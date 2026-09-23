@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "kind": "abya-task-template",
+  "id": "abya-task-template-multiplayer-workflow",
+  "displayName": "ABYA 多人游戏制作流程",
+  "description": "权威联机、数据化内容、多端 UI、存档发布与真实客户端验收",
+  "sourceSkillName": "abya-multiplayer-workflow"
+}

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "abya.gameplay-architecture/v1",
+  "archiveId": "",
+  "levelId": "",
+  "snapshotRevision": "",
+  "gameMode": {
+    "playerModel": "manual",
+    "networkMode": "single"
+  },
+  "components": [],
+  "exceptions": []
+}
