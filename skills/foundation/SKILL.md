@@ -61,3 +61,11 @@ and `quick_check`, returning before/after byte and WAL metrics for the UI.
 
 When changing foundation behavior, schemas, contracts, paths, or dependencies,
 update this Skill in the same change.
+
+## Managed sandbox transport
+cli_sessions owns in-memory 12-hour capabilities bound to provider/task/conversation. Never serialize them into ABYA settings, workspace files or logs. cli_transport selects the managed pipe when its session environment is present and never falls back after a pipe failure. Same-user standalone access retains DPAPI HTTP. The default workspace is USERPROFILE/ABYA Desktop Development ToolWorkspaces; settings normalize only the exact former default root.
+
+
+## User-initiated clipboard access
+clipboard::read uses Windows clipboard APIs only on explicit terminal paste. Prefer bounded CF_UNICODETEXT (1 MiB UTF-8), otherwise identify bitmap/DIB/PNG without copying image bytes. Never log clipboard contents, monitor clipboard changes or modify clipboard data. Return typed text/image/empty results; close/unlock native handles on exit.
+

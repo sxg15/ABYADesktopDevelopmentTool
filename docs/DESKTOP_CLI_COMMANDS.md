@@ -1,14 +1,22 @@
 # 桌面 CLI 命令契约
 
-桌面应用继续拥有所有业务状态。abya-desktop 通过认证的本机 /api/v1/command 调用应用服务，
+桌面应用继续拥有所有业务状态。托管任务中的 abya-desktop 通过认证的本机命名管道调用应用服务，
 由桌面使用现有 abya CLI 操作游戏。没有旧协议适配器或自动降级。
 
 使用 ABYA_DESKTOP_CLI 环境变量指定的程序；先运行 doctor --json 和 capabilities --json。
 命令组与 ID 映射见 .codex/skills/abya-game-development-task/references/cli-commands.md。
 所有命令接受 --input-file 文件或 -，--json；可用 --request-id 指定 UUID 以关联取消操作。
 任务/会话/provider 由环境变量传入并由服务验证，不作为认证凭据。
-启动任务列表和创建可无会话上下文；其余业务命令需要有效会话。
-Windows 用户凭据以 DPAPI 密文登记，不输出到终端或公开设置。
+独立同用户 CLI 保留 DPAPI 认证的 /api/v1/command，可调用任务列表和创建；托管会话不能创建或列出全局任务。
+托管终端额外注入 ABYA_DESKTOP_PIPE、ABYA_DESKTOP_PID 和 ABYA_DESKTOP_SESSION_TOKEN。
+CLI 校验服务进程身份；服务验证客户端 SID 和凭据绑定的任务/会话/provider。不要打印或手动复制凭据。
+会话凭据只在内存中签发，12 小时过期；停止终端或重启服务即撤销，重新打开终端取得新凭据。
+管道出错不会降级到 DPAPI HTTP，也不会修改沙盒、信任或审批策略。
+Desktop 长期令牌继续由原 Windows 用户的 DPAPI 保护，不交给沙盒解密。
+
+默认工作区改为 USERPROFILE/ABYA Desktop Development ToolWorkspaces。打开旧默认目录中的任务终端时，
+先复制迁移到新目录并更新任务记录，原目录保留为恢复副本；任务 ID、会话和历史不变。
+自定义工作区不自动迁移；Codex 启动前的沙盒 doctor 自检会明确报告目录错误 267 或连接失败。
 
 stdout 为单个 JSON 对象，schemaVersion=1，包含 requestId、success、data 和完整 content。
 返回码：0 成功，2 参数/校验，3 未找到，4 认证，5 能力不可用，6 执行失败，7 结果不确定。
@@ -278,4 +286,3 @@ Input: required `sessionId`; optional `severity`, `provider`, `eventName`,
 
 Returns newest persisted WebSocket log events first. `limit` defaults to 200
 and must be from 1 through 1000. Read-only.
-

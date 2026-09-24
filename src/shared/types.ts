@@ -66,6 +66,8 @@ export interface DevelopmentTask {
 export type TerminalProvider = "codex" | "grok";
 
 export interface CodexConversation {
+  nativeSyncError?: string;
+  archived?: boolean;
   id: string;
   taskId: string;
   title: string;

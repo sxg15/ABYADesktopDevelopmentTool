@@ -189,7 +189,10 @@ fn main() {
         std::process::exit(match code {
             "invalid_request" | "validation" | "invalidToolArguments" => 2,
             "notFound" | "instance_not_found" => 3,
-            "unauthorized" => 4,
+            "unauthorized"
+            | "session_unauthorized"
+            | "session_scope_denied"
+            | "desktop_identity_mismatch" => 4,
             "capability_unavailable" => 5,
             "outcome_unknown" | "timeout" => 7,
             _ => 6,

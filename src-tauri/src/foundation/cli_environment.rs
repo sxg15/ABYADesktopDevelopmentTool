@@ -47,7 +47,9 @@ pub fn connection() -> AppResult<(String, String)> {
     }
     Ok((
         value.endpoint,
-        super::settings::decrypt_token(&value.encrypted_token)?,
+        super::settings::decrypt_token(&value.encrypted_token).map_err(|_| AppError::new(
+            "desktop_identity_mismatch",
+            "The current Windows identity cannot decrypt this Desktop connection. Reopen the task terminal to obtain its managed CLI session.", ""))?,
     ))
 }
 

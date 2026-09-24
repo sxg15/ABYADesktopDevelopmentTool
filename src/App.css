@@ -499,7 +499,7 @@ tbody tr:hover { background: #f7faf8; }
 .conversation-pane-header .icon-button:hover { color: #fff; background: #384245; }
 .conversation-list { min-height: 0; overflow: auto; padding: 7px; }
 .conversation-row {
-  position: relative; display: grid; grid-template-columns: minmax(0,1fr) 52px;
+  position: relative; display: grid; grid-template-columns: minmax(0,1fr) 76px;
   min-height: 52px; align-items: stretch; border: 1px solid transparent; border-radius: 5px;
 }
 .conversation-row:hover { background: #2a3335; }
@@ -819,3 +819,6 @@ tbody tr:hover { background: #f7faf8; }
   .conversation-list { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; }
   .conversation-row { min-width: 180px; }
 }
+.conversation-filter { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid #3a4446; }
+.conversation-filter .icon-button { width: 26px; height: 26px; color: #afbbb6; border-color: #4a5557; background: #2c3436; }
+.conversation-filter .icon-button[aria-pressed="true"] { background: #116a5a; color: white; }

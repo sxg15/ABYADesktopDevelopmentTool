@@ -16,7 +16,8 @@ pub struct AppPaths {
 
 impl AppPaths {
     pub fn legacy_workspace_root() -> Option<PathBuf> {
-        std::env::var_os("LOCALAPPDATA").map(|p| PathBuf::from(p).join("ABYA Desktop Development Tool/Workspaces"))
+        std::env::var_os("LOCALAPPDATA")
+            .map(|p| PathBuf::from(p).join("ABYA Desktop Development Tool/Workspaces"))
     }
     pub fn discover() -> AppResult<Self> {
         let local = std::env::var_os("LOCALAPPDATA")

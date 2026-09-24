@@ -43,6 +43,15 @@ default when the user elects to use a style without naming one.
 `codex-terminal` discovers Codex, owns its PTYs and process trees, connects the
 visible TUI to the authenticated loopback Codex app-server, and maps native
 thread/plan/item notifications into the shared workflow model.
+It also registers task-owned native Codex projects through the experimental
+project API and synchronizes conversation naming/archive state by native ID.
+Archive/restore and open/delete are serialized; archived conversations never
+resume implicitly. Local deletion first archives native history. Native sync
+failures retain the local conversation list and are displayed explicitly.
+
+The terminal UI owns paste gestures; foundation reads the Windows clipboard
+only on demand. Plain text uses bracketed paste and serialized bounded IPC
+chunks. Only actual images trigger the provider's native image-paste command.
 `grok-terminal` independently discovers Grok, owns its PTYs and process trees,
 creates or resumes UUID sessions, and incrementally maps the native ACP
 `updates.jsonl` plan/tool/turn stream into the same workflow model. Codex uses
@@ -52,7 +61,9 @@ creates or resumes UUID sessions, and incrementally maps the native ACP
 provider state remains in the user's normal `.codex` or `.grok` directory and
 is never copied into a task workspace.
 
-`desktop-cli` exposes an authenticated non-MCP loopback command endpoint. The abya-desktop executable calls it using a DPAPI-protected current-user descriptor. Each command validates provider/task/conversation ownership, delegates to the existing services and records sanitized activities. Runtime operations start the bundled Abya CLI with the managed PID and launch identity. The CLI calls the game capability host directly. No legacy protocol adapter or fallback exists.
+`desktop-cli` exposes authenticated non-MCP command dispatch. Managed terminal CLIs use a local-only Windows named pipe, restricted client SIDs, and revocable in-memory session capabilities bound to provider/task/conversation. Foundation owns transport and session-capability primitives; provider services issue and revoke capabilities without depending on desktop-cli. Desktop retains the long-term credential; sandbox CLIs never decrypt it. Normal same-user standalone CLI access retains the DPAPI-backed HTTP route; managed pipe failures never fall back to it. Each command validates ownership and records sanitized activities. Runtime operations start bundled Abya CLI with managed PID and launch identity. No MCP adapter exists.
+
+New default workspaces live under USERPROFILE/ABYA Desktop Development ToolWorkspaces. On terminal open, tasks in the former LOCALAPPDATA default root are copied to that compatible root before updating their database path. Original files remain as a recovery copy. Only inactive task terminals may migrate; custom roots and reparse points are not migrated automatically.
 
 `game-connections` is the only module that binds the LAN gateway, broadcasts
 discovery datagrams, owns WebSocket sessions, and correlates archive transfer

@@ -124,3 +124,7 @@ When changing task fields, lifecycle rules, persistence, commands, or tests,
 update this Skill in the same change.
 
 Runtime image paths in completed CLI activity details are previewable in the existing workflow drawer. Image bytes are read only through a backend path check restricted to the selected task runtime artifact directory.
+
+## Legacy default workspace repair
+prepare_terminal_workspace runs before a new provider terminal opens. Only direct children of the old LOCALAPPDATA default root qualify; active session leases prevent migration. Copy into a unique staging directory under the new USERPROFILE default root, reject reparse points, then rename and conditionally update the database path. Keep the original directory as a recovery copy. Conflicts/errors preserve both source and any staging data for inspection; never overwrite or recursively delete user content. Task/conversation IDs and native session metadata remain unchanged. Repeated opens are idempotent. Test binary assets, conversation preservation, custom roots and database path updates.
+

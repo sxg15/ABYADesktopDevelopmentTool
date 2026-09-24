@@ -74,3 +74,7 @@ When changing Grok discovery, launch flags, sessions, ACP mapping, PTY
 behavior, cleanup, or tests, update this Skill in the same change.
 
 ABYA_DESKTOP_CLI carries the absolute desktop CLI executable path. Commands automatically include task, conversation and provider context. ABYA operations use CLI exclusively; native provider transport remains unchanged.
+
+## Managed CLI session
+On a new terminal open, prepare the legacy default workspace through TaskService. Issue the same scoped pipe environment as Codex through foundation cli_sessions with provider grok. Explicit stop and natural exit revoke its capability. No credentials are written to task files or logs. Grok authentication and native provider behavior remain unchanged.
+

@@ -114,24 +114,48 @@ pub struct TaskService {
 impl TaskService {
     /// Relocate only the former managed default. Keep the source as a recovery copy.
     pub fn prepare_terminal_workspace(&self, task_id: &str) -> AppResult<DevelopmentTask> {
+        let Some(legacy) = crate::foundation::AppPaths::legacy_workspace_root() else {
+            return self.get(task_id);
+        };
+        let user = std::env::var_os("USERPROFILE")
+            .ok_or_else(|| AppError::validation("USERPROFILE is unavailable."))?;
+        let root = PathBuf::from(user).join("ABYA Desktop Development ToolWorkspaces");
+        self.prepare_terminal_workspace_in(task_id, &legacy, &root)
+    }
+
+    fn prepare_terminal_workspace_in(
+        &self,
+        task_id: &str,
+        legacy: &Path,
+        root: &Path,
+    ) -> AppResult<DevelopmentTask> {
         static MIGRATION: std::sync::Mutex<()> = std::sync::Mutex::new(());
-        let _guard = MIGRATION.lock().map_err(|_| AppError::internal("Workspace migration lock failed."))?;
+        let _guard = MIGRATION
+            .lock()
+            .map_err(|_| AppError::internal("Workspace migration lock failed."))?;
         let mut task = self.get(task_id)?;
         let source = PathBuf::from(&task.workspace_path);
-        let Some(legacy) = crate::foundation::AppPaths::legacy_workspace_root() else { return Ok(task); };
-        if source.parent() != Some(legacy.as_path()) { return Ok(task); }
-        if crate::foundation::cli_sessions::task_active(task_id) {
-            return Err(AppError::validation("Stop this task's terminals before repairing its legacy workspace."));
+        if source.parent() != Some(legacy) {
+            return Ok(task);
         }
-        let user = std::env::var_os("USERPROFILE").ok_or_else(|| AppError::validation("USERPROFILE is unavailable."))?;
-        let root = PathBuf::from(user).join("ABYA Desktop Development ToolWorkspaces");
-        std::fs::create_dir_all(&root)?;
+        if crate::foundation::cli_sessions::task_active(task_id) {
+            return Err(AppError::validation(
+                "Stop this task's terminals before repairing its legacy workspace.",
+            ));
+        }
+        std::fs::create_dir_all(root)?;
         let destination = root.join(format!("{}-{}", slugify(&task.title), task.id));
-        if destination.exists() { return Err(AppError::validation("Workspace repair destination already exists; the original workspace was preserved.")); }
+        if destination.exists() {
+            return Err(AppError::validation(
+                "Workspace repair destination already exists; the original workspace was preserved.",
+            ));
+        }
         // Resolve boundaries before copying; never follow a task-directory junction.
         let source = source.canonicalize()?;
         if source.parent() != Some(legacy.canonicalize()?.as_path()) {
-            return Err(AppError::validation("Legacy workspace resolves outside its managed root."));
+            return Err(AppError::validation(
+                "Legacy workspace resolves outside its managed root.",
+            ));
         }
         let staging = root.join(format!(".migration-{}", uuid::Uuid::new_v4()));
         let mut pending = vec![(source, staging.clone())];
@@ -142,17 +166,30 @@ impl TaskService {
                 use std::os::windows::fs::MetadataExt;
                 let metadata = std::fs::symlink_metadata(entry.path())?;
                 if metadata.file_attributes() & 0x400 != 0 {
-                    return Err(AppError::validation("Workspace contains a reparse point; automatic repair stopped and preserved the source."));
+                    return Err(AppError::validation(
+                        "Workspace contains a reparse point; automatic repair stopped and preserved the source.",
+                    ));
                 }
                 let target = to.join(entry.file_name());
-                if metadata.is_dir() { pending.push((entry.path(), target)); }
-                else { std::fs::copy(entry.path(), target)?; }
+                if metadata.is_dir() {
+                    pending.push((entry.path(), target));
+                } else {
+                    std::fs::copy(entry.path(), target)?;
+                }
             }
         }
         std::fs::rename(&staging, &destination)?;
         let display = display_path(&destination);
         self.database.with_connection(|connection| {
-            connection.execute("UPDATE development_tasks SET workspace_path=?2 WHERE id=?1 AND workspace_path=?3", rusqlite::params![task.id, display, task.workspace_path])?;
+            let changed = connection.execute(
+                "UPDATE development_tasks SET workspace_path=?2 WHERE id=?1 AND workspace_path=?3",
+                rusqlite::params![task.id, display, task.workspace_path],
+            )?;
+            if changed != 1 {
+                return Err(AppError::validation(
+                    "Task changed during workspace repair; both copies were preserved.",
+                ));
+            }
             Ok(())
         })?;
         task.workspace_path = display;
@@ -588,6 +625,74 @@ fn display_path(path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn workspace_repair_preserves_source_and_is_idempotent() {
+        use super::*;
+        use crate::foundation::{AppPaths, Database};
+        let root = std::env::temp_dir().join(format!("abya-migration-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+        let paths = AppPaths {
+            data_dir: root.clone(),
+            database_path: root.join("db.sqlite"),
+            bootstrap_logs_dir: root.join("logs"),
+            reports_dir: root.join("reports"),
+            archive_transfers_dir: root.join("transfers"),
+            default_archive_root: root.join("archives"),
+            default_workspace_root: root.join("legacy"),
+        };
+        let database = Database::open(&paths).unwrap();
+        let mut service = TaskService::new(database, paths.default_workspace_root.clone());
+        service.managed_skill_sources.clear();
+        let task = service
+            .create(TaskInput {
+                title: "Migration 测试".into(),
+                description: String::new(),
+            })
+            .unwrap();
+        let source = PathBuf::from(&task.workspace_path);
+        std::fs::create_dir(source.join("conversations")).unwrap();
+        std::fs::write(
+            source.join("conversations/history.json"),
+            b"persistent-history",
+        )
+        .unwrap();
+        std::fs::write(source.join("asset.bin"), [0, 1, 255, 9]).unwrap();
+        let destination = root.join("compatible");
+        let repaired = service
+            .prepare_terminal_workspace_in(&task.id, &paths.default_workspace_root, &destination)
+            .unwrap();
+        assert_eq!(task.id, repaired.id);
+        assert_ne!(task.workspace_path, repaired.workspace_path);
+        for file in ["conversations/history.json", "asset.bin"] {
+            assert_eq!(
+                std::fs::read(source.join(file)).unwrap(),
+                std::fs::read(Path::new(&repaired.workspace_path).join(file)).unwrap()
+            );
+        }
+        assert_eq!(
+            service.get(&task.id).unwrap().workspace_path,
+            repaired.workspace_path
+        );
+        assert_eq!(
+            service
+                .prepare_terminal_workspace_in(
+                    &task.id,
+                    &paths.default_workspace_root,
+                    &destination
+                )
+                .unwrap()
+                .workspace_path,
+            repaired.workspace_path
+        );
+        let custom = service
+            .prepare_terminal_workspace_in(&task.id, &root.join("unrelated"), &root.join("unused"))
+            .unwrap();
+        assert_eq!(custom.workspace_path, repaired.workspace_path);
+        drop(service);
+        let resolved = root.canonicalize().unwrap();
+        assert!(resolved.starts_with(std::env::temp_dir().canonicalize().unwrap()));
+        std::fs::remove_dir_all(resolved).unwrap();
+    }
     use super::*;
     use crate::foundation::{AppPaths, Database};
 

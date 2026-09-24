@@ -66,3 +66,9 @@ When changing shared terminal UI, provider contracts, workflow schemas,
 sanitization, or persistence, update this Skill in the same change.
 
 Desktop semantic activity sources are desktopCli and desktopCliReport. Older source names remain displayable in existing journals. Runtime file artifacts are returned through CLI output and inspected by the selected provider.
+
+## Paste and archived conversations
+The terminal intercepts Ctrl+V/Shift+V before forwarding keystrokes. Read native clipboard via the typed adapter; text requires bracketed-paste readiness and strips control sequences, images alone forward the provider image-paste key. Right-click paste follows the same routing. Serialized Unicode-safe chunks stay below the backend IPC input limit. No automatic Enter is sent. Register/remove listeners with the terminal lifecycle. Codex rows expose archive/restore and active/archived filters; archived rows never mount a terminal. Empty active lists do not create replacements when archived records exist. Refresh revisions prevent stale reads from undoing an archive. Refocus/manual refresh reconcile native state; failures preserve local history and show errors.
+
+
+The Codex project-folder icon opens a read-only task path and one-time saved-project instructions for desktop versions that do not show CLI-native projects. The user can select/copy the path; this never accepts an arbitrary cwd.

@@ -81,7 +81,9 @@ impl SettingsService {
             let settings = AppSettings {
                 game_executable_path: stored.game_executable_path,
                 workspace_root_path: if stored.workspace_root_path.trim().is_empty()
-                    || super::AppPaths::legacy_workspace_root().is_some_and(|p| p == std::path::PathBuf::from(&stored.workspace_root_path)) {
+                    || super::AppPaths::legacy_workspace_root()
+                        .is_some_and(|p| p == std::path::Path::new(&stored.workspace_root_path))
+                {
                     self.default_workspace_root.to_string_lossy().into_owned()
                 } else {
                     stored.workspace_root_path

@@ -21,6 +21,9 @@ const terminalApiMock = vi.hoisted(() => ({
     title: "Renamed conversation",
   })),
   deleteConversation: vi.fn(),
+  readClipboard: vi.fn(async () => ({ kind: "text", text: "pasted" })),
+  projectWorkspace: vi.fn(async () => "D:\\Workspaces\\task-1"),
+  setArchived: vi.fn(async (_task: string, _id: string, archived: boolean) => ({ ...conversation, archived })),
   workflow: vi.fn(async () => ({
     taskId: "task-1",
     conversationId: "conversation-1",
@@ -72,6 +75,9 @@ vi.mock("@xterm/addon-fit", () => ({
 
 vi.mock("@xterm/xterm", () => ({
   Terminal: class {
+    modes = { bracketedPasteMode: true };
+    attachCustomKeyEventHandler() {}
+    paste() {}
     buffer = { active: { baseY: 0, viewportY: 0 } };
     get cols() {
       return terminalGrid.cols;
@@ -175,6 +181,43 @@ function notifyResize() {
 }
 
 describe("Codex conversation list", () => {
+  it("shows a read-only task folder for desktop project compatibility", async () => {
+    renderView();
+    fireEvent.click(await screen.findByTitle("Codex project grouping"));
+    const field = await screen.findByRole("textbox", { name: "Task folder" });
+    expect((field as HTMLInputElement).value).toBe("D:\\Workspaces\\task-1");
+    expect((field as HTMLInputElement).readOnly).toBe(true);
+    expect(terminalApiMock.projectWorkspace).toHaveBeenCalledWith("task-1");
+  });
+  it("archives without recreating a conversation and restores without a new native thread", async () => {
+    renderView();
+    fireEvent.click(await screen.findByTitle("Archive conversation and stop terminal"));
+    await waitFor(() => expect(terminalApiMock.setArchived).toHaveBeenCalledWith("task-1", "conversation-1", true));
+    await waitFor(() => expect(screen.queryByTitle("Archive conversation and stop terminal")).toBeNull());
+    expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTitle("Toggle archived conversations"));
+    fireEvent.click(await screen.findByTitle("Restore conversation"));
+    await waitFor(() => expect(terminalApiMock.setArchived).toHaveBeenCalledWith("task-1", "conversation-1", false));
+    await screen.findByTitle("Archive conversation and stop terminal");
+    expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
+  });
+
+  it("does not automatically open or replace archived conversations on reload", async () => {
+    terminalApiMock.listConversations.mockResolvedValueOnce([{ ...conversation, archived: true }]);
+    renderView();
+    await screen.findAllByText("No conversations");
+    expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
+    expect(terminalApiMock.open).not.toHaveBeenCalled();
+  });
+
+  it("preserves the active conversation when native archival fails", async () => {
+    terminalApiMock.setArchived.mockRejectedValueOnce(new Error("Native archive failed"));
+    renderView();
+    fireEvent.click(await screen.findByTitle("Archive conversation and stop terminal"));
+    await screen.findByText(/Native archive failed/);
+    expect(screen.getByTitle("Archive conversation and stop terminal")).toBeTruthy();
+    expect(terminalApiMock.deleteConversation).not.toHaveBeenCalled();
+  });
   it("renames a conversation inline and persists the new title", async () => {
     renderView();
 

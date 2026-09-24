@@ -1044,7 +1044,11 @@ fn build_command(
     command.env("ABYA_DEVELOPMENT_TASK_ID", task_id);
     command.env("ABYA_DEVELOPMENT_CONVERSATION_ID", conversation_id);
     command.env("ABYA_DEVELOPMENT_WORKSPACE", working_directory);
-    for (key, value) in crate::foundation::cli_sessions::environment("grok", task_id, conversation_id) { command.env(key, value); }
+    for (key, value) in
+        crate::foundation::cli_sessions::environment("grok", task_id, conversation_id)
+    {
+        command.env(key, value);
+    }
     command.cwd(working_directory);
     command
 }

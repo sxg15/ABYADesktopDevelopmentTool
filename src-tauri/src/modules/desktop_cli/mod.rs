@@ -1,8 +1,8 @@
+mod pipe;
+mod pipe_security;
 mod protocol;
 mod registry;
 mod tools;
-mod pipe;
-mod pipe_security;
 
 use crate::foundation::{AppError, AppResult, AppSettings, SettingsService};
 use crate::modules::archive_transfer::ArchiveTransferService;
@@ -138,7 +138,10 @@ impl DesktopCliService {
         let listener = bind_loopback(address)?;
         listener.set_nonblocking(true)?;
         let state = HttpState::new(settings.desktop_cli_token.clone(), self.dispatcher.clone());
-        let pipe = pipe::start(state.clone(), settings.desktop_cli_token.clone())?;
+        self.inner.lock().pipe = Some(pipe::start(
+            state.clone(),
+            settings.desktop_cli_token.clone(),
+        )?);
         let router = Router::new()
             .route("/api/v1/command", post(handle_command))
             .layer(protocol::body_limit())
@@ -184,10 +187,15 @@ impl DesktopCliService {
             last_error: String::new(),
         };
         #[cfg(not(test))]
-        crate::foundation::cli_environment::publish(&state.endpoint, &settings.desktop_cli_token)?;
+        if let Err(error) = crate::foundation::cli_environment::publish(
+            &state.endpoint,
+            &settings.desktop_cli_token,
+        ) {
+            self.stop();
+            return Err(error);
+        }
         let mut control = self.inner.lock();
         control.state = state.clone();
-        control.pipe = Some(pipe);
         control.shutdown = Some(shutdown_tx);
         Ok(state)
     }
@@ -196,7 +204,9 @@ impl DesktopCliService {
         crate::foundation::cli_sessions::deactivate();
         self.dispatcher.shutdown();
         let mut control = self.inner.lock();
-        if let Some(pipe) = control.pipe.take() { pipe.abort(); }
+        if let Some(pipe) = control.pipe.take() {
+            pipe.abort();
+        }
         if let Some(shutdown) = control.shutdown.take() {
             let _ = shutdown.send(());
         }
@@ -328,6 +338,169 @@ mod tests {
     fn available_port() -> u16 {
         let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
         listener.local_addr().unwrap().port()
+    }
+
+    #[test]
+    #[ignore = "Requires built CLI and installed Codex Windows sandbox; run alone"]
+    fn sandbox_pipe_authentication_smoke() {
+        use crate::foundation::{cli_sessions, cli_transport::Connection};
+        let fixture = fixture();
+        fixture.service.start(&fixture.settings).unwrap();
+        let environment = cli_sessions::environment("codex", "task-one", "conversation-one");
+        let pipe = environment
+            .iter()
+            .find(|(k, _)| k == "ABYA_DESKTOP_PIPE")
+            .unwrap()
+            .1
+            .clone();
+        let token = environment
+            .iter()
+            .find(|(k, _)| k == "ABYA_DESKTOP_SESSION_TOKEN")
+            .unwrap()
+            .1
+            .clone();
+        let context =
+            json!({"provider":"codex","taskId":"task-one","conversationId":"conversation-one"});
+        let connection = Connection::Pipe {
+            name: pipe.clone(),
+            credential: token.clone(),
+            server_pid: std::process::id(),
+        };
+        let request = |context: Value| json!({"version":1,"requestId":Uuid::new_v4().to_string(),"command":"capabilities","arguments":{},"context":context});
+        let result = connection
+            .request(&request(context.clone()), Duration::from_secs(10))
+            .unwrap();
+        assert_eq!(result["success"], true);
+        let replay = request(context.clone());
+        assert_eq!(
+            connection
+                .request(&replay, Duration::from_secs(10))
+                .unwrap()["success"],
+            true
+        );
+        assert_eq!(
+            connection
+                .request(&replay, Duration::from_secs(10))
+                .unwrap()["error"]["code"],
+            "duplicate_request"
+        );
+        let impostor = Connection::Pipe {
+            name: pipe.clone(),
+            credential: token.clone(),
+            server_pid: std::process::id() + 1,
+        };
+        assert_eq!(
+            impostor
+                .request(&request(context.clone()), Duration::from_secs(10))
+                .unwrap_err()
+                .code,
+            "desktop_identity_mismatch"
+        );
+        let second_context =
+            json!({"provider":"grok","taskId":"task-two","conversationId":"conversation-two"});
+        let second_env = cli_sessions::environment("grok", "task-two", "conversation-two");
+        let second = Connection::Pipe {
+            name: pipe.clone(),
+            credential: second_env
+                .iter()
+                .find(|(key, _)| key == "ABYA_DESKTOP_SESSION_TOKEN")
+                .unwrap()
+                .1
+                .clone(),
+            server_pid: std::process::id(),
+        };
+        assert_eq!(
+            second
+                .request(&request(second_context), Duration::from_secs(10))
+                .unwrap()["success"],
+            true
+        );
+        assert_eq!(
+            second
+                .request(&request(context.clone()), Duration::from_secs(10))
+                .unwrap()["success"],
+            false
+        );
+        assert_eq!(
+            connection
+                .request(&request(context.clone()), Duration::from_secs(10))
+                .unwrap()["success"],
+            true
+        );
+        let wrong = Connection::Pipe {
+            name: pipe.clone(),
+            credential: "0".repeat(64),
+            server_pid: std::process::id(),
+        };
+        assert_eq!(
+            wrong
+                .request(&request(context.clone()), Duration::from_secs(10))
+                .unwrap()["error"]["code"],
+            "session_unauthorized"
+        );
+        let mut other = context.clone();
+        other["taskId"] = json!("task-two");
+        assert_eq!(
+            connection
+                .request(&request(other), Duration::from_secs(10))
+                .unwrap()["success"],
+            false
+        );
+        let codex = std::env::var("ABYA_TEST_CODEX").expect("ABYA_TEST_CODEX required");
+        let cli = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/abya-desktop.exe");
+        for operation in ["doctor", "capabilities"] {
+            let output = std::process::Command::new(&codex)
+                .arg("sandbox")
+                .arg(&cli)
+                .arg(operation)
+                .arg("--json")
+                .current_dir("C:\\")
+                .envs(environment.iter().cloned())
+                .env("ABYA_DEVELOPMENT_TASK_ID", "task-one")
+                .env("ABYA_DEVELOPMENT_CONVERSATION_ID", "conversation-one")
+                .env("ABYA_DEVELOPMENT_PROVIDER", "codex")
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "sandbox CLI failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let value: Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(value["success"], true, "{operation}: {value}");
+            println!("sandbox {operation}: passed");
+        }
+        if std::env::var("ABYA_TEST_MODEL").as_deref() == Ok("1") {
+            let script =
+                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/test-codex-pipe.mjs");
+            let output = std::process::Command::new("node")
+                .arg(script)
+                .envs(environment.iter().cloned())
+                .env("ABYA_DESKTOP_CLI", &cli)
+                .env("ABYA_DEVELOPMENT_TASK_ID", "task-one")
+                .env("ABYA_DEVELOPMENT_CONVERSATION_ID", "conversation-one")
+                .output()
+                .unwrap();
+            println!("model smoke: {}", String::from_utf8_lossy(&output.stdout));
+            assert!(
+                output.status.success(),
+                "model smoke failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        cli_sessions::revoke("codex", "conversation-one");
+        assert_eq!(
+            connection
+                .request(&request(context), Duration::from_secs(10))
+                .unwrap()["success"],
+            false
+        );
+        fixture.service.stop();
+        assert!(
+            connection
+                .request(&request(json!({})), Duration::from_secs(3))
+                .is_err()
+        );
     }
 
     #[test]

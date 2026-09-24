@@ -99,3 +99,7 @@ unavailable/compatibility Codex and Grok presentation.
 
 When changing navigation, localization, shared controls, or layout behavior,
 update this Skill in the same change.
+
+## Conversation controls
+Codex conversation rows include archive/restore in addition to rename/delete; reserve room for all three controls. Active/archived filters and explicit synchronization sit above the list. Add bilingual clipboard-ready/size errors and archive labels. Grok retains its existing lifecycle controls.
+

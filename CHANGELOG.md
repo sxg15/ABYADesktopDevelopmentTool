@@ -1,3 +1,19 @@
+# 终端粘贴与 Codex 会话整理
+
+- 接管 Ctrl+V/Ctrl+Shift+V，读取 Windows 原生剪贴板；文本按 bracketed paste 插入，图片才交给 Codex 原生图片粘贴。
+- 长文本按 Unicode 安全边界串行发送，避免 IPC 超限、重复粘贴及意外提交。
+- 自动注册或复用 ABYA 任务对应的 Codex 项目，同步历史会话归属和名称。
+- 增加归档/恢复和已归档列表；通过原生 API 同步，阻止归档会话自动复活，删除本地记录前保留原生归档历史。
+- 刷新或重新聚焦时同步外部归档/恢复；原生同步失败时保留本地列表并明确显示错误。
+
+# Windows 沙盒 CLI 连接修复
+
+- 托管终端使用本机命名管道和会话级短期凭据，避免沙盒用户解密原用户的 DPAPI 令牌。
+- 校验管道客户端身份与任务/会话/提供方；终端停止、凭据过期和服务重启会撤销访问。
+- 默认工作区移至用户目录外层；旧默认工作区在打开终端前复制迁移，保留原目录作为恢复副本，自定义目录不自动迁移。
+- Codex 打开终端前通过真实 Windows 沙盒执行 CLI 自检，区分目录启动失败和服务连接失败。
+- 增加真实沙盒、模型工具调用、凭据隔离和工作区文件保留测试。
+
 # Codex 后台版本与任务环境修复
 
 - CLI 更新后不再让新终端继续复用旧 app-server；同时识别退出的后台进程。
@@ -150,3 +166,5 @@ All notable changes to this project are documented in this file.
 - Bilingual Chinese and English interface.
 - Local Streamable HTTP MCP foundation with an empty tool registry.
 - Portable Windows release pipeline targeting the `Publish` directory.
+
+- 当前 Codex 桌面项目列表与 CLI 原生项目注册不完全同步时，提供只读任务路径与一次性添加项目引导。

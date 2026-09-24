@@ -1,4 +1,5 @@
 mod app_server;
+mod lifecycle;
 
 use crate::foundation::{AppError, AppResult};
 use crate::modules::development_terminal::transcript::read_transcript_replay;
@@ -85,6 +86,10 @@ pub enum CodexTerminalEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexConversation {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_sync_error: Option<String>,
+    #[serde(default)]
+    pub archived: bool,
     pub id: String,
     pub task_id: String,
     pub title: String,
@@ -128,6 +133,7 @@ pub struct CodexTerminalService {
     app_server: Arc<Mutex<Option<AppServerHandle>>>,
     thread_conversations: Arc<Mutex<HashMap<String, (String, String)>>>,
     workflow_write_lock: Arc<Mutex<()>>,
+    lifecycle_lock: Arc<Mutex<()>>,
 }
 
 impl CodexTerminalService {
@@ -139,6 +145,7 @@ impl CodexTerminalService {
             app_server: Default::default(),
             thread_conversations: Default::default(),
             workflow_write_lock: Default::default(),
+            lifecycle_lock: Default::default(),
         })
     }
 
@@ -189,6 +196,12 @@ impl CodexTerminalService {
         }
         conversations.sort_by(|left, right| right.updated_at.cmp(&left.updated_at));
         backfill_native_session_ids(Path::new(&task.workspace_path), &mut conversations)?;
+        #[cfg(not(test))]
+        if let Err(error) = self.refresh_native_conversations(&task, &mut conversations) {
+            for conversation in &mut conversations {
+                conversation.native_sync_error = Some(error.message.clone());
+            }
+        }
         Ok(conversations)
     }
 
@@ -212,6 +225,8 @@ impl CodexTerminalService {
             validate_conversation_title(&title)?
         };
         let conversation = CodexConversation {
+            native_sync_error: None,
+            archived: false,
             id: id.clone(),
             task_id: task_id.to_string(),
             title,
@@ -231,11 +246,19 @@ impl CodexTerminalService {
         conversation_id: &str,
         title: &str,
     ) -> AppResult<CodexConversation> {
+        let _guard = self.lifecycle_lock.lock();
         let title = validate_conversation_title(title)?;
         let task = self.tasks.get(task_id)?;
         let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);
         let mut conversation = self.conversation(task_id, conversation_id)?;
         conversation.title = title;
+        if let Some(thread_id) = &conversation.native_session_id {
+            let codex =
+                (self.resolver)().ok_or_else(|| AppError::validation("Codex is unavailable."))?;
+            let server = self.ensure_app_server(&codex)?;
+            let project = server.ensure_project(&task)?;
+            server.organize_thread(&project, &task, &conversation, thread_id)?;
+        }
         conversation.updated_at = Utc::now().to_rfc3339();
         write_conversation(&directory, &conversation)?;
         Ok(conversation)
@@ -318,6 +341,8 @@ impl CodexTerminalService {
     }
 
     pub fn delete_conversation(&self, task_id: &str, conversation_id: &str) -> AppResult<()> {
+        let _guard = self.lifecycle_lock.lock();
+        self.set_conversation_archived_locked(task_id, conversation_id, true)?;
         let conversation = self.conversation(task_id, conversation_id)?;
         self.stop(conversation_id)?;
         self.thread_conversations
@@ -339,7 +364,13 @@ impl CodexTerminalService {
         rows: u16,
         subscriber: Channel<CodexTerminalEvent>,
     ) -> AppResult<CodexTerminalState> {
+        let _lifecycle_guard = self.lifecycle_lock.lock();
         validate_size(columns, rows)?;
+        if self.conversation(task_id, conversation_id)?.archived {
+            return Err(AppError::validation(
+                "Restore this archived conversation before opening its terminal.",
+            ));
+        }
         if let Some(existing) = self.sessions.lock().get(conversation_id).cloned() {
             // Keep live output behind the transcript snapshot, then atomically
             // attach the new subscriber so replay and live bytes cannot race.
@@ -360,6 +391,13 @@ impl CodexTerminalService {
         let (codex, task) = self.validate_open_request(task_id, conversation_id)?;
         let task = self.tasks.prepare_terminal_workspace(&task.id)?;
         let working_directory = PathBuf::from(&task.workspace_path);
+        #[cfg(not(test))]
+        if let Err(error) =
+            app_server::preflight_cli(&codex, &working_directory, task_id, conversation_id)
+        {
+            crate::foundation::cli_sessions::revoke("codex", conversation_id);
+            return Err(error);
+        }
         let mut conversation = self.conversation(task_id, conversation_id)?;
         let mut native_session_id = conversation
             .native_session_id
@@ -379,6 +417,21 @@ impl CodexTerminalService {
         let observability = if supports_app_server(&codex) {
             match self.ensure_app_server(&codex) {
                 Ok(server) => {
+                    let project = server.ensure_project(&task)?;
+                    let native_archived = match &native_session_id {
+                        Some(id) => server.is_archived(id)?,
+                        None => false,
+                    };
+                    if native_archived {
+                        conversation.archived = true;
+                        write_conversation(
+                            &conversation_directory(&working_directory, conversation_id),
+                            &conversation,
+                        )?;
+                        return Err(AppError::validation(
+                            "This conversation was archived in Codex. Refresh and restore it explicitly.",
+                        ));
+                    }
                     let instructions = managed_developer_instructions(task_id, conversation_id);
                     let prepared = if let Some(thread_id) = native_session_id.as_deref() {
                         server
@@ -415,6 +468,7 @@ impl CodexTerminalService {
                                 )?;
                             }
                             native_session_id = Some(thread_id.clone());
+                            server.organize_thread(&project, &task, &conversation, &thread_id)?;
                             self.thread_conversations.lock().insert(
                                 thread_id,
                                 (task_id.to_string(), conversation_id.to_string()),
@@ -737,6 +791,7 @@ impl CodexTerminalService {
     #[cfg(test)]
     fn for_test(tasks: TaskService, _working_directory: PathBuf, codex: ResolvedCodex) -> Self {
         Self {
+            lifecycle_lock: Default::default(),
             tasks,
             sessions: Default::default(),
             resolver: Arc::new(move || Some(codex.clone())),
@@ -901,7 +956,11 @@ fn build_command(
     command.env("ABYA_DEVELOPMENT_TASK_ID", task_id);
     command.env("ABYA_DEVELOPMENT_CONVERSATION_ID", conversation_id);
     command.env("ABYA_DEVELOPMENT_WORKSPACE", working_directory);
-    for (key, value) in crate::foundation::cli_sessions::environment("codex", task_id, conversation_id) { command.env(key, value); }
+    for (key, value) in
+        crate::foundation::cli_sessions::environment("codex", task_id, conversation_id)
+    {
+        command.env(key, value);
+    }
     command.arg("--cd");
     command.arg(working_directory);
     command.arg("--no-alt-screen");
@@ -1924,6 +1983,8 @@ mod tests {
     fn assigns_a_unique_legacy_session_without_a_time_window() {
         let workspace = PathBuf::from(r"C:\Workspaces\legacy-task");
         let mut conversations = vec![CodexConversation {
+            native_sync_error: None,
+            archived: false,
             id: "conversation-1".into(),
             task_id: "task-1".into(),
             title: "Conversation 1".into(),
@@ -2161,6 +2222,16 @@ mod tests {
             .unwrap();
         let service = CodexTerminalService::new(tasks).unwrap();
         let conversation = service.create_conversation(&task.id, None).unwrap();
+        let archived = service
+            .set_conversation_archived(&task.id, &conversation.id, true)
+            .unwrap();
+        assert!(archived.archived);
+        assert_eq!(service.list_conversations(&task.id).unwrap().len(), 1);
+        let restored = service
+            .set_conversation_archived(&task.id, &conversation.id, false)
+            .unwrap();
+        assert!(!restored.archived);
+        assert_eq!(restored.id, conversation.id);
         service.thread_conversations.lock().insert(
             "thread-1".into(),
             (task.id.clone(), conversation.id.clone()),

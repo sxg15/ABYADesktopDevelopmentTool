@@ -233,6 +233,10 @@ export const api = {
 };
 
 export const terminalApi = {
+  projectWorkspace: (taskId: string) => invoke<string>("get_codex_project_workspace", { taskId }),
+  setArchived: (taskId: string, conversationId: string, archived: boolean) =>
+    invoke<CodexConversation>("set_codex_conversation_archived", { taskId, conversationId, archived }),
+  readClipboard: () => invoke<{ kind: "text"; text: string } | { kind: "image" | "empty" }>("read_terminal_clipboard"),
   availability: (provider: TerminalProvider) =>
     provider === "codex"
       ? api.codexTerminalAvailability()

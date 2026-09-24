@@ -78,3 +78,13 @@ When changing build commands, dependencies, release contents, or validation
 policy, update this Skill in the same change.
 
 Pure CLI releases additionally ship abya-desktop.exe, tools/abya and runtime/node.exe (Node 20+). The publish script runs Rust formatting, Clippy and tests, builds the CLI, then builds the existing desktop application. The embedded Abya CLI is a versioned source snapshot; refresh and test it with every runtime CLI change.
+
+## Sandbox regression validation
+The release includes the named-pipe CLI and Windows security API dependencies. scripts/test-codex-pipe.mjs is an opt-in model-backed test launched by sandbox_pipe_authentication_smoke; it uses existing permissions, refuses approval requests, archives its native test thread, and prints only sanitized pass/fail evidence. Supply ABYA_TEST_CODEX and ABYA_TEST_WORKSPACE; do not store session credentials in scripts or manifests.
+
+
+## Conversation integration validation
+scripts/test-codex-conversation-lifecycle.mjs validates installed native project APIs and archive/restore using temporary test data, without model inference. scripts/sync-codex-projects.mjs performs explicit historical organization using only Desktop-listed tasks and locally recorded native IDs; it never resumes, archives or deletes user conversations. Neither script writes Codex databases or credentials. Validate native clipboard feature dependencies in the Windows release.
+
+
+Historical organization may also use explicitly supplied ABYA_HISTORY_WORKSPACES; it verifies retained task IDs, matches older native threads by exact cwd, and skips unavailable rollouts without recreating task records.

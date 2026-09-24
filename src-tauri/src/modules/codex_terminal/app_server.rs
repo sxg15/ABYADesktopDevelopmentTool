@@ -202,7 +202,7 @@ impl AppServerHandle {
         let _ = fs::remove_file(self.token_file.as_path());
     }
 
-    fn request(&self, method: &str, params: Value) -> AppResult<Value> {
+    pub(super) fn request(&self, method: &str, params: Value) -> AppResult<Value> {
         let (response, receiver) = mpsc::channel();
         self.sender
             .send(BridgeCommand::Request {
@@ -248,6 +248,82 @@ pub(super) fn supports_app_server(codex: &ResolvedCodex) -> bool {
         .stdout(Stdio::null())
         .stderr(Stdio::null());
     command.status().is_ok_and(|status| status.success())
+}
+
+#[cfg(not(test))]
+pub(super) fn preflight_cli(
+    codex: &ResolvedCodex,
+    cwd: &std::path::Path,
+    task: &str,
+    conversation: &str,
+) -> AppResult<()> {
+    let environment = crate::foundation::cli_sessions::environment("codex", task, conversation);
+    if environment.is_empty() {
+        return Err(AppError::validation(
+            "Desktop CLI service is unavailable. Restart it before opening the terminal.",
+        ));
+    }
+    let mut command = codex_process_command(codex);
+    command
+        .arg("sandbox")
+        .arg(crate::foundation::cli_environment::desktop_cli_path())
+        .args(["doctor", "--json"])
+        .current_dir(cwd)
+        .envs(environment)
+        .env("ABYA_DEVELOPMENT_TASK_ID", task)
+        .env("ABYA_DEVELOPMENT_CONVERSATION_ID", conversation)
+        .env("ABYA_DEVELOPMENT_PROVIDER", "codex")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    #[cfg(windows)]
+    std::os::windows::process::CommandExt::creation_flags(&mut command, super::CREATE_NO_WINDOW);
+    let mut child = command.spawn().map_err(AppError::internal)?;
+    let started = Instant::now();
+    loop {
+        if child.try_wait()?.is_some() {
+            break;
+        }
+        if started.elapsed() > Duration::from_secs(30) {
+            let mut kill = Command::new("taskkill");
+            kill.args(["/PID", &child.id().to_string(), "/T", "/F"])
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
+            #[cfg(windows)]
+            std::os::windows::process::CommandExt::creation_flags(
+                &mut kill,
+                super::CREATE_NO_WINDOW,
+            );
+            let _ = kill.status();
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(AppError::new(
+                "cli_preflight_timeout",
+                "Codex sandbox startup timed out. No task command was started.",
+                "",
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let output = child.wait_with_output()?;
+    if output.status.success()
+        && serde_json::from_slice::<Value>(&output.stdout).is_ok_and(|v| v["success"] == true)
+    {
+        return Ok(());
+    }
+    if String::from_utf8_lossy(&output.stderr).contains("267") {
+        return Err(AppError::new(
+            "workspace_bootstrap_failed",
+            "Codex cannot start a sandbox command in this workspace. Choose a local workspace outside AppData; existing files were preserved.",
+            "",
+        ));
+    }
+    Err(AppError::new(
+        "cli_preflight_failed",
+        "Codex sandbox could not connect to Desktop CLI. Check the Desktop service and reopen this terminal.",
+        "",
+    ))
 }
 
 fn spawn_app_server(
@@ -305,8 +381,16 @@ fn managed_thread_config(cwd: &str, task_id: &str, conversation_id: &str) -> Val
                     Value::String(value.into()),
                 )
             })
-            .chain(crate::foundation::cli_sessions::environment("codex", task_id, conversation_id)
-                .into_iter().map(|(key, value)| (format!("shell_environment_policy.set.{key}"), Value::String(value))))
+            .chain(
+                crate::foundation::cli_sessions::environment("codex", task_id, conversation_id)
+                    .into_iter()
+                    .map(|(key, value)| {
+                        (
+                            format!("shell_environment_policy.set.{key}"),
+                            Value::String(value),
+                        )
+                    }),
+            )
             .collect(),
     )
 }
@@ -513,7 +597,7 @@ mod tests {
                 .unwrap()
                 .ends_with("abya-desktop.exe")
         );
-        assert!([5, 7].contains(&first.as_object().unwrap().len()));
+        assert!([5, 8].contains(&first.as_object().unwrap().len()));
         assert!(
             first
                 .as_object()

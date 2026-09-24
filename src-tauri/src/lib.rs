@@ -281,12 +281,34 @@ fn stop_codex_terminal(conversation_id: String, state: State<'_, AppState>) -> A
     state.codex_terminal.stop(&conversation_id)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn list_codex_conversations(
     task_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<Vec<CodexConversation>> {
     state.codex_terminal.list_conversations(&task_id)
+}
+
+#[tauri::command(async)]
+fn read_terminal_clipboard() -> AppResult<foundation::clipboard::ClipboardContent> {
+    foundation::clipboard::read()
+}
+
+#[tauri::command(async)]
+fn get_codex_project_workspace(task_id: String, state: State<'_, AppState>) -> AppResult<String> {
+    state.codex_terminal.project_workspace(&task_id)
+}
+
+#[tauri::command(async)]
+fn set_codex_conversation_archived(
+    task_id: String,
+    conversation_id: String,
+    archived: bool,
+    state: State<'_, AppState>,
+) -> AppResult<CodexConversation> {
+    state
+        .codex_terminal
+        .set_conversation_archived(&task_id, &conversation_id, archived)
 }
 
 #[tauri::command]
@@ -298,7 +320,7 @@ fn create_codex_conversation(
     state.codex_terminal.create_conversation(&task_id, title)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn rename_codex_conversation(
     task_id: String,
     conversation_id: String,
@@ -678,6 +700,9 @@ pub fn run() {
             resize_codex_terminal,
             stop_codex_terminal,
             list_codex_conversations,
+            read_terminal_clipboard,
+            get_codex_project_workspace,
+            set_codex_conversation_archived,
             create_codex_conversation,
             rename_codex_conversation,
             get_codex_workflow,

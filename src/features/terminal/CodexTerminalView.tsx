@@ -4,6 +4,9 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Terminal as XTerm } from "@xterm/xterm";
 import {
   ArrowDown,
+  Archive,
+  ArchiveRestore,
+  FolderPlus,
   Check,
   CirclePlus,
   Pencil,
@@ -26,6 +29,8 @@ import type {
 } from "../../shared/types";
 import type { MessageKey } from "../../i18n";
 import { clampTerminalSize, hostHasTerminalLayout } from "./terminalSize";
+import { installTerminalClipboard, terminalInputQueue } from "./terminalClipboard";
+import { Modal } from "../../app/Modal";
 
 const MAX_HISTORY_CHARACTERS = 2 * 1024 * 1024;
 const HISTORY_TRUNCATED_MESSAGE =
@@ -57,6 +62,10 @@ export function DevelopmentTerminalView({
   const [editingTitle, setEditingTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [projectFolder, setProjectFolder] = useState<string>();
+  const [conversationBusy, setConversationBusy] = useState(false);
+  const refreshRevision = useRef(0);
   const onConversationChangeRef = useRef(onConversationChange);
   const onWorkflowChangeRef = useRef(onWorkflowChange);
 
@@ -69,35 +78,61 @@ export function DevelopmentTerminalView({
   }, [onWorkflowChange]);
 
   async function refreshConversations() {
+    const revision = ++refreshRevision.current;
     setLoading(true);
     try {
       let result = await terminalApi.listConversations(provider, taskId);
+      if (revision !== refreshRevision.current) return;
       if (result.length === 0 && availability?.available) {
         result = [await terminalApi.createConversation(provider, taskId)];
       }
+      if (revision !== refreshRevision.current) return;
       setConversations(result);
+      const active = result.filter(item => !item.archived);
       setSelectedId((current) =>
-        result.some((conversation) => conversation.id === current)
+        active.some((conversation) => conversation.id === current)
           ? current
-          : result[0]?.id ?? "",
+          : active[0]?.id ?? "",
       );
       setOpenedIds((current) => [
         ...current.filter((id) =>
-          result.some((conversation) => conversation.id === id),
+          active.some((conversation) => conversation.id === id),
         ),
-        ...(result[0] && !current.includes(result[0].id) ? [result[0].id] : []),
+        ...(active[0] && !current.includes(active[0].id) ? [active[0].id] : []),
       ]);
-      setError("");
+      setError(result.find(item => item.nativeSyncError)?.nativeSyncError ?? "");
     } catch (value) {
       setError(errorMessage(value));
     } finally {
-      setLoading(false);
+      if (revision === refreshRevision.current) setLoading(false);
     }
   }
 
   useEffect(() => {
+    setShowArchived(false);
+    setProjectFolder(undefined);
     void refreshConversations();
+    return () => { refreshRevision.current++; };
   }, [provider, taskId, availability?.available]);
+
+  useEffect(() => {
+    const refresh = () => { if (visible && provider === "codex" && !conversationBusy) void refreshConversations(); };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [visible, provider, taskId, conversationBusy]);
+
+  async function setArchived(conversation: CodexConversation) {
+    setConversationBusy(true); refreshRevision.current++;
+    try {
+      const updated = await terminalApi.setArchived(taskId, conversation.id, !conversation.archived);
+      setConversations(current => current.map(item => item.id === updated.id ? updated : item));
+      setOpenedIds(current => current.filter(id => id !== updated.id));
+      if (selectedId === updated.id) setSelectedId("");
+      if (!updated.archived) setShowArchived(false);
+      setError("");
+    } catch (value) { setError(errorMessage(value)); }
+    finally { setConversationBusy(false); setLoading(false); }
+  }
 
   useEffect(() => {
     const conversation = conversations.find((item) => item.id === selectedId);
@@ -121,6 +156,7 @@ export function DevelopmentTerminalView({
     try {
       const conversation = await terminalApi.createConversation(provider, taskId);
       setConversations((current) => [conversation, ...current]);
+      setShowArchived(false);
       setSelectedId(conversation.id);
       setOpenedIds((current) => [...current, conversation.id]);
       setError("");
@@ -154,8 +190,9 @@ export function DevelopmentTerminalView({
     if (!window.confirm(t("deleteConversationConfirm"))) return;
     try {
       await terminalApi.deleteConversation(provider, taskId, conversation.id);
-      const remaining = conversations.filter((item) => item.id !== conversation.id);
-      setConversations(remaining);
+      const allRemaining = conversations.filter((item) => item.id !== conversation.id);
+      const remaining = allRemaining.filter(item => !item.archived);
+      setConversations(allRemaining);
       setOpenedIds((current) => current.filter((id) => id !== conversation.id));
       if (editingId === conversation.id) {
         setEditingId("");
@@ -213,13 +250,22 @@ export function DevelopmentTerminalView({
           <button
             className="icon-button"
             title={t("newConversation")}
+            disabled={conversationBusy}
             onClick={createConversation}
           >
             <CirclePlus size={16} />
           </button>
         </div>
+        {provider === "codex" && <div className="conversation-filter">
+          <button className="icon-button" title={t("codexProjectHelp")} onClick={() => {
+            void terminalApi.projectWorkspace(taskId).then(setProjectFolder).catch(value => setError(errorMessage(value)));
+          }}><FolderPlus size={14} /></button>
+          <button className="icon-button" title={t("refreshConversations")} disabled={conversationBusy || loading} onClick={() => void refreshConversations()}><RefreshCw size={14} /></button>
+          <button className="icon-button" title={t("showArchivedConversations")} aria-pressed={showArchived} onClick={() => setShowArchived(value => !value)}><Archive size={14} /></button>
+          <small>{t(showArchived ? "archivedConversations" : "activeConversations")}</small>
+        </div>}
         <div className="conversation-list">
-          {conversations.map((conversation) => (
+          {conversations.filter(item => Boolean(item.archived) === showArchived).map((conversation) => (
             <div
               className={`conversation-row ${
                 conversation.id === selectedId ? "selected" : ""
@@ -271,6 +317,7 @@ export function DevelopmentTerminalView({
                 <>
                   <button
                     className="conversation-select"
+                    disabled={conversation.archived || conversationBusy}
                     onClick={() => {
                       setSelectedId(conversation.id);
                       setOpenedIds((current) =>
@@ -284,9 +331,15 @@ export function DevelopmentTerminalView({
                     <small>{formatDate(conversation.updatedAt)}</small>
                   </button>
                   <div className="conversation-row-actions">
+                    {provider === "codex" && <button className="icon-button conversation-edit" disabled={conversationBusy}
+                      title={t(conversation.archived ? "restoreConversation" : "archiveConversation")}
+                      onClick={() => void setArchived(conversation)}>
+                      {conversation.archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
+                    </button>}
                     <button
                       className="icon-button conversation-edit"
                       title={t("renameConversation")}
+                      disabled={conversationBusy}
                       onClick={() => {
                         setEditingId(conversation.id);
                         setEditingTitle(conversation.title);
@@ -297,6 +350,7 @@ export function DevelopmentTerminalView({
                     <button
                       className="icon-button conversation-delete"
                       title={t("deleteConversation")}
+                      disabled={conversationBusy}
                       onClick={() => void deleteConversation(conversation)}
                     >
                       <Trash2 size={13} />
@@ -306,18 +360,27 @@ export function DevelopmentTerminalView({
               )}
             </div>
           ))}
-          {!loading && conversations.length === 0 && (
+          {!loading && conversations.filter(item => Boolean(item.archived) === showArchived).length === 0 && (
             <div className="empty-state">{t("noConversations")}</div>
           )}
           {loading && <div className="empty-state">{t("loading")}</div>}
         </div>
       </aside>
+      {projectFolder && <Modal title={t("codexProjectHelp")} onClose={() => setProjectFolder(undefined)}>
+        <div className="form-stack">
+          <p>{t("codexProjectInstructions")}</p>
+          <label className="field"><span>{t("codexProjectFolder")}</span>
+            <input readOnly value={projectFolder} autoFocus onFocus={event => event.currentTarget.select()} />
+          </label>
+          <small>{t("codexProjectCopyHint")}</small>
+        </div>
+      </Modal>}
       <div className="conversation-terminal-area">
         {openedIds.map((conversationId) => {
           const conversation = conversations.find(
             (item) => item.id === conversationId,
           );
-          if (!conversation) return null;
+          if (!conversation || conversation.archived) return null;
           return (
             <div
               className="terminal-session-panel"
@@ -556,11 +619,16 @@ function ConversationTerminal({
     const observer = new ResizeObserver(resize);
     observer.observe(hostRef.current);
 
-    const input = terminal.onData((data) => {
-      void terminalApi.write(provider, conversation.id, data).catch((value) => {
-        setError(errorMessage(value));
-      });
-    });
+    const sendInput = terminalInputQueue(
+      data => terminalApi.write(provider, conversation.id, data),
+      value => setError(errorMessage(value)),
+    );
+    const removeClipboard = installTerminalClipboard(hostRef.current!, terminal,
+      () => { void sendInput("\x16"); },
+      () => setError(t("clipboardUnavailable")),
+      terminalApi.readClipboard,
+    );
+    const input = terminal.onData(data => { void sendInput(data); });
     const terminalResize = terminal.onResize(({ cols, rows }) => {
       if (pendingStart) return;
       const size = clampTerminalSize(cols, rows);
@@ -608,6 +676,7 @@ function ConversationTerminal({
       window.cancelAnimationFrame(startFrame);
       observer.disconnect();
       input.dispose();
+      removeClipboard();
       terminalResize.dispose();
       terminalScroll.dispose();
       terminal.dispose();
