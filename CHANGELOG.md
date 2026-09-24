@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- 修复 Git 忽略规则误排除 `src/features/logs/` 与 `src-tauri/src/modules/logs/`，补齐日志页面和日志后端源码。
 - 修复运行日志真实数据仍可再次占满系统盘：每个结构化日志会话只保留最近 100,000 个 sequence 位置，消息、标识字段和原始 JSON 均设置持久化上限；托管实例 stdout/stderr 日志超过 64 MiB 时由进程监控器在线截断并写入标记，避免高频 Unity 输出同时无界增长 SQLite 与 `InstanceLogs`。
 - 修复任务工作流事件日志和 SQLite 存储异常膨胀：`workflow-events.jsonl` 改为不再嵌入完整快照的紧凑 revision 记录并限制为 8 MiB，下一次保存会自动压缩超限旧日志；数据库启动时截断已 checkpoint 的 WAL、限制保留 journal、对严重空洞旧库执行一次安全 vacuum 并启用增量回收；运行日志批次改为单事务提交，避免逐事件放大 WAL 写入。
 - Codex/Grok 任务终端不再在打开几十到上百 MB 的 `transcript.log` 时把完整文件同步灌入 WebView：后端只按 64 KiB 分片回放最近 256 KiB，实时会话重连时先完成快照回放再切换订阅者；前端输出历史限制为最近 2 MiB，避免高密度 ANSI 重绘导致历史显示中途卡住并连带阻塞键盘输入提交。
