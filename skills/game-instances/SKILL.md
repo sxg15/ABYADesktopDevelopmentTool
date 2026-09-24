@@ -17,7 +17,7 @@ and discovery belong to `game-archives`.
 `LaunchReportResult`, `WindowVisibilityMode`, and instance lifecycle commands.
 
 Launch profiles expose only typed choices. They generate user IDs, user names,
-reports, bootstrap log paths, per-instance Runtime MCP endpoints, and the
+reports, bootstrap log paths, per-instance CLI launch identity, and the
 selected LAN gateway endpoint. Canonical modes are `editor`, `offline`,
 `lan-host`, `lan-client`, and `igp-hosted`; legacy `normal`, `host`, and
 `clientOnly` values deserialize as compatibility aliases. Ordinary desktop
@@ -25,12 +25,7 @@ launch does not expose IGP secrets and rejects `igp-hosted` without an
 independently secured in-memory IGP context.
 
 Managed launches use production `--abya-launch-*` archive, level, report, and
-LAN parameters. They also pass the desktop WebSocket connection arguments and
-a random Runtime MCP port, 43-character URL-safe token, forced MCP autostart,
-and `--abya-mcp-auto-approve=true` so Internal MCP HighImpact tools skip the
-in-game confirmation dialog. The auto-approve flag is process-local and is not
-persisted into game settings. The token lives only in process memory and the
-child command line; persisted `sanitizedArgs` contains `[REDACTED]`.
+LAN parameters. They pass the desktop WebSocket connection arguments and --abya-cli-autostart=true. The child receives ABYA_CLI_DEVELOPMENT=1 in its process environment. The game generates the runtime endpoint and token; the desktop retains no runtime connection secret. Runtime commands resolve the live managed PID and verify the desktop launch identity.
 
 New launches default to `background`: the Unity Player remains windowed and
 rendering, while a Windows PID-scoped controller preserves each visible
@@ -55,7 +50,7 @@ exceeds 64 MiB, including while the child append handles remain open, so noisy
 Unity output cannot exhaust the system drive.
 
 External instances are created when a user-started game connects without a
-desktop instance ID. They have no task, process, or MCP control, but may
+desktop instance ID. They have no task, process, or CLI control, but may
 provide logs and capability-gated archive transfer. Finished managed instances
 and disconnected external history may be deleted; active processes and
 connected sources are protected. SQLite cascades associated structured log
@@ -67,13 +62,12 @@ archive parsing, identity allocation, or local multiplayer behavior.
 ## Dependencies
 
 Depends on foundation, task contracts, and the game-connections endpoint.
-Runtime MCP and log protocols remain outside this module.
+Runtime CLI and log protocols remain outside this module.
 
 ## Validation
 
-Test exact production launch and desktop-connection arguments, MCP auto-approve,
-token redaction,
-distinct Host/MCP ports, archive parsing, LAN client Host selection, launch
+Test exact production launch and desktop-connection arguments, CLI autostart and absence of legacy launch arguments,
+Host port allocation, archive parsing, LAN client Host selection, launch
 report bounds, wait timeouts, background launch defaults, legacy visible
 profile compatibility, PID-scoped off-screen/restore behavior, foreground
 preservation, hidden task-switching state, continued background rendering,
@@ -89,3 +83,5 @@ under the authoritative InstanceLogs directory.
 
 When changing launch options, instance data, process behavior, or validation,
 update this Skill in the same change.
+
+Rust test builds append an isolated --abya-data-root for real Player validation. Production builds do not change the game data root.

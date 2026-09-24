@@ -37,7 +37,7 @@ then payload. A session must advertise `archive-transfer-v1`; managed and
 external sessions may both use this capability.
 
 The LAN gateway intentionally has no authentication, encryption, pairing,
-token, or approval. Desktop MCP remains a separate authenticated loopback-only
+token, or approval. Desktop CLI remains a separate authenticated loopback-only
 server and must never be routed through this gateway.
 
 ## Dependencies

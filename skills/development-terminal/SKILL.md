@@ -64,3 +64,5 @@ command.
 
 When changing shared terminal UI, provider contracts, workflow schemas,
 sanitization, or persistence, update this Skill in the same change.
+
+Desktop semantic activity sources are desktopCli and desktopCliReport. Older source names remain displayable in existing journals. Runtime file artifacts are returned through CLI output and inspected by the selected provider.

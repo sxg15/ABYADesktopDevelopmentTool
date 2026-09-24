@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use windows_dpapi::{Scope, decrypt_data, encrypt_data};
 
 const SETTINGS_KEY: &str = "application";
-const TOKEN_ENTROPY: &[u8] = b"ABYA Desktop Development Tool MCP";
+const TOKEN_ENTROPY: &[u8] = b"ABYA Desktop Development Tool CLI";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,8 +15,9 @@ pub struct AppSettings {
     pub game_executable_path: String,
     pub workspace_root_path: String,
     pub locale: String,
-    pub desktop_mcp_port: u16,
-    pub desktop_mcp_token: String,
+    pub desktop_cli_port: u16,
+    #[serde(skip_serializing)]
+    pub desktop_cli_token: String,
     pub game_gateway_port: u16,
     pub preferred_adapter_id: String,
     pub lan_broadcast_enabled: bool,
@@ -32,9 +33,10 @@ struct StoredSettings {
     workspace_root_path: String,
     #[serde(default)]
     locale: String,
-    #[serde(default = "default_desktop_mcp_port")]
-    desktop_mcp_port: u16,
-    encrypted_desktop_mcp_token: String,
+    #[serde(default = "default_desktop_cli_port")]
+    desktop_cli_port: u16,
+    #[serde(default)]
+    encrypted_desktop_cli_token: String,
     #[serde(default = "default_game_gateway_port")]
     game_gateway_port: u16,
     #[serde(default)]
@@ -71,17 +73,22 @@ impl SettingsService {
             }
         })?;
         if let Some(stored) = stored {
-            let token = decrypt_token(&stored.encrypted_desktop_mcp_token)?;
+            let token = if stored.encrypted_desktop_cli_token.is_empty() {
+                generate_token()
+            } else {
+                decrypt_token(&stored.encrypted_desktop_cli_token)?
+            };
             let settings = AppSettings {
                 game_executable_path: stored.game_executable_path,
-                workspace_root_path: if stored.workspace_root_path.trim().is_empty() {
+                workspace_root_path: if stored.workspace_root_path.trim().is_empty()
+                    || super::AppPaths::legacy_workspace_root().is_some_and(|p| p == std::path::PathBuf::from(&stored.workspace_root_path)) {
                     self.default_workspace_root.to_string_lossy().into_owned()
                 } else {
                     stored.workspace_root_path
                 },
                 locale: stored.locale,
-                desktop_mcp_port: stored.desktop_mcp_port,
-                desktop_mcp_token: token,
+                desktop_cli_port: stored.desktop_cli_port,
+                desktop_cli_token: token,
                 game_gateway_port: stored.game_gateway_port,
                 preferred_adapter_id: stored.preferred_adapter_id,
                 lan_broadcast_enabled: stored.lan_broadcast_enabled,
@@ -98,8 +105,8 @@ impl SettingsService {
             game_executable_path: String::new(),
             workspace_root_path: self.default_workspace_root.to_string_lossy().into_owned(),
             locale: String::new(),
-            desktop_mcp_port: default_desktop_mcp_port(),
-            desktop_mcp_token: generate_token(),
+            desktop_cli_port: default_desktop_cli_port(),
+            desktop_cli_token: generate_token(),
             game_gateway_port: default_game_gateway_port(),
             preferred_adapter_id: String::new(),
             lan_broadcast_enabled: true,
@@ -110,9 +117,9 @@ impl SettingsService {
     }
 
     pub fn save(&self, settings: &AppSettings) -> AppResult<()> {
-        if settings.desktop_mcp_port < 1024 {
+        if settings.desktop_cli_port < 1024 {
             return Err(AppError::validation(
-                "Desktop MCP port must be between 1024 and 65535.",
+                "Desktop CLI port must be between 1024 and 65535.",
             ));
         }
         if settings.game_gateway_port < 1024 {
@@ -120,9 +127,9 @@ impl SettingsService {
                 "Game gateway port must be between 1024 and 65535.",
             ));
         }
-        if settings.desktop_mcp_port == settings.game_gateway_port {
+        if settings.desktop_cli_port == settings.game_gateway_port {
             return Err(AppError::validation(
-                "Desktop MCP and the game gateway must use different ports.",
+                "Desktop CLI and the game gateway must use different ports.",
             ));
         }
         let workspace_root = if settings.workspace_root_path.trim().is_empty() {
@@ -138,8 +145,8 @@ impl SettingsService {
             game_executable_path: settings.game_executable_path.trim().to_string(),
             workspace_root_path: workspace_root.to_string_lossy().into_owned(),
             locale: settings.locale.trim().to_string(),
-            desktop_mcp_port: settings.desktop_mcp_port,
-            encrypted_desktop_mcp_token: encrypt_token(&settings.desktop_mcp_token)?,
+            desktop_cli_port: settings.desktop_cli_port,
+            encrypted_desktop_cli_token: encrypt_token(&settings.desktop_cli_token)?,
             game_gateway_port: settings.game_gateway_port,
             preferred_adapter_id: settings.preferred_adapter_id.trim().to_string(),
             lan_broadcast_enabled: settings.lan_broadcast_enabled,
@@ -183,13 +190,13 @@ impl SettingsService {
 
     pub fn regenerate_token(&self) -> AppResult<AppSettings> {
         let mut settings = self.get()?;
-        settings.desktop_mcp_token = generate_token();
+        settings.desktop_cli_token = generate_token();
         self.save(&settings)?;
         Ok(settings)
     }
 }
 
-fn default_desktop_mcp_port() -> u16 {
+fn default_desktop_cli_port() -> u16 {
     47600
 }
 
@@ -209,13 +216,13 @@ fn generate_token() -> String {
         .collect()
 }
 
-fn encrypt_token(token: &str) -> AppResult<String> {
+pub fn encrypt_token(token: &str) -> AppResult<String> {
     let encrypted = encrypt_data(token.as_bytes(), Scope::User, Some(TOKEN_ENTROPY))
         .map_err(AppError::internal)?;
     Ok(STANDARD.encode(encrypted))
 }
 
-fn decrypt_token(encoded: &str) -> AppResult<String> {
+pub fn decrypt_token(encoded: &str) -> AppResult<String> {
     let encrypted = STANDARD.decode(encoded).map_err(AppError::internal)?;
     let decrypted =
         decrypt_data(&encrypted, Scope::User, Some(TOKEN_ENTROPY)).map_err(AppError::internal)?;

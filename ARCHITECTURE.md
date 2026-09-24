@@ -14,7 +14,7 @@ service interfaces and serializable DTOs.
 
 SQLite owns durable tasks, instance history, settings, log sessions, log
 events, and archive transfer records. Live process handles, Windows Job
-Objects, WebSocket sessions, Runtime MCP HTTP sessions, active transfer
+Objects, WebSocket sessions, CLI operation cancellation state, active transfer
 cancellation channels, temporary ZIP packages, and open network connections
 remain in memory or disposable application data.
 
@@ -52,19 +52,13 @@ creates or resumes UUID sessions, and incrementally maps the native ACP
 provider state remains in the user's normal `.codex` or `.grok` directory and
 is never copied into a task workspace.
 
-`desktop-mcp` binds an initialized MCP session to a provider plus one
-task-owned conversation and reports sanitized domain activities through that
-provider's public terminal service. Subsequent desktop tool calls are recorded
-as start and completion/failure activities for the binding. It does not own
-provider processes, native sessions, plans, or workflow persistence. Its
-Settings surface provides provider-correct copy-ready configuration, including
-Codex `http_headers` and Grok `headers` TOML authentication fields.
+`desktop-cli` exposes an authenticated non-MCP loopback command endpoint. The abya-desktop executable calls it using a DPAPI-protected current-user descriptor. Each command validates provider/task/conversation ownership, delegates to the existing services and records sanitized activities. Runtime operations start the bundled Abya CLI with the managed PID and launch identity. The CLI calls the game capability host directly. No legacy protocol adapter or fallback exists.
 
 `game-connections` is the only module that binds the LAN gateway, broadcasts
 discovery datagrams, owns WebSocket sessions, and correlates archive transfer
 messages and frames. It emits typed connection and log events through an
 application coordinator. It does not persist instances or logs and never
-exposes the loopback-only desktop or Runtime MCP servers.
+exposes the loopback-only desktop or runtime CLI endpoints.
 
 `game-archives` is the sole owner of `Main.PBArc` discovery and complete-folder
 validation. `archive-transfer` consumes immutable archive snapshots and the

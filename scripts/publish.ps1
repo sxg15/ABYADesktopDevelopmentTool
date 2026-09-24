@@ -33,6 +33,14 @@ foreach ($directoryName in $llmDirectories) {
 npm run check
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+cargo test --manifest-path src-tauri/Cargo.toml
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+cargo build --manifest-path src-tauri/Cargo.toml --release --bin abya-desktop
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 npm run tauri build -- --no-bundle
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -42,6 +50,16 @@ if (-not (Test-Path -LiteralPath $target)) {
 
 $destination = Join-Path $publish "ABYA Desktop Development Tool.exe"
 Copy-Item -LiteralPath $target -Destination $destination -Force
+Copy-Item -LiteralPath (Join-Path $root "src-tauri/target/release/abya-desktop.exe") -Destination $publish -Force
+$runtime = Join-Path $publish "runtime"
+New-Item -ItemType Directory -Path $runtime -Force | Out-Null
+$nodePath = (Get-Command node.exe -ErrorAction Stop).Source
+$nodeVersion = & $nodePath --version
+if ([int]($nodeVersion.TrimStart('v').Split('.')[0]) -lt 20) { throw "Node 20+ is required" }
+Copy-Item -LiteralPath $nodePath -Destination (Join-Path $runtime "node.exe") -Force
+$toolsPath = Join-Path $publish "tools"
+New-Item -ItemType Directory -Path $toolsPath -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $root "tools/abya") -Destination $toolsPath -Recurse -Force
 
 foreach ($directoryName in $llmDirectories) {
     $llmSource = Join-Path $root $directoryName
@@ -71,12 +89,23 @@ try {
 finally {
     $stream.Dispose()
 }
+$cliStream = [IO.File]::OpenRead((Join-Path $publish "abya-desktop.exe"))
+try {
+    $cliAlgorithm = [Security.Cryptography.SHA256]::Create()
+    try { $cliHash = [BitConverter]::ToString($cliAlgorithm.ComputeHash($cliStream)).Replace("-", "") }
+    finally { $cliAlgorithm.Dispose() }
+} finally { $cliStream.Dispose() }
 $manifest = [ordered]@{
     product = "ABYA Desktop Development Tool"
     version = "0.1.0"
     builtAtUtc = [DateTime]::UtcNow.ToString("O")
     executable = [IO.Path]::GetFileName($destination)
     sha256 = $hash
+    cliExecutable = "abya-desktop.exe"
+    cliSha256 = $cliHash
+    runtimeCliVersion = "0.2.0"
+    cliProtocolVersion = 1
+    nodeVersion = $nodeVersion
 }
 $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $publish "build-manifest.json") -Encoding utf8
 

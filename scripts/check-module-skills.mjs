@@ -76,6 +76,7 @@ try {
     .split(/\r?\n/)
     .filter(Boolean)
     .map((value) => value.replaceAll("\\", "/"));
+  changed.push(...execFileSync("git", ["ls-files", "--others", "--exclude-standard"], { cwd: root, encoding: "utf8" }).split(/\r?\n/).filter(Boolean));
   for (const module of registry.modules) {
     const productionChanged = changed.some((file) =>
       module.paths.some((prefix) => file.startsWith(prefix)),

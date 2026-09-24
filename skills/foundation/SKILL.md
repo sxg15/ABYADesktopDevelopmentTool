@@ -31,8 +31,7 @@ visibility modes used by Tauri commands and React features. Business rules and
 Windows HWND control remain owned by `game-instances`.
 
 Durable data lives below
-`%LOCALAPPDATA%\ABYA Desktop Development Tool\Data`. Desktop MCP secrets are
-encrypted for the current Windows user with DPAPI. The versioned runtime-table
+`%LOCALAPPDATA%\ABYA Desktop Development Tool\Data`. Desktop CLI secrets are encrypted for the current Windows user with DPAPI. Legacy settings are read without reusing the old token, then saved in the new schema. Public settings never serialize the CLI token. cli_environment publishes an encrypted connection descriptor and resolves the bundled CLI/Node paths. The versioned runtime-table
 migration preserves existing task, instance, log-session, and event IDs while
 generalizing instances into managed and external origins with separate process
 and connection states. `AppPaths.archive_transfers_dir` stores temporary

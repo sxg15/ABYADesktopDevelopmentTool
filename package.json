@@ -8,11 +8,12 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "vitest run",
+    "test": "vitest run src && node --test tools/abya/test/cli.test.mjs tools/abya/test/desktop-contract.test.mjs",
     "check:skills": "node scripts/check-module-skills.mjs && node --test scripts/import-task-template.check.mjs",
     "check:changelog": "node scripts/check-changelog.mjs",
     "check": "npm run check:skills && npm run check:changelog && npm run test && npm run build",
-    "build:portable": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish.ps1"
+    "build:portable": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish.ps1",
+    "build:cli": "cargo build --manifest-path src-tauri/Cargo.toml --bin abya-desktop"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

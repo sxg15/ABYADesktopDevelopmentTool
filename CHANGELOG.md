@@ -1,3 +1,16 @@
+# Codex 后台版本与任务环境修复
+
+- CLI 更新后不再让新终端继续复用旧 app-server；同时识别退出的后台进程。
+- 保留模型选择、原生会话与历史；其他活动终端不会被自动中断。
+- 新建和恢复后台会话时按会话注入五个 ABYA 环境变量，避免远程工具执行环境缺少 CLI 和任务身份。
+
+# 纯 CLI 开发管线（开发中）
+
+- 保留现有桌面应用，新增 abya-desktop 命令入口并移除桌面协议适配器。
+- 游戏操作改用随包 Abya CLI，加入托管实例身份、稳定会话、取消和图片文件输出。
+- 更新双 provider 工作流、设置界面和发布依赖。
+- Unity/真实 Player 的完整验收结果见 docs/CLI_MIGRATION_VALIDATION.md。
+
 # Changelog
 
 - Run storage repair on a background thread so large legacy databases do not block the desktop UI.

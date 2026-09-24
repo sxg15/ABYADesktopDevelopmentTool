@@ -26,7 +26,7 @@ or trigger event expresses the same behavior.
 1. Call `editor_gameplay_architecture_snapshot` after the target archive and
    level are ready.
 2. Create `artifacts/gameplay-architecture.v1.json` from the bundled template.
-   Use only exact targets and event IDs returned by Runtime MCP.
+   Use only exact targets and event IDs returned by Runtime CLI.
 3. Call `editor_gameplay_architecture_validate` with the complete JSON object.
    Errors block implementation. Warnings require correction or an exception
    containing `ruleCode`, exact `targetKey`, reason, and evidence.

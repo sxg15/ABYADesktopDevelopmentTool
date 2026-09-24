@@ -10,7 +10,7 @@ import type {
   CodexTerminalEvent,
   CodexTerminalState,
   CodexWorkflowSnapshot,
-  DesktopMcpState,
+  DesktopCliState,
   DevelopmentTask,
   GameConnectionState,
   GameInstance,
@@ -30,6 +30,7 @@ import type {
 } from "./types";
 
 export const api = {
+  readRuntimeArtifact: (taskId: string, path: string) => invoke<string>("read_runtime_artifact", { taskId, path }),
   paths: () => invoke<AppPaths>("get_app_paths"),
   settings: () => invoke<AppSettings>("get_settings"),
   updateSettings: (input: {
@@ -44,9 +45,9 @@ export const api = {
       input,
     }),
   regenerateDesktopToken: () =>
-    invoke<AppSettings>("regenerate_desktop_mcp_token"),
-  desktopMcpState: () => invoke<DesktopMcpState>("get_desktop_mcp_state"),
-  restartDesktopMcp: () => invoke<DesktopMcpState>("restart_desktop_mcp"),
+    invoke<AppSettings>("regenerate_desktop_cli_token"),
+  desktopCliState: () => invoke<DesktopCliState>("get_desktop_cli_state"),
+  restartDesktopCli: () => invoke<DesktopCliState>("restart_desktop_cli"),
   listLanInterfaces: () => invoke<LanInterface[]>("list_lan_interfaces"),
   gameConnectionState: () =>
     invoke<GameConnectionState>("get_game_connection_state"),

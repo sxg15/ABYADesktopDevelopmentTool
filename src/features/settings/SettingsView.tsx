@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  Copy,
-  Eye,
-  EyeOff,
   FileSearch,
   FolderOpen,
   KeyRound,
@@ -16,16 +13,11 @@ import { api, errorMessage } from "../../shared/api";
 import type {
   AppPaths,
   AppSettings,
-  DesktopMcpState,
+  DesktopCliState,
   GameConnectionState,
   LanInterface,
 } from "../../shared/types";
 import type { Locale, MessageKey } from "../../i18n";
-import {
-  MCP_CLIENT_PRESETS,
-  buildMcpClientConfig,
-  type McpClientPresetId,
-} from "./mcpConfigTemplates";
 
 export function SettingsView({
   settings,
@@ -44,14 +36,12 @@ export function SettingsView({
   const [workspaceRoot, setWorkspaceRoot] = useState("");
   const [selectedLocale, setSelectedLocale] = useState<Locale>(locale);
   const [paths, setPaths] = useState<AppPaths>();
-  const [mcp, setMcp] = useState<DesktopMcpState>();
+  const [cli, setCli] = useState<DesktopCliState>();
   const [gateway, setGateway] = useState<GameConnectionState>();
   const [interfaces, setInterfaces] = useState<LanInterface[]>([]);
   const [gatewayPort, setGatewayPort] = useState(47610);
   const [preferredAdapterId, setPreferredAdapterId] = useState("");
   const [broadcastEnabled, setBroadcastEnabled] = useState(true);
-  const [showToken, setShowToken] = useState(false);
-  const [mcpClient, setMcpClient] = useState<McpClientPresetId>("codex");
   const [repairing, setRepairing] = useState(false);
 
   useEffect(() => {
@@ -71,7 +61,7 @@ export function SettingsView({
 
   async function refreshState() {
     try {
-      setMcp(await api.desktopMcpState());
+      setCli(await api.desktopCliState());
       setGateway(await api.gameConnectionState());
     } catch (error) {
       notify(errorMessage(error), true);
@@ -124,7 +114,7 @@ export function SettingsView({
 
   async function restart() {
     try {
-      setMcp(await api.restartDesktopMcp());
+      setCli(await api.restartDesktopCli());
     } catch (error) {
       notify(errorMessage(error), true);
     }
@@ -146,28 +136,6 @@ export function SettingsView({
       notify(`${t("storageRepairDone")} ${Math.round((report.database.databaseBytesBefore - report.database.databaseBytesAfter) / 1024 / 1024)} MB`);
     } catch (error) { notify(errorMessage(error), true); } finally { setRepairing(false); }
   }
-
-  async function copyMcpConfig() {
-    try {
-      await navigator.clipboard.writeText(mcpConfig);
-      notify(t("mcpConfigCopied"));
-    } catch (error) {
-      notify(errorMessage(error), true);
-    }
-  }
-
-  const mcpEndpoint =
-    mcp?.endpoint ??
-    `http://127.0.0.1:${settings?.desktopMcpPort ?? 47600}/mcp`;
-  const mcpToken = settings?.desktopMcpToken ?? "";
-  const selectedMcpClient =
-    MCP_CLIENT_PRESETS.find((preset) => preset.id === mcpClient) ??
-    MCP_CLIENT_PRESETS[0];
-  const mcpConfig = buildMcpClientConfig(
-    selectedMcpClient.id,
-    mcpEndpoint,
-    mcpToken || "<desktop-mcp-token>",
-  );
 
   return (
     <div className="workspace settings-workspace">
@@ -308,81 +276,16 @@ export function SettingsView({
 
       <section className="settings-section">
         <div className="settings-section-header">
-          <div>
-            <h2>{t("desktopMcp")}</h2>
-            <p>{mcpEndpoint}</p>
-          </div>
-          <span className={mcp?.running ? "status-ok" : "status-muted"}>
-            {mcp?.running ? t("running") : t("stopped")}
-          </span>
+          <h2>{t("desktopCli")}</h2>
+          <span className={cli?.running ? "status-ok" : "status-muted"}>{cli?.running ? t("running") : t("stopped")}</span>
         </div>
-        <div className="token-row">
-          <KeyRound size={17} />
-          <code>
-            {showToken
-              ? settings?.desktopMcpToken
-              : "•".repeat(Math.min(settings?.desktopMcpToken.length ?? 24, 32))}
-          </code>
-          <button
-            className="icon-button"
-            onClick={() => setShowToken((value) => !value)}
-            title={showToken ? t("hideToken") : t("showToken")}
-          >
-            {showToken ? <EyeOff size={17} /> : <Eye size={17} />}
-          </button>
-        </div>
+        <p>{t("cliConnectionHelp")}</p>
+        <code>{cli?.endpoint}</code>
         <div className="settings-actions">
-          <button className="secondary-button" onClick={restart}>
-            <RefreshCw size={16} />
-            {t("restart")}
-          </button>
-          <button className="secondary-button" onClick={regenerate}>
-            <KeyRound size={16} />
-            {t("regenerateToken")}
-          </button>
+          <button className="secondary-button" onClick={restart}><RefreshCw size={16} />{t("restart")}</button>
+          <button className="secondary-button" onClick={regenerate}><KeyRound size={16} />{t("resetCliConnection")}</button>
         </div>
-        {mcp?.lastError && <div className="inline-error">{mcp.lastError}</div>}
-      </section>
-
-      <section className="settings-section">
-        <div className="mcp-config-header">
-          <div>
-            <h2>{t("mcpConfigTemplate")}</h2>
-            <code>{selectedMcpClient.configPath}</code>
-          </div>
-          <label className="mcp-client-select">
-            <span>{t("mcpClient")}</span>
-            <select
-              value={mcpClient}
-              onChange={(event) =>
-                setMcpClient(event.target.value as McpClientPresetId)
-              }
-            >
-              {MCP_CLIENT_PRESETS.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="mcp-config-control">
-          <textarea
-            value={mcpConfig}
-            readOnly
-            spellCheck={false}
-            aria-label={t("mcpConfigTemplate")}
-          />
-          <button
-            className="secondary-button"
-            onClick={copyMcpConfig}
-            disabled={!mcpToken}
-          >
-            <Copy size={16} />
-            {t("copyConfig")}
-          </button>
-        </div>
-        <p className="mcp-token-notice">{t("mcpConfigContainsToken")}</p>
+        {cli?.lastError && <div className="inline-error">{cli.lastError}</div>}
       </section>
     </div>
   );

@@ -1,42 +1,29 @@
-# Game Runtime Bridge Skill
+# Game Runtime CLI Bridge
 
 ## Purpose
 
-Connect to each managed game instance's authenticated local Runtime MCP HTTP
-endpoint.
+Invoke the bundled Abya CLI for desktop-owned game instances.
 
 ## Ownership
 
-Owns MCP initialize/session state, non-secret connection state, game tool
-discovery, bounded long-running tool calls, and complete MCP content results.
+Own fixed Node/script execution, PID mapping, stable conversation sessions, bounded IO, cancellation and screenshot artifacts.
 
 ## Public Contracts
 
-Runtime connection state, wait-for-ready behavior, game tool discovery, and
-typed MCP call results.
-
-The bridge obtains the live endpoint and token from the game-instances module,
-initializes Streamable HTTP with Bearer authentication, caches only the
-non-secret MCP session ID/server information, and reinitializes once when a
-session expires. Tool calls may run for up to ten minutes. Returned `content`
-blocks remain intact, including native `text` and `image` blocks. External or
-stopped instances are rejected.
-
-Read `docs/ABYA_GAME_RUNTIME_CONTRACT.md` before changing game MCP methods,
-headers, protocol negotiation, or log server discovery.
+RuntimeBridgeService reads live managed PID from InstanceService and the task workspace from TaskService. Each CLI invocation passes --instance, --json and an operation-owned output directory. ABYA_CLI_DESKTOP_INSTANCE_ID must match the host status. No endpoints or tokens are cached by this module. JSON arguments travel through stdin without shell interpretation. Images are written under artifacts/runtime/<instance>/<operation>. Output is capped at 16 MiB, stderr is drained with a 64 KiB cap. Writes are never automatically retried. Cancellation sends the game cancel request before terminating a lingering child and returns outcome_unknown. External and stopped instances are rejected. Readiness reports CLI connectivity; the task Skill must additionally verify archive/level and required capability availability.
 
 ## Dependencies
 
-Depends on foundation and game instance identity/ephemeral endpoint access. It
-must not own UI, durable secrets, processes, or log storage.
+Foundation, game-instances and development-tasks.
 
 ## Validation
 
-Use an authenticated fake HTTP Runtime MCP to test initialize, session headers,
-`tools/list`, text/image result preservation, timeouts, session refresh, and
-stopped/external-instance rejection.
+CLI process lifecycle, fake CLI host, output/identity rejection, multiline input, Unicode paths, screenshots, session isolation, cancellation and stopped-instance rejection.
 
 ## LLM Maintenance Rule
 
-When changing game MCP protocol behavior, tool names, retries, or result
-contracts, update this Skill in the same change.
+Update this Skill, command documentation and tests whenever these contracts change.
+
+read_artifact canonicalizes both the task runtime artifact root and requested file, rejects path escape and non-PNG/JPEG files, and bounds images to 16 MiB before returning a data URL.
+
+The shared process budget allows eight concurrent runtime CLI calls. Stopping a terminal requests cancellation for its active session. Release builds require bundled CLI and Node files and never fall back to the developer source tree.

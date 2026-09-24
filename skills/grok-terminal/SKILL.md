@@ -48,15 +48,14 @@ usable.
 
 Every task workspace contains the bundled Grok-native
 `.grok/skills/abya-game-development-task/SKILL.md` and its references. Grok
-discovers it from the task working directory. The Skill explicitly binds
-Desktop MCP activity with `provider: "grok"` and requires native execution-plan
+discovers it from the task working directory. The Skill explicitly receives CLI activity with provider grok and requires native execution-plan
 updates without forcing formal read-only plan mode.
 
 ## Dependencies
 
 Depends on foundation, development tasks, and the shared development-terminal
 workflow model. It does not depend on Codex, game instances, logs, Runtime MCP,
-or Desktop MCP.
+or Desktop CLI.
 
 ## Validation
 
@@ -73,3 +72,5 @@ process-tree cleanup, and application shutdown.
 
 When changing Grok discovery, launch flags, sessions, ACP mapping, PTY
 behavior, cleanup, or tests, update this Skill in the same change.
+
+ABYA_DESKTOP_CLI carries the absolute desktop CLI executable path. Commands automatically include task, conversation and provider context. ABYA operations use CLI exclusively; native provider transport remains unchanged.

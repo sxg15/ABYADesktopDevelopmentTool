@@ -1,15 +1,22 @@
-# Desktop MCP Tools
+# 桌面 CLI 命令契约
 
-The desktop MCP server exposes local application workflows to an LLM through
-authenticated Streamable HTTP at `POST /mcp`. The listener is loopback-only,
-requires the desktop Bearer token, and never returns desktop or generated game
-MCP tokens.
+桌面应用继续拥有所有业务状态。abya-desktop 通过认证的本机 /api/v1/command 调用应用服务，
+由桌面使用现有 abya CLI 操作游戏。没有旧协议适配器或自动降级。
 
-All `tools/call` arguments are JSON objects. Most successful and failed calls
-return one JSON text content block; failed calls also set `isError` to `true`.
-`game_runtime_call_tool` preserves the target Runtime MCP's complete content
-array, including images, and propagates its `isError` value. Unknown fields are
-rejected.
+使用 ABYA_DESKTOP_CLI 环境变量指定的程序；先运行 doctor --json 和 capabilities --json。
+命令组与 ID 映射见 .codex/skills/abya-game-development-task/references/cli-commands.md。
+所有命令接受 --input-file 文件或 -，--json；可用 --request-id 指定 UUID 以关联取消操作。
+任务/会话/provider 由环境变量传入并由服务验证，不作为认证凭据。
+启动任务列表和创建可无会话上下文；其余业务命令需要有效会话。
+Windows 用户凭据以 DPAPI 密文登记，不输出到终端或公开设置。
+
+stdout 为单个 JSON 对象，schemaVersion=1，包含 requestId、success、data 和完整 content。
+返回码：0 成功，2 参数/校验，3 未找到，4 认证，5 能力不可用，6 执行失败，7 结果不确定。
+没有自动写入重试。Ctrl+C 尝试发送取消，退出码 7 不能证明操作已回滚。
+截图保存在 artifacts/runtime/<instance>/<operation>；模型必须打开路径进行视觉验收。
+
+runtime describe/search 分别包装 capability_describe/capability_search；参数为 instanceId 加 capabilityId/query。
+runtime cancel 参数为 instanceId 与 operationId。取消仅限同一任务、会话及实例的活动操作。
 
 ## Desktop
 
@@ -52,9 +59,9 @@ Changes task lifecycle status. Reversible write.
 Input: required `taskId` and `conversationId`; optional `provider` (`codex` or
 `grok`, default `codex`).
 
-Requires an initialized MCP session and validates that the provider-owned
-conversation belongs to the task. The binding is held only for that MCP
-session. Subsequent Desktop MCP tool calls are automatically recorded in the
+Requires an initialized CLI session and validates that the provider-owned
+conversation belongs to the task. The binding is held only for that CLI
+session. Subsequent Desktop CLI tool calls are automatically recorded in the
 conversation workflow as started and completed/failed activities with
 sanitized input arguments. Reversible in-memory orchestration write.
 
@@ -63,17 +70,17 @@ sanitized input arguments. Reversible in-memory orchestration write.
 Input:
 
 - Required `status`: `started`, `progress`, `completed`, or `failed`.
-- Required `kind`: `analysis`, `command`, `fileChange`, `mcp`,
+- Required `kind`: `analysis`, `command`, `fileChange`, `cli`,
   `gameInstance`, `test`, `web`, `agent`, or `other`.
 - Required `summary`: 1 through 240 characters.
 - Optional `detail`: at most 2000 characters.
 
-Requires `development_conversation_bind` in the same MCP session. Records a
+Requires `development_conversation_bind` in the same CLI session. Records a
 sanitized semantic milestone in the active conversation turn. When no native
 turn exists, reporting creates a local reported turn. Reusing the same summary
 updates the matching active reported milestone instead of appending a new
 lifecycle row. Do not send credentials, tokens, raw command output, patch
-bodies, or downstream MCP results. Reversible workflow-metadata write.
+bodies, or downstream CLI results. Reversible workflow-metadata write.
 
 ## Game Instances
 
@@ -163,7 +170,7 @@ Input:
 
 Starts a managed process with production `--abya-launch-*` parameters, a
 selected LAN desktop-connection endpoint, an independent authenticated
-Runtime MCP endpoint, and `--abya-mcp-auto-approve=true` so HighImpact game
+Runtime CLI endpoint, and `--abya-cli-auto-approve=true` so HighImpact game
 tools do not wait for the in-game confirmation dialog. Omitting `executablePath` uses desktop settings. Editor,
 Offline, and LAN Host require an archive. LAN Client requires a live LAN Host
 from the same task and inherits its archive and Host port. `igp-hosted` is
@@ -196,12 +203,12 @@ through 600000, default 30000.
 
 Waits for the persisted process state without client polling. Read-only.
 
-### `game_instance_wait_for_mcp`
+### `game_instance_wait_for_cli`
 
 Input: required `instanceId`; optional `timeoutMs` from 100 through 600000,
 default 30000.
 
-Waits until the managed instance accepts authenticated Runtime MCP initialize
+Waits until the managed instance accepts authenticated Runtime CLI initialize
 and returns non-secret endpoint and server information. Read-only network
 operation.
 
@@ -212,41 +219,28 @@ Input: required `instanceId`.
 Reads the instance's production startup-report JSON. Missing reports are
 returned as `exists=false`; files larger than 1 MiB are rejected. Read-only.
 
-## Selected Game MCP
+## Selected Game CLI
 
-### `game_instance_mcp_get_state`
+### `game_runtime_get_state`
 
 Input: required `instanceId`.
 
-Checks the selected local HTTP Runtime MCP and returns non-secret endpoint,
+Checks the selected local HTTP Runtime CLI and returns non-secret endpoint,
 game, platform, capability, server, and availability metadata. Read-only.
 
 ### `game_runtime_list_tools`
 
 Input: required `instanceId`.
 
-Initializes or resumes the selected managed instance Runtime MCP and returns
-its current tool definitions. Read-only network operation.
+Lists the selected managed instance capability definitions through the bundled Abya CLI. Read-only operation.
 
 ### `game_runtime_call_tool`
 
 Input: required `instanceId` and `toolName`; optional object `arguments`.
 
-Calls the selected Runtime MCP tool. The target tool may mutate or destroy
+Calls the selected Runtime CLI tool. The target tool may mutate or destroy
 game/editor state. Call `game_runtime_list_tools` first and inspect its schema
-and annotations. Text and image content blocks are returned unchanged.
-
-### `game_instance_mcp_tools_list`
-
-Input: required `instanceId`.
-
-Deprecated compatibility alias for `game_runtime_list_tools`.
-
-### `game_instance_mcp_call`
-
-Input: required `instanceId` and `toolName`; optional object `arguments`.
-
-Deprecated compatibility alias for `game_runtime_call_tool`.
+and annotations. All text is preserved; images are saved to task artifact files and returned as absolute paths.
 
 ## Game Logs
 
@@ -285,42 +279,3 @@ Input: required `sessionId`; optional `severity`, `provider`, `eventName`,
 Returns newest persisted WebSocket log events first. `limit` defaults to 200
 and must be from 1 through 1000. Read-only.
 
-## Prioritized Backlog
-
-These names are design candidates and are not registered yet.
-
-### Next
-
-- `development_task_get`: return one task without scanning the full list.
-- `development_task_delete`: delete a task with explicit destructive metadata
-  and existing running-instance protection.
-- `game_instance_launch_host_and_clients`: atomically validate and launch one
-  Host plus a requested number of ClientOnly instances.
-- `game_log_tail`: wait for and return logs after a sequence number.
-- `game_log_get_context`: return events surrounding one sequence number.
-- `game_log_search_across_sessions`: search task or instance history without
-  manually enumerating sessions.
-- `game_instance_mcp_batch_call`: execute an ordered, bounded batch against one
-  game MCP with per-call results and stop-on-error control.
-- `desktop_get_state`: summarize active tasks, running instances, collectors,
-  and non-secret configuration readiness.
-
-### Observation And Maintenance
-
-- `game_archive_get` and `game_archive_validate_launch_selection`.
-- `game_instance_get_bootstrap_log`.
-- `game_instance_metrics_get` and `game_instance_restart`.
-- `game_log_snapshot`, `game_log_providers_list`, and
-  `development_task_summary`.
-- `game_instance_delete_history` and `game_log_session_delete`, both with
-  destructive annotations and active-state protection.
-
-### Later Or High Risk
-
-- Bulk stop or delete tools.
-- Automated Host and ClientOnly acceptance scenarios.
-- Persisted reusable launch profiles.
-- Multi-step LLM workflow execution with rollback and audit records.
-- Non-loopback desktop MCP binding.
-- Game/editor mutation wrappers that bypass inspection of the selected game's
-  own MCP tool schema and risk annotations.

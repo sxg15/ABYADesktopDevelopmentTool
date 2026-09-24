@@ -18,6 +18,7 @@ import {
   TestTube2,
   X,
 } from "lucide-react";
+import { RuntimeArtifactPreviews } from "./RuntimeArtifactPreviews";
 import type { MessageKey } from "../../i18n";
 import type {
   CodexActivity,
@@ -357,6 +358,7 @@ function WorkflowTimelineDrawer({
                         </div>
                         <time>{formatDate(activity.startedAt)}</time>
                         {activity.detail && <pre>{activity.detail}</pre>}
+                        <RuntimeArtifactPreviews taskId={workflow.taskId} detail={activity.detail} t={t} />
                       </div>
                     </div>
                   ))

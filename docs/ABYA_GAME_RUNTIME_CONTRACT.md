@@ -1,9 +1,6 @@
 # ABYA Game Runtime Contract
 
-This document records the desktop-side protocol implemented through September 1,
-2026. The Unity project at `F:\Unity\Projects\AbyaPB` was inspected to verify
-the production launch parser, Runtime MCP authentication/session behavior,
-startup reports, and desktop WebSocket contract.
+当前版本使用纯 CLI 开发入口。旧协议已退役；日志和存档传输继续使用原有 WebSocket。
 
 ## Launch Parser
 
@@ -33,10 +30,7 @@ Every desktop-managed instance receives:
 --abya-devtool-instance-id=<desktop-instance-id>
 --abya-devtool-protocol=1
 --abya-devtool-autoconnect=true
---abya-mcp-port=<per-instance-random-port>
---abya-mcp-token=<per-instance-random-url-safe-token>
---abya-mcp-autostart=true
---abya-mcp-auto-approve=true
+--abya-cli-autostart=true
 ```
 
 `lan-host` receives a generated Host port. `lan-client` selects a running Host
@@ -44,16 +38,9 @@ from the same task and inherits its archive and Host port. Per-instance
 identity overrides keep same-device participants distinct without combining
 production launch with the legacy `--abya-test-role`.
 
-`--abya-mcp-auto-approve=true` overrides the game Settings toggle for Internal
-MCP HighImpact confirmation and is not written into `Settings.PBConf`. Ordinary
-desktop launch always emits `true` so managed instances do not block on the
-in-game approval dialog. The game still accepts `false` as a process-local
-override; the desktop tool does not emit that value.
-
-The Runtime MCP token is passed only to the child process and retained in the
-desktop process's live instance registry. SQLite, launch reports, logs, tool
-definitions, instance details, and MCP results never contain it. Persisted
-arguments replace the value with `[REDACTED]`.
+桌面在托管游戏的进程环境中设置 ABYA_CLI_DEVELOPMENT=1。游戏确认桌面启动信号后，
+仅向 ExternalCli 开放冻结的桌面开发能力清单并执行其写入授权策略。内置 APA 保持原准入。
+游戏生成自己的回环端点及临时令牌，桌面不通过参数传递游戏令牌。
 
 ## Managed Window Lifecycle
 
@@ -65,7 +52,7 @@ outside the display area without calling `SW_HIDE`. Avoiding `SW_HIDE` is
 required because Unity D3D11 can stop presenting while a native Player window
 is hidden. The controller restores the latest non-game foreground window if
 Unity attempts to activate itself. This is not Unity `-batchmode -nographics`:
-Runtime MCP screenshots, Runtime UI, Custom UI, animation, particles, and
+Runtime CLI screenshots, Runtime UI, Custom UI, animation, particles, and
 visual validation remain available.
 
 `visibilityMode=visible` preserves the normal visible Player. A running
@@ -117,7 +104,7 @@ all private IPv4 adapters when enabled.
 
 This LAN protocol intentionally has no authentication, encryption, pairing,
 token, or approval. It must remain separate from the authenticated,
-loopback-only desktop MCP endpoint.
+loopback-only desktop CLI endpoint.
 
 ## Connection Lifecycle
 
@@ -139,7 +126,7 @@ The first game message must be `hello`:
 
 Supplying `instanceId` associates the connection with an existing managed
 instance. Omitting it creates or resumes an external source outside development
-tasks. External sources cannot receive process or Runtime MCP control, but may
+tasks. External sources cannot receive process or Runtime CLI control, but may
 provide logs and capability-gated archive transfer.
 
 The desktop replies with `welcome`, including its assigned connection and
@@ -200,26 +187,12 @@ after the `welcome.resumeAfterSequence` value. `logs_control` with
 External connections automatically create or resume log collection and remain
 queryable after disconnect.
 
-## Managed Runtime MCP
+## Managed Runtime CLI
 
-Every live managed process has an independent Runtime MCP endpoint:
-
-```text
-http://127.0.0.1:<generated-port>/mcp
-Authorization: Bearer <generated-token>
-```
-
-The desktop initializes MCP protocol `2025-11-25`, caches the non-secret
-`Mcp-Session-Id` and server information, and sends that session header on
-`tools/list` and `tools/call`. A 404 session response causes one reinitialize
-and retry. Readiness probes use bounded two-second connection attempts;
-ordinary tool listing is bounded to 30 seconds and long tool calls to ten
-minutes.
-
-Runtime MCP results preserve the complete MCP `content` array. In particular,
-`ui_capture_screenshot` metadata text and PNG image blocks are returned through
-desktop MCP without JSON-text conversion. Stopped and external instances have
-no desktop-managed Runtime MCP endpoint.
+运行时桥接通过固定的 Node 和随包 abya CLI 调用游戏。按托管 PID 发现实例，
+并核对 status.desktopInstanceId 与桌面 launch ID。命令共享会话身份，每次操作使用不同 UUID。
+输入经 stdin 传递，图片落盘到任务目录，结果保留全部内容。超时或取消返回结果不确定，
+不自动重试写入。目录可见性仍受调用方、Player 清单与场景上下文约束。
 
 ## Archive Transfer
 

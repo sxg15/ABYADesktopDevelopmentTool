@@ -112,6 +112,53 @@ pub struct TaskService {
 }
 
 impl TaskService {
+    /// Relocate only the former managed default. Keep the source as a recovery copy.
+    pub fn prepare_terminal_workspace(&self, task_id: &str) -> AppResult<DevelopmentTask> {
+        static MIGRATION: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _guard = MIGRATION.lock().map_err(|_| AppError::internal("Workspace migration lock failed."))?;
+        let mut task = self.get(task_id)?;
+        let source = PathBuf::from(&task.workspace_path);
+        let Some(legacy) = crate::foundation::AppPaths::legacy_workspace_root() else { return Ok(task); };
+        if source.parent() != Some(legacy.as_path()) { return Ok(task); }
+        if crate::foundation::cli_sessions::task_active(task_id) {
+            return Err(AppError::validation("Stop this task's terminals before repairing its legacy workspace."));
+        }
+        let user = std::env::var_os("USERPROFILE").ok_or_else(|| AppError::validation("USERPROFILE is unavailable."))?;
+        let root = PathBuf::from(user).join("ABYA Desktop Development ToolWorkspaces");
+        std::fs::create_dir_all(&root)?;
+        let destination = root.join(format!("{}-{}", slugify(&task.title), task.id));
+        if destination.exists() { return Err(AppError::validation("Workspace repair destination already exists; the original workspace was preserved.")); }
+        // Resolve boundaries before copying; never follow a task-directory junction.
+        let source = source.canonicalize()?;
+        if source.parent() != Some(legacy.canonicalize()?.as_path()) {
+            return Err(AppError::validation("Legacy workspace resolves outside its managed root."));
+        }
+        let staging = root.join(format!(".migration-{}", uuid::Uuid::new_v4()));
+        let mut pending = vec![(source, staging.clone())];
+        while let Some((from, to)) = pending.pop() {
+            std::fs::create_dir(&to)?;
+            for entry in std::fs::read_dir(from)? {
+                let entry = entry?;
+                use std::os::windows::fs::MetadataExt;
+                let metadata = std::fs::symlink_metadata(entry.path())?;
+                if metadata.file_attributes() & 0x400 != 0 {
+                    return Err(AppError::validation("Workspace contains a reparse point; automatic repair stopped and preserved the source."));
+                }
+                let target = to.join(entry.file_name());
+                if metadata.is_dir() { pending.push((entry.path(), target)); }
+                else { std::fs::copy(entry.path(), target)?; }
+            }
+        }
+        std::fs::rename(&staging, &destination)?;
+        let display = display_path(&destination);
+        self.database.with_connection(|connection| {
+            connection.execute("UPDATE development_tasks SET workspace_path=?2 WHERE id=?1 AND workspace_path=?3", rusqlite::params![task.id, display, task.workspace_path])?;
+            Ok(())
+        })?;
+        task.workspace_path = display;
+        Ok(task)
+    }
+
     pub fn new(database: Database, workspace_root: PathBuf) -> Self {
         Self {
             database,
@@ -685,7 +732,7 @@ mod tests {
                     .join("SKILL.md")
             )
             .unwrap()
-            .contains("provider: \"grok\"")
+            .contains("ABYA_DEVELOPMENT_PROVIDER")
         );
         let _ = std::fs::remove_dir_all(root);
     }

@@ -97,7 +97,7 @@ channel and PTY handles before process-tree termination so ConPTY output
 cannot block webview IPC. Windows `taskkill` waits at most two seconds
 before falling back to the PTY killer.
 
-Desktop MCP exposes list, create, update, and status operations by delegating to
+Desktop CLI exposes list, create, update, and status operations by delegating to
 `TaskService`. MCP status filtering is an orchestration concern and does not
 change task persistence rules.
 
@@ -122,3 +122,5 @@ refresh after instance deletion.
 
 When changing task fields, lifecycle rules, persistence, commands, or tests,
 update this Skill in the same change.
+
+Runtime image paths in completed CLI activity details are previewable in the existing workflow drawer. Image bytes are read only through a backend path check restricted to the selected task runtime artifact directory.

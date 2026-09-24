@@ -1,7 +1,5 @@
 use super::{ArchiveSelection, LaunchMode, LaunchProfile, WindowMode, WindowVisibilityMode};
 use crate::foundation::{AppError, AppPaths, AppResult};
-use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-use rand::RngCore;
 use std::net::TcpListener;
 use std::path::Path;
 
@@ -10,8 +8,6 @@ pub(crate) struct LaunchContract {
     pub sanitized_args: Vec<String>,
     pub host_port: Option<u16>,
     pub log_path: String,
-    pub mcp_endpoint: String,
-    pub mcp_token: String,
 }
 
 pub(crate) fn validate_executable(path: &str) -> AppResult<()> {
@@ -64,8 +60,6 @@ pub(crate) fn build_launch_contract(
         ),
         _ => None,
     };
-    let mcp_port = allocate_port_excluding(host_port)?;
-    let mcp_token = generate_mcp_token();
     let short_id = instance_id.chars().take(8).collect::<String>();
     let user_id = format!("abya-desktop-{short_id}");
     let user_name = format!(
@@ -94,10 +88,7 @@ pub(crate) fn build_launch_contract(
         format!("--abya-launch-mode={}", profile.mode.as_db()),
         format!("--abya-launch-report={report_path}"),
         format!("--abya-launch-exit-on-failure={}", profile.exit_on_failure),
-        format!("--abya-mcp-port={mcp_port}"),
-        format!("--abya-mcp-token={mcp_token}"),
-        "--abya-mcp-autostart=true".into(),
-        "--abya-mcp-auto-approve=true".into(),
+        "--abya-cli-autostart=true".into(),
         format!("--abya-devtool-endpoint={gateway_endpoint}"),
         format!("--abya-devtool-instance-id={instance_id}"),
         "--abya-devtool-protocol=1".into(),
@@ -116,23 +107,12 @@ pub(crate) fn build_launch_contract(
     if let Some(archive) = &profile.archive {
         append_archive_args(&mut args, archive);
     }
-    let sanitized_args = args
-        .iter()
-        .map(|argument| {
-            if argument.starts_with("--abya-mcp-token=") {
-                "--abya-mcp-token=[REDACTED]".to_string()
-            } else {
-                argument.clone()
-            }
-        })
-        .collect();
+    let sanitized_args = args.clone();
     Ok(LaunchContract {
         args,
         sanitized_args,
         host_port,
         log_path,
-        mcp_endpoint: format!("http://127.0.0.1:{mcp_port}/mcp"),
-        mcp_token,
     })
 }
 
@@ -182,26 +162,6 @@ fn append_archive_args(args: &mut Vec<String>, archive: &ArchiveSelection) {
 fn allocate_port() -> AppResult<u16> {
     let listener = TcpListener::bind(("127.0.0.1", 0))?;
     Ok(listener.local_addr()?.port())
-}
-
-fn allocate_port_excluding(excluded: Option<u16>) -> AppResult<u16> {
-    for _ in 0..20 {
-        let port = allocate_port()?;
-        if Some(port) != excluded {
-            return Ok(port);
-        }
-    }
-    Err(AppError::new(
-        "portAllocationFailed",
-        "The desktop tool could not allocate a distinct Runtime MCP port.",
-        "",
-    ))
-}
-
-fn generate_mcp_token() -> String {
-    let mut bytes = [0_u8; 32];
-    rand::rng().fill_bytes(&mut bytes);
-    URL_SAFE_NO_PAD.encode(bytes)
 }
 
 #[cfg(test)]
@@ -270,22 +230,9 @@ mod tests {
         assert!(joined.contains("--abya-launch-mode=offline"));
         assert!(joined.contains("--abya-launch-archive-guid=archive"));
         assert!(joined.contains("--abya-launch-level-guid=level"));
-        assert!(joined.contains("--abya-mcp-port="));
-        assert!(joined.contains("--abya-mcp-token="));
-        assert!(joined.contains("--abya-mcp-autostart=true"));
-        assert!(joined.contains("--abya-mcp-auto-approve=true"));
-        assert!(
-            !contract
-                .sanitized_args
-                .join(" ")
-                .contains(&contract.mcp_token)
-        );
-        assert!(
-            contract
-                .sanitized_args
-                .contains(&"--abya-mcp-token=[REDACTED]".into())
-        );
-        assert_eq!(contract.mcp_token.len(), 43);
+        assert!(joined.contains("--abya-cli-autostart=true"));
+        assert!(!joined.contains("--abya-mcp-"));
+
         let _ = std::fs::remove_dir_all(archive_root);
     }
 }

@@ -70,10 +70,7 @@ Destructive instance and log-session actions use explicit localized
 confirmation text and icon controls. Controls remain disabled while the target
 is running or collecting.
 
-Settings includes a localized MCP client preset selector, read-only
-configuration text area, configuration-path hint, and copy command. Client
-brand names and configuration syntax remain in the owning desktop-mcp feature;
-shell localization owns only generic labels and notifications.
+Settings includes desktop CLI connection status, restart and reset actions. It does not display credentials or legacy client configuration templates.
 
 Settings also exposes game gateway status, port, private IPv4 adapter
 selection, LAN broadcast enablement, advertised endpoints, connected count,

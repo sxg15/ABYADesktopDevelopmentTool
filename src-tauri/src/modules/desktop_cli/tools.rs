@@ -1,4 +1,4 @@
-use super::{DesktopMcpDependencies, registry};
+use super::{DesktopCliDependencies, registry};
 use crate::foundation::{AppError, AppResult};
 use crate::modules::archive_transfer::StartArchiveTransferInput;
 use crate::modules::codex_terminal::{CodexActivityKind, CodexActivityStatus};
@@ -15,29 +15,127 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+#[cfg(test)]
 use uuid::Uuid;
 
 type ConversationBinding = (TerminalProvider, String, String);
 
 #[derive(Clone)]
 pub(crate) struct DesktopToolDispatcher {
-    dependencies: DesktopMcpDependencies,
+    dependencies: DesktopCliDependencies,
     conversation_bindings: Arc<Mutex<HashMap<String, ConversationBinding>>>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ToolCallResult {
-    content: Vec<Value>,
-    is_error: bool,
+    pub(super) content: Vec<Value>,
+    pub(super) is_error: bool,
 }
 
 impl DesktopToolDispatcher {
-    pub(crate) fn new(dependencies: DesktopMcpDependencies) -> Self {
+    pub(crate) fn new(dependencies: DesktopCliDependencies) -> Self {
         Self {
             dependencies,
             conversation_bindings: Default::default(),
         }
+    }
+
+    pub(super) fn shutdown(&self) {
+        self.dependencies.runtime_bridge.shutdown();
+        self.conversation_bindings.lock().clear();
+    }
+
+    // 每条命令重新验证归属；上下文 ID 不是认证凭据。
+    pub(super) fn call_with_context(
+        &self,
+        context: Option<Value>,
+        request_id: &str,
+        name: &str,
+        mut arguments: Value,
+    ) -> ToolCallResult {
+        let Some(context) = context else {
+            if matches!(name, "development_task_list" | "development_task_create") {
+                return self.dispatch(None, name, arguments, request_id);
+            }
+            return ToolCallResult::error(AppError::validation(
+                "A task conversation context is required.",
+            ));
+        };
+        let input: ConversationBindInput = match decode(context.clone()) {
+            Ok(value) => value,
+            Err(error) => return ToolCallResult::error(error),
+        };
+        let session = format!(
+            "{}-{}",
+            match input.provider {
+                TerminalProvider::Codex => "codex",
+                TerminalProvider::Grok => "grok",
+            },
+            input.conversation_id
+        );
+        if let Err(error) = self.bind_conversation(Some(&session), context) {
+            return ToolCallResult::error(error);
+        }
+        if let Some(task) = arguments.get("taskId").and_then(Value::as_str)
+            && task != input.task_id
+        {
+            return ToolCallResult::error(AppError::validation("Task context mismatch."));
+        }
+        let referenced_instance =
+            if let Some(id) = arguments.get("instanceId").and_then(Value::as_str) {
+                Some(id.to_string())
+            } else if let Some(id) = arguments.get("transferId").and_then(Value::as_str) {
+                match self.dependencies.archive_transfers.get(id) {
+                    Ok(record) => Some(record.instance_id),
+                    Err(error) => return ToolCallResult::error(error),
+                }
+            } else if name == "game_log_query" {
+                let id = arguments["sessionId"].as_str().unwrap_or("");
+                match self.dependencies.logs.list_sessions(None) {
+                    Ok(sessions) => match sessions.into_iter().find(|session| session.id == id) {
+                        Some(session) => Some(session.instance_id),
+                        None => return ToolCallResult::error(AppError::not_found("Log session")),
+                    },
+                    Err(error) => return ToolCallResult::error(error),
+                }
+            } else {
+                None
+            };
+        if let Some(id) = referenced_instance.as_deref() {
+            match self.dependencies.instances.read(id) {
+                Ok(instance)
+                    if instance.task_id.as_deref() == Some(&input.task_id)
+                        || (instance.origin
+                            == crate::modules::instances::InstanceOrigin::External
+                            && (name.starts_with("game_log_")
+                                || name.starts_with("game_archive_transfer_"))) => {}
+                _ => {
+                    return ToolCallResult::error(AppError::validation(
+                        "Instance is not owned by this task.",
+                    ));
+                }
+            }
+        }
+        if name == "game_instance_list" {
+            arguments["taskId"] = json!(input.task_id);
+        }
+        if name == "game_runtime_cancel" {
+            let id = arguments["instanceId"].as_str().unwrap_or("");
+            let operation = arguments["operationId"].as_str().unwrap_or("");
+            return match self
+                .dependencies
+                .runtime_bridge
+                .cancel(id, operation, &session)
+            {
+                Ok(value) => ToolCallResult::success(value),
+                Err(error) => ToolCallResult::error(error),
+            };
+        }
+        if name == "development_conversation_bind" {
+            return ToolCallResult::success(json!({"bound":true}));
+        }
+        self.dispatch(Some(&session), name, arguments, request_id)
     }
 
     #[cfg(test)]
@@ -45,11 +143,22 @@ impl DesktopToolDispatcher {
         self.call_for_session(None, name, arguments)
     }
 
+    #[cfg(test)]
     pub(crate) fn call_for_session(
         &self,
         session_id: Option<&str>,
         name: &str,
         arguments: Value,
+    ) -> ToolCallResult {
+        self.dispatch(session_id, name, arguments, &Uuid::new_v4().to_string())
+    }
+
+    fn dispatch(
+        &self,
+        session_id: Option<&str>,
+        name: &str,
+        arguments: Value,
+        operation_id: &str,
     ) -> ToolCallResult {
         if name == "development_conversation_bind" {
             return match self.bind_conversation(session_id, arguments) {
@@ -65,8 +174,30 @@ impl DesktopToolDispatcher {
         }
         let binding = session_id
             .and_then(|session_id| self.conversation_bindings.lock().get(session_id).cloned());
-        let activity_id = Uuid::new_v4().to_string();
-        let activity_arguments = arguments.clone();
+        let activity_id = operation_id.to_string();
+        let activity_arguments: Value = arguments
+            .as_object()
+            .map(|values| {
+                Value::Object(
+                    values
+                        .iter()
+                        .filter(|(key, _)| {
+                            matches!(
+                                key.as_str(),
+                                "taskId"
+                                    | "instanceId"
+                                    | "toolName"
+                                    | "transferId"
+                                    | "sessionId"
+                                    | "mode"
+                                    | "targetState"
+                            )
+                        })
+                        .map(|(key, value)| (key.clone(), value.clone()))
+                        .collect(),
+                )
+            })
+            .unwrap_or_else(|| json!({}));
         if let Some((provider, task_id, conversation_id)) = binding.as_ref() {
             let _ = self.record_desktop_tool_activity(
                 *provider,
@@ -74,12 +205,16 @@ impl DesktopToolDispatcher {
                 conversation_id,
                 &activity_id,
                 name,
-                &arguments,
+                &activity_arguments,
                 CodexActivityStatus::Started,
             );
         }
-        if matches!(name, "game_runtime_call_tool" | "game_instance_mcp_call") {
-            let result = match self.call_runtime_tool(arguments) {
+        if matches!(name, "game_runtime_call_tool") {
+            let result = match self.call_runtime_tool(
+                arguments,
+                session_id.unwrap_or("desktop"),
+                operation_id,
+            ) {
                 Ok(result) => ToolCallResult {
                     content: result.content,
                     is_error: result.is_error,
@@ -114,7 +249,9 @@ impl DesktopToolDispatcher {
                 name,
                 &json!({
                     "arguments": arguments,
-                    "isError": result.is_error
+                    "isError": result.is_error,
+                    "artifacts": result.content.iter().filter(|v|v["type"]=="image")
+                        .filter_map(|v|v["path"].as_str()).collect::<Vec<_>>()
                 }),
                 if result.is_error {
                     CodexActivityStatus::Failed
@@ -127,7 +264,7 @@ impl DesktopToolDispatcher {
 
     fn bind_conversation(&self, session_id: Option<&str>, arguments: Value) -> AppResult<Value> {
         let session_id = session_id.ok_or_else(|| {
-            AppError::validation("An initialized MCP session is required for conversation binding.")
+            AppError::validation("An validated CLI context is required for conversation binding.")
         })?;
         let input: ConversationBindInput = decode(arguments)?;
         let conversation = match input.provider {
@@ -154,7 +291,7 @@ impl DesktopToolDispatcher {
 
     fn report_activity(&self, session_id: Option<&str>, arguments: Value) -> AppResult<Value> {
         let session_id = session_id.ok_or_else(|| {
-            AppError::validation("An initialized MCP session is required for activity reporting.")
+            AppError::validation("An validated CLI context is required for activity reporting.")
         })?;
         let (provider, task_id, conversation_id) = self
             .conversation_bindings
@@ -233,7 +370,7 @@ impl DesktopToolDispatcher {
     fn invoke(&self, name: &str, arguments: Value) -> AppResult<Value> {
         if !arguments.is_object() {
             return Err(AppError::validation(
-                "Desktop MCP tool arguments must be an object.",
+                "Desktop CLI tool arguments must be an object.",
             ));
         }
         match name {
@@ -350,7 +487,7 @@ impl DesktopToolDispatcher {
                 )
             }
             "game_instance_launch" => {
-                let input: McpLaunchInput = decode(arguments)?;
+                let input: CliLaunchInput = decode(arguments)?;
                 let executable_path = match input.executable_path {
                     Some(path) if !path.trim().is_empty() => path,
                     _ => self.dependencies.settings.get()?.game_executable_path,
@@ -404,12 +541,12 @@ impl DesktopToolDispatcher {
                     validated_timeout(input.timeout_ms)?,
                 )?)
             }
-            "game_instance_wait_for_mcp" => {
-                let input: WaitForMcpInput = decode(arguments)?;
+            "game_instance_wait_for_cli" => {
+                let input: WaitForCliInput = decode(arguments)?;
                 serialize(
                     self.dependencies
                         .runtime_bridge
-                        .wait_for_mcp(&input.instance_id, validated_timeout(input.timeout_ms)?)?,
+                        .wait_for_cli(&input.instance_id, validated_timeout(input.timeout_ms)?)?,
                 )
             }
             "game_instance_get_launch_report" => {
@@ -420,11 +557,11 @@ impl DesktopToolDispatcher {
                         .read_launch_report(&input.instance_id)?,
                 )
             }
-            "game_instance_mcp_get_state" => {
+            "game_runtime_get_state" => {
                 let input: InstanceIdInput = decode(arguments)?;
                 serialize(self.dependencies.runtime_bridge.state(&input.instance_id))
             }
-            "game_runtime_list_tools" | "game_instance_mcp_tools_list" => {
+            "game_runtime_list_tools" => {
                 let input: InstanceIdInput = decode(arguments)?;
                 self.dependencies
                     .runtime_bridge
@@ -480,8 +617,8 @@ impl DesktopToolDispatcher {
                 })?)
             }
             _ => Err(AppError::new(
-                "unknownDesktopMcpTool",
-                format!("Desktop MCP tool was not found: {name}"),
+                "unknownDesktopCliTool",
+                format!("Desktop CLI tool was not found: {name}"),
                 "",
             )),
         }
@@ -490,25 +627,29 @@ impl DesktopToolDispatcher {
     fn call_runtime_tool(
         &self,
         arguments: Value,
+        session_id: &str,
+        operation_id: &str,
     ) -> AppResult<crate::modules::runtime_bridge::RuntimeToolResult> {
         if !arguments.is_object() {
             return Err(AppError::validation(
-                "Desktop MCP tool arguments must be an object.",
+                "Desktop CLI tool arguments must be an object.",
             ));
         }
-        let input: GameMcpCallInput = decode(arguments)?;
+        let input: GameCliCallInput = decode(arguments)?;
         if input.tool_name.trim().is_empty() {
-            return Err(AppError::validation("Game MCP tool name is required."));
+            return Err(AppError::validation("Game CLI tool name is required."));
         }
         if !input.arguments.is_object() {
             return Err(AppError::validation(
-                "Game MCP tool arguments must be an object.",
+                "Game CLI tool arguments must be an object.",
             ));
         }
-        self.dependencies.runtime_bridge.call_tool(
+        self.dependencies.runtime_bridge.call_tool_scoped(
             &input.instance_id,
             &input.tool_name,
             input.arguments,
+            session_id,
+            operation_id,
         )
     }
 }
@@ -528,7 +669,7 @@ impl ToolCallResult {
         let text = serde_json::to_string(&error).unwrap_or_else(|_| {
             json!({
                 "code": "internal",
-                "message": "Desktop MCP tool failed.",
+                "message": "Desktop CLI tool failed.",
                 "detail": error.to_string()
             })
             .to_string()
@@ -544,7 +685,7 @@ fn decode<T: DeserializeOwned>(arguments: Value) -> AppResult<T> {
     serde_json::from_value(arguments).map_err(|error| {
         AppError::new(
             "invalidToolArguments",
-            "Desktop MCP tool arguments are invalid.",
+            "Desktop CLI tool arguments are invalid.",
             error.to_string(),
         )
     })
@@ -638,7 +779,7 @@ struct ArchiveTransferIdInput {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct McpLaunchInput {
+struct CliLaunchInput {
     task_id: String,
     name: String,
     executable_path: Option<String>,
@@ -678,7 +819,7 @@ struct WaitForStateInput {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct WaitForMcpInput {
+struct WaitForCliInput {
     instance_id: String,
     #[serde(default = "default_timeout_ms")]
     timeout_ms: u64,
@@ -686,7 +827,7 @@ struct WaitForMcpInput {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct GameMcpCallInput {
+struct GameCliCallInput {
     instance_id: String,
     tool_name: String,
     #[serde(default = "empty_object")]
@@ -758,7 +899,7 @@ mod tests {
     use crate::foundation::{AppPaths, Database, SettingsService};
     use crate::modules::archive_transfer::ArchiveTransferService;
     use crate::modules::codex_terminal::CodexTerminalService;
-    use crate::modules::desktop_mcp::DesktopMcpGameDependencies;
+    use crate::modules::desktop_cli::DesktopCliGameDependencies;
     use crate::modules::game_archives::ArchiveCatalogService;
     use crate::modules::game_connections::GameConnectionService;
     use crate::modules::grok_terminal::GrokTerminalService;
@@ -784,7 +925,7 @@ mod tests {
     }
 
     fn fixture() -> Fixture {
-        let root = std::env::temp_dir().join(format!("abya-desktop-mcp-{}", Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("abya-desktop-cli-{}", Uuid::new_v4()));
         let paths = AppPaths {
             database_path: root.join("app.db"),
             bootstrap_logs_dir: root.join("logs"),
@@ -806,7 +947,7 @@ mod tests {
         let connections = GameConnectionService::new();
         let archives = ArchiveCatalogService::new(paths.clone());
         let instances = InstanceService::new(database.clone(), paths.clone(), connections.clone());
-        let runtime_bridge = RuntimeBridgeService::new(instances.clone());
+        let runtime_bridge = RuntimeBridgeService::new(instances.clone(), tasks.clone());
         let logs = LogService::new(database.clone(), connections.clone());
         let archive_transfers = ArchiveTransferService::new(
             database,
@@ -816,12 +957,12 @@ mod tests {
             connections.clone(),
         );
         Fixture {
-            dispatcher: DesktopToolDispatcher::new(DesktopMcpDependencies::new(
+            dispatcher: DesktopToolDispatcher::new(DesktopCliDependencies::new(
                 settings,
                 tasks.clone(),
                 codex_terminal.clone(),
                 grok_terminal.clone(),
-                DesktopMcpGameDependencies::new(
+                DesktopCliGameDependencies::new(
                     instances,
                     runtime_bridge,
                     logs,
@@ -839,6 +980,306 @@ mod tests {
 
     fn result_json(result: ToolCallResult) -> Value {
         serde_json::from_str(result.content[0]["text"].as_str().unwrap()).unwrap()
+    }
+
+    #[test]
+    #[ignore = "Requires ABYA_CLI_SMOKE_PLAYER, ABYA_CLI_SMOKE_ARCHIVE and ABYA_CLI_SMOKE_OUTPUT"]
+    fn real_player_cli_pipeline_with_both_provider_contexts() {
+        let executable = std::env::var("ABYA_CLI_SMOKE_PLAYER").unwrap();
+        let archive_source = PathBuf::from(std::env::var("ABYA_CLI_SMOKE_ARCHIVE").unwrap());
+        let output = PathBuf::from(std::env::var("ABYA_CLI_SMOKE_OUTPUT").unwrap());
+        std::fs::create_dir_all(&output).unwrap();
+        std::fs::write(
+            output.join("summary.json"),
+            r#"{"success":false,"phase":"running"}"#,
+        )
+        .unwrap();
+        let fixture = fixture();
+        fn copy_archive(source: &std::path::Path, target: &std::path::Path) {
+            std::fs::create_dir_all(target).unwrap();
+            for item in std::fs::read_dir(source).unwrap() {
+                let item = item.unwrap();
+                let kind = item.file_type().unwrap();
+                assert!(!kind.is_symlink());
+                if kind.is_dir() {
+                    copy_archive(&item.path(), &target.join(item.file_name()));
+                } else {
+                    std::fs::copy(item.path(), target.join(item.file_name())).unwrap();
+                }
+            }
+        }
+        let archive_path = fixture.root.join("IsolatedGameData/Archives/Smoke");
+        copy_archive(&archive_source, &archive_path);
+        let archive_path = archive_path.to_string_lossy().into_owned();
+        let deps = &fixture.dispatcher.dependencies;
+        let mut settings = deps.settings.get().unwrap();
+        let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        settings.game_gateway_port = listener.local_addr().unwrap().port();
+        drop(listener);
+        settings.lan_broadcast_enabled = false;
+        deps.connections
+            .set_handler(Arc::new(crate::GameConnectionCoordinator {
+                instances: deps.instances.clone(),
+                logs: deps.logs.clone(),
+            }));
+        deps.connections.start(&settings).unwrap();
+        let task = fixture
+            .tasks
+            .create(TaskInput {
+                title: "CLI migration smoke".into(),
+                description: String::new(),
+            })
+            .unwrap();
+        let archive = deps
+            .archives
+            .inspect_main(&PathBuf::from(&archive_path).join("Main.PBArc"))
+            .unwrap();
+        let codex = fixture
+            .codex_terminal
+            .create_conversation(&task.id, None)
+            .unwrap();
+        let context = json!({"provider":"codex","taskId":task.id,"conversationId":codex.id});
+        let launched = fixture.dispatcher.call_with_context(
+            Some(context.clone()),
+            &Uuid::new_v4().to_string(),
+            "game_instance_launch",
+            json!({"taskId":task.id,"name":"CLI verification","executablePath":executable,
+                "mode":"editor","exitOnFailure":false,"width":800,"height":600,
+                "archive":{"archiveGuid":archive.archive_guid,"archivePath":archive_path,"archiveName":archive.archive_name,"levelGuid":"","levelName":""}}),
+        );
+        assert!(!launched.is_error, "{:?}", launched);
+        let instance_id = result_json(launched)["id"].as_str().unwrap().to_string();
+        struct StopInstance(InstanceService, String);
+        impl Drop for StopInstance {
+            fn drop(&mut self) {
+                let _ = self.0.stop(&self.1);
+            }
+        }
+        let _stop = StopInstance(deps.instances.clone(), instance_id.clone());
+        let ready = deps
+            .runtime_bridge
+            .wait_for_cli(&instance_id, Duration::from_secs(120));
+        if let Err(error) = &ready {
+            panic!("CLI readiness failed: {error}");
+        }
+        let startup = std::time::Instant::now();
+        loop {
+            let report = deps.instances.read_launch_report(&instance_id).unwrap();
+            std::fs::write(
+                output.join("launch-report.json"),
+                serde_json::to_vec_pretty(&report).unwrap(),
+            )
+            .unwrap();
+            assert_ne!(
+                report.report["phase"], "failed",
+                "Launch report: {:?}",
+                report
+            );
+            if report.report["success"] == true && report.report["phase"] == "ready" {
+                break;
+            }
+            assert!(
+                startup.elapsed() < Duration::from_secs(120),
+                "Archive readiness timed out"
+            );
+            std::thread::sleep(Duration::from_millis(250));
+        }
+        let catalog = deps.runtime_bridge.list_tools(&instance_id).unwrap();
+        assert_eq!(catalog.as_array().unwrap().len(), 239);
+        let lua = "--[[ABYA-LUA\n{\"schemaVersion\":1,\"apiVersion\":\"3.0\",\"name\":\"cli-smoke\",\"description\":\"Pure validation\",\"context\":\"automation\",\"side\":\"universal\",\"entry\":\"main\",\"requires\":[],\"parameters\":[],\"returns\":[{\"name\":\"value\",\"type\":\"Float\",\"required\":true,\"description\":\"Result\"}]}\nABYA-LUA]]\nfunction main(input) return 42 end";
+        for (tool, arguments) in [
+            ("read_me_first", json!({})),
+            ("runtime_get_game_state", json!({})),
+            ("lua_execute", json!({"script":lua})),
+            ("ui_capture_screenshot", json!({"maxWidth":800})),
+        ] {
+            let result = fixture.dispatcher.call_with_context(
+                Some(context.clone()),
+                &Uuid::new_v4().to_string(),
+                "game_runtime_call_tool",
+                json!({"instanceId":instance_id,"toolName":tool,"arguments":arguments}),
+            );
+            std::fs::write(
+                output.join(format!("{tool}.json")),
+                serde_json::to_vec_pretty(&result).unwrap(),
+            )
+            .unwrap();
+            assert!(!result.is_error, "{tool}: {:?}", result);
+            if tool == "ui_capture_screenshot" {
+                let image = result
+                    .content
+                    .iter()
+                    .find_map(|v| v["path"].as_str())
+                    .expect("Screenshot file missing");
+                std::fs::copy(image, output.join("runtime.png")).unwrap();
+            }
+        }
+        let grok = fixture
+            .grok_terminal
+            .create_conversation(&task.id, None)
+            .unwrap();
+        let result = fixture.dispatcher.call_with_context(
+            Some(json!({"provider":"grok","taskId":task.id,"conversationId":grok.id})),
+            &Uuid::new_v4().to_string(),
+            "game_runtime_call_tool",
+            json!({"instanceId":instance_id,"toolName":"runtime_get_status","arguments":{}}),
+        );
+        assert!(!result.is_error, "Grok context: {:?}", result);
+        let multiplayer = std::env::var("ABYA_CLI_SMOKE_MULTIPLAYER").as_deref() == Ok("1");
+        if multiplayer {
+            deps.instances.stop(&instance_id).unwrap();
+            let mut peers: Vec<String> = Vec::new();
+            let mut peer_guards = Vec::new();
+            for mode in ["lan-host", "lan-client"] {
+                let mut input = json!({"taskId":task.id,"name":mode,"executablePath":executable,
+                    "mode":mode,"exitOnFailure":false,"width":800,"height":600});
+                if mode == "lan-host" {
+                    input["archive"] = json!({"archiveGuid":archive.archive_guid,"archivePath":archive_path,
+                        "archiveName":archive.archive_name,"levelGuid":"","levelName":""});
+                } else {
+                    input["hostInstanceId"] = json!(peers[0]);
+                }
+                let launched = fixture.dispatcher.call_with_context(
+                    Some(context.clone()),
+                    &Uuid::new_v4().to_string(),
+                    "game_instance_launch",
+                    input,
+                );
+                assert!(!launched.is_error, "{mode}: {:?}", launched);
+                let id = result_json(launched)["id"].as_str().unwrap().to_string();
+                peer_guards.push(StopInstance(deps.instances.clone(), id.clone()));
+                deps.runtime_bridge
+                    .wait_for_cli(&id, Duration::from_secs(120))
+                    .unwrap();
+                let start = std::time::Instant::now();
+                loop {
+                    let report = deps.instances.read_launch_report(&id).unwrap();
+                    std::fs::write(
+                        output.join(format!("{mode}-launch.json")),
+                        serde_json::to_vec_pretty(&report).unwrap(),
+                    )
+                    .unwrap();
+                    assert_ne!(report.report["phase"], "failed", "{mode}: {:?}", report);
+                    if report.report["success"] == true && report.report["phase"] == "ready" {
+                        break;
+                    }
+                    assert!(
+                        start.elapsed() < Duration::from_secs(120),
+                        "{mode} readiness timeout"
+                    );
+                    std::thread::sleep(Duration::from_millis(250));
+                }
+                let state = fixture.dispatcher.call_with_context(
+                    Some(context.clone()),
+                    &Uuid::new_v4().to_string(),
+                    "game_runtime_call_tool",
+                    json!({"instanceId":id,"toolName":"runtime_get_game_state","arguments":{}}),
+                );
+                assert!(!state.is_error);
+                let state_data = result_json(state);
+                std::fs::write(
+                    output.join(format!("{mode}-state.json")),
+                    serde_json::to_vec_pretty(&state_data).unwrap(),
+                )
+                .unwrap();
+                assert_eq!(state_data["context"]["clientConnected"], true);
+                assert_eq!(state_data["context"]["networkGameplayReady"], true);
+                if mode == "lan-host" {
+                    assert_eq!(state_data["context"]["serverActive"], true);
+                }
+                peers.push(id);
+            }
+            assert_ne!(
+                deps.instances.read(&peers[0]).unwrap().pid,
+                deps.instances.read(&peers[1]).unwrap().pid
+            );
+            assert!(!deps.logs.list_sessions(Some(&peers[0])).unwrap().is_empty());
+            assert!(!deps.logs.list_sessions(Some(&peers[1])).unwrap().is_empty());
+        }
+        std::fs::write(
+            output.join("summary.json"),
+            json!({"success":true,"capabilities":239,
+            "providers":["codex","grok"],"pureLua":true,"screenshot":true,"multiplayer":multiplayer})
+            .to_string(),
+        )
+        .unwrap();
+        deps.connections.stop();
+    }
+
+    #[test]
+    fn runtime_artifact_preview_cannot_escape_task_directory() {
+        let fixture = fixture();
+        let task = fixture
+            .tasks
+            .create(TaskInput {
+                title: "Artifacts".into(),
+                description: String::new(),
+            })
+            .unwrap();
+        let root = std::path::PathBuf::from(&task.workspace_path).join("artifacts/runtime");
+        std::fs::create_dir_all(&root).unwrap();
+        let image = root.join("sample.png");
+        std::fs::write(&image, b"image bytes").unwrap();
+        let bridge = &fixture.dispatcher.dependencies.runtime_bridge;
+        assert!(
+            bridge
+                .read_artifact(&task.id, &image.to_string_lossy())
+                .unwrap()
+                .starts_with("data:image/png;base64,")
+        );
+        let outside = std::path::PathBuf::from(&task.workspace_path).join("private.png");
+        std::fs::write(&outside, b"private").unwrap();
+        assert!(
+            bridge
+                .read_artifact(&task.id, &outside.to_string_lossy())
+                .is_err()
+        );
+        let script = root.join("script.html");
+        std::fs::write(&script, b"html").unwrap();
+        assert!(
+            bridge
+                .read_artifact(&task.id, &script.to_string_lossy())
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn validated_context_cannot_update_another_task() {
+        let fixture = fixture();
+        let task = fixture
+            .tasks
+            .create(TaskInput {
+                title: "Owner".into(),
+                description: String::new(),
+            })
+            .unwrap();
+        let other = fixture
+            .tasks
+            .create(TaskInput {
+                title: "Unchanged".into(),
+                description: String::new(),
+            })
+            .unwrap();
+        let conversation = fixture
+            .codex_terminal
+            .create_conversation(&task.id, None)
+            .unwrap();
+        let context = json!({"provider":"codex","taskId":task.id,"conversationId":conversation.id});
+        let result = fixture.dispatcher.call_with_context(
+            Some(context.clone()),
+            &Uuid::new_v4().to_string(),
+            "development_task_update",
+            json!({"taskId":other.id,"title":"Incorrect"}),
+        );
+        assert!(result.is_error);
+        assert_eq!(fixture.tasks.get(&other.id).unwrap().title, "Unchanged");
+        let bound = fixture.dispatcher.call_with_context(
+            Some(context),
+            &Uuid::new_v4().to_string(),
+            "development_conversation_bind",
+            json!({}),
+        );
+        assert!(!bound.is_error);
     }
 
     #[test]
@@ -866,7 +1307,7 @@ mod tests {
         let fixture = fixture();
         let unknown = fixture.dispatcher.call("missing_tool", json!({}));
         assert!(unknown.is_error);
-        assert_eq!(result_json(unknown)["code"], "unknownDesktopMcpTool");
+        assert_eq!(result_json(unknown)["code"], "unknownDesktopCliTool");
 
         let invalid = fixture
             .dispatcher
@@ -908,7 +1349,7 @@ mod tests {
     fn game_mcp_call_reports_missing_instance() {
         let fixture = fixture();
         let result = fixture.dispatcher.call(
-            "game_instance_mcp_call",
+            "game_runtime_call_tool",
             json!({
                 "instanceId": "missing",
                 "toolName": "runtime_log_server_get_state",

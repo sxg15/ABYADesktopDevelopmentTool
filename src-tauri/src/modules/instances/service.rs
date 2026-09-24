@@ -1,7 +1,7 @@
 use super::{
     GameInstance, InstanceOrigin, InstanceRuntimeInfo, InstanceStopResult, LaunchInstanceInput,
-    LaunchMode, LaunchReportResult, ProcessState, RuntimeMcpEndpoint, WindowMode,
-    WindowVisibilityMode, build_launch_contract, validate_executable,
+    LaunchMode, LaunchReportResult, ProcessState, WindowMode, WindowVisibilityMode,
+    build_launch_contract, validate_executable,
 };
 use crate::foundation::{AppError, AppPaths, AppResult, Database};
 use crate::modules::game_connections::{ConnectionRegistration, GameConnectionService, GameHello};
@@ -25,7 +25,6 @@ const MAX_INSTANCE_LOG_BYTES: u64 = 64 * 1024 * 1024;
 
 struct LiveInstance {
     child: Arc<Mutex<Box<dyn ChildWrapper>>>,
-    runtime_mcp: RuntimeMcpEndpoint,
     window: InstanceWindowController,
 }
 
@@ -165,15 +164,21 @@ impl InstanceService {
         let stderr = stdout.try_clone()?;
         let executable = input.executable_path.trim().to_string();
         let working_directory = Path::new(&executable).parent().map(Path::to_path_buf);
-        let runtime_mcp = RuntimeMcpEndpoint {
-            endpoint: contract.mcp_endpoint.clone(),
-            token: contract.mcp_token.clone(),
-        };
         let log_path = PathBuf::from(&contract.log_path);
         let args = contract.args;
+        #[cfg(test)]
+        let args = {
+            let mut isolated = args;
+            isolated.push(format!(
+                "--abya-data-root={}",
+                self.paths.data_dir.join("IsolatedGameData").display()
+            ));
+            isolated
+        };
         let restore_foreground = capture_foreground_window();
         let mut command = CommandWrap::with_new(&executable, |command| {
             command
+                .env("ABYA_CLI_DEVELOPMENT", "1")
                 .args(&args)
                 .stdout(Stdio::from(stdout))
                 .stderr(Stdio::from(stderr));
@@ -207,7 +212,6 @@ impl InstanceService {
             id.clone(),
             LiveInstance {
                 child: child.clone(),
-                runtime_mcp,
                 window,
             },
         );
@@ -361,18 +365,18 @@ impl InstanceService {
         })
     }
 
-    pub(crate) fn runtime_mcp_endpoint(&self, id: &str) -> AppResult<RuntimeMcpEndpoint> {
+    pub(crate) fn runtime_pid(&self, id: &str) -> AppResult<u32> {
         let instance = self.read(id)?;
         if instance.origin != InstanceOrigin::Managed {
             return Err(AppError::validation(
-                "External game instances do not expose desktop-managed Runtime MCP.",
+                "External instances have no runtime control.",
             ));
         }
         self.live
             .lock()
             .get(id)
-            .map(|entry| entry.runtime_mcp.clone())
-            .ok_or_else(|| AppError::validation("The managed game instance is not running."))
+            .map(|entry| entry.child.lock().id())
+            .ok_or_else(|| AppError::validation("The managed instance is not running."))
     }
 
     pub fn delete(&self, id: &str) -> AppResult<()> {

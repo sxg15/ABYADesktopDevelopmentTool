@@ -2,27 +2,46 @@
   "modules": [
     {
       "id": "foundation",
-      "paths": ["src-tauri/src/foundation/", "src/shared/"],
+      "paths": [
+        "src-tauri/src/foundation/",
+        "src/shared/"
+      ],
       "skill": "skills/foundation/SKILL.md",
       "dependsOn": []
     },
     {
       "id": "app-shell",
-      "paths": ["src/App.tsx", "src/App.css", "src/app/", "src/i18n/"],
+      "paths": [
+        "src/App.tsx",
+        "src/App.css",
+        "src/app/",
+        "src/i18n/"
+      ],
       "skill": "skills/app-shell/SKILL.md",
-      "dependsOn": ["foundation"]
+      "dependsOn": [
+        "foundation"
+      ]
     },
     {
       "id": "game-archives",
-      "paths": ["src-tauri/src/modules/game_archives/"],
+      "paths": [
+        "src-tauri/src/modules/game_archives/"
+      ],
       "skill": "skills/game-archives/SKILL.md",
-      "dependsOn": ["foundation"]
+      "dependsOn": [
+        "foundation"
+      ]
     },
     {
       "id": "development-tasks",
-      "paths": ["src-tauri/src/modules/tasks/", "src/features/tasks/"],
+      "paths": [
+        "src-tauri/src/modules/tasks/",
+        "src/features/tasks/"
+      ],
       "skill": "skills/development-tasks/SKILL.md",
-      "dependsOn": ["foundation"]
+      "dependsOn": [
+        "foundation"
+      ]
     },
     {
       "id": "development-terminal",
@@ -31,37 +50,70 @@
         "src/features/terminal/"
       ],
       "skill": "skills/development-terminal/SKILL.md",
-      "dependsOn": ["foundation", "development-tasks"]
+      "dependsOn": [
+        "foundation",
+        "development-tasks"
+      ]
     },
     {
       "id": "codex-terminal",
-      "paths": ["src-tauri/src/modules/codex_terminal/"],
+      "paths": [
+        "src-tauri/src/modules/codex_terminal/"
+      ],
       "skill": "skills/codex-terminal/SKILL.md",
-      "dependsOn": ["foundation", "development-tasks", "development-terminal"]
+      "dependsOn": [
+        "foundation",
+        "development-tasks",
+        "development-terminal"
+      ]
     },
     {
       "id": "grok-terminal",
-      "paths": ["src-tauri/src/modules/grok_terminal/"],
+      "paths": [
+        "src-tauri/src/modules/grok_terminal/"
+      ],
       "skill": "skills/grok-terminal/SKILL.md",
-      "dependsOn": ["foundation", "development-tasks", "development-terminal"]
+      "dependsOn": [
+        "foundation",
+        "development-tasks",
+        "development-terminal"
+      ]
     },
     {
       "id": "game-connections",
-      "paths": ["src-tauri/src/modules/game_connections/"],
+      "paths": [
+        "src-tauri/src/modules/game_connections/"
+      ],
       "skill": "skills/game-connections/SKILL.md",
-      "dependsOn": ["foundation"]
+      "dependsOn": [
+        "foundation"
+      ]
     },
     {
       "id": "game-instances",
-      "paths": ["src-tauri/src/modules/instances/", "src/features/instances/"],
+      "paths": [
+        "src-tauri/src/modules/instances/",
+        "src/features/instances/"
+      ],
       "skill": "skills/game-instances/SKILL.md",
-      "dependsOn": ["foundation", "development-tasks", "game-connections"]
+      "dependsOn": [
+        "foundation",
+        "development-tasks",
+        "game-connections"
+      ]
     },
     {
       "id": "game-runtime-bridge",
-      "paths": ["src-tauri/src/modules/runtime_bridge/"],
+      "paths": [
+        "src-tauri/src/modules/runtime_bridge/"
+      ],
       "skill": "skills/game-runtime-bridge/SKILL.md",
-      "dependsOn": ["foundation", "game-connections", "game-instances"]
+      "dependsOn": [
+        "foundation",
+        "game-connections",
+        "game-instances",
+        "development-tasks"
+      ]
     },
     {
       "id": "archive-transfer",
@@ -79,14 +131,25 @@
     },
     {
       "id": "game-logs",
-      "paths": ["src-tauri/src/modules/logs/", "src/features/logs/"],
+      "paths": [
+        "src-tauri/src/modules/logs/",
+        "src/features/logs/"
+      ],
       "skill": "skills/game-logs/SKILL.md",
-      "dependsOn": ["foundation", "game-connections", "game-instances"]
+      "dependsOn": [
+        "foundation",
+        "game-connections",
+        "game-instances"
+      ]
     },
     {
-      "id": "desktop-mcp",
-      "paths": ["src-tauri/src/modules/desktop_mcp/", "src/features/settings/"],
-      "skill": "skills/desktop-mcp/SKILL.md",
+      "id": "desktop-cli",
+      "paths": [
+        "src-tauri/src/modules/desktop_cli/",
+        "src/features/settings/",
+        "src-tauri/src/bin/"
+      ],
+      "skill": "skills/desktop-cli/SKILL.md",
       "dependsOn": [
         "foundation",
         "development-tasks",
@@ -103,7 +166,12 @@
     },
     {
       "id": "release",
-      "paths": ["scripts/", "src-tauri/tauri.conf.json", "package.json"],
+      "paths": [
+        "scripts/",
+        "src-tauri/tauri.conf.json",
+        "package.json",
+        "tools/"
+      ],
       "skill": "skills/release/SKILL.md",
       "dependsOn": []
     }

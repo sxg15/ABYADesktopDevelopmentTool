@@ -32,11 +32,11 @@ true-color support so Codex does not enter dumb terminal mode. The UI never
 accepts a command, executable, shell type, working directory, or raw Codex
 arguments.
 
-Each Codex process receives `ABYA_DEVELOPMENT_TASK_ID`,
+Each visible Codex TUI process receives `ABYA_DEVELOPMENT_TASK_ID`,
 `ABYA_DEVELOPMENT_CONVERSATION_ID`, `ABYA_DEVELOPMENT_WORKSPACE`, and
 `ABYA_DEVELOPMENT_PROVIDER=codex`. Task-local
 Skills use these values to restrict managed game-instance operations to the
-current development task and bind Desktop MCP activity to the current
+current development task and associate CLI activity to the current
 conversation.
 
 Each conversation has a directory below
@@ -74,8 +74,7 @@ When supported, one hidden Codex app-server binds to a random loopback
 WebSocket port with a temporary capability-token file. The visible TUI connects
 through `--remote` while retaining its PTY presentation. Thread start/resume
 receives developer instructions requiring a per-user-turn plan before
-multi-operation work and Desktop MCP conversation binding before domain tool
-use. A new native thread receives the same instructions through
+multi-operation work and CLI diagnosis and capability discovery before domain operations. A new native thread receives the same instructions through
 `thread/inject_items` before the TUI resumes it; this creates its durable rollout
 without a hidden model turn, so a newly created conversation is immediately
 recoverable after application restart. Native `turn/started`,
@@ -123,7 +122,7 @@ validation and rename, bounded transcript-tail replay and live reattachment
 ordering, app-server capability/authentication, native event mapping,
 serialized Windows snapshot replacement, bounded legacy event-journal compaction,
 unplanned-operation handling,
-workflow redaction, Desktop MCP activity correlation, all task statuses,
+workflow redaction, Desktop CLI activity correlation, all task statuses,
 per-task uniqueness, Unicode and ANSI output, visible long-output scrolling
 while output continues, natural exit, restart, explicit stop, task deletion without UI-channel waits,
 bounded process-tree cleanup, and application shutdown.
@@ -133,3 +132,9 @@ bounded process-tree cleanup, and application shutdown.
 When changing Codex discovery, arguments, PTY behavior, terminal transport,
 session lifecycle, process cleanup, or tests, update this Skill in the same
 change.
+
+ABYA_DESKTOP_CLI carries the absolute desktop CLI executable path. Commands automatically include task, conversation and provider context. ABYA operations use CLI exclusively; native provider transport remains unchanged.
+
+The cached app-server records the resolved executable path, size and modification time before launch and checks process liveness before reuse. After a CLI update or backend exit, an idle cached backend is stopped and recreated; thread routing is rebuilt on resume. Other live terminals are not interrupted: new opens use the existing compatibility path with a restart explanation until those terminals are stopped. Backend creation is serialized to avoid duplicate instances.
+
+Remote thread/start and thread/resume also receive the five public ABYA context variables through per-thread dotted shell_environment_policy.set overrides. This is required because the shared app-server executes tools in a different process from the TUI. It never sets task IDs globally on the shared backend, never changes sandbox/approval/trust/model settings, and preserves unrelated environment overrides. New and resumed conversations use the same builder.

@@ -15,6 +15,9 @@ pub struct AppPaths {
 }
 
 impl AppPaths {
+    pub fn legacy_workspace_root() -> Option<PathBuf> {
+        std::env::var_os("LOCALAPPDATA").map(|p| PathBuf::from(p).join("ABYA Desktop Development Tool/Workspaces"))
+    }
     pub fn discover() -> AppResult<Self> {
         let local = std::env::var_os("LOCALAPPDATA")
             .map(PathBuf::from)
@@ -35,9 +38,7 @@ impl AppPaths {
                 .join("ABYA_PB")
                 .join("Data")
                 .join("Archives"),
-            default_workspace_root: local
-                .join("ABYA Desktop Development Tool")
-                .join("Workspaces"),
+            default_workspace_root: user.join("ABYA Desktop Development ToolWorkspaces"),
             data_dir,
         };
         paths.ensure()?;

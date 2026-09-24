@@ -108,7 +108,7 @@ export function InstanceDetailsModal({
       </div>
 
       <div className="section-heading">
-        <h3>{t("desktopMcp").replace("Desktop", "Runtime")}</h3>
+        <h3>{t("runtimeCli")}</h3>
         <button className="icon-button" onClick={refresh} title={t("refresh")}>
           <RefreshCw size={16} />
         </button>
@@ -119,7 +119,7 @@ export function InstanceDetailsModal({
           {runtime?.connected ? t("connected") : t("disconnected")}
         </span>
         <code>
-          {runtime?.mcpAvailable
+          {runtime?.cliAvailable
             ? `${runtime.gameVersion} · ${runtime.platform}`
             : runtime?.lastError || ""}
         </code>

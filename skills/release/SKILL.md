@@ -76,3 +76,5 @@ works in Windows PowerShell environments where `Get-FileHash` is unavailable.
 
 When changing build commands, dependencies, release contents, or validation
 policy, update this Skill in the same change.
+
+Pure CLI releases additionally ship abya-desktop.exe, tools/abya and runtime/node.exe (Node 20+). The publish script runs Rust formatting, Clippy and tests, builds the CLI, then builds the existing desktop application. The embedded Abya CLI is a versioned source snapshot; refresh and test it with every runtime CLI change.

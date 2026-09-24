@@ -1,6 +1,8 @@
 mod protocol;
 mod registry;
 mod tools;
+mod pipe;
+mod pipe_security;
 
 use crate::foundation::{AppError, AppResult, AppSettings, SettingsService};
 use crate::modules::archive_transfer::ArchiveTransferService;
@@ -14,7 +16,7 @@ use crate::modules::runtime_bridge::RuntimeBridgeService;
 use crate::modules::tasks::TaskService;
 use axum::{Router, routing::post};
 use parking_lot::Mutex;
-use protocol::{HttpState, handle_mcp};
+use protocol::{HttpState, handle_command};
 use serde::Serialize;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener};
 use std::sync::Arc;
@@ -24,7 +26,7 @@ use tools::DesktopToolDispatcher;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DesktopMcpState {
+pub struct DesktopCliState {
     pub running: bool,
     pub endpoint: String,
     pub port: u16,
@@ -33,7 +35,7 @@ pub struct DesktopMcpState {
 }
 
 #[derive(Clone)]
-pub struct DesktopMcpDependencies {
+pub struct DesktopCliDependencies {
     settings: SettingsService,
     tasks: TaskService,
     codex_terminal: CodexTerminalService,
@@ -46,7 +48,7 @@ pub struct DesktopMcpDependencies {
     archive_transfers: ArchiveTransferService,
 }
 
-pub struct DesktopMcpGameDependencies {
+pub struct DesktopCliGameDependencies {
     instances: InstanceService,
     runtime_bridge: RuntimeBridgeService,
     logs: LogService,
@@ -55,7 +57,7 @@ pub struct DesktopMcpGameDependencies {
     archive_transfers: ArchiveTransferService,
 }
 
-impl DesktopMcpGameDependencies {
+impl DesktopCliGameDependencies {
     pub fn new(
         instances: InstanceService,
         runtime_bridge: RuntimeBridgeService,
@@ -75,13 +77,13 @@ impl DesktopMcpGameDependencies {
     }
 }
 
-impl DesktopMcpDependencies {
+impl DesktopCliDependencies {
     pub fn new(
         settings: SettingsService,
         tasks: TaskService,
         codex_terminal: CodexTerminalService,
         grok_terminal: GrokTerminalService,
-        game: DesktopMcpGameDependencies,
+        game: DesktopCliGameDependencies,
     ) -> Self {
         Self {
             settings,
@@ -99,21 +101,24 @@ impl DesktopMcpDependencies {
 }
 
 #[derive(Clone)]
-pub struct DesktopMcpService {
+pub struct DesktopCliService {
     inner: Arc<Mutex<ServerControl>>,
     dispatcher: DesktopToolDispatcher,
 }
 
 struct ServerControl {
-    state: DesktopMcpState,
+    pipe: Option<tokio::task::JoinHandle<()>>,
+    state: DesktopCliState,
     shutdown: Option<oneshot::Sender<()>>,
+    generation: u64,
 }
 
-impl DesktopMcpService {
-    pub fn new(dependencies: DesktopMcpDependencies) -> Self {
+impl DesktopCliService {
+    pub fn new(dependencies: DesktopCliDependencies) -> Self {
         Self {
             inner: Arc::new(Mutex::new(ServerControl {
-                state: DesktopMcpState {
+                pipe: None,
+                state: DesktopCliState {
                     running: false,
                     endpoint: String::new(),
                     port: 0,
@@ -121,27 +126,34 @@ impl DesktopMcpService {
                     last_error: String::new(),
                 },
                 shutdown: None,
+                generation: 0,
             })),
             dispatcher: DesktopToolDispatcher::new(dependencies),
         }
     }
 
-    pub fn start(&self, settings: &AppSettings) -> AppResult<DesktopMcpState> {
+    pub fn start(&self, settings: &AppSettings) -> AppResult<DesktopCliState> {
         self.stop();
-        let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), settings.desktop_mcp_port);
+        let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), settings.desktop_cli_port);
         let listener = bind_loopback(address)?;
         listener.set_nonblocking(true)?;
-        let state = HttpState::new(settings.desktop_mcp_token.clone(), self.dispatcher.clone());
+        let state = HttpState::new(settings.desktop_cli_token.clone(), self.dispatcher.clone());
+        let pipe = pipe::start(state.clone(), settings.desktop_cli_token.clone())?;
         let router = Router::new()
-            .route("/mcp", post(handle_mcp))
+            .route("/api/v1/command", post(handle_command))
+            .layer(protocol::body_limit())
             .with_state(state);
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let control = self.inner.clone();
+        let generation = control.lock().generation;
         tauri::async_runtime::spawn(async move {
             let listener = match tokio::net::TcpListener::from_std(listener) {
                 Ok(listener) => listener,
                 Err(error) => {
                     let mut control = control.lock();
+                    if control.generation != generation {
+                        return;
+                    }
                     control.state.running = false;
                     control.state.last_error = error.to_string();
                     return;
@@ -153,33 +165,46 @@ impl DesktopMcpService {
                 })
                 .await;
             let mut control = control.lock();
+            if control.generation != generation {
+                return;
+            }
             control.state.running = false;
             if let Err(error) = result {
                 control.state.last_error = error.to_string();
             }
         });
-        let state = DesktopMcpState {
+        let state = DesktopCliState {
             running: true,
-            endpoint: format!("http://127.0.0.1:{}/mcp", settings.desktop_mcp_port),
-            port: settings.desktop_mcp_port,
+            endpoint: format!(
+                "http://127.0.0.1:{}/api/v1/command",
+                settings.desktop_cli_port
+            ),
+            port: settings.desktop_cli_port,
             tool_count: registry::tool_count(),
             last_error: String::new(),
         };
+        #[cfg(not(test))]
+        crate::foundation::cli_environment::publish(&state.endpoint, &settings.desktop_cli_token)?;
         let mut control = self.inner.lock();
         control.state = state.clone();
+        control.pipe = Some(pipe);
         control.shutdown = Some(shutdown_tx);
         Ok(state)
     }
 
     pub fn stop(&self) {
+        crate::foundation::cli_sessions::deactivate();
+        self.dispatcher.shutdown();
         let mut control = self.inner.lock();
+        if let Some(pipe) = control.pipe.take() { pipe.abort(); }
         if let Some(shutdown) = control.shutdown.take() {
             let _ = shutdown.send(());
         }
+        control.generation += 1;
         control.state.running = false;
     }
 
-    pub fn state(&self) -> DesktopMcpState {
+    pub fn state(&self) -> DesktopCliState {
         self.inner.lock().state.clone()
     }
 }
@@ -195,16 +220,16 @@ fn bind_loopback(address: SocketAddr) -> AppResult<TcpListener> {
             }
             Err(error) => {
                 return Err(AppError::new(
-                    "desktopMcpBindFailed",
-                    "Desktop MCP could not bind its loopback port.",
+                    "desktopCliBindFailed",
+                    "Desktop CLI could not bind its loopback port.",
                     error.to_string(),
                 ));
             }
         }
     }
     Err(AppError::new(
-        "desktopMcpBindFailed",
-        "Desktop MCP could not restart because its loopback port is still in use.",
+        "desktopCliBindFailed",
+        "Desktop CLI could not restart because its loopback port is still in use.",
         last_error
             .map(|error| error.to_string())
             .unwrap_or_default(),
@@ -221,7 +246,7 @@ mod tests {
     use uuid::Uuid;
 
     struct Fixture {
-        service: DesktopMcpService,
+        service: DesktopCliService,
         settings: AppSettings,
         tasks: TaskService,
         root: PathBuf,
@@ -235,7 +260,7 @@ mod tests {
     }
 
     fn fixture() -> Fixture {
-        let root = std::env::temp_dir().join(format!("abya-desktop-mcp-http-{}", Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("abya-desktop-cli-http-{}", Uuid::new_v4()));
         let paths = AppPaths {
             database_path: root.join("app.db"),
             bootstrap_logs_dir: root.join("logs"),
@@ -258,7 +283,7 @@ mod tests {
         let connections = GameConnectionService::new();
         let archives = ArchiveCatalogService::new(paths.clone());
         let instances = InstanceService::new(database.clone(), paths.clone(), connections.clone());
-        let runtime_bridge = RuntimeBridgeService::new(instances.clone());
+        let runtime_bridge = RuntimeBridgeService::new(instances.clone(), tasks.clone());
         let logs = LogService::new(database.clone(), connections.clone());
         let archive_transfers = ArchiveTransferService::new(
             database,
@@ -267,12 +292,12 @@ mod tests {
             instances.clone(),
             connections.clone(),
         );
-        let service = DesktopMcpService::new(DesktopMcpDependencies::new(
+        let service = DesktopCliService::new(DesktopCliDependencies::new(
             settings_service,
             tasks.clone(),
             codex_terminal,
             grok_terminal,
-            DesktopMcpGameDependencies::new(
+            DesktopCliGameDependencies::new(
                 instances,
                 runtime_bridge,
                 logs,
@@ -288,8 +313,8 @@ mod tests {
                 game_executable_path: String::new(),
                 workspace_root_path: root.join("workspaces").to_string_lossy().into_owned(),
                 locale: "en".to_string(),
-                desktop_mcp_port: port,
-                desktop_mcp_token: "desktop-mcp-test-token".to_string(),
+                desktop_cli_port: port,
+                desktop_cli_token: "desktop-cli-test-token".to_string(),
                 game_gateway_port: 47610,
                 preferred_adapter_id: String::new(),
                 lan_broadcast_enabled: true,
@@ -306,75 +331,89 @@ mod tests {
     }
 
     #[test]
-    fn serves_authenticated_tool_list_and_task_calls_over_http() {
+    fn serves_cli_commands_and_rejects_legacy_protocol() {
         let fixture = fixture();
         let state = fixture.service.start(&fixture.settings).unwrap();
         let client = Client::new();
-        let initialize = client
-            .post(&state.endpoint)
-            .bearer_auth(&fixture.settings.desktop_mcp_token)
-            .json(&json!({
-                "jsonrpc": "2.0",
-                "id": "initialize",
-                "method": "initialize",
-                "params": {
-                    "protocolVersion": "2025-11-25",
-                    "capabilities": {},
-                    "clientInfo": { "name": "test", "version": "1" }
-                }
-            }))
-            .send()
-            .unwrap();
-        assert!(initialize.status().is_success());
-        let session_id = initialize
-            .headers()
-            .get("Mcp-Session-Id")
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
-
+        let request = |command: &str, arguments: Value| {
+            json!({"version":1,
+            "requestId":Uuid::new_v4().to_string(),"command":command,"arguments":arguments})
+        };
+        assert_eq!(
+            client
+                .post(&state.endpoint)
+                .json(&request("capabilities", json!({})))
+                .send()
+                .unwrap()
+                .status()
+                .as_u16(),
+            401
+        );
+        assert_eq!(
+            client
+                .post(&state.endpoint)
+                .bearer_auth(&fixture.settings.desktop_cli_token)
+                .header("Origin", "http://untrusted.example")
+                .json(&request("capabilities", json!({})))
+                .send()
+                .unwrap()
+                .status()
+                .as_u16(),
+            403
+        );
         let listed: Value = client
             .post(&state.endpoint)
-            .bearer_auth(&fixture.settings.desktop_mcp_token)
-            .header("Mcp-Session-Id", &session_id)
-            .json(&json!({
-                "jsonrpc": "2.0",
-                "id": "list",
-                "method": "tools/list",
-                "params": {}
-            }))
+            .bearer_auth(&fixture.settings.desktop_cli_token)
+            .json(&request("capabilities", json!({})))
             .send()
             .unwrap()
             .json()
             .unwrap();
+        assert_eq!(listed["success"], true);
         assert_eq!(
-            listed
-                .pointer("/result/tools")
-                .and_then(Value::as_array)
-                .unwrap()
-                .len(),
+            listed["data"].as_array().unwrap().len(),
             registry::tool_count()
         );
-
+        let create_request = request("development_task_create", json!({"title":"CLI test"}));
         let called: Value = client
             .post(&state.endpoint)
-            .bearer_auth(&fixture.settings.desktop_mcp_token)
-            .header("Mcp-Session-Id", &session_id)
-            .json(&json!({
-                "jsonrpc": "2.0",
-                "id": "call",
-                "method": "tools/call",
-                "params": {
-                    "name": "development_task_create",
-                    "arguments": { "title": "HTTP MCP task" }
-                }
-            }))
+            .bearer_auth(&fixture.settings.desktop_cli_token)
+            .json(&create_request)
             .send()
             .unwrap()
             .json()
             .unwrap();
-        assert_eq!(called.pointer("/result/isError"), Some(&Value::Bool(false)));
+        assert_eq!(called["success"], true);
         assert_eq!(fixture.tasks.list().unwrap().len(), 1);
+        assert_eq!(
+            client
+                .post(&state.endpoint)
+                .bearer_auth(&fixture.settings.desktop_cli_token)
+                .json(&create_request)
+                .send()
+                .unwrap()
+                .status()
+                .as_u16(),
+            409
+        );
+        assert_eq!(fixture.tasks.list().unwrap().len(), 1);
+        assert!(
+            serde_json::to_value(&fixture.settings)
+                .unwrap()
+                .get("desktopCliToken")
+                .is_none()
+        );
+        let legacy = format!("http://127.0.0.1:{}/mcp", state.port);
+        assert_eq!(
+            client
+                .post(legacy)
+                .bearer_auth(&fixture.settings.desktop_cli_token)
+                .json(&json!({"method":"tools/list"}))
+                .send()
+                .unwrap()
+                .status()
+                .as_u16(),
+            404
+        );
     }
 }

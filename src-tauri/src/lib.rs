@@ -1,4 +1,4 @@
-mod foundation;
+pub mod foundation;
 mod modules;
 
 use foundation::{
@@ -11,8 +11,8 @@ use modules::codex_terminal::{
     CodexConversation, CodexTerminalAvailability, CodexTerminalEvent, CodexTerminalService,
     CodexTerminalState, CodexWorkflowSnapshot,
 };
-use modules::desktop_mcp::{
-    DesktopMcpDependencies, DesktopMcpGameDependencies, DesktopMcpService, DesktopMcpState,
+use modules::desktop_cli::{
+    DesktopCliDependencies, DesktopCliGameDependencies, DesktopCliService, DesktopCliState,
 };
 use modules::game_archives::{ArchiveCatalogService, ArchiveOption, TransferableArchive};
 use modules::game_connections::{
@@ -47,7 +47,7 @@ struct AppState {
     instances: InstanceService,
     runtime_bridge: RuntimeBridgeService,
     logs: LogService,
-    desktop_mcp: DesktopMcpService,
+    desktop_cli: DesktopCliService,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -140,26 +140,26 @@ fn update_settings(
     state
         .tasks
         .set_workspace_root(PathBuf::from(&settings.workspace_root_path));
-    state.desktop_mcp.start(&settings)?;
+    state.desktop_cli.start(&settings)?;
     state.connections.start(&settings)?;
     Ok(settings)
 }
 
 #[tauri::command]
-fn regenerate_desktop_mcp_token(state: State<'_, AppState>) -> AppResult<AppSettings> {
+fn regenerate_desktop_cli_token(state: State<'_, AppState>) -> AppResult<AppSettings> {
     let settings = state.settings.regenerate_token()?;
-    state.desktop_mcp.start(&settings)?;
+    state.desktop_cli.start(&settings)?;
     Ok(settings)
 }
 
 #[tauri::command]
-fn get_desktop_mcp_state(state: State<'_, AppState>) -> DesktopMcpState {
-    state.desktop_mcp.state()
+fn get_desktop_cli_state(state: State<'_, AppState>) -> DesktopCliState {
+    state.desktop_cli.state()
 }
 
 #[tauri::command]
-fn restart_desktop_mcp(state: State<'_, AppState>) -> AppResult<DesktopMcpState> {
-    state.desktop_mcp.start(&state.settings.get()?)
+fn restart_desktop_cli(state: State<'_, AppState>) -> AppResult<DesktopCliState> {
+    state.desktop_cli.start(&state.settings.get()?)
 }
 
 #[tauri::command]
@@ -275,6 +275,9 @@ fn resize_codex_terminal(
 
 #[tauri::command(async)]
 fn stop_codex_terminal(conversation_id: String, state: State<'_, AppState>) -> AppResult<()> {
+    state
+        .runtime_bridge
+        .cancel_session(&format!("codex-{conversation_id}"));
     state.codex_terminal.stop(&conversation_id)
 }
 
@@ -367,6 +370,9 @@ fn resize_grok_terminal(
 
 #[tauri::command(async)]
 fn stop_grok_terminal(conversation_id: String, state: State<'_, AppState>) -> AppResult<()> {
+    state
+        .runtime_bridge
+        .cancel_session(&format!("grok-{conversation_id}"));
     state.grok_terminal.stop(&conversation_id)
 }
 
@@ -526,8 +532,26 @@ fn delete_instance(id: String, state: State<'_, AppState>) -> AppResult<()> {
 }
 
 #[tauri::command]
-fn get_runtime_bridge_state(instance_id: String, state: State<'_, AppState>) -> RuntimeBridgeState {
-    state.runtime_bridge.state(&instance_id)
+async fn read_runtime_artifact(
+    task_id: String,
+    path: String,
+    state: State<'_, AppState>,
+) -> AppResult<String> {
+    let bridge = state.runtime_bridge.clone();
+    tauri::async_runtime::spawn_blocking(move || bridge.read_artifact(&task_id, &path))
+        .await
+        .map_err(foundation::AppError::internal)?
+}
+
+#[tauri::command]
+async fn get_runtime_bridge_state(
+    instance_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<RuntimeBridgeState> {
+    let bridge = state.runtime_bridge.clone();
+    tauri::async_runtime::spawn_blocking(move || bridge.state(&instance_id))
+        .await
+        .map_err(foundation::AppError::internal)
 }
 
 #[tauri::command]
@@ -586,7 +610,7 @@ pub fn run() {
             let archives = ArchiveCatalogService::new(paths.clone());
             let instances =
                 InstanceService::new(database.clone(), paths.clone(), connections.clone());
-            let runtime_bridge = RuntimeBridgeService::new(instances.clone());
+            let runtime_bridge = RuntimeBridgeService::new(instances.clone(), tasks.clone());
             let logs = LogService::new(database.clone(), connections.clone());
             let archive_transfers = ArchiveTransferService::new(
                 database.clone(),
@@ -599,12 +623,12 @@ pub fn run() {
                 instances: instances.clone(),
                 logs: logs.clone(),
             }));
-            let desktop_mcp = DesktopMcpService::new(DesktopMcpDependencies::new(
+            let desktop_cli = DesktopCliService::new(DesktopCliDependencies::new(
                 settings.clone(),
                 tasks.clone(),
                 codex_terminal.clone(),
                 grok_terminal.clone(),
-                DesktopMcpGameDependencies::new(
+                DesktopCliGameDependencies::new(
                     instances.clone(),
                     runtime_bridge.clone(),
                     logs.clone(),
@@ -614,7 +638,7 @@ pub fn run() {
                 ),
             ));
             connections.start(&current_settings)?;
-            desktop_mcp.start(&current_settings)?;
+            desktop_cli.start(&current_settings)?;
             app.manage(AppState {
                 paths,
                 database: database.clone(),
@@ -628,7 +652,7 @@ pub fn run() {
                 instances,
                 runtime_bridge,
                 logs,
-                desktop_mcp,
+                desktop_cli,
             });
             Ok(())
         })
@@ -636,9 +660,9 @@ pub fn run() {
             get_app_paths,
             get_settings,
             update_settings,
-            regenerate_desktop_mcp_token,
-            get_desktop_mcp_state,
-            restart_desktop_mcp,
+            regenerate_desktop_cli_token,
+            get_desktop_cli_state,
+            restart_desktop_cli,
             list_lan_interfaces,
             get_game_connection_state,
             restart_game_connections,
@@ -683,6 +707,7 @@ pub fn run() {
             set_instance_window_visibility,
             delete_instance,
             get_runtime_bridge_state,
+            read_runtime_artifact,
             list_log_sources,
             list_log_sessions,
             start_log_collection,
@@ -704,7 +729,7 @@ pub fn run() {
             state.grok_terminal.stop_all();
             state.instances.stop_all();
             state.connections.stop();
-            state.desktop_mcp.stop();
+            state.desktop_cli.stop();
         }
     });
 }

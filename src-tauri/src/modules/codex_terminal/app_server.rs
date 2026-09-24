@@ -33,6 +33,23 @@ enum BridgeCommand {
     Shutdown,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ExecutableStamp {
+    path: PathBuf,
+    length: u64,
+    modified: std::time::SystemTime,
+}
+impl ExecutableStamp {
+    fn read(path: &std::path::Path) -> Option<Self> {
+        let metadata = fs::metadata(path).ok()?;
+        Some(Self {
+            path: path.to_path_buf(),
+            length: metadata.len(),
+            modified: metadata.modified().ok()?,
+        })
+    }
+}
+
 #[derive(Clone)]
 pub(super) struct AppServerHandle {
     pub endpoint: String,
@@ -40,6 +57,7 @@ pub(super) struct AppServerHandle {
     sender: Sender<BridgeCommand>,
     child: Arc<parking_lot::Mutex<Option<Child>>>,
     token_file: Arc<PathBuf>,
+    executable_stamp: Option<ExecutableStamp>,
 }
 
 impl AppServerHandle {
@@ -47,6 +65,8 @@ impl AppServerHandle {
         codex: &ResolvedCodex,
         on_notification: NotificationHandler,
     ) -> AppResult<Self> {
+        let executable_stamp = ExecutableStamp::read(&codex.path)
+            .ok_or_else(|| AppError::validation("Codex executable is unavailable."))?;
         let port = reserve_loopback_port()?;
         let endpoint = format!("ws://127.0.0.1:{port}");
         let token = format!("abya-{}", Uuid::new_v4());
@@ -78,6 +98,7 @@ impl AppServerHandle {
             sender,
             child,
             token_file: Arc::new(token_file),
+            executable_stamp: Some(executable_stamp),
         };
         if let Err(error) = handle.request(
             "initialize",
@@ -105,12 +126,15 @@ impl AppServerHandle {
         &self,
         cwd: &str,
         developer_instructions: &str,
+        task_id: &str,
+        conversation_id: &str,
     ) -> AppResult<String> {
         let result = self.request(
             "thread/start",
             json!({
                 "cwd": cwd,
                 "developerInstructions": developer_instructions,
+                "config": managed_thread_config(cwd, task_id, conversation_id),
                 "experimentalRawEvents": false
             }),
         )?;
@@ -141,6 +165,8 @@ impl AppServerHandle {
         thread_id: &str,
         cwd: &str,
         developer_instructions: &str,
+        task_id: &str,
+        conversation_id: &str,
     ) -> AppResult<()> {
         self.request(
             "thread/resume",
@@ -148,10 +174,23 @@ impl AppServerHandle {
                 "threadId": thread_id,
                 "cwd": cwd,
                 "developerInstructions": developer_instructions,
+                "config": managed_thread_config(cwd, task_id, conversation_id),
                 "excludeTurns": true
             }),
         )?;
         Ok(())
+    }
+
+    pub(super) fn is_current(&self, codex: &ResolvedCodex) -> bool {
+        if self.executable_stamp.is_none()
+            || self.executable_stamp != ExecutableStamp::read(&codex.path)
+        {
+            return false;
+        }
+        self.child
+            .lock()
+            .as_mut()
+            .is_some_and(|child| matches!(child.try_wait(), Ok(None)))
     }
 
     pub(super) fn stop(&self) {
@@ -196,6 +235,7 @@ impl AppServerHandle {
             sender,
             child: Arc::new(parking_lot::Mutex::new(None)),
             token_file: Arc::new(PathBuf::new()),
+            executable_stamp: None,
         }
     }
 }
@@ -241,6 +281,34 @@ fn codex_process_command(codex: &ResolvedCodex) -> Command {
             command
         }
     }
+}
+
+// Per-thread values must reach the process that executes tools, not only the remote TUI.
+// Dotted overrides preserve unrelated user environment entries and permission settings.
+fn managed_thread_config(cwd: &str, task_id: &str, conversation_id: &str) -> Value {
+    let cli = crate::foundation::cli_environment::desktop_cli_path()
+        .to_string_lossy()
+        .into_owned();
+    let values = [
+        ("ABYA_DESKTOP_CLI", cli.as_str()),
+        ("ABYA_DEVELOPMENT_TASK_ID", task_id),
+        ("ABYA_DEVELOPMENT_CONVERSATION_ID", conversation_id),
+        ("ABYA_DEVELOPMENT_PROVIDER", "codex"),
+        ("ABYA_DEVELOPMENT_WORKSPACE", cwd),
+    ];
+    Value::Object(
+        values
+            .into_iter()
+            .map(|(key, value)| {
+                (
+                    format!("shell_environment_policy.set.{key}"),
+                    Value::String(value.into()),
+                )
+            })
+            .chain(crate::foundation::cli_sessions::environment("codex", task_id, conversation_id)
+                .into_iter().map(|(key, value)| (format!("shell_environment_policy.set.{key}"), Value::String(value))))
+            .collect(),
+    )
 }
 
 fn developer_instruction_item(developer_instructions: &str) -> Value {
@@ -391,7 +459,69 @@ fn fail_pending(receiver: Receiver<BridgeCommand>, message: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::developer_instruction_item;
+    use super::*;
+
+    #[test]
+    fn replacing_codex_at_the_same_path_invalidates_the_backend_stamp() {
+        let file = std::env::temp_dir().join(format!("abya-codex-stamp-{}", Uuid::new_v4()));
+        fs::write(&file, b"old binary").unwrap();
+        let before = ExecutableStamp::read(&file).unwrap();
+        assert_eq!(Some(before.clone()), ExecutableStamp::read(&file));
+        fs::write(&file, b"updated binary with new model support").unwrap();
+        assert_ne!(Some(before), ExecutableStamp::read(&file));
+        fs::remove_file(&file).unwrap();
+        assert_eq!(None, ExecutableStamp::read(&file));
+    }
+
+    #[test]
+    fn backend_without_a_live_process_is_not_reused() {
+        let file = std::env::temp_dir().join(format!("abya-codex-dead-{}", Uuid::new_v4()));
+        fs::write(&file, b"binary").unwrap();
+        let mut handle = AppServerHandle::for_test("ws://127.0.0.1:1", "test");
+        handle.executable_stamp = ExecutableStamp::read(&file);
+        let codex = ResolvedCodex {
+            path: file.clone(),
+            kind: CodexLaunchKind::Executable,
+        };
+        assert!(!handle.is_current(&codex));
+        fs::remove_file(file).unwrap();
+    }
+
+    #[test]
+    fn backend_context_is_isolated_per_conversation_without_permission_overrides() {
+        let first = managed_thread_config("D:/work/a", "task-a", "conversation-a");
+        let second = managed_thread_config("D:/work/b", "task-b", "conversation-b");
+        assert_eq!(
+            first["shell_environment_policy.set.ABYA_DEVELOPMENT_TASK_ID"],
+            "task-a"
+        );
+        assert_eq!(
+            first["shell_environment_policy.set.ABYA_DEVELOPMENT_CONVERSATION_ID"],
+            "conversation-a"
+        );
+        assert_eq!(
+            second["shell_environment_policy.set.ABYA_DEVELOPMENT_TASK_ID"],
+            "task-b"
+        );
+        assert_eq!(
+            second["shell_environment_policy.set.ABYA_DEVELOPMENT_CONVERSATION_ID"],
+            "conversation-b"
+        );
+        assert!(
+            first["shell_environment_policy.set.ABYA_DESKTOP_CLI"]
+                .as_str()
+                .unwrap()
+                .ends_with("abya-desktop.exe")
+        );
+        assert!([5, 7].contains(&first.as_object().unwrap().len()));
+        assert!(
+            first
+                .as_object()
+                .unwrap()
+                .keys()
+                .all(|key| key.starts_with("shell_environment_policy.set.ABYA_"))
+        );
+    }
 
     #[test]
     fn injected_thread_item_contains_only_the_managed_developer_message() {

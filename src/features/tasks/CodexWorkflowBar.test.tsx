@@ -38,7 +38,7 @@ const workflow: CodexWorkflowSnapshot = {
           status: "started",
           summary: "Inspecting game logs",
           detail: "{\"sessionId\":\"session-1\"}",
-          source: "desktopMcp",
+          source: "desktopCli",
           unplanned: false,
           startedAt: "2026-08-31T01:01:00Z",
         },

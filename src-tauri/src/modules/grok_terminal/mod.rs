@@ -274,7 +274,7 @@ impl GrokTerminalService {
             status,
             summary,
             detail,
-            "desktopMcpReport",
+            "desktopCliReport",
         )
     }
 
@@ -290,7 +290,7 @@ impl GrokTerminalService {
         let workflow = self.workflow(task_id, conversation_id)?;
         let turn_id = workflow
             .current_turn_id
-            .unwrap_or_else(|| format!("desktop-mcp-{}", Uuid::new_v4()));
+            .unwrap_or_else(|| format!("desktop-cli-{}", Uuid::new_v4()));
         let (kind, summary) = describe_desktop_tool(tool_name);
         self.record_activity(
             task_id,
@@ -301,7 +301,7 @@ impl GrokTerminalService {
             status,
             &summary,
             &sanitize_detail(arguments),
-            "desktopMcp",
+            "desktopCli",
         )
     }
 
@@ -343,6 +343,7 @@ impl GrokTerminalService {
         }
 
         let (grok, task) = self.validate_open_request(task_id, conversation_id)?;
+        let task = self.tasks.prepare_terminal_workspace(&task.id)?;
         let working_directory = PathBuf::from(&task.workspace_path);
         let conversation = self.conversation(task_id, conversation_id)?;
         let native_session_exists =
@@ -481,6 +482,7 @@ impl GrokTerminalService {
     }
 
     pub fn stop(&self, conversation_id: &str) -> AppResult<()> {
+        crate::foundation::cli_sessions::revoke("grok", conversation_id);
         let Some(session) = self.sessions.lock().remove(conversation_id) else {
             return Ok(());
         };
@@ -588,6 +590,7 @@ impl GrokTerminalService {
                 .is_some_and(|session| session.session_id == session_id);
             if is_current {
                 sessions.lock().remove(&conversation_id);
+                crate::foundation::cli_sessions::revoke("grok", &conversation_id);
             }
             match result {
                 Ok(status) => update_state(
@@ -1031,30 +1034,24 @@ fn build_command(
     command.arg("--minimal");
     command.arg("--rules");
     command.arg(managed_developer_instructions(task_id, conversation_id));
+    command.env(
+        "ABYA_DESKTOP_CLI",
+        crate::foundation::cli_environment::desktop_cli_path(),
+    );
     command.env("TERM", "xterm-256color");
     command.env("COLORTERM", "truecolor");
     command.env("ABYA_DEVELOPMENT_PROVIDER", "grok");
     command.env("ABYA_DEVELOPMENT_TASK_ID", task_id);
     command.env("ABYA_DEVELOPMENT_CONVERSATION_ID", conversation_id);
     command.env("ABYA_DEVELOPMENT_WORKSPACE", working_directory);
+    for (key, value) in crate::foundation::cli_sessions::environment("grok", task_id, conversation_id) { command.env(key, value); }
     command.cwd(working_directory);
     command
 }
 
 fn managed_developer_instructions(task_id: &str, conversation_id: &str) -> String {
-    let current_date = chrono::Local::now().format("%Y-%m-%d");
     format!(
-        "You are working inside ABYA development task {task_id}, Grok conversation \
-         {conversation_id}. The current local date is {current_date}. For every new user \
-         request that requires more than one operation, publish an execution plan before \
-         any command, file edit, web call, MCP call, or game-instance action. Keep exactly \
-         one plan step in progress, update the plan as work advances, and complete or fail \
-         every step before the final response. Do not enter formal read-only plan mode \
-         unless ambiguity genuinely requires user approval. If the ABYA desktop MCP is \
-         used, first call development_conversation_bind with provider grok, this task, and \
-         this conversation, then use development_conversation_activity_report for meaningful \
-         design, editing, testing, and blocker milestones. Do not include credentials, raw \
-         commands, command output, patches, or secrets in activity details."
+        "You are working in ABYA task {task_id}, conversation {conversation_id}. Publish and maintain a plan for multi-step work. Use only the executable in ABYA_DESKTOP_CLI for ABYA operations. Run doctor and capabilities first. CLI commands inherit the task, provider and conversation context. Report semantic milestones with conversation report. Do not use MCP or start unmanaged game processes. Open returned screenshot paths for visual acceptance. Never include credentials, raw commands, outputs or patches in activity details."
     )
 }
 
@@ -1064,18 +1061,16 @@ fn describe_desktop_tool(tool_name: &str) -> (CodexActivityKind, String) {
     } else if tool_name.starts_with("game_") {
         CodexActivityKind::GameInstance
     } else {
-        CodexActivityKind::Mcp
+        CodexActivityKind::Command
     };
     let summary = match tool_name {
         "game_instance_launch" => "Starting a game instance",
         "game_instance_wait_for_state" => "Waiting for the game process",
-        "game_instance_wait_for_mcp" => "Waiting for the game Runtime MCP",
+        "game_instance_wait_for_cli" => "Waiting for the game Runtime CLI",
         "game_instance_set_window_visibility" => "Updating the game window",
         "game_instance_stop" => "Stopping a game instance",
-        "game_runtime_call_tool" | "game_instance_mcp_call" => "Using a game runtime tool",
-        "game_runtime_list_tools" | "game_instance_mcp_tools_list" => {
-            "Inspecting game runtime capabilities"
-        }
+        "game_runtime_call_tool" => "Using a game runtime tool",
+        "game_runtime_list_tools" => "Inspecting game runtime capabilities",
         "game_log_query" => "Inspecting game logs",
         other => return (kind, format!("Using {other}")),
     };

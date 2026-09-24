@@ -37,17 +37,10 @@
 | `--abya-launch-report` | 启动状态 JSON 文件，状态为 `resolving`、`launching`、`ready` 或 `failed`。 |
 | `--abya-launch-exit-on-failure` | 启动失败时是否以退出码 `1` 关闭。 |
 
-## Runtime MCP 参数
+## Runtime CLI 参数
 
-| 参数 | 说明 |
-| --- | --- |
-| `--abya-mcp-port` | Runtime MCP loopback HTTP 端口，范围 `1024-65535`。 |
-| `--abya-mcp-token` | 每实例临时 Bearer Token。 |
-| `--abya-mcp-autostart=true` | 初始化后强制启动 Runtime MCP。 |
-| `--abya-mcp-auto-approve=true` | 强制放行 Internal MCP 的 HighImpact 授权，不写进游戏设置。 |
-
-Token 只允许存在于桌面工具内存和子进程启动参数中。不得写入数据库、启动报告、
-日志、实例详情或 MCP 返回值。
+桌面使用 --abya-cli-autostart=true，CLI 自动发现托管 PID 并验证桌面实例身份。
+临时凭证由游戏生成，不出现在 AI 参数或日志中。开发授权仅在桌面启动的进程启用。
 
 ## 桌面开发工具连接
 
@@ -60,7 +53,7 @@ Token 只允许存在于桌面工具内存和子进程启动参数中。不得�
 --abya-devtool-instance-id=<instance-id>
 ```
 
-WebSocket 用于结构化日志和存档传输；Runtime MCP 使用独立的 loopback HTTP
+WebSocket 用于结构化日志和存档传输；Runtime CLI 使用独立的 loopback HTTP
 连接。
 
 ## IGP 托管

@@ -196,12 +196,6 @@ pub struct InstanceRuntimeInfo {
     pub process_alive: bool,
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct RuntimeMcpEndpoint {
-    pub endpoint: String,
-    pub token: String,
-}
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceStopResult {

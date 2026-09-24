@@ -11,4 +11,3 @@ pub use models::{
 pub use service::{InstanceLogRepairReport, InstanceService};
 
 pub(crate) use launch::{build_launch_contract, validate_executable};
-pub(crate) use models::RuntimeMcpEndpoint;

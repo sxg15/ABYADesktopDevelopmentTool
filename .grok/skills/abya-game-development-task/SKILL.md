@@ -1,6 +1,6 @@
 ---
 name: abya-game-development-task
-description: Define, assess, implement, and validate an ABYA game-development task through desktop-managed game instances and the selected instance Runtime MCP. Use for ABYA game creation, editing, testing, or feasibility work inside a desktop development task.
+description: Define, assess, implement, and validate an ABYA game-development task through desktop-managed game instances and the selected instance Runtime CLI. Use for ABYA game creation, editing, testing, or feasibility work inside a desktop development task.
 when-to-use: Use when the user asks Grok to design, inspect, implement, fix, or validate an ABYA game through the ABYA Desktop Development Tool.
 user-invocable: true
 ---
@@ -11,28 +11,33 @@ Use this Skill inside an existing desktop development task. Do not create a
 second database task or change task status without the user's explicit
 acceptance.
 
-The desktop MCP is the control plane. Use it to discover archives, launch and
+The desktop CLI is the control plane. Use it to discover archives, launch and
 stop task-owned game instances, inspect launch reports and logs, and proxy the
-selected instance's Runtime MCP. Never launch an unmanaged process when the
-desktop MCP can perform the operation.
+selected instance's Runtime CLI. Never launch an unmanaged process when the
+desktop CLI can perform the operation.
 
 ## Workflow Visibility
 
 For every user request that needs more than one operation, publish a native
-Grok execution plan before any command, file edit, web call, MCP call, or
+Grok execution plan before any command, file edit, web call, CLI command, or
 game-instance action. Keep exactly one step in progress, update the plan as
 work advances, and complete or fail every step before the final response. Do
 not enter formal read-only plan mode unless ambiguity genuinely requires user
 approval.
 
-Before the first Desktop MCP domain call in a conversation, call
-`development_conversation_bind` with `provider: "grok"`,
-`ABYA_DEVELOPMENT_TASK_ID`, and `ABYA_DEVELOPMENT_CONVERSATION_ID`. Report
-meaningful design, authoring, instance, test, and blocker milestones through
-`development_conversation_activity_report`. Use the same concise summary when
-advancing one milestone from started/progress to completed/failed. Do not put
-credentials, tokens, command output, patch bodies, or MCP results in activity
-details.
+The executable path is injected as ABYA_DESKTOP_CLI. In PowerShell use
+`& $env:ABYA_DESKTOP_CLI doctor --json` and then `capabilities --json`.
+Every command automatically carries ABYA_DEVELOPMENT_TASK_ID,
+ABYA_DEVELOPMENT_CONVERSATION_ID and ABYA_DEVELOPMENT_PROVIDER.
+Use `conversation bind` once to verify context and `conversation report`
+for semantic milestones. Pass a JSON object with `--input-file <file|->`.
+Read [references/cli-commands.md](references/cli-commands.md) for the exact mapping.
+Only use CLI commands for ABYA operations. There is no legacy transport fallback.
+Read capability schemas before invoking game operations. Inspect all returned
+content blocks and open every relevant image path for visual acceptance.
+Exit code 7 or outcome_unknown requires reading actual game state before retrying;
+never automatically replay a write. Reuse the same summary for milestone updates.
+Do not include credentials, raw output, patches or secrets in activity details.
 
 ## 0. Choose A Task Template
 
@@ -101,13 +106,13 @@ confirms implementation.
 2. Launch `editor` for authoring inspection or `offline` for a single-player
    runtime probe. For multiplayer, launch `lan-host` and an independent
    `lan-client`; do not treat CreatorTest/Local as multiplayer evidence.
-   Managed instances launch in `background` mode by default. Use Runtime MCP
+   Managed instances launch in `background` mode by default. Use Runtime CLI
    screenshots and UI state while the render-preserving Player window remains
    off-screen; show the native window without activation only when direct
    human inspection is required, then return it to background mode.
-3. Wait for the process and Runtime MCP with the desktop wait tools. Read the
+3. Wait for the process and Runtime CLI with the desktop wait tools. Read the
    launch report when startup is slow or fails.
-4. Call the target Runtime MCP `read_me_first` before every new instance
+4. Call the target Runtime CLI `read_me_first` before every new instance
    workflow. Dynamically list tools and Lua APIs; do not guess names, schemas,
    event IDs, or capabilities.
 5. Inspect archive/level readiness, visible UI, screenshots, logs, and runtime
@@ -118,7 +123,7 @@ Report one feasibility grade:
 - `可直接实现`: supported by current authoring/runtime tools with routine work.
 - `可实现但复杂`: supported, but needs substantial gameplay, authority, UI, or
   validation work.
-- `需要补充工具`: implementation is plausible but a concrete MCP/Lua/tool
+- `需要补充工具`: implementation is plausible but a concrete CLI/Lua/tool
   capability is missing.
 - `当前阻塞`: required source material, runtime state, platform, or capability
   is unavailable.
@@ -228,7 +233,7 @@ accepted when entity behavior exists only inside a global per-frame loop.
 Manage only instances whose `taskId` matches `ABYA_DEVELOPMENT_TASK_ID`.
 
 If an instance stops responding, first make a best-effort five-second capture
-of its launch report, logs, Runtime MCP state, and screenshot. Then call the
+of its launch report, logs, Runtime CLI state, and screenshot. Then call the
 desktop stop tool, which verifies process-tree termination. Restart at most
 twice in one implementation stage. After that, report the repeated blocker and
 preserve the collected evidence.

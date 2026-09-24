@@ -286,7 +286,7 @@ impl CodexTerminalService {
             status,
             summary,
             detail,
-            "desktopMcpReport",
+            "desktopCliReport",
         )
     }
 
@@ -302,7 +302,7 @@ impl CodexTerminalService {
         let workflow = self.workflow(task_id, conversation_id)?;
         let turn_id = workflow
             .current_turn_id
-            .unwrap_or_else(|| format!("desktop-mcp-{}", Uuid::new_v4()));
+            .unwrap_or_else(|| format!("desktop-cli-{}", Uuid::new_v4()));
         let (kind, summary) = describe_desktop_tool(tool_name);
         self.record_activity(
             task_id,
@@ -313,7 +313,7 @@ impl CodexTerminalService {
             status,
             &summary,
             &sanitize_detail(arguments),
-            "desktopMcp",
+            "desktopCli",
         )
     }
 
@@ -358,6 +358,7 @@ impl CodexTerminalService {
         }
 
         let (codex, task) = self.validate_open_request(task_id, conversation_id)?;
+        let task = self.tasks.prepare_terminal_workspace(&task.id)?;
         let working_directory = PathBuf::from(&task.workspace_path);
         let mut conversation = self.conversation(task_id, conversation_id)?;
         let mut native_session_id = conversation
@@ -385,11 +386,18 @@ impl CodexTerminalService {
                                 thread_id,
                                 &display_path(&working_directory),
                                 &instructions,
+                                task_id,
+                                conversation_id,
                             )
                             .map(|()| thread_id.to_string())
                     } else {
                         server
-                            .start_thread(&display_path(&working_directory), &instructions)
+                            .start_thread(
+                                &display_path(&working_directory),
+                                &instructions,
+                                task_id,
+                                conversation_id,
+                            )
                             .and_then(|thread_id| {
                                 server
                                     .persist_developer_instructions(&thread_id, &instructions)
@@ -556,6 +564,7 @@ impl CodexTerminalService {
     }
 
     pub fn stop(&self, conversation_id: &str) -> AppResult<()> {
+        crate::foundation::cli_sessions::revoke("codex", conversation_id);
         let Some(session) = self.sessions.lock().remove(conversation_id) else {
             return Ok(());
         };
@@ -607,8 +616,21 @@ impl CodexTerminalService {
     }
 
     fn ensure_app_server(&self, codex: &ResolvedCodex) -> AppResult<AppServerHandle> {
-        if let Some(server) = self.app_server.lock().clone() {
-            return Ok(server);
+        let mut cached = self.app_server.lock();
+        if let Some(server) = cached.as_ref() {
+            if server.is_current(codex) {
+                return Ok(server.clone());
+            }
+            if !self.sessions.lock().is_empty() {
+                return Err(AppError::new(
+                    "codexBackendRestartRequired",
+                    "Codex was updated or its backend exited. Stop the other Codex terminals and reopen to reload the backend.",
+                    "",
+                ));
+            }
+            server.stop();
+            *cached = None;
+            self.thread_conversations.lock().clear();
         }
         let tasks = self.tasks.clone();
         let sessions = self.sessions.clone();
@@ -626,7 +648,7 @@ impl CodexTerminalService {
                 );
             }),
         )?;
-        *self.app_server.lock() = Some(server.clone());
+        *cached = Some(server.clone());
         Ok(server)
     }
 
@@ -691,6 +713,7 @@ impl CodexTerminalService {
                 .is_some_and(|session| session.session_id == session_id);
             if is_current {
                 sessions.lock().remove(&conversation_id);
+                crate::foundation::cli_sessions::revoke("codex", &conversation_id);
             }
             match result {
                 Ok(status) => update_state(
@@ -868,12 +891,17 @@ fn build_command(
         command.arg("ABYA_CODEX_APP_SERVER_TOKEN");
         command.env("ABYA_CODEX_APP_SERVER_TOKEN", &server.token);
     }
+    command.env(
+        "ABYA_DESKTOP_CLI",
+        crate::foundation::cli_environment::desktop_cli_path(),
+    );
     command.env("TERM", "xterm-256color");
     command.env("COLORTERM", "truecolor");
     command.env("ABYA_DEVELOPMENT_PROVIDER", "codex");
     command.env("ABYA_DEVELOPMENT_TASK_ID", task_id);
     command.env("ABYA_DEVELOPMENT_CONVERSATION_ID", conversation_id);
     command.env("ABYA_DEVELOPMENT_WORKSPACE", working_directory);
+    for (key, value) in crate::foundation::cli_sessions::environment("codex", task_id, conversation_id) { command.env(key, value); }
     command.arg("--cd");
     command.arg(working_directory);
     command.arg("--no-alt-screen");
@@ -882,19 +910,8 @@ fn build_command(
 }
 
 fn managed_developer_instructions(task_id: &str, conversation_id: &str) -> String {
-    let current_date = chrono::Local::now().format("%Y-%m-%d");
     format!(
-        "You are working inside ABYA development task {task_id}, conversation \
-         {conversation_id}. The current local date is {current_date}. For every new user \
-         request that requires more than one operation, call update_plan before \
-         any command, file edit, web call, MCP call, or game-instance action. Keep \
-         exactly one plan step in progress, update the plan as work advances, and \
-         complete or fail every step before the final response. If the ABYA desktop \
-         MCP is used, first call \
-         development_conversation_bind with provider codex, this task, and this conversation, then use \
-         development_conversation_activity_report for meaningful design, editing, \
-         testing, and blocker milestones. Do not include credentials or secrets in \
-         activity details."
+        "You are working in ABYA task {task_id}, conversation {conversation_id}. Publish and maintain a plan for multi-step work. Use only the executable in ABYA_DESKTOP_CLI for ABYA operations. Run doctor and capabilities first. CLI commands inherit the task, provider and conversation context. Report semantic milestones with conversation report. Do not use MCP or start unmanaged game processes. Open returned screenshot paths for visual acceptance. Never include credentials, raw commands, outputs or patches in activity details."
     )
 }
 
@@ -1192,18 +1209,16 @@ fn describe_desktop_tool(tool_name: &str) -> (CodexActivityKind, String) {
     } else if tool_name.starts_with("game_") {
         CodexActivityKind::GameInstance
     } else {
-        CodexActivityKind::Mcp
+        CodexActivityKind::Command
     };
     let summary = match tool_name {
         "game_instance_launch" => "Starting a game instance",
         "game_instance_wait_for_state" => "Waiting for the game process",
-        "game_instance_wait_for_mcp" => "Waiting for the game Runtime MCP",
+        "game_instance_wait_for_cli" => "Waiting for the game Runtime CLI",
         "game_instance_set_window_visibility" => "Updating the game window",
         "game_instance_stop" => "Stopping a game instance",
-        "game_runtime_call_tool" | "game_instance_mcp_call" => "Using a game runtime tool",
-        "game_runtime_list_tools" | "game_instance_mcp_tools_list" => {
-            "Inspecting game runtime capabilities"
-        }
+        "game_runtime_call_tool" => "Using a game runtime tool",
+        "game_runtime_list_tools" => "Inspecting game runtime capabilities",
         "game_log_query" => "Inspecting game logs",
         other => return (kind, format!("Using {other}")),
     };
