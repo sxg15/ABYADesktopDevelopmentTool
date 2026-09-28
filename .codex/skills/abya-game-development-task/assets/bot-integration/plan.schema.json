@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ABYA Bot task plan v1 (task artifact, not a Runtime CLI input)",
+  "type": "object", "additionalProperties": false,
+  "required": ["schemaVersion", "enabled", "target", "networkMode", "playerModel", "changedDefinitionIds", "removedDefinitionIds", "allowRemoveAll", "bots"],
+  "properties": {
+    "schemaVersion": {"const": 1}, "enabled": {"type": "boolean"},
+    "target": {"type": "object", "additionalProperties": false, "required": ["archiveId", "levelId"],
+      "properties": {"archiveId": {"$ref": "#/$defs/text"}, "levelId": {"$ref": "#/$defs/text"}}},
+    "networkMode": {"enum": ["single", "multiplayer"]}, "playerModel": {"enum": ["native", "manual"]},
+    "changedDefinitionIds": {"$ref": "#/$defs/ids"}, "removedDefinitionIds": {"$ref": "#/$defs/ids"},
+    "allowRemoveAll": {"type": "boolean"},
+    "bots": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+      "required": ["definitionId", "actionChannel", "observations", "observationContract", "decisionPolicy", "spawnRule", "removeRule", "difficultyBehaviors"],
+      "properties": {
+        "definitionId": {"$ref": "#/$defs/text"}, "actionChannel": {"$ref": "#/$defs/text"},
+        "observations": {"$ref": "#/$defs/nonEmptyTexts"}, "decisionPolicy": {"$ref": "#/$defs/text"},
+        "spawnRule": {"$ref": "#/$defs/text"}, "removeRule": {"$ref": "#/$defs/text"},
+        "observationContract": {"type": "object", "additionalProperties": false,
+          "required": ["source", "fields", "handshake", "stateIdentity", "acceptedEvidence"],
+          "properties": {"source": {"enum": ["message", "publicObject"]}, "channel": {"$ref": "#/$defs/text"},
+            "fields": {"$ref": "#/$defs/nonEmptyTexts"}, "handshake": {"$ref": "#/$defs/text"},
+            "stateIdentity": {"$ref": "#/$defs/text"}, "acceptedEvidence": {"$ref": "#/$defs/text"}}},
+        "difficultyBehaviors": {"type": "object", "additionalProperties": false,
+          "required": ["Easy", "Medium", "Hard", "Hell"], "properties": {
+            "Easy": {"$ref": "#/$defs/text"}, "Medium": {"$ref": "#/$defs/text"},
+            "Hard": {"$ref": "#/$defs/text"}, "Hell": {"$ref": "#/$defs/text"}}}
+      }}}
+  },
+  "$defs": {"text": {"type": "string", "minLength": 1},
+    "ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+    "nonEmptyTexts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}}}
+}

@@ -1,13 +1,26 @@
+param([switch]$Staging)
+
 $ErrorActionPreference = "Stop"
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$publish = Join-Path $root "Publish"
+$publishName = if ($Staging) { "Publish-Staging-Bot" } else { "Publish" }
+$publish = Join-Path $root $publishName
 $llmDirectories = @(".codex", ".grok")
 $managedSkillRelativePath = "skills\abya-game-development-task\SKILL.md"
 $managedSkillRequiredFiles = @(
     $managedSkillRelativePath,
     "skills\abya-game-development-task\references\gameplay-architecture.md",
     "skills\abya-game-development-task\assets\gameplay-architecture.v1.template.json",
+    "skills\abya-game-development-task\references\bot-development.md",
+    "skills\abya-game-development-task\references\bot-artifacts.md",
+    "skills\abya-game-development-task\assets\bot-integration\plan.schema.json",
+    "skills\abya-game-development-task\assets\bot-integration\plan.template.json",
+    "skills\abya-game-development-task\assets\bot-integration\validation.schema.json",
+    "skills\abya-game-development-task\assets\bot-integration\validation.template.json",
+    "skills\abya-game-development-task\scripts\validate-bot-artifacts.mjs",
+    "skills\abya-game-development-task\scripts\bot-artifact-core.mjs",
+    "skills\abya-game-development-task\scripts\bot-definition-checks.mjs",
+    "skills\abya-game-development-task\scripts\bot-evidence-checks.mjs",
     "skills\abya-import-task-template\SKILL.md",
     "skills\abya-import-task-template\scripts\import-template.mjs"
 )

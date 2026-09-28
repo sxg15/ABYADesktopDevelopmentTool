@@ -36,6 +36,14 @@ or trigger event expresses the same behavior.
 5. After implementation, call `editor_gameplay_architecture_lint` with the same
    manifest. Re-run runtime tests after every structural correction.
 
+For Bot authoring, read [bot-development.md](bot-development.md). The current
+validator inspects loaded definitions. Check the existing base first, preflight
+candidate Lua/API, and stage only the candidate definitions reversibly without
+saving. Re-read the snapshot and validate the complete manifest, including every
+Bot, before implementing other bindings. This explicit staging exception also
+applies to the multiplayer template. A topology snapshotRevision does not lock
+Bot content: re-read definitions and compare their separate content hash.
+
 Prefab writes synchronize all linked instances and therefore require explicit
 high-impact approval. Read the binding immediately before writing and pass its
 `prefabRevision` as `expectedRevision`.

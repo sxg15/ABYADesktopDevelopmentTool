@@ -19,6 +19,18 @@ directories in portable output. Both source directories must contain
 `skills/abya-game-development-task/SKILL.md`; checks and publishing fail when
 either provider's bundled task Skill is absent. The published managed Skill
 also includes its gameplay architecture reference and versioned JSON template.
+Both provider bundles additionally require the Bot workflow/artifact references,
+plan/report schemas and templates, and all four validator modules. Publishing
+preflights these files and copies them with the complete provider root.
+check:skills runs scripts/bot-workflow.check.mjs: update-scope preservation,
+numeric enum readback compatibility, stale/missing/foreign evidence rejection,
+independent-client and difficulty coverage, current archive/Player fingerprints,
+CLI exit codes and provider resource parity. These synthetic checker tests are
+not Bot gameplay or real Player acceptance evidence.
+`scripts/publish.ps1 -Staging` runs the same checks/build/copy/manifest pipeline
+into the fixed repository-local Publish-Staging-Bot directory, allowing package
+validation while the normal Publish executable is in use. The default remains
+Publish; both destinations retain the same resolved-path deletion boundary.
 
 Both provider roots also ship `abya-import-task-template/SKILL.md` and its
 standalone Node `scripts/import-template.mjs`. Import accepts an original Skill

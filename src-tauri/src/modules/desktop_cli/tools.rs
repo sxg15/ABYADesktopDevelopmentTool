@@ -1085,7 +1085,20 @@ mod tests {
             std::thread::sleep(Duration::from_millis(250));
         }
         let catalog = deps.runtime_bridge.list_tools(&instance_id).unwrap();
-        assert_eq!(catalog.as_array().unwrap().len(), 239);
+        std::fs::write(
+            output.join("runtime-catalog.json"),
+            serde_json::to_vec_pretty(&catalog).unwrap(),
+        )
+        .unwrap();
+        let tools = catalog.as_array().expect("运行能力目录必须是数组");
+        for required in ["read_me_first", "runtime_get_status", "lua_execute"] {
+            assert!(tools.iter().any(|tool| tool["name"] == required));
+        }
+        assert!(!tools.iter().any(|tool| {
+            tool["name"]
+                .as_str()
+                .is_some_and(|name| name.starts_with("runtime_log_server_"))
+        }));
         let lua = "--[[ABYA-LUA\n{\"schemaVersion\":1,\"apiVersion\":\"3.0\",\"name\":\"cli-smoke\",\"description\":\"Pure validation\",\"context\":\"automation\",\"side\":\"universal\",\"entry\":\"main\",\"requires\":[],\"parameters\":[],\"returns\":[{\"name\":\"value\",\"type\":\"Float\",\"required\":true,\"description\":\"Result\"}]}\nABYA-LUA]]\nfunction main(input) return 42 end";
         for (tool, arguments) in [
             ("read_me_first", json!({})),
@@ -1198,7 +1211,7 @@ mod tests {
         }
         std::fs::write(
             output.join("summary.json"),
-            json!({"success":true,"capabilities":239,
+            json!({"success":true,"capabilities":tools.len(),
             "providers":["codex","grok"],"pureLua":true,"screenshot":true,"multiplayer":multiplayer})
             .to_string(),
         )

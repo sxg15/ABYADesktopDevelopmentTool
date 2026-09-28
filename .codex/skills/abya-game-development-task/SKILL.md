@@ -81,6 +81,11 @@ network authority model, and any reference videos or documents. Read accessible
 references with the appropriate tool and identify inaccessible material as an
 evidence gap.
 
+If the request needs bot participants, load
+[references/bot-development.md](references/bot-development.md) during feasibility.
+Record their roles, slots, visible information and difficulty goals. Reuse facts
+already supplied; do not add bots to unrelated requests or remove existing definitions.
+
 Unless the user supplies assets or explicitly requires existing resources,
 plan for the agent to create every visual, audio, and UI asset required by the
 accepted gameplay design, import it into the editor, and assign it to the
@@ -185,7 +190,12 @@ call `editor_gameplay_architecture_validate` with the complete manifest. Do not
 mutate gameplay while any deterministic `error` remains. Resolve heuristic
 warnings or record an exact warning exception with evidence and a concrete
 reason; an exception never suppresses an error. Begin mutation only when the
-validation response reports `ready=true`.
+validation response reports `ready=true`. For new Bot definitions, the narrowly
+scoped reversible candidate staging procedure in
+[references/bot-development.md](references/bot-development.md) applies: validate
+the current base and candidate Lua first, stage definitions without saving,
+then validate the complete candidate manifest before other gameplay writes.
+Do not omit existing bots from the base or bypass deterministic errors.
 
 - New or rewritten gameplay defaults to a complete self-contained ABYA-LUA
   String. Read the Runtime Lua authoring guides, scaffold against the exact
@@ -253,3 +263,7 @@ present as a resource file.
 Separate source/static checks, validation calls, runtime assertions, and real
 Host plus ClientOnly evidence in the final report. Do not mark the development
 task complete until the user accepts the result.
+
+For Bot changes, follow the Bot guide's read/merge/readback workflow and run its
+local artifact checker. Report gameplay acceptance evidence separately from
+submitted counts and static readiness; blocked or unverified runs are not passed.

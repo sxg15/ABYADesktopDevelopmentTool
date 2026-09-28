@@ -8,5 +8,6 @@
     "networkMode": "single"
   },
   "components": [],
+  "bots": [],
   "exceptions": []
 }

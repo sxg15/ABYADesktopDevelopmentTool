@@ -696,6 +696,45 @@ mod tests {
     use super::*;
     use crate::foundation::{AppPaths, Database};
 
+    const BOT_RESOURCES: [&str; 10] = [
+        "references/bot-development.md",
+        "references/bot-artifacts.md",
+        "assets/bot-integration/plan.schema.json",
+        "assets/bot-integration/plan.template.json",
+        "assets/bot-integration/validation.schema.json",
+        "assets/bot-integration/validation.template.json",
+        "scripts/validate-bot-artifacts.mjs",
+        "scripts/bot-artifact-core.mjs",
+        "scripts/bot-definition-checks.mjs",
+        "scripts/bot-evidence-checks.mjs",
+    ];
+
+    // 比较部署字节并启动无副作用的参数检查，覆盖嵌套模块导入。
+    fn assert_bot_resources(service: &TaskService, workspace: &Path) {
+        for source in &service.managed_skill_sources {
+            let bundled = source.source.as_ref().expect("随包 Skill 必须存在");
+            let deployed = workspace
+                .join(source.llm_directory)
+                .join("skills")
+                .join(MANAGED_SKILL_NAME);
+            for relative in BOT_RESOURCES {
+                assert_eq!(
+                    std::fs::read(deployed.join(relative)).unwrap(),
+                    std::fs::read(bundled.join(relative)).unwrap(),
+                    "{}: {relative}",
+                    source.llm_directory
+                );
+            }
+            let result = std::process::Command::new("node")
+                .arg(deployed.join("scripts/validate-bot-artifacts.mjs"))
+                .output()
+                .unwrap();
+            assert_eq!(result.status.code(), Some(2));
+            let body: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+            assert_eq!(body["accepted"], false);
+        }
+    }
+
     #[test]
     fn creates_unique_workspace_for_each_task() {
         let root = std::env::temp_dir().join(format!("abya-task-service-{}", Uuid::new_v4()));
@@ -755,6 +794,7 @@ mod tests {
                     .is_file()
             );
         }
+        assert_bot_resources(&service, Path::new(&first.workspace_path));
         assert_eq!(service.list().unwrap().len(), 2);
         let _ = std::fs::remove_dir_all(root);
     }
@@ -793,6 +833,9 @@ mod tests {
             std::fs::create_dir_all(&user_skill).unwrap();
             std::fs::write(user_skill.join("SKILL.md"), "user content").unwrap();
             std::fs::write(managed.join("SKILL.md"), "stale managed content").unwrap();
+            for relative in BOT_RESOURCES {
+                std::fs::write(managed.join(relative), "stale Bot resource").unwrap();
+            }
         }
 
         service.get(&task.id).unwrap();
@@ -839,6 +882,7 @@ mod tests {
             .unwrap()
             .contains("ABYA_DEVELOPMENT_PROVIDER")
         );
+        assert_bot_resources(&service, workspace);
         let _ = std::fs::remove_dir_all(root);
     }
 

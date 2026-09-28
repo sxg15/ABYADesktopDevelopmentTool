@@ -40,6 +40,16 @@ The same deployment boundary supports `abya-art-template-*` with a valid
 after feasibility and before implementation, with comic-arcade-ui as the
 default when the user elects to use a style without naming one.
 
+Bot development is a conditional part of the managed task Skill, shared by the
+multiplayer template and both providers. Task-owned artifacts/bot-integration
+contains the plan, before/current/candidate/reloaded definition snapshots and
+version-bound verification materials. Standalone bundled Node modules validate
+update scope, artifacts and explicit evidence assertions without game writes.
+Game operations still use desktop-cli. Candidate staging is reversible and
+followed by full architecture validation before bindings/save. Workflow turn
+completion is separate from Bot runtime acceptance and user task acceptance.
+The checker is not a backend-enforced completion gate or an atomic version lock.
+
 `codex-terminal` discovers Codex, owns its PTYs and process trees, connects the
 visible TUI to the authenticated loopback Codex app-server, and maps native
 thread/plan/item notifications into the shared workflow model.

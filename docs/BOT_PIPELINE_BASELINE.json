@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-28",
+  "scope": "bot-pipeline-source-integration",
+  "status": "blocked-for-bot-runtime-acceptance",
+  "desktopSourceRevision": "238a687",
+  "gameChangeset": 11352,
+  "playerPath": "D:/AbyaCliValidation/CLI-Player-20260924/ABYA_PB.exe",
+  "playerBuildId": "53ef727c2fa2d1a8900489c4a86c98ca533f5d21dbf3beb5dc52dfedc9da0343",
+  "availableCapabilities": [
+    "editor_get_bot_definitions",
+    "editor_set_bot_definitions",
+    "editor_gameplay_architecture_snapshot",
+    "editor_gameplay_architecture_validate",
+    "editor_gameplay_architecture_lint",
+    "editor_save_archive",
+    "lua_api_search"
+  ],
+  "missingCapabilities": [
+    "runtime_bot_diagnostics"
+  ],
+  "transportSmoke": {
+    "gameplayAcceptance": false,
+    "providerContexts": [
+      "codex",
+      "grok"
+    ],
+    "modelInference": false,
+    "independentHostClient": true,
+    "passed": true,
+    "evidenceDirectory": "D:/AbyaCliValidation/Bot-Pipeline-20260928"
+  },
+  "sample": {
+    "source": "D:/AbyaCliValidation/CLI-Smoke-Archive",
+    "requestedBotSamplesAvailable": false,
+    "name": "合作模式-1",
+    "purpose": "isolated transport smoke only"
+  },
+  "blockers": [
+    "交接包未含快速口算/颜色记忆原始存档，本机已查目录未找到；已询问用户路径。",
+    "现有验证 Player 缺少 runtime_bot_diagnostics，未逐项发现新版 Bot Lua API。",
+    "新 Player 构建前需解决既有 Unity iOS/Xcode 编译依赖和编辑器版本匹配。"
+  ]
+}

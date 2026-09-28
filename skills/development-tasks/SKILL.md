@@ -63,6 +63,17 @@ architecture reference and manifest template. During an approved gameplay
 implementation the provider writes the concrete manifest to the task-owned
 `artifacts/gameplay-architecture.v1.json`; this artifact belongs to the task
 workspace and is not persisted in the desktop database or the game archive.
+Bot requests additionally load references/bot-development.md and bot-artifacts.md.
+Both provider bundles ship versioned plan/report schemas, templates and four local
+Node validator modules. Bot plans, definition snapshots and verification evidence
+live under artifacts/bot-integration in the task workspace. They do not add task
+database fields or automatically mark the task complete. New definitions use a
+limited reversible staging step before full architecture validation; existing
+definitions are preserved and writes use a single author plus immediate readback.
+The local validator checks declared update scope, read-before-write content hashes,
+saved archive/Player hashes and evidence-bound gameplay assertions. It does not
+execute Lua, establish atomic write locking, authenticate evidence, or replace
+runtime acceptance. The multiplayer template uses the same Bot contract.
 The bundled Skill also makes agent-created, imported, and assigned gameplay
 assets the default when the user does not provide or require existing assets,
 and requires CustomUI text contrast plus parent-contained layout acceptance.
@@ -117,6 +128,9 @@ both-provider terminal cleanup on successful task deletion without UI-channel
 waits, tab and provider selection retention, workflow visibility across tabs,
 provider-scoped conversation/workflow synchronization, and task-workspace
 refresh after instance deletion.
+Also compare every deployed Bot schema/reference/module with its bundled source
+for new tasks and stale-task refresh, and execute the deployed Node entrypoint to
+verify sibling imports. Preserve user-owned Skills and gameplay task artifacts.
 
 ## LLM Maintenance Rule
 
