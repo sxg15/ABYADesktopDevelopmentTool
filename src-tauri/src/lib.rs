@@ -295,6 +295,31 @@ fn read_terminal_clipboard() -> AppResult<foundation::clipboard::ClipboardConten
 }
 
 #[tauri::command(async)]
+fn copy_terminal_history(
+    provider: modules::development_terminal::TerminalProvider,
+    task_id: String,
+    conversation_id: String,
+    window: tauri::WebviewWindow,
+    state: State<'_, AppState>,
+) -> AppResult<bool> {
+    use modules::development_terminal::TerminalProvider;
+    let text = match provider {
+        TerminalProvider::Codex => state
+            .codex_terminal
+            .transcript_text(&task_id, &conversation_id)?,
+        TerminalProvider::Grok => state
+            .grok_terminal
+            .transcript_text(&task_id, &conversation_id)?,
+    };
+    if text.trim().is_empty() {
+        return Ok(false);
+    }
+    let owner = window.hwnd().map_err(foundation::AppError::internal)?;
+    foundation::clipboard::write_text(&text, owner.0 as isize)?;
+    Ok(true)
+}
+
+#[tauri::command(async)]
 fn get_codex_project_workspace(task_id: String, state: State<'_, AppState>) -> AppResult<String> {
     state.codex_terminal.project_workspace(&task_id)
 }
@@ -701,6 +726,7 @@ pub fn run() {
             stop_codex_terminal,
             list_codex_conversations,
             read_terminal_clipboard,
+            copy_terminal_history,
             get_codex_project_workspace,
             set_codex_conversation_archived,
             create_codex_conversation,

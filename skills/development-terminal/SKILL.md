@@ -39,6 +39,18 @@ keeps a rolling recent window of at most 2 MiB of normalized text so sustained
 PTY redraw traffic cannot exhaust the WebView; the provider transcript remains
 persisted on disk.
 
+The toolbar's copy-all action copies the selected conversation's entire persisted
+PTY transcript, including output older than replay and UI retention windows. It
+works in terminal/history modes and after exit for both providers. The async
+copy_terminal_history adapter returns true only after native clipboard success;
+false means no text and preserves the clipboard. Disable concurrent clicks and
+show bilingual success, empty-history and retryable failure feedback. Read a
+fixed file-length snapshot in chunks and strip ANSI/control strings with parser
+state across chunk boundaries. Do not send the complete transcript through IPC
+or mount it in the DOM. This is terminal output, including provider redraws;
+it does not expand tool results hidden by the provider UI. Tests cover multi-MiB
+history, Unicode, split escape sequences, empty files, errors and provider routing.
+
 PTY open and live resize clamp columns to 20–500 and rows to 5–200, matching
 Codex/Grok backend limits. The PTY is not opened until the selected host is
 visible and has a non-zero laid-out box. A later resize or visibility change

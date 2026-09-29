@@ -22,6 +22,7 @@ const terminalApiMock = vi.hoisted(() => ({
   })),
   deleteConversation: vi.fn(),
   readClipboard: vi.fn(async () => ({ kind: "text", text: "pasted" })),
+  copyHistory: vi.fn(async () => true),
   projectWorkspace: vi.fn(async () => "D:\\Workspaces\\task-1"),
   setArchived: vi.fn(async (_task: string, _id: string, archived: boolean) => ({ ...conversation, archived })),
   workflow: vi.fn(async () => ({
@@ -181,6 +182,50 @@ function notifyResize() {
 }
 
 describe("Codex conversation list", () => {
+  it("copies persisted history while the terminal is stopped and shows success", async () => {
+    terminalApiMock.open.mockResolvedValueOnce({
+      taskId: "task-1", conversationId: "conversation-1", status: "exited",
+      pid: 0, workingDirectory: "D:\\Workspaces\\task-1", lastError: "",
+    });
+    renderView();
+    await screen.findAllByText("Original title");
+    giveHostLayout();
+    notifyResize();
+    await screen.findByText(translator("en-US")("codexExited"));
+    fireEvent.click(await screen.findByRole("button", { name: "Copy all conversation history" }));
+    await screen.findByText("All conversation history copied");
+    expect(terminalApiMock.copyHistory).toHaveBeenCalledWith("codex", "task-1", "conversation-1");
+    expect(terminalApiMock.open).toHaveBeenCalledTimes(1);
+    expect(terminalApiMock.write).not.toHaveBeenCalled();
+  });
+
+  it("disables repeat copies, reports errors, and allows retry from history view", async () => {
+    let rejectCopy!: (error: Error) => void;
+    terminalApiMock.copyHistory.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectCopy = reject; }));
+    renderView();
+    const button = await screen.findByRole("button", { name: "Copy all conversation history" });
+    fireEvent.click(button);
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(button);
+    expect(terminalApiMock.copyHistory).toHaveBeenCalledTimes(1);
+    rejectCopy(new Error("Clipboard is busy"));
+    await screen.findByText(/Could not copy conversation history/);
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByTitle(translator("en-US")("terminalHistory")));
+    fireEvent.click(button);
+    await screen.findByText("All conversation history copied");
+  });
+
+  it("uses the selected Grok provider and reports empty history without success", async () => {
+    terminalApiMock.copyHistory.mockResolvedValueOnce(false);
+    render(<DevelopmentTerminalView provider="grok" taskId="task-1" visible
+      availability={availability} t={translator("en-US")} onRefreshAvailability={vi.fn()} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Copy all conversation history" }));
+    await screen.findByText("This conversation has no history to copy yet.");
+    expect(terminalApiMock.copyHistory).toHaveBeenCalledWith("grok", "task-1", "conversation-1");
+    expect(screen.queryByText("All conversation history copied")).toBeNull();
+  });
+
   it("shows a read-only task folder for desktop project compatibility", async () => {
     renderView();
     fireEvent.click(await screen.findByTitle("Codex project grouping"));

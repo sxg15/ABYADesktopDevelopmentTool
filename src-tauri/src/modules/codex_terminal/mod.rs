@@ -264,6 +264,15 @@ impl CodexTerminalService {
         Ok(conversation)
     }
 
+    pub fn transcript_text(&self, task_id: &str, conversation_id: &str) -> AppResult<String> {
+        Uuid::parse_str(conversation_id).map_err(AppError::internal)?;
+        self.conversation(task_id, conversation_id)?;
+        let task = self.tasks.get(task_id)?;
+        let path = conversation_directory(Path::new(&task.workspace_path), conversation_id)
+            .join(CONVERSATION_TRANSCRIPT_FILE);
+        crate::modules::development_terminal::transcript::read_transcript_text(&path)
+    }
+
     pub fn workflow(
         &self,
         task_id: &str,

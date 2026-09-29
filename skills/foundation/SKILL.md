@@ -67,5 +67,13 @@ cli_sessions owns in-memory 12-hour capabilities bound to provider/task/conversa
 
 
 ## User-initiated clipboard access
-clipboard::read uses Windows clipboard APIs only on explicit terminal paste. Prefer bounded CF_UNICODETEXT (1 MiB UTF-8), otherwise identify bitmap/DIB/PNG without copying image bytes. Never log clipboard contents, monitor clipboard changes or modify clipboard data. Return typed text/image/empty results; close/unlock native handles on exit.
+clipboard::read uses Windows clipboard APIs only on explicit terminal paste. Prefer bounded CF_UNICODETEXT (1 MiB UTF-8), otherwise identify bitmap/DIB/PNG without copying image bytes. Never log clipboard contents or monitor clipboard changes. Return typed text/image/empty results; close/unlock native handles on exit.
+
+clipboard::write_text is only called for explicit copy-all history. Use the
+invoking desktop window as clipboard owner, allocate null-terminated Unicode
+text before opening/emptying the clipboard, retry temporary contention, and
+release handles on failure. Successful SetClipboardData transfers allocation
+ownership to Windows. Copy has no paste-size/replay-tail limit. The typed
+terminalApi.copyHistory sends provider/task/conversation IDs and returns a bool;
+it never transports the transcript to the WebView.
 

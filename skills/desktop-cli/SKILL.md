@@ -31,6 +31,10 @@ The opt-in test saves runtime-catalog.json and checks essential capabilities plu
 retired log-server exclusions instead of fixing the total catalog size. Inspect
 that captured catalog for Bot integration prerequisites; transport readiness with
 an older Player is not evidence of Bot gameplay or runtime_bot_diagnostics support.
+Set ABYA_CLI_SMOKE_BOTS=1 for the opt-in real Player test to require Bot definition
+get/set and diagnostics in the catalog, then read definitions, diagnostics and the
+exact receive/submit_action Lua API under both provider contexts. It saves separate
+bot-<provider>-<check>.json evidence without authoring or saving any Bot definitions.
 
 ## Windows sandbox sessions
 Managed terminals use a random local-only named pipe with explicit owner and available CodexSandboxOffline/Online SID ACLs. After reading each bounded request, inspect peer identity without retaining impersonation. Validate the in-memory capability against the entire provider/task/conversation context before dispatch. A managed session cannot create/list global tasks. Requests are capped at 4 MiB, responses at 32 MiB, concurrent connections at 32, initial reads at 5 seconds and operations at 720 seconds. Duplicate IDs share the HTTP registry. Service stop revokes all capabilities and closes pipes. Native provider session configuration receives ephemeral credentials; ABYA never writes them to its logs or project files. The standalone DPAPI descriptor is not read by managed CLIs. Run sandbox_pipe_authentication_smoke alone with --ignored; ABYA_TEST_MODEL=1 also runs the model-backed test script.

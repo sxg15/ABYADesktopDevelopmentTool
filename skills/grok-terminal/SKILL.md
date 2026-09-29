@@ -53,6 +53,11 @@ updates without forcing formal read-only plan mode.
 
 ## Dependencies
 
+transcript_text validates the conversation UUID and task ownership, then reads
+the entire persisted transcript through development-terminal's streaming text
+normalizer. Copying also works after exit without opening/resuming the PTY;
+it bypasses the replay tail and never reads native provider credentials.
+
 Depends on foundation, development tasks, and the shared development-terminal
 workflow model. It does not depend on Codex, game instances, logs, Runtime MCP,
 or Desktop CLI.

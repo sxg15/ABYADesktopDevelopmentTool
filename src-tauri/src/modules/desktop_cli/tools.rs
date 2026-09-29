@@ -1138,6 +1138,64 @@ mod tests {
             json!({"instanceId":instance_id,"toolName":"runtime_get_status","arguments":{}}),
         );
         assert!(!result.is_error, "Grok context: {:?}", result);
+        // 可选的人机就绪检查走真实托管 Player；只读定义与 API，不生成或保存玩法。
+        let bot_prerequisites = std::env::var("ABYA_CLI_SMOKE_BOTS").as_deref() == Ok("1");
+        if bot_prerequisites {
+            for required in [
+                "editor_get_bot_definitions",
+                "editor_set_bot_definitions",
+                "runtime_bot_diagnostics",
+            ] {
+                assert!(
+                    tools.iter().any(|tool| tool["name"] == required),
+                    "缺少 {required}"
+                );
+            }
+            for (provider, conversation_id) in [("codex", &codex.id), ("grok", &grok.id)] {
+                let bot_context =
+                    json!({"provider":provider,"taskId":task.id,"conversationId":conversation_id});
+                for (name, tool, arguments) in [
+                    ("definitions", "editor_get_bot_definitions", json!({})),
+                    ("diagnostics", "runtime_bot_diagnostics", json!({})),
+                    (
+                        "receive",
+                        "lua_api_describe",
+                        json!({"api_id":"abya.domain.bots.receive"}),
+                    ),
+                    (
+                        "submit-action",
+                        "lua_api_describe",
+                        json!({"api_id":"abya.domain.bots.submit_action"}),
+                    ),
+                ] {
+                    let response = fixture.dispatcher.call_with_context(
+                        Some(bot_context.clone()),
+                        &Uuid::new_v4().to_string(),
+                        "game_runtime_call_tool",
+                        json!({"instanceId":instance_id,"toolName":tool,"arguments":arguments}),
+                    );
+                    std::fs::write(
+                        output.join(format!("bot-{provider}-{name}.json")),
+                        serde_json::to_vec_pretty(&response).unwrap(),
+                    )
+                    .unwrap();
+                    assert!(!response.is_error, "{provider}/{name}: {response:?}");
+                    let payload = result_json(response);
+                    match name {
+                        "definitions" => assert!(payload["definitions"].is_array()),
+                        "diagnostics" => {
+                            assert!(payload["bots"].is_array());
+                            assert_eq!(payload["acceptanceVerified"], false);
+                        }
+                        "receive" => assert_eq!(payload["apiId"], "abya.domain.bots.receive"),
+                        "submit-action" => {
+                            assert_eq!(payload["apiId"], "abya.domain.bots.submit_action");
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            }
+        }
         let multiplayer = std::env::var("ABYA_CLI_SMOKE_MULTIPLAYER").as_deref() == Ok("1");
         if multiplayer {
             deps.instances.stop(&instance_id).unwrap();
@@ -1211,7 +1269,7 @@ mod tests {
         }
         std::fs::write(
             output.join("summary.json"),
-            json!({"success":true,"capabilities":tools.len(),
+            json!({"success":true,"capabilities":tools.len(),"botPrerequisites":bot_prerequisites,
             "providers":["codex","grok"],"pureLua":true,"screenshot":true,"multiplayer":multiplayer})
             .to_string(),
         )

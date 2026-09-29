@@ -108,6 +108,11 @@ history and current output cannot interleave.
 
 ## Dependencies
 
+transcript_text validates the conversation UUID and task ownership, then reads
+the entire persisted transcript through development-terminal's streaming text
+normalizer. Copying does not resume the native session or require a live PTY;
+it bypasses the bounded replay tail and never reads provider credentials.
+
 Depends on foundation error and DTO conventions, development-task identity,
 and the development-terminal workflow model. It must not depend on game
 instances, logs, runtime MCP, desktop MCP, or settings.

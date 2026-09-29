@@ -9,6 +9,7 @@ import {
   FolderPlus,
   Check,
   CirclePlus,
+  Copy,
   Pencil,
   RefreshCw,
   ScrollText,
@@ -449,6 +450,31 @@ function ConversationTerminal({
   const [error, setError] = useState("");
   const [atBottom, setAtBottom] = useState(true);
   const [historyAtBottom, setHistoryAtBottom] = useState(true);
+  const [copyState, setCopyState] = useState<"idle" | "copying" | "copied">("idle");
+  const copyBusyRef = useRef(false);
+
+  useEffect(() => {
+    if (copyState !== "copied") return;
+    const timer = window.setTimeout(() => setCopyState("idle"), 2500);
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
+
+  async function copyHistory() {
+    if (copyBusyRef.current) return;
+    copyBusyRef.current = true;
+    setCopyState("copying");
+    setError("");
+    try {
+      const copied = await terminalApi.copyHistory(provider, taskId, conversation.id);
+      setCopyState(copied ? "copied" : "idle");
+      if (!copied) setError(t("terminalHistoryEmpty"));
+    } catch (value) {
+      setCopyState("idle");
+      setError(`${t("copyTerminalHistoryFailed")} ${errorMessage(value)}`);
+    } finally {
+      copyBusyRef.current = false;
+    }
+  }
 
   useEffect(() => {
     visibleRef.current = visible;
@@ -743,6 +769,18 @@ function ConversationTerminal({
           {state?.workingDirectory ?? availability.workingDirectory}
         </code>
         <div className="terminal-actions">
+          <span role="status" aria-live="polite">
+            {copyState === "copied" && t("terminalHistoryCopied")}
+          </span>
+          <button
+            className="icon-button"
+            title={t(copyState === "copying" ? "copyingTerminalHistory" : "copyTerminalHistory")}
+            aria-label={t("copyTerminalHistory")}
+            disabled={copyState === "copying"}
+            onClick={() => void copyHistory()}
+          >
+            {copyState === "copied" ? <Check size={15} /> : <Copy size={15} />}
+          </button>
           <button
             className={`icon-button ${viewMode === "terminal" ? "selected" : ""}`}
             title={t("terminalView")}

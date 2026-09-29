@@ -233,6 +233,8 @@ export const api = {
 };
 
 export const terminalApi = {
+  copyHistory: (provider: TerminalProvider, taskId: string, conversationId: string) =>
+    invoke<boolean>("copy_terminal_history", { provider, taskId, conversationId }),
   projectWorkspace: (taskId: string) => invoke<string>("get_codex_project_workspace", { taskId }),
   setArchived: (taskId: string, conversationId: string, archived: boolean) =>
     invoke<CodexConversation>("set_codex_conversation_archived", { taskId, conversationId, archived }),
