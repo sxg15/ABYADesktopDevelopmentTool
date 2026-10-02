@@ -31,14 +31,39 @@ managed Skill directories may be replaced; user-owned Skills remain intact.
 Tasks additionally discover bundled `abya-task-template-*` directories with a
 valid `abya-task-template.json` marker and sync their complete resources to
 the corresponding provider workspace. Matching unmarked user directories are
-never overwritten. Template selection lives in the task Skill conversation;
-it adds no database field or UI command input. The maintenance-only
+never overwritten. Template selection lives in the task production record for
+full workflows or in scoped-task conversation context. The maintenance-only
 `abya-import-task-template` Skill ships beside the executable for importing
 templates into both provider roots and is not a gameplay template.
 The same deployment boundary supports `abya-art-template-*` with a valid
-`abya-art-template.json` marker. Art styles are a separate conversation choice
-after feasibility and before implementation, with comic-arcade-ui as the
-default when the user elects to use a style without naming one.
+`abya-art-template.json` marker. Task-template suggestions join requirements
+confirmation; art-template suggestions join execution-plan confirmation.
+Explicit choices are reused, no style is automatically selected, and existing
+assets take priority. Templates add domain constraints to the shared stages.
+
+The production workflow is owned by development-tasks. SQLite task_production and
+task_production_history are authoritative; artifacts/game-development JSON/HTML
+are exports, distinct from terminal workflow projections. Revision-checked mutations
+manage documents, evidence, issues, versions and rounds. Only a Tauri user action
+can decide the three document approvals; CLI cannot approve or fabricate acceptance.
+Stage gates check current document hashes, actual saved archive/Player fingerprints,
+evidence files, complete rounds/questions and issue closure. They validate declared
+materials, not gameplay quality or user experience. Scoped tasks remain opt-in.
+First-batch common workflow resources are maintained in the repository .codex
+bundle and synchronized into .grok by npm run sync:workflow, preserving Grok
+entry metadata. The check command rejects drift; remaining resources retain
+their existing ownership. Once production is enabled, ordinary task reads stop
+refreshing managed Skills. Explicit upgrades require stopped terminals, check for
+local modifications, preserve backups/history and restart document confirmation.
+The task UI separates production, installed Skill browsing and native conversation
+activity. Approval continues an already-open task terminal without creating a chat.
+
+game-instances owns the bounded FFmpeg window recorder and child lifecycle.
+Capture targets a task-owned PID's HWND, temporarily shows the window without
+activation, and restores visibility at completion. This is video-only capture;
+black/occluded frames require review and cannot be treated as gameplay acceptance.
+The pinned LGPL shared runtime, license materials and source manifest ship alongside
+the application. It never captures the whole desktop or accepts arbitrary commands.
 
 Bot development is a conditional part of the managed task Skill, shared by the
 multiplayer template and both providers. Task-owned artifacts/bot-integration

@@ -8,6 +8,9 @@
 | CLI | 命令 ID |
 | --- | --- |
 | task list/create/update/status | development_task_list/create/update/set_status |
+| production get/update/version/report | development_production_get/update/version/report；确认由 APP 用户操作，不能通过 CLI 批准 |
+| skill list/read | development_skill_list/read |
+| recording tools/start/get/stop | game_recording_tools/start/get/stop；实时视频，无音频 |
 | conversation bind/report | development_conversation_bind/activity_report |
 | instance list/get/launch/stop/window/wait/launch-report | game_instance_list/get/launch/stop/set_window_visibility/wait_for_state/get_launch_report |
 | runtime status/wait/list/run/cancel | game_runtime_get_state / game_instance_wait_for_cli / game_runtime_list_tools / game_runtime_call_tool / game_runtime_cancel |

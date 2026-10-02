@@ -51,6 +51,13 @@ foundation; foundation must not depend on product modules.
 
 ## Validation
 
+Additive task_production and task_production_history tables retain authoritative
+versioned production JSON and prior revisions, with task-ID foreign keys. Existing
+task IDs and archives are not migrated or rewritten. Domain transitions stay in
+TaskService; shared TypeScript production adapters expose typed read/mutate/user
+decision, Skill browsing and artifact-opening commands. JSON exports do not import
+themselves back into the database.
+
 Run Rust unit tests, migration and storage-maintenance tests, TypeScript contract checks, and
 `npm run check:skills`, including workflow DTO serialization compatibility.
 

@@ -69,8 +69,8 @@ export function importTemplate({ source, destination, slug, displayName, descrip
     .replace(/^name:.*$/m, `name: ${id}`)
     .replace(/^description:[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*/m, `description: ${JSON.stringify(`${kind === "art" ? "美术风格" : "任务"}模板：${description}。通过创建任务流程选择，或用户明确指定此模板时使用。`)}`);
   const routing = kind === "art"
-    ? `\n## 美术模板入口\n\n本 Skill 只定义视觉风格，不替代玩法任务流程。遵循同级 ../abya-game-development-task/SKILL.md 的评估后美术选择流程；用户明确选择后再加载本模板及参考素材。保持已确认的玩法、设备和输入契约。项目或任务指定的字体优先于下文的字体建议；ABYA 多人任务的文本自由物体和 CustomUI 必须使用 DingTalk，不因粗体黑体或等宽数字建议换用其他字体。随包素材是可复用来源，须按实际接口导入、赋值、读回并完成实机验收，不能仅复制文件。\n\n`
-    : `\n## 任务模板入口\n\n先读取同级 ../abya-game-development-task/SKILL.md 的模板选择与公共约束。\n用户明确指定本模板即视为已选择，不重复询问、不递归调用入口。使用下方流程组织任务；\n实例绑定、只读可行性、已有授权、架构校验和验收要求仍由公共流程提供。\n\n`;
+    ? `\n## 美术模板入口\n\n本 Skill 只在风格已选定时补充视觉要求，不替代玩法流程。风格建议随同级 ../abya-game-development-task/SKILL.md 的执行计划确认，已有选择不重问。保持玩法、设备和输入契约，优先复用现有素材，缺项先提出。项目或任务字体优先；ABYA 多人任务的文本自由物体和 CustomUI 使用 DingTalk。素材须实际导入、赋值、读回并运行检查；共用验证引用同一结果。\n\n`
+    : `\n## 任务模板入口\n\n本模板向同级 ../abya-game-development-task/SKILL.md 补充专项要求，不另建阶段和确认流程。用户明确指定即视为已选择，不重问或递归调用入口。沿用提问模式、已有授权和确认版本；仅加载本次相关资料，共用同一运行检查结果。原始内容中相冲突的流程规则需适配，不得据此扩大当前用户范围。\n\n`;
   files.set("SKILL.md", Buffer.from(`---\n${header}\n---\n${routing}${entry.slice(frontmatter[0].length)}`));
   for (const [name, bytes] of files) {
     if (/\.(md|ya?ml)$/i.test(name)) files.set(name, Buffer.from(bytes.toString("utf8").replaceAll(`$${nameValue}`, `$${id}`)));

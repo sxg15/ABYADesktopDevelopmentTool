@@ -19,6 +19,10 @@ import { LaunchInstanceModal } from "../instances/LaunchInstanceModal";
 import { InstanceDetailsModal } from "../instances/InstanceDetailsModal";
 import { DevelopmentTerminalView } from "../terminal/CodexTerminalView";
 import { CodexWorkflowBar } from "./CodexWorkflowBar";
+import { ProductionPanel } from "./ProductionPanel";
+import { SkillLibrary } from "./SkillLibrary";
+import { productionText } from "./productionText";
+import { productionApi } from "../../shared/production";
 import { api, errorMessage, terminalApi } from "../../shared/api";
 import type {
   AppSettings,
@@ -512,6 +516,8 @@ export function TasksView({
             />
 
             <div className="task-tabs" role="tablist">
+              <button role="tab" className={selectedTab === "production" ? "selected" : ""} aria-selected={selectedTab === "production"} onClick={() => selectTab("production")}>{productionText(settings?.locale).title}</button>
+              <button role="tab" className={selectedTab === "skills" ? "selected" : ""} aria-selected={selectedTab === "skills"} onClick={() => selectTab("skills")}>{productionText(settings?.locale).skills}</button>
               <button
                 className={selectedTab === "instances" ? "selected" : ""}
                 role="tab"
@@ -533,6 +539,18 @@ export function TasksView({
             </div>
 
             <div className="task-tab-content">
+              {selectedTab === "production" && <ProductionPanel key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
+                onContinue={async message => {
+                  const conversation = selectedTerminalContext?.conversation;
+                  if (!conversation) throw new Error("Open the task terminal to continue.");
+                  await terminalApi.write(selectedProvider, conversation.id, `\x1b[200~${message}\x1b[201~\r`);
+                }} />}
+              {selectedTab === "skills" && <SkillLibrary key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
+                onContinue={async message => {
+                  const conversation = selectedTerminalContext?.conversation;
+                  if (!conversation) throw new Error("Open the task terminal to continue.");
+                  await terminalApi.write(selectedProvider, conversation.id, `\x1b[200~${message}\x1b[201~\r`);
+                }} />}
               <div
                 className="instance-tab-panel"
                 hidden={selectedTab !== "instances"}
@@ -708,6 +726,7 @@ export function TasksView({
       {showCreate && (
         <CreateTaskModal
           t={t}
+          locale={settings?.locale}
           onClose={() => setShowCreate(false)}
           onCreated={async (task) => {
             setSelectedId(task.id);
@@ -743,10 +762,12 @@ export function TasksView({
 
 function CreateTaskModal({
   t,
+  locale,
   onClose,
   onCreated,
 }: {
   t: (key: MessageKey) => string;
+  locale?: string;
   onClose: () => void;
   onCreated: (task: DevelopmentTask) => void;
 }) {
@@ -754,18 +775,33 @@ function CreateTaskModal({
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
 
+  const [mode, setMode] = useState("full");
+  const [questions, setQuestions] = useState("ask");
+  const [created, setCreated] = useState<DevelopmentTask>();
+  const [creating, setCreating] = useState(false);
+  const s = productionText(locale);
+
   async function create() {
+    setCreating(true);
     try {
-      onCreated(await api.createTask(title, description));
+      const task = created ?? await api.createTask(title, description);
+      setCreated(task);
+      if (mode === "full") {
+        const existing = await productionApi.get(task.id);
+        if (!existing.record) await productionApi.update(task.id, 0, "initialize", { questionMode: questions });
+      }
+      onCreated(task);
       onClose();
     } catch (value) {
       setError(errorMessage(value));
-    }
+    } finally { setCreating(false); }
   }
 
   return (
     <Modal title={t("newTask")} onClose={onClose}>
       <div className="form-stack">
+        <label className="field"><span>{s.taskMode}</span><select value={mode} disabled={creating || Boolean(created)} onChange={e => setMode(e.target.value)}><option value="full">{s.fullTask}</option><option value="scoped">{s.scopedTask}</option></select></label>
+        {mode === "full" && <label className="field"><span>{s.questionMode}</span><select value={questions} disabled={creating} onChange={e => setQuestions(e.target.value)}><option value="ask">{s.ask}</option><option value="no-followup">{s.noAsk}</option></select></label>}
         <label className="field">
           <span>{t("taskTitle")}</span>
           <input
@@ -788,7 +824,7 @@ function CreateTaskModal({
         <button className="secondary-button" onClick={onClose}>
           {t("cancel")}
         </button>
-        <button className="primary-button" disabled={!title.trim()} onClick={create}>
+        <button className="primary-button" disabled={!title.trim() || creating} onClick={create}>
           {t("create")}
         </button>
       </footer>
@@ -807,7 +843,7 @@ function isActiveInstance(instance: GameInstance) {
   );
 }
 
-type TaskTab = "instances" | "terminal";
+type TaskTab = "instances" | "terminal" | "production" | "skills";
 
 interface TaskTerminalContext {
   conversation?: CodexConversation;

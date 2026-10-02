@@ -12,6 +12,8 @@ dist
 dist-ssr
 Publish/
 Publish-Staging-*/
+tools/ffmpeg/runtime/
+tools/ffmpeg/staging-*/
 marker.txt
 *.local
 

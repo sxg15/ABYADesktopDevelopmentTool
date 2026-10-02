@@ -16,7 +16,7 @@ delete commands and task list queries expose that path. New tasks create a
 unique, title-derived directory below the configured foundation workspace root.
 Legacy tasks with an empty path receive a workspace lazily on first read.
 
-Every created or read task receives provider-specific copies of the bundled
+Every created or unpinned task receives provider-specific copies of the bundled
 managed Skill at `.codex/skills/abya-game-development-task` and
 `.grok/skills/abya-game-development-task`. Synchronization is idempotent and
 may replace only those exact managed Skill directories. User-owned files and
@@ -24,8 +24,8 @@ other Skills under either provider root are never removed or overwritten. Each
 bundled source is resolved from the matching project-root directory in the
 development repository or beside the portable executable.
 
-The additional managed template namespace is `abya-task-template-*`. On each
-create/read, discover sibling bundled directories with `SKILL.md` and a valid
+The additional managed template namespace is `abya-task-template-*`. Before a
+task is pinned, discover sibling bundled directories with `SKILL.md` and a valid
 `abya-task-template.json`: schemaVersion 1, kind `abya-task-template`, matching
 id, nonempty displayName, description and sourceSkillName. Copy complete
 resources to the matching provider root. Existing destinations are replaceable
@@ -34,29 +34,22 @@ causes a validation error and is preserved. Ignore unmarked source Skills and
 invalid template markers. Templates absent from the bundle are not deleted
 from existing workspaces. The importer itself is not synced into tasks.
 
-Before gameplay intake the task Skill reads marker summaries and offers all
-templates plus `不使用模板（通用开发流程）`. No templates means the original
-workflow. Explicit selection/decline is reused across follow-ups. Load only
-the chosen template, use its stages, and retain shared provider binding,
-managed-instance, feasibility, authorization, architecture and acceptance
-contracts. Selection is conversation/specification context, not a database
-field. Already supplied facts and authorization are not requested again.
+The task Skill reads marker summaries when selecting a relevant template and
+includes a recommendation or none in the requirements document. An explicit
+selection/decline is reused. Load only the chosen template; it supplements the
+shared stages instead of starting another intake. Choices live in task-owned
+production records, not new database fields. A scoped request never implicitly
+starts the full production workflow or twelve rounds.
 
 Art templates use the separate `abya-art-template-*` namespace and
 `abya-art-template.json` marker, kind `abya-art-template`, with the same v1
 identity fields, synchronization and collision protection as task templates.
 Complete art resources (including images and nested directories) are deployed.
-They never appear in the initial task-template menu. After reporting
-feasibility, offer use/no-art-template; a use response without another named
-style selects `abya-art-template-comic-arcade-ui`. Multiplayer also recommends
-this default, while still allowing decline or another style. Wait for an
-actual choice unless the user already supplied one. Persist the choice in the
-conversation/specification and reuse it, not in a database field. No installed
-styles means continue without one; a missing requested/default style must be
-reported, never silently replaced. The selected art template governs visual
-design and asset reuse, not gameplay, and cannot override the multiplayer
-template's required DingTalk font. Additional style constraints can require
-updating the feasibility result before implementation.
+Task and art choices remain distinct. Existing art/resources are preferred;
+new style suggestions are confirmed with the execution plan, without a fourth
+approval gate or automatic comic-arcade-ui default. A missing chosen template,
+font, asset or tool is a feasibility gap. Art does not change gameplay or
+override the multiplayer template's DingTalk font requirement.
 
 The complete managed Skill directory is deployed, including its gameplay
 architecture reference and manifest template. During an approved gameplay
@@ -74,9 +67,33 @@ The local validator checks declared update scope, read-before-write content hash
 saved archive/Player hashes and evidence-bound gameplay assertions. It does not
 execute Lua, establish atomic write locking, authenticate evidence, or replace
 runtime acceptance. The multiplayer template uses the same Bot contract.
-The bundled Skill also makes agent-created, imported, and assigned gameplay
-assets the default when the user does not provide or require existing assets,
-and requires CustomUI text contrast plus parent-contained layout acceptance.
+The bundled Skill requires actual resource import/assignment/readback and
+CustomUI contrast/layout acceptance, but no longer defaults to generating all
+art. Missing assets are raised in the plan.
+
+Production v1.1 uses SQLite task_production and append-only revision history as
+the source of truth. Task-owned JSON/round files/three HTML reports are exports.
+Only explicit enablement starts a full task; old artifact records are preserved
+as legacy material without inferring acceptance. New-task UI offers full/scoped
+mode and ask/no-followup. Scoped tasks keep the existing terminal workflow.
+Revision-checked operations submit immutable document versions, issues, evidence,
+milestones and rounds. Tauri user decisions bind the displayed document revision
+and SHA; no agent/CLI approval operation exists. File changes invalidate approval.
+Required issues, missing/stale evidence and incomplete 8+4 prevent stage closure.
+Completed task status additionally requires accepted delivery and finished closeout.
+Saved versions are hashed from a task-owned instance's known launch archive and
+Player executable/Data/runtime files; callers cannot provide arbitrary source paths
+or hashes. Required checks revalidate those sources. This is saved-file evidence,
+not proof of the currently loaded runtime state; save/reload checks remain required.
+Document changes retain history and invalidate affected downstream stages. Reports
+escape all user text and percent-encode file links. Artifact paths reject traversal,
+alternate streams and symlinks/reparse points outside task-owned files.
+Production tasks pin installed Skills and their policy. Ordinary reads no longer
+refresh them. Explicit upgrade requires stopped terminals, preserves a backup and
+history, detects local managed changes and restarts appropriate confirmations.
+The task UI provides stage status, documents/approval/feedback, issues, rounds,
+evidence/report entry points and a searchable installed Skill library. It reads
+only a selected Skill body and protects against stale async task responses.
 
 The task workspace keeps persistent active, completed, and archived tasks.
 Only active tasks may launch new managed instances, and deleting a task is
@@ -131,6 +148,13 @@ refresh after instance deletion.
 Also compare every deployed Bot schema/reference/module with its bundled source
 for new tasks and stale-task refresh, and execute the deployed Node entrypoint to
 verify sibling imports. Preserve user-owned Skills and gameplay task artifacts.
+The same create/refresh tests compare all production resources byte for
+byte, preserving existing task records rather than reinitializing them.
+Production tests cover stale revision/hash decisions, no CLI approval bypass,
+source/evidence changes, invalid paths, complete twelve-round contracts, history,
+escaped reports and pinned task reads. UI tests check explicit approval, stale
+documents, task switching and selected-only Skill reads. Synthetic files test
+consistency only; they are not real gameplay acceptance evidence.
 
 ## LLM Maintenance Rule
 

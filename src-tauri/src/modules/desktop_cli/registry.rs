@@ -23,6 +23,90 @@ struct ToolAnnotations {
 pub(crate) fn tools() -> Vec<CliCommand> {
     vec![
         tool(
+            "game_recording_tools",
+            "Check bundled window recorder availability. Video only; no microphone, desktop-wide capture or audio.",
+            "Check recorder",
+            object_schema(json!({}), &[]),
+            read_only(),
+        ),
+        tool(
+            "game_recording_start",
+            "Start a real-time recording of this managed Player's PID-selected window. Do not minimize or resize during recording; inspect frames for capture quality. Creates task-owned video and metadata, bounded by maxSeconds.",
+            "Start instance recording",
+            object_schema(
+                json!({"instanceId":{"type":"string"},"maxSeconds":{"type":"integer","minimum":5,"maximum":7200,"default":3600}}),
+                &["instanceId"],
+            ),
+            process_create(),
+        ),
+        tool(
+            "game_recording_get",
+            "Read recording state and frame count; recording success is not visual acceptance.",
+            "Read instance recording",
+            object_schema(json!({"instanceId":{"type":"string"}}), &["instanceId"]),
+            read_only(),
+        ),
+        tool(
+            "game_recording_stop",
+            "Finalize this instance's recording and return video/metadata paths. Interrupted output is not completed evidence.",
+            "Stop instance recording",
+            object_schema(json!({"instanceId":{"type":"string"}}), &["instanceId"]),
+            reversible_write(),
+        ),
+        tool(
+            "development_production_version",
+            "Fingerprint the managed instance's saved launch archive and actual Player files. Save and reload the matching archive/level first. Never accepts caller-supplied hashes or source paths.",
+            "Record actual game version",
+            object_schema(
+                json!({"taskId":{"type":"string"},"instanceId":{"type":"string"},"expectedRevision":{"type":"integer","minimum":1},"versionId":{"type":"string","minLength":1}}),
+                &["instanceId", "expectedRevision", "versionId"],
+            ),
+            reversible_write(),
+        ),
+        tool(
+            "development_production_get",
+            "Read this task's authoritative production state, policy, version-bound decisions and warnings.",
+            "Read production workflow",
+            object_schema(json!({"taskId":{"type":"string"}}), &[]),
+            read_only(),
+        ),
+        tool(
+            "development_production_update",
+            "Apply one production operation with optimistic revision checking. User approval is APP-only. See the bundled production-records guide for per-operation data.",
+            "Update production workflow",
+            object_schema(
+                json!({"taskId":{"type":"string"},"expectedRevision":{"type":"integer","minimum":0},
+                "operation":{"type":"string","enum":["initialize","configure","submit-document","register-evidence","set-milestone","save-issue","save-round","complete-stage","save-knowledge"]},
+                "data":{"type":"object","description":"initialize: questionMode; submit-document: kind/path; register-evidence: id/path/kind/captureType/reviewed/description; set-milestone: name/evidenceIds; save-issue: id/kind/status/stage/description/fix/recheck/evidenceIds/resumeWhen; save-round: number/close/checks/questions/evidenceIds; complete-stage: stage/summary/checks; save-knowledge: entries; configure: questionMode/taskTemplate/artTemplate. Record saved-file versions through production version."}}),
+                &["expectedRevision", "operation", "data"],
+            ),
+            reversible_write(),
+        ),
+        tool(
+            "development_production_report",
+            "Regenerate the three fixed reports and JSON exports from the stored task state. Does not approve or advance stages.",
+            "Generate production reports",
+            object_schema(json!({"taskId":{"type":"string"}}), &[]),
+            reversible_write(),
+        ),
+        tool(
+            "development_skill_list",
+            "List this task's installed Skills, template kinds and fingerprints without refreshing pinned resources.",
+            "List task Skills",
+            object_schema(json!({"taskId":{"type":"string"}}), &[]),
+            read_only(),
+        ),
+        tool(
+            "development_skill_read",
+            "Read the selected installed Skill entry only. Read supporting references only when needed.",
+            "Read task Skill",
+            object_schema(
+                json!({"taskId":{"type":"string"},"provider":{"type":"string","enum":["codex","grok"]},"skillId":{"type":"string"}}),
+                &["provider", "skillId"],
+            ),
+            read_only(),
+        ),
+        tool(
             "game_runtime_cancel",
             "Requests cancellation without implying rollback.",
             "Cancel runtime operation",

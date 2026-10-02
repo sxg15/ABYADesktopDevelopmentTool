@@ -286,3 +286,38 @@ Input: required `sessionId`; optional `severity`, `provider`, `eventName`,
 
 Returns newest persisted WebSocket log events first. `limit` defaults to 200
 and must be from 1 through 1000. Read-only.
+
+## Production workflow (1.1)
+
+The authenticated task context owns these commands. `taskId` may be omitted in a managed session.
+`production get` returns record, pinned policy, warnings and report locations; no workflow is created by reading.
+`production update` accepts `expectedRevision`, `operation`, and object `data`. Supported operations:
+initialize, configure, submit-document, register-evidence, set-milestone, save-issue, save-round,
+complete-stage and save-knowledge. Their fields are documented in the distributed production-records.md.
+
+`production version` requires instanceId, expectedRevision and versionId. It resolves the task-owned
+instance's saved launch archive and Player files, computes their hashes, and binds the record to them.
+It accepts neither arbitrary filesystem sources nor agent-supplied hashes. Save and reload the matching
+archive/level before invoking it. Actual saved-file changes invalidate later round/delivery checks.
+`production report` regenerates three HTML reports and JSON exports from the database.
+There is no production approve command. Only a user decision in the APP can approve the current
+requirements, plan or delivery document; its displayed revision and hash are checked again.
+
+Writes reject stale revisions. Source JSON exports are not an import/approval channel. A write may
+persist in SQLite before report export fails: after any write error, read current state before retrying.
+Full tasks cannot be marked completed until current delivery acceptance and closeout have passed.
+
+`skill list` returns installed task Skills and fingerprints. `skill read` requires provider and skillId,
+and reads that entry only. Enabled production tasks retain their installed resources and policy until
+an explicit APP upgrade; upgrade requires stopped task terminals and preserves history and backups.
+
+## Managed-window recording
+
+`recording tools` reports the installed recorder. `recording start` requires instanceId and optionally
+maxSeconds (integer 5–7200, default 3600); get/stop require instanceId. Only owned running Player
+windows are permitted. The recorder targets that PID's HWND, shows it without activation for capture,
+and restores prior visibility on completion. Keep the window unobstructed and do not minimize/resize it.
+Output is 15 fps H.264 MP4 with no audio, plus task/instance/version/timing metadata and a frame count.
+A file or positive frame count is not visual acceptance. Inspect actual frames and the relevant process.
+Completed native recordings may be registered as production evidence only for the same task/version;
+interrupted or zero-frame captures are rejected. The original video and metadata remain task artifacts.

@@ -1,0 +1,40 @@
+{
+  "schema": "abya.game-development-workflow/v1",
+  "workflowVersion": "1.1.0",
+  "taskId": null,
+  "provider": null,
+  "mode": "full",
+  "questionMode": null,
+  "taskTemplate": null,
+  "artTemplate": null,
+  "skillSources": [],
+  "currentStage": "requirements",
+  "currentRound": 0,
+  "stages": {
+    "requirements": "not-started",
+    "resources": "not-started",
+    "plan": "not-started",
+    "implementation": "not-started",
+    "review": "not-started",
+    "delivery": "not-started",
+    "closeout": "not-started"
+  },
+  "productStatus": {
+    "implementation": "not-started",
+    "selfReview": "not-started",
+    "userAcceptance": "not-started",
+    "closeout": "not-started"
+  },
+  "target": {"archiveGuid": null, "levelGuid": null},
+  "currentVersion": null,
+  "artifacts": {},
+  "approvals": [],
+  "blockers": [],
+  "issues": [],
+  "checks": [],
+  "evidence": [],
+  "roundFiles": [],
+  "knowledgeUses": [],
+  "proposals": [],
+  "updatedAt": null
+}

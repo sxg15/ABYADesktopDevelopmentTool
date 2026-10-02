@@ -7,6 +7,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use uuid::Uuid;
 
+mod production;
+pub use production::{
+    ProductionDecision, ProductionMutation, ProductionView, SkillEntry, VersionSources,
+};
+
 const MANAGED_SKILL_NAME: &str = "abya-game-development-task";
 const MANAGED_LLM_DIRECTORIES: [&str; 2] = [".codex", ".grok"];
 const TEMPLATE_KINDS: [&str; 2] = ["abya-task-template", "abya-art-template"];
@@ -298,6 +303,9 @@ impl TaskService {
     }
 
     pub fn set_status(&self, id: &str, status: TaskStatus) -> AppResult<DevelopmentTask> {
+        if status == TaskStatus::Completed {
+            self.production_can_complete(id)?;
+        }
         let now = Utc::now().to_rfc3339();
         let completed = matches!(status, TaskStatus::Completed).then_some(now.clone());
         let archived = matches!(status, TaskStatus::Archived).then_some(now.clone());
@@ -391,7 +399,9 @@ impl TaskService {
                 "The task workspace path must be a directory.",
             ));
         }
-        self.sync_managed_skills(&workspace)?;
+        if !self.production_exists(&task.id)? {
+            self.sync_managed_skills(&workspace)?;
+        }
         let display = display_path(&workspace);
         if task.workspace_path != display {
             self.database.with_connection(|connection| {
@@ -709,6 +719,21 @@ mod tests {
         "scripts/bot-evidence-checks.mjs",
     ];
 
+    const PRODUCTION_RESOURCES: [&str; 12] = [
+        "references/production-stages.md",
+        "references/production-records.md",
+        "references/runtime-authoring.md",
+        "references/whole-experience-review.md",
+        "references/recording.md",
+        "assets/production/workflow-policy.json",
+        "assets/production/workflow.template.json",
+        "assets/production/round.template.json",
+        "assets/production/requirements.template.md",
+        "assets/production/plan.template.md",
+        "assets/production/delivery.template.md",
+        "assets/production/closeout.template.md",
+    ];
+
     // 比较部署字节并启动无副作用的参数检查，覆盖嵌套模块导入。
     fn assert_bot_resources(service: &TaskService, workspace: &Path) {
         for source in &service.managed_skill_sources {
@@ -717,7 +742,10 @@ mod tests {
                 .join(source.llm_directory)
                 .join("skills")
                 .join(MANAGED_SKILL_NAME);
-            for relative in BOT_RESOURCES {
+            for relative in std::iter::once("SKILL.md")
+                .chain(BOT_RESOURCES)
+                .chain(PRODUCTION_RESOURCES)
+            {
                 assert_eq!(
                     std::fs::read(deployed.join(relative)).unwrap(),
                     std::fs::read(bundled.join(relative)).unwrap(),
@@ -821,6 +849,10 @@ mod tests {
             })
             .unwrap();
         let workspace = Path::new(&task.workspace_path);
+        let production = workspace.join("artifacts/game-development/workflow.json");
+        std::fs::create_dir_all(production.parent().unwrap()).unwrap();
+        let existing_record = br#"{"taskId":"existing","currentRound":7,"issues":["unresolved"]}"#;
+        std::fs::write(&production, existing_record).unwrap();
         for llm_directory in MANAGED_LLM_DIRECTORIES {
             let managed = workspace
                 .join(llm_directory)
@@ -833,8 +865,8 @@ mod tests {
             std::fs::create_dir_all(&user_skill).unwrap();
             std::fs::write(user_skill.join("SKILL.md"), "user content").unwrap();
             std::fs::write(managed.join("SKILL.md"), "stale managed content").unwrap();
-            for relative in BOT_RESOURCES {
-                std::fs::write(managed.join(relative), "stale Bot resource").unwrap();
+            for relative in BOT_RESOURCES.into_iter().chain(PRODUCTION_RESOURCES) {
+                std::fs::write(managed.join(relative), "stale managed resource").unwrap();
             }
         }
 
@@ -854,11 +886,6 @@ mod tests {
                 "user content"
             );
             assert!(
-                std::fs::read_to_string(managed.join("SKILL.md"))
-                    .unwrap()
-                    .contains("ABYA Game Development Task")
-            );
-            assert!(
                 managed
                     .join("references")
                     .join("gameplay-architecture.md")
@@ -871,17 +898,7 @@ mod tests {
                     .is_file()
             );
         }
-        assert!(
-            std::fs::read_to_string(
-                workspace
-                    .join(".grok")
-                    .join("skills")
-                    .join(MANAGED_SKILL_NAME)
-                    .join("SKILL.md")
-            )
-            .unwrap()
-            .contains("ABYA_DEVELOPMENT_PROVIDER")
-        );
+        assert_eq!(std::fs::read(&production).unwrap(), existing_record);
         assert_bot_resources(&service, workspace);
         let _ = std::fs::remove_dir_all(root);
     }

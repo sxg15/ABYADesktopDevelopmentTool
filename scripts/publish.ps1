@@ -1,9 +1,10 @@
-param([switch]$Staging)
+param([switch]$Staging, [switch]$WorkflowStaging)
 
 $ErrorActionPreference = "Stop"
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$publishName = if ($Staging) { "Publish-Staging-Bot" } else { "Publish" }
+if ($Staging -and $WorkflowStaging) { throw 'Choose only one staging destination.' }
+$publishName = if ($WorkflowStaging) { "Publish-Staging-Workflow" } elseif ($Staging) { "Publish-Staging-Bot" } else { "Publish" }
 $publish = Join-Path $root $publishName
 $llmDirectories = @(".codex", ".grok")
 $managedSkillRelativePath = "skills\abya-game-development-task\SKILL.md"
@@ -25,6 +26,8 @@ $managedSkillRequiredFiles = @(
     "skills\abya-import-task-template\scripts\import-template.mjs"
 )
 $target = Join-Path $root "src-tauri\target\release\abya-desktop-development-tool.exe"
+$recorder = Join-Path $root 'tools/ffmpeg'
+if (-not (Test-Path -LiteralPath (Join-Path $recorder 'runtime/bin/ffmpeg.exe'))) { throw 'Run scripts/setup-recorder.ps1 before publishing.' }
 
 if (-not (Test-Path -LiteralPath $publish)) {
     New-Item -ItemType Directory -Path $publish | Out-Null
@@ -73,6 +76,10 @@ Copy-Item -LiteralPath $nodePath -Destination (Join-Path $runtime "node.exe") -F
 $toolsPath = Join-Path $publish "tools"
 New-Item -ItemType Directory -Path $toolsPath -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $root "tools/abya") -Destination $toolsPath -Recurse -Force
+$recorderDestination = Join-Path $toolsPath 'ffmpeg'
+New-Item -ItemType Directory -Path $recorderDestination -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $recorder 'source.json') -Destination $recorderDestination -Force
+Copy-Item -LiteralPath (Join-Path $recorder 'runtime') -Destination $recorderDestination -Recurse -Force
 
 foreach ($directoryName in $llmDirectories) {
     $llmSource = Join-Path $root $directoryName

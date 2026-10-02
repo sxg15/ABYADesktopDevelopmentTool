@@ -20,6 +20,15 @@ Foundation plus task, provider terminal, instances, runtime bridge, archives, tr
 
 ## Validation
 
+production get/update/version/report and skill list/read bind to the authenticated
+task context. Mutation requires expectedRevision; no approve/accept CLI exists.
+production version resolves an owned instance's saved launch archive and Player,
+then delegates fingerprinting to TaskService; agent-supplied paths/hashes are refused.
+recording tools/start/get/stop delegates to game-instances, with existing instance
+ownership checks. Reports and videos are task-owned artifacts; neither their
+creation nor command success marks a task complete. Recording is video-only,
+bounded to two hours and never records a desktop-wide source.
+
 Authenticated command integration, Origin rejection, old endpoint absence, schema uniqueness, task ownership, both providers, activity updates, runtime failures and command parsing.
 
 ## LLM Maintenance Rule

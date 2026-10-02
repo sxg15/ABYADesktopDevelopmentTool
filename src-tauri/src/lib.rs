@@ -29,7 +29,10 @@ use modules::instances::{
 };
 use modules::logs::{LogFilter, LogRepairReport, LogService, LogSession, RuntimeLogEvent};
 use modules::runtime_bridge::{RuntimeBridgeService, RuntimeBridgeState};
-use modules::tasks::{DevelopmentTask, TaskInput, TaskService, TaskStatus};
+use modules::tasks::{
+    DevelopmentTask, ProductionDecision, ProductionMutation, ProductionView, SkillEntry, TaskInput,
+    TaskService, TaskStatus,
+};
 use serde::Deserialize;
 use std::path::PathBuf;
 use tauri::{Manager, State, ipc::Channel};
@@ -208,6 +211,67 @@ fn list_tasks(state: State<'_, AppState>) -> AppResult<Vec<DevelopmentTask>> {
 #[tauri::command]
 fn create_task(input: TaskInput, state: State<'_, AppState>) -> AppResult<DevelopmentTask> {
     state.tasks.create(input)
+}
+
+#[tauri::command(async)]
+fn get_task_production(task_id: String, state: State<'_, AppState>) -> AppResult<ProductionView> {
+    state.tasks.production_get(&task_id)
+}
+
+#[tauri::command(async)]
+fn update_task_production(
+    input: ProductionMutation,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    state.tasks.production_update(input)
+}
+
+#[tauri::command(async)]
+fn decide_task_production(
+    input: ProductionDecision,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    state.tasks.production_decide(input)
+}
+
+#[tauri::command(async)]
+fn upgrade_task_production(
+    task_id: String,
+    expected_revision: u64,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    state.tasks.production_upgrade(&task_id, expected_revision)
+}
+
+#[tauri::command(async)]
+fn get_task_skills(task_id: String, state: State<'_, AppState>) -> AppResult<Vec<SkillEntry>> {
+    state.tasks.production_catalog(&task_id)
+}
+
+#[tauri::command(async)]
+fn read_task_skill(
+    task_id: String,
+    provider: String,
+    skill_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<String> {
+    state
+        .tasks
+        .production_skill_text(&task_id, &provider, &skill_id)
+}
+
+#[tauri::command(async)]
+fn open_production_artifact(
+    task_id: String,
+    path: String,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let path = state.tasks.production_artifact_path(&task_id, &path)?;
+    app.opener()
+        .open_path(path, None::<&str>)
+        .map_err(foundation::AppError::internal)
 }
 
 #[tauri::command]
@@ -704,6 +768,13 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            get_task_production,
+            update_task_production,
+            decide_task_production,
+            upgrade_task_production,
+            get_task_skills,
+            read_task_skill,
+            open_production_artifact,
             get_app_paths,
             get_settings,
             update_settings,

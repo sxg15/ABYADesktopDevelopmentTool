@@ -50,7 +50,7 @@ The importer additionally accepts `--kind art` (default remains `task`) for
 `abya-art-template-<slug>` and `abya-art-template.json`, kind
 `abya-art-template`. Both kinds share preflight, identity protection, staging,
 rollback and binary resource preservation. Imported art instructions defer to
-task font requirements and the post-feasibility art choice. Checks validate
+task font requirements and the art choice confirmed in the execution plan. Checks validate
 both namespaces and provider parity; importer and task deployment tests cover
 both kinds. The comic-arcade-ui bundle includes its complete source artwork,
 preview HTML, PNG kit, design tokens, references and optional generation script.
@@ -61,6 +61,27 @@ Publishing copies all template resources through the existing complete-root
 copy, and fails on missing importer resources or malformed template metadata.
 
 ## Dependencies
+
+First-batch workflow content has a canonical source in .codex. npm run sync:workflow
+updates only the listed repository .grok resources, including importer routing and
+the two existing templates, while keeping Grok-specific entry metadata. It does
+not update installed Publish directories or user task workspaces. check:skills
+rejects stale copies and checks policy identities, all pilot rounds/questions,
+blank initial acceptance/evidence and relative resource links. The task-service
+tests verify real create/refresh deployment and preserve existing task records.
+Production resources in assets/production and conditional references ship
+through the existing complete-directory copy. These checks do not run an AI model
+or establish gameplay acceptance. Backend production gates have separate Rust
+tests; UI approval and record browsing have frontend tests.
+
+scripts/setup-recorder.ps1 downloads the pinned BtbN LGPL shared FFmpeg archive,
+checks its published SHA-256 and preserves the complete license/source manifest.
+The runtime is an ignored reproducible dependency under tools/ffmpeg/runtime;
+publishing requires it and copies it with source.json into the portable tools
+directory. -WorkflowStaging writes Publish-Staging-Workflow, preserving the
+in-use normal Publish executable and its resources. It is mutually exclusive
+with the older -Staging switch. Validate the bundled ffmpeg/ffprobe and the
+native owned-window smoke test separately from a real Unity gameplay task.
 
 May invoke frontend and Rust checks. It must not contain product business logic.
 Cargo dependency changes for the LAN WebSocket gateway must remain compatible

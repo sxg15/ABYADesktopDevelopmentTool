@@ -73,6 +73,17 @@ impl Database {
                     archived_at TEXT,
                     workspace_path TEXT NOT NULL DEFAULT ''
                 );
+                CREATE TABLE IF NOT EXISTS task_production (
+                    task_id TEXT PRIMARY KEY REFERENCES development_tasks(id) ON DELETE CASCADE,
+                    revision INTEGER NOT NULL,
+                    body TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS task_production_history (
+                    task_id TEXT NOT NULL REFERENCES development_tasks(id) ON DELETE CASCADE,
+                    revision INTEGER NOT NULL,
+                    body TEXT NOT NULL,
+                    PRIMARY KEY(task_id, revision)
+                );
                 "#,
             )?;
             if !table_has_column(connection, "development_tasks", "workspace_path")? {

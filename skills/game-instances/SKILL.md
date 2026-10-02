@@ -66,6 +66,17 @@ Runtime CLI and log protocols remain outside this module.
 
 ## Validation
 
+The window recorder uses the bundled pinned FFmpeg LGPL shared build. Start selects
+the largest non-minimized window owned by the managed Player PID and captures that
+HWND at 15 fps to H.264 MP4, without audio. It temporarily restores and raises the
+game window without activation, then restores the prior visibility on stop, early
+failure or maximum duration. Occlusion, minimization and resize can invalidate visual
+evidence. Metadata records task, instance, version, frames, times and final state.
+A Windows Job Object owns the encoder; process/APP stop finalizes or marks interruption.
+The native smoke test uses an owned brief non-activating fixture, checks actual
+encoding/dimensions and is run explicitly. Visual QA must inspect decoded frames;
+an earlier off-screen probe generated black frames and is not a passing capture.
+
 Test exact production launch and desktop-connection arguments, CLI autostart and absence of legacy launch arguments,
 Host port allocation, archive parsing, LAN client Host selection, launch
 report bounds, wait timeouts, background launch defaults, legacy visible
