@@ -10,6 +10,13 @@ Own authenticated loopback command dispatch, schemas, task/conversation validati
 
 ## Public Contracts
 
+production update accepts publish-questions and configure playerMode. The dispatcher overwrites
+question provider/conversation/nativeSessionId from authenticated context; callers cannot select
+another answer destination. Agent mutations never save drafts or submit user answers; those are
+APP-only. Schema and production-records document limits and version semantics. The opt-in pipe
+model smoke also restarts the backend, revokes/reissues its scoped lease and resumes the same
+native ID, checking actual doctor/capabilities execution and rejection of old credentials.
+
 POST /api/v1/command accepts version=1, UUID requestId, command, object arguments and optional provider/taskId/conversationId context. No MCP routes, sessions or fallback exist. Authentication uses a DPAPI-protected descriptor in current-user application data. Origin-bearing requests are rejected. Requests are limited to 4 MiB; duplicate IDs are rejected. Command contexts are validated through the owning provider service on every call. Instance operations require matching task ownership. Bootstrap task list/create, doctor and capabilities may omit conversation context. Commands retain existing domain IDs except deleted protocol aliases. See docs/DESKTOP_CLI_COMMANDS.md.
 
 The abya-desktop binary reads JSON from stdin or a file and emits one JSON result. The terminal supplies its absolute path as ABYA_DESKTOP_CLI. Runtime commands use the existing Abya CLI through runtime-bridge. Content retains all text and image file paths. Credentials and raw outputs never enter semantic workflow events. Settings shows connection state and reset/restart actions; no client configuration templates or tokens are exposed.

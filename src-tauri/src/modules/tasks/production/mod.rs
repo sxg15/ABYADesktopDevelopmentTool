@@ -2,6 +2,7 @@ mod catalog;
 mod files;
 mod models;
 mod mutation;
+mod questions;
 mod report;
 mod validation;
 mod versions;
@@ -80,6 +81,10 @@ impl TaskService {
             workflow_version: policy()["workflowVersion"].as_str().unwrap().into(),
             policy: policy(),
             question_mode: question.into(),
+            player_mode: questions::player_mode(&input.data)?
+                .unwrap_or("unspecified")
+                .into(),
+            question_groups: vec![],
             task_template: None,
             art_template: None,
             current_stage: "requirements".into(),

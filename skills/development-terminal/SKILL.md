@@ -13,6 +13,23 @@ DTO implementation, title validation, sanitization, and workflow persistence.
 
 ## Public Contracts
 
+TerminalConnectionRequest connects an exact existing conversation requested by intake UI.
+It selects/mounts that terminal, waits for successful open/reattach, then resolves once. Missing
+or archived conversations fail; never create a replacement. A request waits for real layout,
+preserves normal native trust/approval handling and does not itself start a model turn.
+
+Codex controls distinguish Pause task, Continue task and Reconnect terminal. Continue goes through
+the persistent queue API; reconnection only restores the terminal attachment. Pause cancels pending
+intents and interrupts the native turn. useTaskControl polls one backend projection with stale
+response guards; the toolbar and workflow bar use it rather than historical TUI text. Inactive
+transcripts have an explicit historical label; elapsed time is time since observed progress,
+not an inferred networking error. Completed/archived tasks disable Continue until restored instead
+of showing ready. TUI closure alone may leave work running. Failed reattachment retains
+visible history; replay replacement occurs only after successful open. Project help shows native
+ID and workspace and offers scoped history recovery after pause, with metadata backup. It does
+not guarantee sidebar enrollment or simultaneous execution from another client. Recovery does
+not merge native histories or auto-resume. Refresh list is separate from continue execution.
+
 `TerminalProvider` is `codex` or `grok`. Each selected provider exposes
 availability, conversation CRUD, PTY open/write/resize/stop, workflow reads,
 and terminal events through typed frontend adapters. The user explicitly

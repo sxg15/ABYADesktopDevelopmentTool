@@ -321,3 +321,10 @@ Output is 15 fps H.264 MP4 with no audio, plus task/instance/version/timing meta
 A file or positive frame count is not visual acceptance. Inspect actual frames and the relevant process.
 Completed native recordings may be registered as production evidence only for the same task/version;
 interrupted or zero-frame captures are rejected. The original video and metadata remain task artifacts.
+# 2026-10-08：需求问答补充
+
+`production update` 新增 `publish-questions`：data 为 id、title、questions；每题为 id、text、options、optional。
+仅 requirements/ask 可发布，组 ID 不可重复，一次只能有一组待答。Desktop 从受管上下文注入原生会话关联。
+答案由 APP 保存、提交、修订；CLI 不提供代答或批准入口。`production get` 返回 questionGroups 和 playerMode。
+initialize/configure 支持 playerMode=unspecified/single/multiplayer；已明确人数由策划在 APP 修改。
+题目格式和续接流程见捆绑 Skill 的 production-records.md。旧任务需显式升级，普通读取不替换 Skill。

@@ -19,6 +19,8 @@ import {
   X,
 } from "lucide-react";
 import { RuntimeArtifactPreviews } from "./RuntimeArtifactPreviews";
+import type { TaskControlState } from "../../shared/production";
+import { controlText, controlLabel } from "../terminal/useTaskControl";
 import type { MessageKey } from "../../i18n";
 import type {
   CodexActivity,
@@ -40,12 +42,14 @@ interface HoveredStep {
 }
 
 export function CodexWorkflowBar({
+  control,
   provider,
   conversation,
   workflow,
   loading = false,
   t,
 }: {
+  control?:TaskControlState;
   provider: TerminalProvider;
   conversation?: CodexConversation;
   workflow?: CodexWorkflowSnapshot;
@@ -96,7 +100,7 @@ export function CodexWorkflowBar({
               <span
                 className={`workflow-turn-status workflow-turn-${currentTurn.status}`}
               >
-                {turnStatusLabel(t, currentTurn.status)}
+                {control ? controlLabel(control) : turnStatusLabel(t, currentTurn.status)}
               </span>
             )}
           </div>
@@ -111,7 +115,9 @@ export function CodexWorkflowBar({
         </div>
 
         <div className="workflow-track-viewport">
-          {loading ? (
+          {control && (steps.length === 0 || !["running","waitingForResponse"].includes(control.state)) ? (
+            <div className="workflow-placeholder"><Circle size={16}/><span>{controlText(control)}</span></div>
+          ) : loading ? (
             <div className="workflow-placeholder">
               <LoaderCircle className="spin" size={16} />
               <span>{t("loading")}</span>
@@ -123,7 +129,8 @@ export function CodexWorkflowBar({
             >
               <AlertTriangle size={16} />
               <span>
-                {t(
+                {control ? controlText(control) : currentTurn && ["interrupted","failed","completed"].includes(currentTurn.status)
+                  ? turnStatusLabel(t,currentTurn.status) : t(
                   provider === "codex"
                     ? "codexCompatibilityWarning"
                     : "grokCompatibilityWarning",

@@ -1,0 +1,89 @@
+{
+  "testedAt": "2026-10-08T07:39:50.343Z",
+  "application": {
+    "workflowVersion": "1.2.0",
+    "buildTime": "2026-10-08T06:17:58.8414678Z",
+    "sha256": "EF14B6FC20C1B8996EF88DC83B9EA3AE9A04733E0FFDBC7AF19BB42355578631"
+  },
+  "workspace": "D:/ABYAWorkflowUI-20261008/工作流自动测试---弹窗与恢复-c2fcd257",
+  "nativeSessionId": "01a11a55-b850-7223-9ed0-71382c173985",
+  "production": {
+    "revision": 21,
+    "playerMode": "multiplayer",
+    "stage": "requirements",
+    "approvals": 0,
+    "rounds": 0,
+    "groups": [
+      {
+        "id": "cat-blocking-requirements-round-1",
+        "status": "submitted",
+        "publishedAt": "2026-10-08T07:12:42.901428100+00:00",
+        "questionCount": 6,
+        "answerVersions": 2
+      },
+      {
+        "id": "cat-blocking-requirements-round-2",
+        "status": "submitted",
+        "publishedAt": "2026-10-08T07:25:24.200911600+00:00",
+        "questionCount": 7,
+        "answerVersions": 1
+      }
+    ]
+  },
+  "turns": [
+    {
+      "id": "01a11a58-ce99-7d11-958c-fa2a817880f0",
+      "status": "completed",
+      "startedAt": "2026-10-08T07:09:50.133513600+00:00",
+      "completedAt": "2026-10-08T07:13:09.571771100+00:00",
+      "durationMs": 199438
+    },
+    {
+      "id": "01a11a60-ef6f-7cc3-9f62-bfd1f328f98e",
+      "status": "interrupted",
+      "startedAt": "2026-10-08T07:18:42.954317100+00:00",
+      "completedAt": "2026-10-08T07:19:51.321286200+00:00",
+      "durationMs": 68367
+    },
+    {
+      "id": "01a11a63-cead-7f43-aeef-b3639715ef92",
+      "status": "completed",
+      "startedAt": "2026-10-08T07:21:51.051053700+00:00",
+      "completedAt": "2026-10-08T07:25:41.464725600+00:00",
+      "durationMs": 230413
+    },
+    {
+      "id": "01a11a70-fdbf-7563-90bd-51be646a27ff",
+      "status": "interrupted",
+      "startedAt": "2026-10-08T07:36:15.060996800+00:00",
+      "completedAt": "2026-10-08T07:36:15.314593800+00:00",
+      "durationMs": 254
+    }
+  ],
+  "pauseMs": 858,
+  "reconnectStatusMs": 2426,
+  "restartDraft": {
+    "case": "native_app_restart_draft",
+    "pass": true,
+    "actual": "自动化重启草稿验证：局域网测试，尚未提交",
+    "at": "2026-10-08T07:28:27.995Z"
+  },
+  "failedContinuationReceipt": {
+    "at": "2026-10-08T07:36:15.056767600+00:00",
+    "messageId": "9ca8e756-aa11-4e54-a4d8-7bd42fb549ea",
+    "nativeSessionId": "01a11a55-b850-7223-9ed0-71382c173985",
+    "status": "sent",
+    "turnId": "01a11a70-fdbf-7563-90bd-51be646a27ff"
+  },
+  "nativeUsage": {
+    "at": "2026-10-08T07:36:18.288555300+00:00",
+    "nativeSessionId": "01a11a55-b850-7223-9ed0-71382c173985",
+    "total": {
+      "cachedInputTokens": 365952,
+      "inputTokens": 411985,
+      "outputTokens": 3607,
+      "reasoningOutputTokens": 259,
+      "totalTokens": 415592
+    }
+  }
+}

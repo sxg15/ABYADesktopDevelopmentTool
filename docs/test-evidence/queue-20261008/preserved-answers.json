@@ -1,0 +1,33 @@
+{
+  "workflowVersion": "1.2.1",
+  "playerMode": "multiplayer",
+  "approvals": [],
+  "groups": [
+    {
+      "id": "queue-first",
+      "status": "submitted",
+      "answers": [
+        {
+          "revision": 1,
+          "answers": {
+            "mode": "多人"
+          },
+          "submittedAt": "2026-10-08T11:54:18.835986+00:00"
+        }
+      ]
+    },
+    {
+      "id": "queue-followup",
+      "status": "submitted",
+      "answers": [
+        {
+          "revision": 1,
+          "answers": {
+            "next": "稍后测试"
+          },
+          "submittedAt": "2026-10-08T11:56:01.874127700+00:00"
+        }
+      ]
+    }
+  ]
+}

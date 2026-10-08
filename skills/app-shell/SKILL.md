@@ -11,6 +11,17 @@ Owns page composition but not task, process, log, or MCP business logic.
 
 ## Public Contracts
 
+IconButtonTooltips renders immediate in-app hover/focus help for SVG-only buttons using their
+existing title/accessible label, including disabled controls and modal/inline icon buttons.
+It preserves accessible names/descriptions, restores native attributes on exit and dismisses
+on pointer down, Escape, scroll or blur. Tooltip placement stays within the WebView viewport.
+
+Codex labels distinguish Pause task, Continue task and Reconnect terminal. Sidebar identity comes
+from embedded BuildInfo: version, release/date and validation/test status, never a hardcoded version.
+ExitRequested marks native shutdown immediately and runs cleanup once on a worker, while the UI
+event loop remains available for IPC teardown. Only completed cleanup requests final exit; do not
+repeat blocking cleanup on Exit or hold the UI thread while waiting for native/PTY shutdown.
+
 Navigation view IDs, locale keys, shared UI primitives, and application-level
 refresh events.
 

@@ -123,6 +123,27 @@ impl DesktopToolDispatcher {
         if name.starts_with("development_production_") || name.starts_with("development_skill_") {
             arguments["taskId"] = json!(input.task_id);
         }
+        if name == "development_production_update" && arguments["operation"] == "publish-questions"
+        {
+            if !arguments["data"].is_object() {
+                return ToolCallResult::error(AppError::validation("data 必须为问题组对象。"));
+            }
+            let native = match input.provider {
+                TerminalProvider::Codex => self
+                    .dependencies
+                    .codex_terminal
+                    .native_session_id(&input.task_id, &input.conversation_id),
+                TerminalProvider::Grok => Ok(None),
+            };
+            match native {
+                Ok(id) => {
+                    arguments["data"]["provider"] = json!(input.provider);
+                    arguments["data"]["conversationId"] = json!(input.conversation_id);
+                    arguments["data"]["nativeSessionId"] = json!(id);
+                }
+                Err(error) => return ToolCallResult::error(error),
+            }
+        }
         if name == "game_runtime_cancel" {
             let id = arguments["instanceId"].as_str().unwrap_or("");
             let operation = arguments["operationId"].as_str().unwrap_or("");

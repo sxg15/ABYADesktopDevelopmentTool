@@ -1,4 +1,4 @@
-# 任务资料与制作 CLI（v1.1）
+# 任务资料与制作 CLI（v1.2.1）
 
 仅完整制作、较大改动和指定阶段加载。普通任务不自动启用完整流程。
 状态以桌面数据库为准；artifacts/game-development/workflow.json、rounds/ 和 reports/
@@ -34,8 +34,9 @@ APP 创建完整任务已初始化时不要重复提问或初始化。旧文件�
 
 | operation | data 与条件 |
 |---|---|
-| initialize | questionMode: ask/no-followup，仅尚未启用时 |
-| configure | questionMode、taskTemplate、artTemplate；用真实模板 ID 或 none；相关文档确认后先修订再改 |
+| initialize | questionMode: ask/no-followup；可含 playerMode，未明确时 unspecified；仅尚未启用时 |
+| configure | questionMode、playerMode、taskTemplate、artTemplate；playerMode 为 unspecified/single/multiplayer；已明确的人数由策划在 APP 修改；模板使用真实 ID 或 none |
+| publish-questions | id/title/questions；仅需求阶段且允许提问，每次一组，发布后结束当前轮等待策划 |
 | submit-document | kind、path；需求确认后完成 resources，才提交计划 |
 | complete-stage | resources: stage/summary；implementation: stage/checks；closeout: stage |
 | register-evidence | id/path/kind/captureType/reviewed/description，可含 instanceId；必须是实际存在的任务内文件 |
@@ -49,6 +50,20 @@ evidenceIds；它们是实际校验的记录，不是让模型生成一个成功
 issues.kind: defect/blocker/checkpoint/suggestion；status: open/resolved。
 必要缺陷不能改名为 suggestion 绕过检查；无关建议不阻塞交付。
 当前后台只检查材料与已声明结果，不能代替实际操作、规则判断和视觉审阅。
+
+## APP 需求问答
+
+~~~json
+{"expectedRevision":1,"operation":"publish-questions","data":{"id":"player-mode","title":"先敲定玩法人数","questions":[{"id":"mode","text":"这次制作单人还是多人玩法？","options":["单人","多人"],"optional":false}]}}
+~~~
+只问用户尚未明确且影响方案的问题，每组 1–12 题；没有默认提交选项，自由答案同样有效。
+题目 ID 组内唯一。会话关联由桌面注入，不填写或猜测 provider/conversationId/nativeSessionId。
+production get 返回 questionGroups：pending 是草稿，submitted 的 answers 最后一版才是已提交答案。
+不要把 draft 或旧版答案当成决定。不得代策划调用用户答题接口或伪造答案。
+策划可以返回上一题、重启后恢复草稿，或修改已提交答案；以最新版为准，保留需求来源。
+“提交并继续”保存答案并登记继续请求。AI 忙时等当前轮次结束，不需要策划先暂停。暂停会停止排队和当前执行；重启后由用户明确继续任务。
+人数模式改变会取消待答问题并重新打开需求梳理；重新判断哪些问题仍相关，不照抄旧假设。
+答题不等于批准需求文档；需求、计划和最终交付仍各有原有的版本确认。
 
 ## 登记真实版本与证据
 

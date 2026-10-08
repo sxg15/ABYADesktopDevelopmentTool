@@ -822,3 +822,13 @@ tbody tr:hover { background: #f7faf8; }
 .conversation-filter { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid #3a4446; }
 .conversation-filter .icon-button { width: 26px; height: 26px; color: #afbbb6; border-color: #4a5557; background: #2c3436; }
 .conversation-filter .icon-button[aria-pressed="true"] { background: #116a5a; color: white; }
+.icon-action-tooltip {
+  position: fixed; z-index: 10000; pointer-events: none;
+  max-width: min(280px, calc(100vw - 16px)); padding: 7px 10px;
+  border-radius: 6px; background: #243832; color: #fff;
+  font: 12px/1.5 system-ui, sans-serif; overflow-wrap: anywhere;
+  box-shadow: 0 3px 12px #0003;
+}
+.terminal-task-notice { padding: 8px 12px; background: #eef5f2; color: #25483e; font-size: 12px; line-height: 1.5; flex-shrink: 0; }
+.codex-terminal.with-task-control { grid-template-rows: 42px auto minmax(0,1fr); }
+.sidebar-footer { flex-direction: column; align-items: flex-start; overflow-wrap: anywhere; }

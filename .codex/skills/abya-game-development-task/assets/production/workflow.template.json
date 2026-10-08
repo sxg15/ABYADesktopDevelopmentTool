@@ -1,10 +1,12 @@
 {
   "schema": "abya.game-development-workflow/v1",
-  "workflowVersion": "1.1.0",
+  "workflowVersion": "1.2.1",
   "taskId": null,
   "provider": null,
   "mode": "full",
   "questionMode": null,
+  "playerMode": "unspecified",
+  "questionGroups": [],
   "taskTemplate": null,
   "artTemplate": null,
   "skillSources": [],

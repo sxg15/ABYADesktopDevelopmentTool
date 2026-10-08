@@ -90,6 +90,40 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
             .collect(),
     );
     if phase == "plan" {
+        body += &format!(
+            "<h2>需求问答</h2><p>人数模式：{}</p>",
+            escape(&r.player_mode)
+        );
+        for group in &r.question_groups {
+            body += &format!(
+                "<details><summary>{} · {}</summary><p>发布 {} · 更新 {}</p>",
+                escape(&group.title),
+                escape(&group.status),
+                escape(&group.published_at),
+                escape(&group.updated_at)
+            );
+            for version in &group.answers {
+                body += &format!(
+                    "<h3>答案第 {} 版 · {}</h3>",
+                    version.revision,
+                    escape(&version.submitted_at)
+                );
+                for question in &group.questions {
+                    body += &format!(
+                        "<p>{}：{}</p>",
+                        escape(&question.text),
+                        escape(
+                            version
+                                .answers
+                                .get(&question.id)
+                                .map(String::as_str)
+                                .unwrap_or("未回答")
+                        )
+                    );
+                }
+            }
+            body += "</details>";
+        }
         body += "<h2>需求文档</h2>";
         body += &document(r, "requirements");
         body += "<h2>执行计划</h2>";
@@ -276,5 +310,12 @@ impl TaskService {
             return Err(AppError::not_found("Artifact"));
         }
         Ok(path.to_string_lossy().into_owned())
+    }
+
+    pub fn production_report_path(&self, id: &str, phase: &str) -> AppResult<String> {
+        if !["plan", "review", "closeout"].contains(&phase) {
+            return Err(AppError::validation("无效阶段报告。"));
+        }
+        self.production_artifact_path(id, &format!("{ROOT}/reports/{phase}-report.html"))
     }
 }

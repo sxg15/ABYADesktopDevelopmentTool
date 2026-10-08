@@ -101,6 +101,16 @@ pub(super) fn version(r: &ProductionRecord) -> AppResult<&str> {
 pub(super) fn document_gate(r: &ProductionRecord, root: &Path, kind: &str) -> AppResult<()> {
     clear_issues(r, kind)?;
     match kind {
+        "requirements" => {
+            if r.question_groups.iter().any(|g| g.status == "pending") {
+                return Err(AppError::validation(
+                    "还有未提交的需求问题，请先回答或取消。",
+                ));
+            }
+            if r.question_mode == "ask" && r.player_mode == "unspecified" {
+                return Err(AppError::validation("请先敲定单人或多人玩法。"));
+            }
+        }
         "plan" => {
             approved(r, root, "requirements")?;
             if r.stages.get("resources").map(String::as_str) != Some("passed") {

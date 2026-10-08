@@ -1,4 +1,6 @@
 const zh = {
+  revealDocument: "在文件资源管理器中显示", revealDocumentHint: "打开文档所在文件夹，并选中这份文档",
+  openReportFolder: "打开报告所在文件夹，并选中对应报告文件",
   title: "制作流程", skills: "Skill 库", enable: "启用完整制作流程", enableHint: "完整玩法和较大改动使用此流程；局部任务可以继续使用终端。",
   ask: "允许需求追问", noAsk: "不做需求追问", questionMode: "需求提问", refresh: "刷新", loading: "正在读取…",
   version: "流程版本", round: "当前轮次", revision: "记录版本", cycle: "需求周期", noRecord: "尚未启用制作流程",
@@ -14,6 +16,8 @@ const zh = {
   taskMode: "任务范围", method: "制作阶段", details: "查看详情", knowledge: "知识与工具建议", acceptance: "确认历史",
 };
 const en: Record<keyof typeof zh, string> = {
+  revealDocument: "Show in File Explorer", revealDocumentHint: "Open the document folder and select this document",
+  openReportFolder: "Open the report folder and select the corresponding report file",
   title: "Production", skills: "Skills", enable: "Enable full production", enableHint: "Use for complete gameplay or major changes. Scoped tasks can continue in the terminal.",
   ask: "Allow requirements questions", noAsk: "No requirements follow-ups", questionMode: "Questions", refresh: "Refresh", loading: "Loading…",
   version: "Workflow version", round: "Current round", revision: "Record revision", cycle: "Requirements cycle", noRecord: "Production is not enabled",

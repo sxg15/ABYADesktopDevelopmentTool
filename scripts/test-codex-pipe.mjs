@@ -17,7 +17,7 @@ const finished = new Promise(resolve => { complete = resolve; });
 readline.createInterface({ input: child.stdout }).on('line', line => {
   let message;
   try { message = JSON.parse(line); } catch { return; }
-  if (message.id !== undefined && pending.has(message.id)) {
+  if (message.id !== undefined && !message.method && pending.has(message.id)) {
     const resolve = pending.get(message.id); pending.delete(message.id); resolve(message);
   }
   if (message.method === 'item/completed' && message.params?.item?.type === 'commandExecution') {
@@ -45,7 +45,8 @@ try {
   for (const key of required.filter(key => !key.startsWith('ABYA_TEST_'))) config[`shell_environment_policy.set.${key}`] = process.env[key];
   config['shell_environment_policy.set.ABYA_DEVELOPMENT_PROVIDER'] = 'codex';
   config['shell_environment_policy.set.ABYA_DEVELOPMENT_WORKSPACE'] = process.env.ABYA_TEST_WORKSPACE;
-  const result = await call('thread/start', {
+  const result = await call(process.env.ABYA_TEST_RESUME_THREAD ? 'thread/resume' : 'thread/start', {
+    ...(process.env.ABYA_TEST_RESUME_THREAD ? { threadId: process.env.ABYA_TEST_RESUME_THREAD } : {}),
     cwd: process.env.ABYA_TEST_WORKSPACE, config,
     developerInstructions: 'This is a read-only CLI integration test. Do not read configuration, credentials, files or directory listings. Do not print any token or pipe environment variable. Use exec_command once with its default working directory and no permission overrides to run: whoami; Get-Location; & $env:ABYA_DESKTOP_CLI doctor --json; & $env:ABYA_DESKTOP_CLI capabilities --json. Report results. Do not change anything or start games.',
   });
@@ -54,7 +55,7 @@ try {
   const status = await Promise.race([finished, new Promise((_, reject) => setTimeout(() => reject(new Error('Model test timed out')), 240000).unref())]);
   const output = commands.map(item => item.output ?? '').join('\n');
   const summary = {
-    status, commandCount: commands.length,
+    status, threadId, commandCount: commands.length,
     sandboxIdentity: /codexsandboxoffline/i.test(output),
     doctor: /"runtimeCliInstalled":true/.test(output),
     capabilities: /development_task_list/.test(output),
@@ -63,6 +64,6 @@ try {
   console.log(JSON.stringify(summary));
   if (status !== 'completed' || !summary.sandboxIdentity || !summary.doctor || !summary.capabilities || summary.errors) process.exitCode = 1;
 } finally {
-  if (threadId) await call('thread/archive', { threadId }).catch(() => {});
+  if (threadId && process.env.ABYA_TEST_KEEP_THREAD !== '1') await call('thread/archive', { threadId }).catch(() => {});
   spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
 }

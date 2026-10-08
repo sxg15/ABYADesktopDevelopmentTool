@@ -13,12 +13,14 @@ import {
   type MessageKey,
 } from "./i18n";
 import "./App.css";
+import { IconButtonTooltips } from "./app/IconButtonTooltips";
 
 type ViewId = "tasks" | "archiveTransfer" | "logs" | "settings";
 
 function App() {
   const [view, setView] = useState<ViewId>("tasks");
   const [settings, setSettings] = useState<AppSettings>();
+  const [buildInfo,setBuildInfo]=useState<Awaited<ReturnType<typeof api.buildInfo>>>();
   const [locale, setLocale] = useState<Locale>(
     normalizeLocale(navigator.language),
   );
@@ -29,6 +31,7 @@ function App() {
   const t = useMemo(() => translator(locale), [locale]);
 
   useEffect(() => {
+    void api.buildInfo().then(setBuildInfo).catch(()=>undefined);
     void api
       .settings()
       .then((value) => {
@@ -66,6 +69,7 @@ function App() {
 
   return (
     <div className="app-shell">
+      <IconButtonTooltips closeLabel={t("close")} />
       <aside className="app-sidebar">
         <div className="brand">
           <div className="brand-mark">A</div>
@@ -91,7 +95,10 @@ function App() {
         </nav>
         <div className="sidebar-footer">
           <span className="connection-light" />
-          <span>v0.1.0</span>
+          <strong>APP {buildInfo?.version??"版本核对中"}{buildInfo?.testEnvironment?" · 测试环境":""}</strong>
+          <span>{buildInfo?.release??""}</span>
+          <span>{buildInfo?.builtAt && buildInfo.builtAt!=="development" ? new Date(buildInfo.builtAt).toLocaleString(locale) : "开发构建"}</span>
+          {buildInfo?.verification!=="verified" && <span>未确认构建，请核对发布入口</span>}
         </div>
       </aside>
 

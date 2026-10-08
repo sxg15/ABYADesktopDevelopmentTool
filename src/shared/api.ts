@@ -30,6 +30,7 @@ import type {
 } from "./types";
 
 export const api = {
+  buildInfo: () => invoke<{version:string;release:string;builtAt:string;verification:string;dataDirectory:string;executable:string;testEnvironment:boolean}>("get_build_info"),
   readRuntimeArtifact: (taskId: string, path: string) => invoke<string>("read_runtime_artifact", { taskId, path }),
   paths: () => invoke<AppPaths>("get_app_paths"),
   settings: () => invoke<AppSettings>("get_settings"),
@@ -233,6 +234,10 @@ export const api = {
 };
 
 export const terminalApi = {
+  conversationMetrics: (taskId: string, conversationId: string) => invoke<Record<string, unknown>>("codex_conversation_metrics", { taskId, conversationId }),
+  recoveryCandidates: (taskId: string) => invoke<{ id: string; startedAt: string }[]>("codex_recovery_candidates", { taskId }),
+  repairBinding: (taskId: string, conversationId: string, nativeId: string) =>
+    invoke<CodexConversation>("repair_codex_binding", { taskId, conversationId, nativeId }),
   copyHistory: (provider: TerminalProvider, taskId: string, conversationId: string) =>
     invoke<boolean>("copy_terminal_history", { provider, taskId, conversationId }),
   projectWorkspace: (taskId: string) => invoke<string>("get_codex_project_workspace", { taskId }),

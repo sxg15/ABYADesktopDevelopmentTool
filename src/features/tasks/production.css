@@ -17,3 +17,11 @@
 .production-skill-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
 .production-skill-grid .production-card{margin:0}
 @media(max-width:1000px){.production-stages{grid-template-columns:repeat(4,minmax(95px,1fr))}.production-panel{padding:12px}}
+.intake-questions fieldset { border: 1px solid var(--border-color, #d1d5db); border-radius: 8px; padding: 12px; margin: 12px 0; min-width: 0; }
+.intake-questions legend { white-space: pre-wrap; overflow-wrap: anywhere; }
+.intake-option { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0; }
+.intake-option input[type="radio"] { width: 16px; height: 16px; min-height: 0; flex: 0 0 16px; margin: 3px 0 0; padding: 0; }
+.intake-questions button[aria-current="step"] { outline: 2px solid #6478ca; }
+.intake-pending-button { position: fixed; right: 24px; bottom: 24px; z-index: 80; box-shadow: 0 4px 16px #0002; }
+.intake-dialog-hint { margin: 0; color: var(--muted, #69756f); font-size: 13px; line-height: 1.6; }
+.modal .intake-questions { margin: 12px 0; }

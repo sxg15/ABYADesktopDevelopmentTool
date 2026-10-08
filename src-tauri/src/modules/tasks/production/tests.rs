@@ -193,7 +193,11 @@ fn approval_requires_current_file_revision_and_cannot_be_forged_by_mutation() {
 fn revision_conflict_retains_newer_state_and_export_cannot_override_database() {
     let f = Fixture::new();
     let old = f.record();
-    f.apply("configure", json!({"questionMode":"ask"})).unwrap();
+    f.apply(
+        "configure",
+        json!({"questionMode":"ask", "playerMode":"single"}),
+    )
+    .unwrap();
     assert!(
         f.service
             .production_update(ProductionMutation {
@@ -211,6 +215,87 @@ fn revision_conflict_retains_newer_state_and_export_cannot_override_database() {
     .unwrap();
     assert_eq!(f.record().question_mode, "ask");
     assert!(f.record().approvals.is_empty());
+}
+
+#[test]
+fn intake_answers_survive_reload_reject_agent_submission_and_invalidate_decisions() {
+    let f = Fixture::new();
+    assert_eq!(f.record().player_mode, "unspecified");
+    f.apply(
+        "configure",
+        json!({"questionMode":"ask", "playerMode":"single"}),
+    )
+    .unwrap();
+    let question = json!({"id":"rules","title":"需求梳理","provider":"codex",
+        "conversationId":uuid::Uuid::new_v4().to_string(),"nativeSessionId":uuid::Uuid::new_v4().to_string(),
+        "questions":[{"id":"rules","text":"如何计分？","options":["按时间","按步数"]}]});
+    f.apply("publish-questions", question.clone()).unwrap();
+    assert!(f.apply("publish-questions", question).is_err());
+    assert!(validation::document_gate(&f.record(), &f.workspace, "requirements").is_err());
+    let data = json!({"id":"rules","answers":{"rules":"按步数"}});
+    assert!(f.apply("submit-answers", data.clone()).is_err());
+    let change = |op: &str, data: Value| {
+        f.service.production_answer(ProductionMutation {
+            task_id: f.id.clone(),
+            expected_revision: f.record().revision,
+            operation: op.into(),
+            data,
+        })
+    };
+    change("save-draft", data.clone()).unwrap();
+    assert_eq!(f.record().question_groups[0].draft["rules"], "按步数");
+    let stale = f.record().revision;
+    change("submit-answers", data.clone()).unwrap();
+    assert!(
+        f.service
+            .production_answer(ProductionMutation {
+                task_id: f.id.clone(),
+                expected_revision: stale,
+                operation: "submit-answers".into(),
+                data: data.clone()
+            })
+            .is_err()
+    );
+    assert!(change("submit-answers", data).is_err());
+    f.doc("requirements", "Confirmed scoring.");
+    f.accept("requirements");
+    change("amend", json!({"id":"rules"})).unwrap();
+    assert_eq!(f.record().stages["requirements"], "in-progress");
+    change(
+        "submit-answers",
+        json!({"id":"rules","answers":{"rules":"按时间"}}),
+    )
+    .unwrap();
+    let record = f.record();
+    assert_eq!(record.question_groups[0].answers.len(), 2);
+    assert_eq!(
+        record.question_groups[0].answers[0].answers["rules"],
+        "按步数"
+    );
+    assert!(
+        f.apply("configure", json!({"playerMode":"multiplayer"}))
+            .is_err()
+    );
+    change("set-player-mode", json!({"playerMode":"multiplayer"})).unwrap();
+    assert_eq!(f.record().player_mode, "multiplayer");
+}
+
+#[test]
+fn intake_no_followup_unknown_fields_required_answers_and_legacy_defaults() {
+    let f = Fixture::new();
+    let mut legacy = serde_json::to_value(f.record()).unwrap();
+    legacy.as_object_mut().unwrap().remove("playerMode");
+    legacy.as_object_mut().unwrap().remove("questionGroups");
+    let restored: ProductionRecord = serde_json::from_value(legacy).unwrap();
+    assert_eq!(restored.player_mode, "unspecified");
+    assert!(restored.question_groups.is_empty());
+    assert!(f.apply("publish-questions", json!({})).is_err());
+    assert!(
+        f.apply("configure", json!({"playerMode":"online"}))
+            .is_err()
+    );
+    f.apply("configure", json!({"questionMode":"ask"})).unwrap();
+    assert!(validation::document_gate(&f.record(), &f.workspace, "requirements").is_err());
 }
 
 #[test]
@@ -349,7 +434,11 @@ fn actual_saved_archive_changes_invalidate_version() {
 fn changing_pending_choices_requires_document_resubmission() {
     let f = Fixture::new();
     f.doc("requirements", "No follow-up questions.");
-    f.apply("configure", json!({"questionMode":"ask"})).unwrap();
+    f.apply(
+        "configure",
+        json!({"questionMode":"ask", "playerMode":"single"}),
+    )
+    .unwrap();
     let record = f.record();
     assert_eq!(record.stages["requirements"], "in-progress");
     assert!(

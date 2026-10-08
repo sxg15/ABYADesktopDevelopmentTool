@@ -122,6 +122,11 @@ fn get_app_paths(state: State<'_, AppState>) -> AppPaths {
     state.paths.clone()
 }
 
+#[tauri::command(async)]
+fn get_build_info(state: State<'_, AppState>) -> AppResult<foundation::build_info::BuildInfo> {
+    foundation::build_info::read(&state.paths)
+}
+
 #[tauri::command]
 fn get_settings(state: State<'_, AppState>) -> AppResult<AppSettings> {
     state.settings.get()
@@ -227,6 +232,66 @@ fn update_task_production(
 }
 
 #[tauri::command(async)]
+fn answer_task_questions(
+    input: ProductionMutation,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    state.tasks.production_answer(input)
+}
+
+#[tauri::command(async)]
+fn continue_intake_questions(
+    task_id: String,
+    group_id: String,
+    revision: u64,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::IntakeContinuation> {
+    state
+        .codex_terminal
+        .continue_questions(&task_id, &group_id, revision)
+}
+
+#[tauri::command(async)]
+fn submit_intake_answers(
+    input: ProductionMutation,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::QuestionSubmission> {
+    state.codex_terminal.submit_questions(input)
+}
+#[tauri::command(async)]
+fn continue_codex_task(
+    task_id: String,
+    conversation_id: String,
+    after_revision: Option<u64>,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::IntakeContinuation> {
+    state
+        .codex_terminal
+        .continue_after_revision(&task_id, &conversation_id, after_revision)
+}
+#[tauri::command(async)]
+fn flush_codex_continuation(
+    task_id: String,
+    conversation_id: String,
+    request_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::IntakeContinuation> {
+    state
+        .codex_terminal
+        .flush_continuation(&task_id, &conversation_id, &request_id)
+}
+#[tauri::command(async)]
+fn get_codex_task_control(
+    task_id: String,
+    conversation_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::TaskControlState> {
+    state
+        .codex_terminal
+        .task_control(&task_id, &conversation_id)
+}
+
+#[tauri::command(async)]
 fn decide_task_production(
     input: ProductionDecision,
     state: State<'_, AppState>,
@@ -264,13 +329,34 @@ fn read_task_skill(
 fn open_production_artifact(
     task_id: String,
     path: String,
+    reveal: Option<bool>,
     state: State<'_, AppState>,
     app: tauri::AppHandle,
 ) -> AppResult<()> {
     use tauri_plugin_opener::OpenerExt;
     let path = state.tasks.production_artifact_path(&task_id, &path)?;
+    if reveal.unwrap_or(false) {
+        return app
+            .opener()
+            .reveal_item_in_dir(path)
+            .map_err(foundation::AppError::internal);
+    }
     app.opener()
         .open_path(path, None::<&str>)
+        .map_err(foundation::AppError::internal)
+}
+
+#[tauri::command(async)]
+fn reveal_production_report(
+    task_id: String,
+    phase: String,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let path = state.tasks.production_report_path(&task_id, &phase)?;
+    app.opener()
+        .reveal_item_in_dir(path)
         .map_err(foundation::AppError::internal)
 }
 
@@ -386,6 +472,35 @@ fn copy_terminal_history(
 #[tauri::command(async)]
 fn get_codex_project_workspace(task_id: String, state: State<'_, AppState>) -> AppResult<String> {
     state.codex_terminal.project_workspace(&task_id)
+}
+
+#[tauri::command(async)]
+fn codex_conversation_metrics(
+    task_id: String,
+    conversation_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state.codex_terminal.metrics(&task_id, &conversation_id)
+}
+
+#[tauri::command(async)]
+fn codex_recovery_candidates(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<Vec<modules::codex_terminal::RecoveryCandidate>> {
+    state.codex_terminal.recovery_candidates(&task_id)
+}
+
+#[tauri::command(async)]
+fn repair_codex_binding(
+    task_id: String,
+    conversation_id: String,
+    native_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<CodexConversation> {
+    state
+        .codex_terminal
+        .repair_binding(&task_id, &conversation_id, &native_id)
 }
 
 #[tauri::command(async)]
@@ -702,6 +817,17 @@ fn query_log_events(
 }
 
 pub fn run() {
+    if foundation::single_instance::redirect_packaged_launch()
+        .expect("Cannot establish normal Windows data context")
+    {
+        return;
+    }
+    let paths = AppPaths::discover().expect("ABYA data directory unavailable");
+    let Some(_instance_guard) = foundation::single_instance::acquire(&paths.data_dir)
+        .expect("Cannot acquire ABYA instance lock")
+    else {
+        return;
+    };
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -770,12 +896,20 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_task_production,
             update_task_production,
+            answer_task_questions,
+            continue_intake_questions,
+            submit_intake_answers,
+            continue_codex_task,
+            flush_codex_continuation,
+            get_codex_task_control,
             decide_task_production,
             upgrade_task_production,
             get_task_skills,
             read_task_skill,
             open_production_artifact,
+            reveal_production_report,
             get_app_paths,
+            get_build_info,
             get_settings,
             update_settings,
             regenerate_desktop_cli_token,
@@ -799,6 +933,9 @@ pub fn run() {
             read_terminal_clipboard,
             copy_terminal_history,
             get_codex_project_workspace,
+            codex_conversation_metrics,
+            codex_recovery_candidates,
+            repair_codex_binding,
             set_codex_conversation_archived,
             create_codex_conversation,
             rename_codex_conversation,
@@ -840,18 +977,37 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("failed to build ABYA Desktop Development Tool");
 
-    app.run(|app_handle, event| {
-        if matches!(
-            event,
-            tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }
-        ) {
-            let state = app_handle.state::<AppState>();
-            state.archive_transfers.stop_all();
-            state.codex_terminal.stop_all();
-            state.grok_terminal.stop_all();
-            state.instances.stop_all();
-            state.connections.stop();
-            state.desktop_cli.stop();
+    let shutdown_started = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let shutdown_finished = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    app.run(move |app_handle, event| {
+        if let tauri::RunEvent::ExitRequested { api, .. } = event {
+            use std::sync::atomic::Ordering;
+            if shutdown_finished.load(Ordering::SeqCst) {
+                return;
+            }
+            api.prevent_exit();
+            if shutdown_started.swap(true, Ordering::SeqCst) {
+                return;
+            }
+            app_handle
+                .state::<AppState>()
+                .codex_terminal
+                .begin_shutdown();
+            let handle = app_handle.clone();
+            let finished = shutdown_finished.clone();
+            // Keep the WebView event loop alive while IPC and native children are drained.
+            // Cleanup must run once, off the UI thread, before releasing the instance guard.
+            std::thread::spawn(move || {
+                let state = handle.state::<AppState>();
+                state.archive_transfers.stop_all();
+                state.codex_terminal.stop_all();
+                state.grok_terminal.stop_all();
+                state.instances.stop_all();
+                state.connections.stop();
+                state.desktop_cli.stop();
+                finished.store(true, Ordering::SeqCst);
+                handle.exit(0);
+            });
         }
     });
 }

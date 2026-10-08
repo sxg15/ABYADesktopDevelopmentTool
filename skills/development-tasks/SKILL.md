@@ -11,6 +11,38 @@ task-to-instance history relationships.
 
 ## Public Contracts
 
+Production v1.2 adds playerMode (unspecified/single/multiplayer) and durable questionGroups.
+Legacy records default to unspecified and no questions. Publishing questions is agent-accessible
+only during requirements/ask, with a validated Desktop-owned conversation binding. User-only
+production_answer saves drafts, submits, amends, cancels or changes player mode. Revisions protect
+against stale writes and duplicate submission. Prior answers remain immutable; answers are not
+document approvals. Changes invalidate downstream stages; existing version resubmission starts
+the next cycle. CLI cannot override an already explicit player mode. Pending questions prevent
+requirements submission/approval; ask mode also requires an explicit player mode.
+APP drafts persist to SQLite plus immediate local browser recovery until successful submission.
+TaskIntakeDialog polls the selected task even while its terminal tab is active and opens an APP
+modal for a new pending group. Close/Escape/later retains drafts and never submits/cancels.
+Dismissed groups have a resume button; production shows summary/reopen entries, not a second
+answer editor. New groups and amendment versions can prompt again. Late responses are ignored.
+Question groups carry native identity; continuation must target their originating conversation.
+Submit and continue is one action. The parent dialog owns submission so a polling rerender or
+editor close cannot lose an already accepted intent. Revision checks reject stale views.
+Continuation feedback includes queued, paused, waiting gates and needsReview. If the backend
+requires a terminal, TasksView connects the exact conversation then flushes the saved request ID;
+it does not create a new intent. Document approval/rejection passes its saved production revision
+through the same queue; decisions remain saved when connection fails. Required answers are checked before submission
+and the first missing question is selected; only revision conflicts instruct the user to refresh.
+Editing clears stale validation errors and allows autosave again.
+Reports include question and answer history with timestamps. No-followup records explicit
+assumptions in the requirement document and does not publish business questions.
+Stage report buttons reveal the generated report in the OS file manager, selecting the exact
+plan/review/closeout HTML inside the common reports directory. The service accepts only those
+three phase IDs and reuses existing safe artifact validation/export. Evidence opening is unchanged.
+Requirements, plan and delivery document cards also expose Show in File Explorer above the details.
+The action selects the document's recorded path and remains available after approval or task closure.
+It uses the existing artifact path validation; missing files show an error without rewriting documents
+or changing approval state. It does not invoke a file editor or approve the displayed version.
+
 `DevelopmentTask` includes a durable `workspacePath`. Create/update/archive/
 delete commands and task list queries expose that path. New tasks create a
 unique, title-derived directory below the configured foundation workspace root.

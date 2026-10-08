@@ -36,6 +36,7 @@ pub(super) fn apply(
         return Err(AppError::validation("data 必须为对象。"));
     }
     match operation {
+        "publish-questions" => super::questions::publish(r, data),
         "submit-document" => submit(r, root, data),
         "register-evidence" => evidence(r, root, data),
         "set-milestone" => {
@@ -73,6 +74,17 @@ pub(super) fn apply(
             let mut invalidate_plan = false;
             let requirements_approved = validation::approved(r, root, "requirements").is_ok();
             let plan_approved = validation::approved(r, root, "plan").is_ok();
+            if let Some(mode) = super::questions::player_mode(data)? {
+                if r.player_mode != "unspecified" && r.player_mode != mode {
+                    return Err(AppError::validation(
+                        "人数模式已明确，请由策划在 APP 中修改。",
+                    ));
+                }
+                if r.player_mode != mode {
+                    r.player_mode = mode.into();
+                    super::questions::invalidate(r);
+                }
+            }
             if let Some(mode) = data["questionMode"].as_str() {
                 if requirements_approved {
                     return Err(AppError::validation(
@@ -84,6 +96,14 @@ pub(super) fn apply(
                 }
                 invalidate_requirements = r.question_mode != mode;
                 r.question_mode = mode.into();
+                if mode == "no-followup" {
+                    for group in &mut r.question_groups {
+                        if group.status == "pending" {
+                            group.status = "cancelled".into();
+                            group.updated_at = now();
+                        }
+                    }
+                }
             }
             for (key, target) in [
                 ("taskTemplate", &mut r.task_template),

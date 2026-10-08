@@ -1,6 +1,6 @@
 {
   "schema": "abya.game-development-policy/v1",
-  "workflowVersion": "1.1.0",
+  "workflowVersion": "1.2.1",
   "scope": "完整玩法、较大改动；独立阶段仅执行明确范围",
   "questionModes": ["ask", "no-followup"],
   "stageStatuses": ["not-started", "in-progress", "awaiting-confirmation", "blocked", "passed", "not-applicable", "stopped"],

@@ -11,6 +11,10 @@ pub struct ProductionRecord {
     pub workflow_version: String,
     pub policy: Value,
     pub question_mode: String,
+    #[serde(default = "unspecified")]
+    pub player_mode: String,
+    #[serde(default)]
+    pub question_groups: Vec<QuestionGroup>,
     pub task_template: Option<String>,
     pub art_template: Option<String>,
     pub current_stage: String,
@@ -30,6 +34,45 @@ pub struct ProductionRecord {
     pub skill_pins: Vec<SkillEntry>,
     pub legacy_record: Option<String>,
     pub updated_at: String,
+}
+
+fn unspecified() -> String {
+    "unspecified".into()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct IntakeQuestion {
+    pub id: String,
+    pub text: String,
+    #[serde(default)]
+    pub options: Vec<String>,
+    #[serde(default)]
+    pub optional: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuestionGroup {
+    pub id: String,
+    pub title: String,
+    pub provider: String,
+    pub conversation_id: String,
+    pub native_session_id: Option<String>,
+    pub questions: Vec<IntakeQuestion>,
+    pub draft: BTreeMap<String, String>,
+    pub answers: Vec<AnswerRevision>,
+    pub status: String,
+    pub published_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnswerRevision {
+    pub revision: u64,
+    pub answers: BTreeMap<String, String>,
+    pub submitted_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -32,12 +32,16 @@ import type { MessageKey } from "../../i18n";
 import { clampTerminalSize, hostHasTerminalLayout } from "./terminalSize";
 import { installTerminalClipboard, terminalInputQueue } from "./terminalClipboard";
 import { Modal } from "../../app/Modal";
+import type { TerminalConnectionRequest } from "./terminalConnection";
+import { productionApi, continuationMessages } from "../../shared/production";
+import { useTaskControl, controlText, controlLabel } from "./useTaskControl";
 
 const MAX_HISTORY_CHARACTERS = 2 * 1024 * 1024;
 const HISTORY_TRUNCATED_MESSAGE =
   "[Earlier terminal output omitted; showing recent output.]\n";
 
 export function DevelopmentTerminalView({
+  connectionRequest,
   provider,
   taskId,
   visible,
@@ -47,6 +51,7 @@ export function DevelopmentTerminalView({
   onConversationChange,
   onWorkflowChange,
 }: {
+  connectionRequest?: TerminalConnectionRequest;
   provider: TerminalProvider;
   taskId: string;
   visible: boolean;
@@ -65,6 +70,10 @@ export function DevelopmentTerminalView({
   const [error, setError] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [projectFolder, setProjectFolder] = useState<string>();
+  const [recoveryCandidates, setRecoveryCandidates] = useState<{ id: string; startedAt: string }[]>([]);
+  const [recoveryId, setRecoveryId] = useState("");
+  const [metrics, setMetrics] = useState<string>();
+  useEffect(() => { setMetrics(undefined); setRecoveryId(""); setRecoveryCandidates([]); }, [taskId, selectedId]);
   const [conversationBusy, setConversationBusy] = useState(false);
   const refreshRevision = useRef(0);
   const onConversationChangeRef = useRef(onConversationChange);
@@ -84,26 +93,28 @@ export function DevelopmentTerminalView({
     try {
       let result = await terminalApi.listConversations(provider, taskId);
       if (revision !== refreshRevision.current) return;
-      if (result.length === 0 && availability?.available) {
+      if (result.length === 0 && availability?.available && !connectionRequest) {
         result = [await terminalApi.createConversation(provider, taskId)];
       }
       if (revision !== refreshRevision.current) return;
       setConversations(result);
       const active = result.filter(item => !item.archived);
+      const preferred = connectionRequest ? active.find(c => c.id === connectionRequest.conversationId) : active[0];
       setSelectedId((current) =>
-        active.some((conversation) => conversation.id === current)
+        !connectionRequest && active.some((conversation) => conversation.id === current)
           ? current
-          : active[0]?.id ?? "",
+          : preferred?.id ?? "",
       );
       setOpenedIds((current) => [
         ...current.filter((id) =>
           active.some((conversation) => conversation.id === id),
         ),
-        ...(active[0] && !current.includes(active[0].id) ? [active[0].id] : []),
+        ...(preferred && !current.includes(preferred.id) ? [preferred.id] : []),
       ]);
       setError(result.find(item => item.nativeSyncError)?.nativeSyncError ?? "");
     } catch (value) {
       setError(errorMessage(value));
+      connectionRequest?.finish(value);
     } finally {
       if (revision === refreshRevision.current) setLoading(false);
     }
@@ -115,6 +126,15 @@ export function DevelopmentTerminalView({
     void refreshConversations();
     return () => { refreshRevision.current++; };
   }, [provider, taskId, availability?.available]);
+
+  useEffect(() => {
+    if (!connectionRequest || loading) return;
+    if (!availability?.available) { connectionRequest.finish(new Error("终端提供方不可用，未发送继续请求。")); return; }
+    const target = conversations.find(c => c.id === connectionRequest.conversationId && !c.archived);
+    if (!target) { connectionRequest.finish(new Error("原会话不存在或已归档，未创建替代对话。")); return; }
+    setShowArchived(false); setSelectedId(target.id);
+    setOpenedIds(ids => ids.includes(target.id) ? ids : [...ids, target.id]);
+  }, [connectionRequest, loading, availability?.available, conversations]);
 
   useEffect(() => {
     const refresh = () => { if (visible && provider === "codex" && !conversationBusy) void refreshConversations(); };
@@ -374,6 +394,31 @@ export function DevelopmentTerminalView({
             <input readOnly value={projectFolder} autoFocus onFocus={event => event.currentTarget.select()} />
           </label>
           <small>{t("codexProjectCopyHint")}</small>
+          <label className="field">Codex 原生会话 ID<input readOnly
+            value={conversations.find(c => c.id === selectedId)?.nativeSessionId ?? "尚未关联，请连接后刷新会话列表"}
+            onFocus={event => event.currentTarget.select()} /></label>
+          <p>使用上面的精确目录在 Codex 中添加项目，并按会话 ID 核对历史。原生关联不保证自动进入“ABYA 开发”侧栏分组。</p>
+          <p>此入口用于查看和定位。在另一客户端继续执行前，请先暂停 APP 中的 AI，避免两边同时运行。</p>
+          <details><summary>测试用时与原生用量</summary>
+            <button className="secondary-button" onClick={() => void terminalApi.conversationMetrics(taskId, selectedId)
+              .then(value => setMetrics(JSON.stringify(value, null, 2))).catch(e => setError(errorMessage(e)))}>读取当前会话统计</button>
+            <p>记录轮次、答题等待和连接事件；耗时可能重叠，不能直接相加。原生用量缺失会标为 null。</p>
+            {metrics && <textarea readOnly rows={12} value={metrics} aria-label="测试统计" onFocus={e => e.currentTarget.select()} />}
+          </details>
+          {conversations.find(c => c.id === selectedId)?.nativeSyncError && <p role="alert">原生同步失败：{conversations.find(c => c.id === selectedId)?.nativeSyncError}</p>}
+          <details><summary>恢复关联错误的旧对话</summary>
+            <p>先暂停 AI。只列出本任务目录中的原生历史；修复前自动备份，不合并或删除历史。</p>
+            <button className="secondary-button" onClick={() => void terminalApi.recoveryCandidates(taskId).then(setRecoveryCandidates).catch(e => setError(errorMessage(e)))}>查找本任务历史</button>
+            <label className="field">选择已核对的原生会话<select value={recoveryId} onChange={e => setRecoveryId(e.target.value)}>
+              <option value="">请选择</option>{recoveryCandidates.map(c => <option key={c.id} value={c.id}>{c.startedAt} · {c.id}</option>)}
+            </select></label>
+            <button className="secondary-button" disabled={!recoveryId || conversationBusy} onClick={async () => {
+              setConversationBusy(true);
+              try { await terminalApi.repairBinding(taskId, selectedId, recoveryId); setProjectFolder(undefined); await refreshConversations(); }
+              catch (e) { setError(errorMessage(e)); }
+              finally { setConversationBusy(false); }
+            }}>备份并修复关联</button>
+          </details>
         </div>
       </Modal>}
       <div className="conversation-terminal-area">
@@ -389,6 +434,7 @@ export function DevelopmentTerminalView({
               key={conversation.id}
             >
               <ConversationTerminal
+                connectionRequest={connectionRequest?.conversationId === conversation.id ? connectionRequest : undefined}
                 taskId={taskId}
                 provider={provider}
                 conversation={conversation}
@@ -416,6 +462,7 @@ export function DevelopmentTerminalView({
 }
 
 function ConversationTerminal({
+  connectionRequest,
   provider,
   taskId,
   conversation,
@@ -424,6 +471,7 @@ function ConversationTerminal({
   t,
   onWorkflowChange,
 }: {
+  connectionRequest?: TerminalConnectionRequest;
   provider: TerminalProvider;
   taskId: string;
   conversation: CodexConversation;
@@ -452,6 +500,23 @@ function ConversationTerminal({
   const [historyAtBottom, setHistoryAtBottom] = useState(true);
   const [copyState, setCopyState] = useState<"idle" | "copying" | "copied">("idle");
   const copyBusyRef = useRef(false);
+  const connectionRef = useRef(connectionRequest); connectionRef.current = connectionRequest;
+  const control=useTaskControl(taskId,conversation.id,provider);
+  const pendingContinue=useRef<string | undefined>(undefined);
+  const [actionBusy,setActionBusy]=useState(false);
+  const [actionNotice,setActionNotice]=useState("");
+  useEffect(()=>setActionNotice(""),[control?.state]);
+  async function continueTask() {
+    if(actionBusy)return;setActionBusy(true);setError("");
+    try {
+      const result=await productionApi.continueTask(taskId,conversation.id);
+      setActionNotice(continuationMessages[result.status]);
+      if(result.status==="needsConnection"&&result.requestId) {
+        pendingContinue.current=result.requestId; startRef.current(true);
+      }
+      window.dispatchEvent(new Event("abya:control-changed"));
+    }catch(e){setError(errorMessage(e));}finally{setActionBusy(false);}
+  }
 
   useEffect(() => {
     if (copyState !== "copied") return;
@@ -575,7 +640,9 @@ function ConversationTerminal({
     fitRef.current = fit;
 
     let disposed = false;
+    let attachment=0;
     let pendingStart = false;
+    let resetAfterAttach = false;
     let startFrame = 0;
 
     const measureSize = () => {
@@ -591,9 +658,14 @@ function ConversationTerminal({
       const size = measureSize();
       if (!size) return;
       pendingStart = false;
+      const generation=++attachment;
       const channel = new Channel<CodexTerminalEvent>();
+      let attaching = true;
+      const buffered: string[] = [];
       channel.onmessage = (event) => {
+        if(disposed||generation!==attachment)return;
         if (event.type === "output") {
+          if (attaching) { buffered.push(event.data); return; }
           appendHistory(event.data);
           const preserveScroll = !atBottomRef.current;
           const viewportY = terminal.buffer.active.viewportY;
@@ -622,8 +694,25 @@ function ConversationTerminal({
           size.rows,
           channel,
         )
-        .then(setState)
+        .then(next => {
+          if (disposed||generation!==attachment) return;
+          if (resetAfterAttach) { terminal.reset(); clearHistory(); }
+          attaching = false;
+          for (const data of buffered) channel.onmessage({ type: "output", data });
+          buffered.length = 0;
+          setState(next);
+          connectionRef.current?.finish(next.status === "running" ? undefined : new Error(next.lastError || "原会话尚未连接。"));
+          const request=pendingContinue.current;pendingContinue.current=undefined;
+          if(request&&next.status==="running") {
+            void productionApi.flushContinuation(taskId,conversation.id,request).then(result=>{
+              if(!disposed){setActionNotice(continuationMessages[result.status]);window.dispatchEvent(new Event("abya:control-changed"));}
+            }).catch(e=>{if(!disposed)setError(errorMessage(e));});
+          }
+        })
         .catch((value) => {
+          if(disposed||generation!==attachment)return;
+          pendingContinue.current=undefined;
+          connectionRef.current?.finish(value);
           setError(errorMessage(value));
           setState((current) =>
             current
@@ -671,12 +760,7 @@ function ConversationTerminal({
 
     startRef.current = (reset = false) => {
       if (disposed) return;
-      if (reset) {
-        terminal.reset();
-        clearHistory();
-        atBottomRef.current = true;
-        setAtBottom(true);
-      }
+      resetAfterAttach = reset;
       setError("");
       setState((current) => ({
         taskId,
@@ -712,6 +796,11 @@ function ConversationTerminal({
   }, [availability.workingDirectory, conversation.id, provider, taskId]);
 
   useEffect(() => {
+    if (connectionRequest && state?.status !== "starting") startRef.current(true);
+    // Start/reattach once per explicit connection request, not on every terminal event.
+  }, [connectionRequest?.id]);
+
+  useEffect(() => {
     const panel = historyPanelRef.current;
     if (viewMode === "history" && panel) {
       const frame = window.requestAnimationFrame(() => {
@@ -731,6 +820,8 @@ function ConversationTerminal({
   }, [visible, viewMode]);
 
   async function stop() {
+    setActionNotice("");
+    pendingContinue.current=undefined;setActionBusy(true);
     setError("");
     try {
       await terminalApi.stop(provider, conversation.id);
@@ -741,25 +832,25 @@ function ConversationTerminal({
       );
     } catch (value) {
       setError(errorMessage(value));
-    }
+    } finally {setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
   }
 
   const terminalEnded =
     state?.status === "exited" || state?.status === "failed";
   const canStop =
-    state?.status === "starting" || state?.status === "running";
+    provider==="codex" ? control?.connection!=="disconnected" || control?.queued : state?.status === "starting" || state?.status === "running";
   const showingHistory = viewMode === "history";
   const canScrollToLatest = showingHistory ? !historyAtBottom : !atBottom;
 
   return (
-    <div className="codex-terminal">
+    <div className={`codex-terminal ${provider==="codex"?"with-task-control":""}`}>
       <div className="terminal-toolbar">
         <div className="terminal-status">
           <span
             className={`terminal-state terminal-state-${state?.status ?? "starting"}`}
           />
           <strong>{conversation.title}</strong>
-          <span>{terminalStatus(t, provider, state?.status)}</span>
+          <span>{provider==="codex" ? controlLabel(control) : terminalStatus(t, provider, state?.status)}</span>
           {state?.pid && <code>PID {state.pid}</code>}
         </div>
         <code
@@ -817,24 +908,33 @@ function ConversationTerminal({
           )}
           {canStop && (
             <button
-              className="icon-button terminal-stop"
+              className="secondary-button terminal-stop"
               title={t(provider === "codex" ? "stopCodex" : "stopGrok")}
               onClick={stop}
+              disabled={actionBusy || control?.state==="paused" || control?.state==="pausing"}
             >
               <Square size={15} fill="currentColor" />
+              {t(provider === "codex" ? "stopCodex" : "stopGrok")}
             </button>
           )}
+          {provider==="codex" && <button className="primary-button" onClick={()=>void continueTask()}
+            disabled={actionBusy||!control?.nativeSessionId||["running","waitingForResponse","queued","pausing","closed"].includes(control?.state??"")}>继续任务</button>}
           {terminalEnded && (
             <button
-              className="icon-button"
+              className="secondary-button"
               title={t(provider === "codex" ? "restartCodex" : "restartGrok")}
               onClick={() => startRef.current(true)}
             >
+              {t(provider === "codex" ? "restartCodex" : "restartGrok")}
               <RefreshCw size={16} />
             </button>
           )}
         </div>
       </div>
+      {provider==="codex" && <div className="terminal-task-notice" role="status">
+        {controlText(control)}{actionNotice&&` · ${actionNotice}`}
+          {control?.turnId && !["running","queued","waitingForResponse"].includes(control.state) && <strong> · 以下为上次执行记录，并非当前运行进度</strong>}
+      </div>}
       <div className="terminal-content">
         <div className="terminal-host" hidden={showingHistory} ref={hostRef} />
         <div

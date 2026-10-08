@@ -12,6 +12,23 @@ process, log, or MCP business workflows.
 
 ## Public Contracts
 
+Shared adapters expose typed intake groups/answer versions/player mode, APP-only answer actions,
+native-bound Codex continuation, and scoped conversation recovery. They never transport session
+credentials. Intake answers and approvals remain separate domain actions; business logic stays
+inside task and provider services.
+IntakeContinuation includes queued, paused, waitingForAnswers, waitingForApproval, needsReview,
+needsConnection, started, resumed, running, completed and superseded, with request/native/turn IDs.
+TaskControlState separates connection, native execution, queue, human gates and last event time.
+BuildInfo validates the embedded release/version against the adjacent manifest and executable hash.
+Before database initialization, normal launches from the OpenAI.Codex Windows package are brokered
+through Explorer to avoid virtualized app data. ABYA_TEST_MODE explicitly permits isolated fixtures.
+A per-user canonical-data-directory Global mutex prevents concurrent APP owners and focuses the
+existing PID only after checking process creation time. Separate test directories remain independent.
+productionApi.revealReport sends a task ID and a fixed report phase to the native adapter;
+path validation and export remain in TaskService, and the adapter reveals the file in its folder.
+productionApi.revealDocument calls open_production_artifact with optional reveal=true, selecting a
+validated task artifact in the OS file manager. Omitted/false retains normal artifact opening.
+
 `AppError`, database access, application paths, settings values, and shared
 serialization helpers. Settings include the game gateway port, LAN broadcast
 switch, preferred adapter ID, and persistent discovery tool ID.

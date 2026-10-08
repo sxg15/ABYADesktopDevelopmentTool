@@ -12,6 +12,17 @@ checks.
 
 ## Public Contracts
 
+publish.ps1 -Validation builds Publish-Staging-Validation without replacing an active package.
+Historical staging switches remain mutually exclusive development destinations. Every build embeds
+version from the package (currently 0.2.1), release workflow-document-reveal-20261008 and UTC build time; manifest workflow version is
+read from policy (1.2.1). Live processes under the destination block replacement.
+After isolated validation, promote-validated.ps1 verifies APP/CLI hashes, stages a complete copy,
+backs up Publish, atomically renames the replacement and creates ABYA 开发工具.lnk through Explorer.
+Keep release backups; promotion never copies or replaces user databases. The stable user entry is
+the shortcut/Publish, not a staging directory. Real-model tests use isolated data/workspaces and
+ABYA_TEST_MODE=1. Preserve pinned user Skills unless explicitly upgrading through TaskService with
+backups. Real-model test output contains identifiers and metrics only; credentials stay in memory.
+
 `npm run check`, `npm run build:portable`, the release executable, and
 `Publish/build-manifest.json`. The project-root `.codex/` and `.grok/`
 directories are required and their complete contents are copied to matching

@@ -18,6 +18,14 @@ Objects, WebSocket sessions, CLI operation cancellation state, active transfer
 cancellation channels, temporary ZIP packages, and open network connections
 remain in memory or disposable application data.
 
+Codex continuation intents are durable per conversation. One lifecycle lock serializes queue
+dispatch, cancellation and native ownership checks; late completion cannot override a pause.
+APP-only answers and document decisions remain in TaskService; CodexTerminalService orchestrates
+their continuation without approving documents. TaskControlState projects native/connection/queue
+and human-wait states for both UI surfaces. Application startup establishes normal Windows data
+context and per-data-directory instance ownership before opening SQLite. Release identity is embedded
+and verified against the installed manifest; validated packages are promoted to a stable Publish entry.
+
 `development-terminal` owns the provider-neutral conversation workflow model,
 sanitized timeline persistence, shared terminal UI, and explicit per-task
 Codex/Grok selection. A task can keep independent provider conversation
@@ -83,6 +91,22 @@ project API and synchronizes conversation naming/archive state by native ID.
 Archive/restore and open/delete are serialized; archived conversations never
 resume implicitly. Local deletion first archives native history. Native sync
 failures retain the local conversation list and are displayed explicitly.
+
+Workflow v1.2 persists intake groups, answer revisions and explicit player mode in the
+production record. Only APP actions submit human answers; CLI publishes questions with
+an authenticated conversation binding. Drafts survive restart, and answers do not approve
+documents. Native-bound continuation retains a delivery receipt to prevent blind retries.
+Delivery receipts are reconciled against native turn state. Interrupted/failed latest attempts
+can resume with a new message ID and preserved attempt history; running, completed or superseded
+attempts do not replay. Unknown outcomes fail closed. Intake can request attachment to its exact
+original terminal and retry once after the UI acknowledges connection, without creating a chat.
+
+Codex execution uses one runtime app-server per conversation and a separate metadata
+backend. Pause interrupts the turn before closing its executor and revoking access;
+TUI detachment alone preserves backend access. Reopen loads the original ID with new
+scoped credentials. Native preparation fails closed instead of starting a replacement
+conversation. Recovery backs up metadata and only rebinds a stopped conversation to a
+verified same-workspace native history; neither native history is rewritten.
 
 The terminal UI owns paste gestures; foundation reads the Windows clipboard
 only on demand. Plain text uses bracketed paste and serialized bounded IPC

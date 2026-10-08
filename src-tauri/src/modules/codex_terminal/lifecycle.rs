@@ -148,17 +148,17 @@ impl CodexTerminalService {
                         server
                             .request("turn/interrupt", json!({"threadId":id,"turnId":turn.id}))?;
                     }
-                    self.stop(conversation_id)?;
+                    self.stop_locked(conversation_id)?;
                     server.request("thread/unsubscribe", json!({"threadId":id}))?;
                     server.request("thread/archive", json!({"threadId":id}))?;
                 } else {
-                    self.stop(conversation_id)?;
+                    self.stop_locked(conversation_id)?;
                 }
             } else if native_archived {
                 server.request("thread/unarchive", json!({"threadId":id}))?;
             }
         } else if archived {
-            self.stop(conversation_id)?;
+            self.stop_locked(conversation_id)?;
         }
         conversation.archived = archived;
         conversation.updated_at = Utc::now().to_rfc3339();
@@ -193,7 +193,7 @@ impl CodexTerminalService {
                 None => conversation.archived,
             };
             if native_archived != conversation.archived {
-                self.stop(&conversation.id)?;
+                self.stop_locked(&conversation.id)?;
                 conversation.archived = native_archived;
                 conversation.updated_at = Utc::now().to_rfc3339();
                 write_conversation(
@@ -265,7 +265,55 @@ mod tests {
             .unwrap()
             .native_session_id
             .unwrap();
-        let server = service.app_server.lock().clone().unwrap();
+        let server = service
+            .ensure_app_server(&(service.resolver)().unwrap())
+            .unwrap();
+        // A successful spawn is insufficient: the remote TUI must attach to this ID.
+        service
+            .write(&conversation.id, "\x1b[1;1R\x1b[?1;2c\x1b[>0;276;0c")
+            .unwrap();
+        std::thread::sleep(Duration::from_secs(5));
+        let runtime = service
+            .runtime_servers
+            .lock()
+            .get(&conversation.id)
+            .cloned()
+            .unwrap();
+        let transcript = std::fs::read_to_string(
+            conversation_directory(Path::new(&task.workspace_path), &conversation.id)
+                .join(CONVERSATION_TRANSCRIPT_FILE),
+        )
+        .unwrap();
+        // Only this test-created workspace is trusted; no global policy override.
+        if transcript.contains("Folder access") && transcript.contains("Trust") {
+            service.write(&conversation.id, "\r").unwrap();
+        }
+        std::thread::sleep(Duration::from_secs(8));
+        let loaded = runtime.request("thread/loaded/list", json!({})).unwrap();
+        let attached_only_expected = loaded["data"] == json!([native]);
+        println!("remote TUI identity matches: {attached_only_expected}");
+        let second = service
+            .create_conversation(&task.id, Some("Independent conversation".into()))
+            .unwrap();
+        service
+            .open(&task.id, &second.id, 100, 30, Channel::new(|_| Ok(())))
+            .unwrap();
+        let second_native = service
+            .native_session_id(&task.id, &second.id)
+            .unwrap()
+            .unwrap();
+        assert_ne!(
+            native, second_native,
+            "New conversation reused another native ID"
+        );
+        let second_runtime = service
+            .runtime_servers
+            .lock()
+            .get(&second.id)
+            .cloned()
+            .unwrap();
+        assert_ne!(runtime.endpoint, second_runtime.endpoint);
+
         let project = server.ensure_project(&task).unwrap();
         assert_eq!(server.ensure_project(&task).unwrap(), project);
         let metadata = server
@@ -285,6 +333,11 @@ mod tests {
                 .archived
         );
         assert!(server.is_archived(&native).unwrap());
+        assert!(
+            second_runtime.is_alive(),
+            "Pausing one conversation killed another executor"
+        );
+        service.delete_conversation(&task.id, &second.id).unwrap();
         assert!(service.sessions.lock().is_empty());
         assert!(
             service
@@ -312,6 +365,28 @@ mod tests {
             )
             .unwrap();
         service.stop(&conversation.id).unwrap();
+        let candidates = service.recovery_candidates(&task.id).unwrap();
+        assert!(candidates.iter().any(|c| c.id == native));
+        service
+            .repair_binding(&task.id, &conversation.id, &native)
+            .unwrap();
+        assert!(
+            std::fs::read_dir(conversation_directory(
+                Path::new(&task.workspace_path),
+                &conversation.id
+            ))
+            .unwrap()
+            .flatten()
+            .any(|e| e
+                .file_name()
+                .to_string_lossy()
+                .starts_with("conversation-before-repair-"))
+        );
+        assert!(
+            service
+                .repair_binding(&task.id, &conversation.id, &Uuid::new_v4().to_string())
+                .is_err()
+        );
         server
             .request("thread/archive", json!({"threadId":native}))
             .unwrap();
@@ -341,6 +416,10 @@ mod tests {
         std::fs::remove_dir_all(resolved).unwrap();
         println!(
             "real PTY: project registration, title, archive, restore, no resurrection, delete/history preservation passed"
+        );
+        assert!(
+            attached_only_expected,
+            "TUI started a different native thread: {loaded}"
         );
     }
     #[test]

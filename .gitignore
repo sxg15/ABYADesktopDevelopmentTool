@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 Publish/
+ReleaseBackups/
+Publish-Incoming-*/
+ABYA 开发工具.lnk
 Publish-Staging-*/
 tools/ffmpeg/runtime/
 tools/ffmpeg/staging-*/
