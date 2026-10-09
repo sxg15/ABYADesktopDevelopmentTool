@@ -35,6 +35,7 @@ import { Modal } from "../../app/Modal";
 import type { TerminalConnectionRequest } from "./terminalConnection";
 import { productionApi, continuationMessages } from "../../shared/production";
 import { useTaskControl, controlText, controlLabel } from "./useTaskControl";
+import { ExecutionSettings } from "./ExecutionSettings";
 
 const MAX_HISTORY_CHARACTERS = 2 * 1024 * 1024;
 const HISTORY_TRUNCATED_MESSAGE =
@@ -510,6 +511,7 @@ function ConversationTerminal({
     if(actionBusy)return;setActionBusy(true);setError("");
     try {
       const result=await productionApi.continueTask(taskId,conversation.id);
+      if (visibleRef.current) terminalRef.current?.focus();
       setActionNotice(continuationMessages[result.status]);
       if(result.status==="needsConnection"&&result.requestId) {
         pendingContinue.current=result.requestId; startRef.current(true);
@@ -642,6 +644,7 @@ function ConversationTerminal({
     let disposed = false;
     let attachment=0;
     let pendingStart = false;
+    let opening = false;
     let resetAfterAttach = false;
     let startFrame = 0;
 
@@ -658,6 +661,7 @@ function ConversationTerminal({
       const size = measureSize();
       if (!size) return;
       pendingStart = false;
+      opening = true;
       const generation=++attachment;
       const channel = new Channel<CodexTerminalEvent>();
       let attaching = true;
@@ -696,11 +700,17 @@ function ConversationTerminal({
         )
         .then(next => {
           if (disposed||generation!==attachment) return;
+          opening = false;
           if (resetAfterAttach) { terminal.reset(); clearHistory(); }
           attaching = false;
           for (const data of buffered) channel.onmessage({ type: "output", data });
           buffered.length = 0;
           setState(next);
+          if (visibleRef.current) terminal.focus();
+          const currentSize = measureSize();
+          if (currentSize && (currentSize.columns !== size.columns || currentSize.rows !== size.rows)) {
+            void terminalApi.resize(provider, conversation.id, currentSize.columns, currentSize.rows).catch(() => undefined);
+          }
           connectionRef.current?.finish(next.status === "running" ? undefined : new Error(next.lastError || "原会话尚未连接。"));
           const request=pendingContinue.current;pendingContinue.current=undefined;
           if(request&&next.status==="running") {
@@ -711,6 +721,7 @@ function ConversationTerminal({
         })
         .catch((value) => {
           if(disposed||generation!==attachment)return;
+          opening = false;
           pendingContinue.current=undefined;
           connectionRef.current?.finish(value);
           setError(errorMessage(value));
@@ -745,7 +756,7 @@ function ConversationTerminal({
     );
     const input = terminal.onData(data => { void sendInput(data); });
     const terminalResize = terminal.onResize(({ cols, rows }) => {
-      if (pendingStart) return;
+      if (pendingStart || opening) return;
       const size = clampTerminalSize(cols, rows);
       if (!size) return;
       void terminalApi.resize(provider, conversation.id, size.columns, size.rows).catch(() => {
@@ -845,6 +856,7 @@ function ConversationTerminal({
   return (
     <div className={`codex-terminal ${provider==="codex"?"with-task-control":""}`}>
       <div className="terminal-toolbar">
+        {provider==="codex"&&<ExecutionSettings taskId={taskId} conversationId={conversation.id} connected={visible&&state?.status==="running"} onResume={continueTask}/>}
         <div className="terminal-status">
           <span
             className={`terminal-state terminal-state-${state?.status ?? "starting"}`}
@@ -911,14 +923,14 @@ function ConversationTerminal({
               className="secondary-button terminal-stop"
               title={t(provider === "codex" ? "stopCodex" : "stopGrok")}
               onClick={stop}
-              disabled={actionBusy || control?.state==="paused" || control?.state==="pausing"}
+              disabled={actionBusy || control?.state==="pausing"}
             >
               <Square size={15} fill="currentColor" />
               {t(provider === "codex" ? "stopCodex" : "stopGrok")}
             </button>
           )}
           {provider==="codex" && <button className="primary-button" onClick={()=>void continueTask()}
-            disabled={actionBusy||!control?.nativeSessionId||["running","waitingForResponse","queued","pausing","closed"].includes(control?.state??"")}>继续任务</button>}
+            disabled={actionBusy||!control?.nativeSessionId||["running","waitingForResponse","queued","pausing","closed"].includes(control?.state??"")}>{control?.state==="blocked"?"重新检查问题":"继续任务"}</button>}
           {terminalEnded && (
             <button
               className="secondary-button"

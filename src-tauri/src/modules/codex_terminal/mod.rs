@@ -11,6 +11,7 @@ mod intake;
 mod intake_receipt;
 pub use intake_receipt::IntakeContinuation;
 mod lifecycle;
+mod settings;
 
 use crate::foundation::{AppError, AppResult};
 use crate::modules::development_terminal::transcript::read_transcript_replay;
@@ -323,6 +324,36 @@ impl CodexTerminalService {
         conversation_id: &str,
     ) -> AppResult<CodexConversation> {
         self.conversation(task_id, conversation_id)
+    }
+
+    pub fn record_reported_plan(
+        &self,
+        task_id: &str,
+        conversation_id: &str,
+        steps: &[(String, CodexPlanStepStatus)],
+        summary: &str,
+    ) -> AppResult<CodexWorkflowSnapshot> {
+        self.conversation(task_id, conversation_id)?;
+        let task = self.tasks.get(task_id)?;
+        let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);
+        let _guard = self.workflow_write_lock.lock();
+        let mut workflow = load_workflow(&directory, task_id, conversation_id)?;
+        let turn = workflow
+            .current_turn_id
+            .clone()
+            .ok_or_else(|| AppError::validation("请在运行中的会话登记步骤。"))?;
+        if workflow
+            .turns
+            .iter()
+            .find(|t| t.id == turn)
+            .is_some_and(|t| t.completed_at.is_some())
+        {
+            return Err(AppError::validation("这一轮已经结束，请在新一轮登记步骤。"));
+        }
+        workflow.update_plan(&turn, Some(summary), steps);
+        save_workflow(&directory, &workflow, "planUpdated")?;
+        send_workflow_to_live_session(&self.sessions, conversation_id, &workflow);
+        Ok(workflow)
     }
 
     pub fn record_reported_activity(
@@ -1183,7 +1214,7 @@ fn build_command(
 
 fn managed_developer_instructions(task_id: &str, conversation_id: &str) -> String {
     format!(
-        "You are working in ABYA task {task_id}, conversation {conversation_id}. Publish and maintain a plan for multi-step work. Use only the executable in ABYA_DESKTOP_CLI for ABYA operations. Run doctor and capabilities first. CLI commands inherit the task, provider and conversation context. Report semantic milestones with conversation report. Do not use MCP or start unmanaged game processes. Open returned screenshot paths for visual acceptance. Never include credentials, raw commands, outputs or patches in activity details."
+        "You are working in ABYA task {task_id}, conversation {conversation_id}. Publish and maintain a plan for multi-step work. If no native plan tool is available, use conversation report with plan:[{{step,status}}], where status is pending/inProgress/completed/failed. Use this for the top conversation steps and keep production stages separate. Explain progress in plain Chinese: outcome, reason, next action. Put technical identifiers in details. Avoid repeating unchanged scope disclaimers. Use only the executable in ABYA_DESKTOP_CLI for ABYA operations. Run doctor and capabilities first. CLI commands inherit the task, provider and conversation context. Report semantic milestones with conversation report. Do not use MCP or start unmanaged game processes. Open returned screenshot paths for visual acceptance. Never include credentials, raw commands, outputs or patches in activity details."
     )
 }
 
@@ -1212,6 +1243,13 @@ fn handle_app_server_notification(
     let Ok(task) = tasks.get(&task_id) else {
         return;
     };
+    if method == "thread/settings/updated" {
+        let _ = settings::save(
+            &conversation_directory(Path::new(&task.workspace_path), &conversation_id),
+            &params["threadSettings"],
+        );
+        return;
+    }
     let _workflow_guard = workflow_write_lock.lock();
     let directory = conversation_directory(Path::new(&task.workspace_path), &conversation_id);
     if method == "thread/tokenUsage/updated" {

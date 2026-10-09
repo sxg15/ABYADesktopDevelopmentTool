@@ -292,11 +292,41 @@ fn get_codex_task_control(
 }
 
 #[tauri::command(async)]
+fn get_codex_execution_settings(
+    task_id: String,
+    conversation_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state
+        .codex_terminal
+        .execution_settings(&task_id, &conversation_id)
+}
+#[tauri::command(async)]
+fn update_codex_execution_settings(
+    task_id: String,
+    conversation_id: String,
+    input: serde_json::Value,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state
+        .codex_terminal
+        .update_execution_settings(&task_id, &conversation_id, input)
+}
+
+#[tauri::command(async)]
 fn decide_task_production(
     input: ProductionDecision,
     state: State<'_, AppState>,
 ) -> AppResult<ProductionView> {
     state.tasks.production_decide(input)
+}
+
+#[tauri::command(async)]
+fn get_production_timing(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    modules::development_terminal::timing::task_timing(&state.tasks, &task_id)
 }
 
 #[tauri::command(async)]
@@ -405,22 +435,28 @@ fn open_codex_terminal(
 }
 
 #[tauri::command]
-fn write_codex_terminal(
+async fn write_codex_terminal(
     conversation_id: String,
     data: String,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    state.codex_terminal.write(&conversation_id, &data)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.write(&conversation_id, &data))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command]
-fn resize_codex_terminal(
+async fn resize_codex_terminal(
     conversation_id: String,
     columns: u16,
     rows: u16,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    state.codex_terminal.resize(&conversation_id, columns, rows)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.resize(&conversation_id, columns, rows))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command(async)]
@@ -576,22 +612,28 @@ fn open_grok_terminal(
 }
 
 #[tauri::command]
-fn write_grok_terminal(
+async fn write_grok_terminal(
     conversation_id: String,
     data: String,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    state.grok_terminal.write(&conversation_id, &data)
+    let service = state.grok_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.write(&conversation_id, &data))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command]
-fn resize_grok_terminal(
+async fn resize_grok_terminal(
     conversation_id: String,
     columns: u16,
     rows: u16,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    state.grok_terminal.resize(&conversation_id, columns, rows)
+    let service = state.grok_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.resize(&conversation_id, columns, rows))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command(async)]
@@ -902,6 +944,9 @@ pub fn run() {
             continue_codex_task,
             flush_codex_continuation,
             get_codex_task_control,
+            get_codex_execution_settings,
+            get_production_timing,
+            update_codex_execution_settings,
             decide_task_production,
             upgrade_task_production,
             get_task_skills,

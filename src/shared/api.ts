@@ -234,6 +234,8 @@ export const api = {
 };
 
 export const terminalApi = {
+  executionSettings: (taskId:string,conversationId:string) => invoke<import("./types").ExecutionSettingsView>("get_codex_execution_settings",{taskId,conversationId}),
+  updateExecutionSettings: (taskId:string,conversationId:string,input:Record<string,unknown>) => invoke<import("./types").ExecutionSettingsView>("update_codex_execution_settings",{taskId,conversationId,input}),
   conversationMetrics: (taskId: string, conversationId: string) => invoke<Record<string, unknown>>("codex_conversation_metrics", { taskId, conversationId }),
   recoveryCandidates: (taskId: string) => invoke<{ id: string; startedAt: string }[]>("codex_recovery_candidates", { taskId }),
   repairBinding: (taskId: string, conversationId: string, nativeId: string) =>

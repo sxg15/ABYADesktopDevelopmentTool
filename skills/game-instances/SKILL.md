@@ -68,9 +68,9 @@ Runtime CLI and log protocols remain outside this module.
 
 The window recorder uses the bundled pinned FFmpeg LGPL shared build. Start selects
 the largest non-minimized window owned by the managed Player PID and captures that
-HWND at 15 fps to H.264 MP4, without audio. It temporarily restores and raises the
+HWND through FFmpeg gfxcapture / Windows.Graphics.Capture at 15 fps to H.264 MP4, without audio. GDI is not a fallback: it may capture occluding windows over GPU-rendered content. A zero HWND is rejected; no monitor, title or executable matching is exposed. It temporarily restores and raises the
 game window without activation, then restores the prior visibility on stop, early
-failure or maximum duration. Occlusion, minimization and resize can invalidate visual
+failure or maximum duration. Occlusion must not replace the target content; minimization and resize can invalidate visual
 evidence. Metadata records task, instance, version, frames, times and final state.
 A Windows Job Object owns the encoder; process/APP stop finalizes or marks interruption.
 The native smoke test uses an owned brief non-activating fixture, checks actual
@@ -96,3 +96,9 @@ When changing launch options, instance data, process behavior, or validation,
 update this Skill in the same change.
 
 Rust test builds append an isolated --abya-data-root for real Player validation. Production builds do not change the game data root.
+
+A wall-clock watchdog bounds a stalled capture to maxSeconds plus five seconds of startup allowance, marks it failed and restores prior visibility. The occlusion regression decodes two video frames and checks target pixels under a separate topmost cover; static fixtures must animate to provide compositor updates.
+
+## Stage workspace update
+
+The stage workspace release retains the existing Windows Graphics Capture recorder fix. Verification must keep file completion separate from frame review and reuse the owned-window occlusion regression.

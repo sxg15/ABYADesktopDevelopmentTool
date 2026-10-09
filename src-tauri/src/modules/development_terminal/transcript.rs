@@ -138,7 +138,12 @@ fn read_transcript_replay_with_limit(path: &Path, max_bytes: u64) -> AppResult<V
             "\r\n[Earlier terminal output omitted ({omitted_bytes} bytes); showing recent output.]\r\n"
         ));
     }
-    append_utf8_chunks(&String::from_utf8_lossy(&bytes), &mut events);
+    // Historical device queries/mode changes must never drive the new PTY handshake.
+    // The live TUI paints its current screen; replay is an output-only text snapshot.
+    let mut text = TranscriptText::default();
+    text.push(&bytes);
+    let plain = String::from_utf8_lossy(&text.output).replace('\n', "\r\n");
+    append_utf8_chunks(&plain, &mut events);
     Ok(events)
 }
 
@@ -159,6 +164,66 @@ mod tests {
     use super::*;
     use std::fs;
     use uuid::Uuid;
+
+    #[cfg(windows)]
+    #[test]
+    fn embedded_pty_starts_without_a_frontend_cursor_reply() {
+        use portable_pty::{CommandBuilder, PtySize, native_pty_system};
+        let pair = native_pty_system()
+            .openpty(PtySize {
+                rows: 24,
+                cols: 80,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
+            .unwrap();
+        let mut reader = pair.master.try_clone_reader().unwrap();
+        let mut writer = pair.master.take_writer().unwrap();
+        let mut command = CommandBuilder::new("cmd.exe");
+        command.args(["/d", "/c", "echo ABYA_PTY_READY"]);
+        let mut child = pair.slave.spawn_command(command).unwrap();
+        drop(pair.slave);
+        let (send, receive) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let mut buffer = [0u8; 4096];
+            while let Ok(count) = reader.read(&mut buffer) {
+                if count == 0 {
+                    break;
+                }
+                if send.send(buffer[..count].to_vec()).is_err() {
+                    break;
+                }
+            }
+        });
+        let started = std::time::Instant::now();
+        let mut output = String::new();
+        while started.elapsed() < std::time::Duration::from_secs(5)
+            && !output.contains("ABYA_PTY_READY")
+        {
+            match receive.recv_timeout(std::time::Duration::from_millis(100)) {
+                Ok(bytes) => output.push_str(&String::from_utf8_lossy(&bytes)),
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+                Err(_) => {}
+            }
+        }
+        // Release a regressed cursor wait before cleaning up and reporting the failed assertion.
+        if !output.contains("ABYA_PTY_READY") {
+            use std::io::Write;
+            let _ = writer.write_all(b"\x1b[1;1R");
+        }
+        let _ = child.kill();
+        let _ = child.wait();
+        drop(writer);
+        drop(pair.master);
+        assert!(
+            output.contains("ABYA_PTY_READY"),
+            "PTY stalled before normal output"
+        );
+        assert!(
+            !output.contains("\x1b[6n"),
+            "Unexpected parent cursor query"
+        );
+    }
 
     #[test]
     fn full_copy_keeps_history_beyond_replay_and_ui_limits() {
@@ -197,6 +262,20 @@ mod tests {
                 "你好🙂\n链接\n下一行\t完成"
             );
         }
+    }
+
+    #[test]
+    fn replay_cannot_send_old_queries_or_change_live_terminal_modes() {
+        let path = std::env::temp_dir().join(format!("abya-replay-{}.log", Uuid::new_v4()));
+        fs::write(
+            &path,
+            "\x1b[?2004l\x1b[?1004lold\r\n\x1b[6n\x1b[c\x1b]11;?\x07\x1bP$qm\x1b\\done",
+        )
+        .unwrap();
+        let events = read_transcript_replay(&path).unwrap();
+        assert_eq!(events.concat(), "old\r\ndone");
+        assert!(!events.concat().contains('\x1b'));
+        fs::remove_file(path).unwrap();
     }
 
     #[test]

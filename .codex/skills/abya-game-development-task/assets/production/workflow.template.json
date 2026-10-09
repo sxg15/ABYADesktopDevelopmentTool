@@ -1,6 +1,6 @@
 {
   "schema": "abya.game-development-workflow/v1",
-  "workflowVersion": "1.2.1",
+  "workflowVersion": "1.3.0",
   "taskId": null,
   "provider": null,
   "mode": "full",

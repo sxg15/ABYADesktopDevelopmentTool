@@ -8,6 +8,172 @@ struct Fixture {
     root: PathBuf,
     workspace: PathBuf,
 }
+
+#[test]
+fn drafts_remain_visible_while_scoped_blocker_prevents_stage_completion() {
+    let f = Fixture::new();
+    f.doc("requirements", "Confirmed rules");
+    f.accept("requirements");
+    files::write_file(&f.workspace, &format!("{ROOT}/plan.md"), b"Draft plan").unwrap();
+    f.apply(
+        "register-artifact",
+        json!({"stage":"plan","path":format!("{ROOT}/plan.md"),"title":"Execution draft"}),
+    )
+    .unwrap();
+    f.apply("save-issue",json!({"id":"recorder","stage":"plan","kind":"blocker","status":"open","description":"Wrong window","resumeWhen":"Record correct window","affectedStages":["plan"],"blockedOperations":["complete-stage","submit-document"]})).unwrap();
+    let view = f
+        .apply(
+            "complete-stage",
+            json!({"stage":"resources","summary":"Assets ready"}),
+        )
+        .unwrap();
+    assert_eq!(view.stage_statuses["plan"], "blocked");
+    assert_eq!(view.artifacts[0]["exists"], true);
+    assert_eq!(view.record.unwrap().stages["requirements"], "passed");
+    assert!(
+        f.apply(
+            "submit-document",
+            json!({"kind":"plan","path":format!("{ROOT}/plan.md")})
+        )
+        .is_err()
+    );
+    assert!(
+        f.apply(
+            "register-artifact",
+            json!({"stage":"plan","path":"../foreign.md","title":"Bad"})
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn stage_answers_do_not_reopen_confirmed_requirements() {
+    let f = Fixture::new();
+    f.apply(
+        "configure",
+        json!({"questionMode":"ask","playerMode":"single"}),
+    )
+    .unwrap();
+    f.doc("requirements", "Rules");
+    f.accept("requirements");
+    f.apply(
+        "complete-stage",
+        json!({"stage":"resources","summary":"Ready"}),
+    )
+    .unwrap();
+    f.apply("publish-questions",json!({"id":"plan-choice","stage":"plan","title":"Plan choice","provider":"codex","conversationId":uuid::Uuid::new_v4().to_string(),"questions":[{"id":"a","text":"Choose an approach"}]})).unwrap();
+    f.service
+        .production_answer(ProductionMutation {
+            task_id: f.id.clone(),
+            expected_revision: f.record().revision,
+            operation: "submit-answers".into(),
+            data: json!({"id":"plan-choice","answers":{"a":"First approach"}}),
+        })
+        .unwrap();
+    assert_eq!(f.record().stages["requirements"], "passed");
+    assert_eq!(f.record().current_stage, "plan");
+    assert_eq!(f.record().question_groups[0].stage, "plan");
+    assert_eq!(f.record().approvals.len(), 1);
+}
+
+#[test]
+fn approved_template_backfill_preserves_document_and_cycle() {
+    let f = Fixture::new();
+    f.doc("requirements", "taskTemplate: none");
+    f.accept("requirements");
+    let before = f.record();
+    f.apply("register-approved-template",json!({"key":"taskTemplate","templateId":"none","documentHash":before.documents["requirements"].sha256})).unwrap();
+    f.apply("configure", json!({"taskTemplate":"none"}))
+        .unwrap();
+    let after = f.record();
+    assert_eq!(before.cycle, after.cycle);
+    assert_eq!(before.approvals.len(), after.approvals.len());
+    assert_eq!(after.stages["requirements"], "passed");
+    assert!(
+        f.apply(
+            "register-approved-template",
+            json!({"key":"taskTemplate","templateId":"none","documentHash":"stale"})
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn template_choice_is_applied_only_when_document_is_accepted() {
+    let f = Fixture::new();
+    let path = format!("{ROOT}/requirements.md");
+    files::write_file(&f.workspace, &path, b"taskTemplate: none").unwrap();
+    f.apply(
+        "submit-document",
+        json!({"kind":"requirements","path":path,"taskTemplate":"none"}),
+    )
+    .unwrap();
+    assert_eq!(f.record().task_template, None);
+    f.accept("requirements");
+    assert_eq!(f.record().task_template.as_deref(), Some("none"));
+}
+
+#[test]
+fn legacy_records_get_additive_defaults_without_new_approvals() {
+    let f = Fixture::new();
+    let mut body = serde_json::to_value(f.record()).unwrap();
+    for key in ["artifacts", "stageUpdates", "events"] {
+        body.as_object_mut().unwrap().remove(key);
+    }
+    let r: ProductionRecord = serde_json::from_value(body).unwrap();
+    assert!(r.artifacts.is_empty());
+    assert!(r.approvals.is_empty());
+    assert!(r.events.is_empty());
+}
+
+#[test]
+fn corrective_document_can_be_submitted_but_required_issue_still_blocks_acceptance() {
+    let f = Fixture::new();
+    f.apply("save-issue",json!({"id":"clarify","stage":"requirements","kind":"checkpoint","status":"open","description":"Resolve before approval","affectedStages":["requirements"],"blockedOperations":["complete-stage"]})).unwrap();
+    f.doc("requirements", "Corrective draft");
+    let r = f.record();
+    assert!(
+        f.service
+            .production_decide(ProductionDecision {
+                task_id: f.id.clone(),
+                expected_revision: r.revision,
+                kind: "requirements".into(),
+                document_hash: r.documents["requirements"].sha256.clone(),
+                accepted: true,
+                feedback: String::new()
+            })
+            .is_err()
+    );
+    assert!(f.record().approvals.is_empty());
+}
+
+#[test]
+fn compatible_workflow_upgrade_retains_approved_documents() {
+    let f = Fixture::new();
+    f.doc("requirements", "Rules");
+    f.accept("requirements");
+    let original = f.record();
+    f.service
+        .production_commit(&f.id, original.revision, |r| {
+            r.workflow_version = "1.2.1".into();
+            r.policy["workflowVersion"] = json!("1.2.1");
+            Ok(())
+        })
+        .unwrap();
+    let result = f
+        .service
+        .production_upgrade(&f.id, f.record().revision)
+        .unwrap()
+        .record
+        .unwrap();
+    assert_eq!(result.stages["requirements"], "passed");
+    assert_eq!(result.cycle, original.cycle);
+    assert_eq!(
+        result.documents["requirements"].sha256,
+        original.documents["requirements"].sha256
+    );
+    assert_eq!(result.approvals.len(), original.approvals.len());
+}
 impl Fixture {
     fn new() -> Self {
         let root = std::env::temp_dir().join(format!("abya-production-{}", uuid::Uuid::new_v4()));

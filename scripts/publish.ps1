@@ -1,14 +1,14 @@
-param([switch]$Staging, [switch]$WorkflowStaging, [switch]$RecoveryStaging, [switch]$ContinuationStaging, [switch]$UiStaging, [switch]$Validation)
+param([switch]$Staging, [switch]$WorkflowStaging, [switch]$RecoveryStaging, [switch]$ContinuationStaging, [switch]$UiStaging, [switch]$Validation, [switch]$RecorderStaging)
 
 $ErrorActionPreference = "Stop"
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-if (@($Staging, $WorkflowStaging, $RecoveryStaging, $ContinuationStaging, $UiStaging, $Validation).Where({ $_ }).Count -gt 1) { throw 'Choose only one staging destination.' }
-$publishName = if ($Validation) { "Publish-Staging-Validation" } elseif ($UiStaging) { "Publish-Staging-UI" } elseif ($ContinuationStaging) { "Publish-Staging-Continuation" } elseif ($RecoveryStaging) { "Publish-Staging-Recovery" } elseif ($WorkflowStaging) { "Publish-Staging-Workflow" } elseif ($Staging) { "Publish-Staging-Bot" } else { "Publish" }
+if (@($Staging, $WorkflowStaging, $RecoveryStaging, $ContinuationStaging, $UiStaging, $Validation, $RecorderStaging).Where({ $_ }).Count -gt 1) { throw 'Choose only one staging destination.' }
+$publishName = if ($RecorderStaging) { "Publish-Staging-Recorder" } elseif ($Validation) { "Publish-Staging-Validation" } elseif ($UiStaging) { "Publish-Staging-UI" } elseif ($ContinuationStaging) { "Publish-Staging-Continuation" } elseif ($RecoveryStaging) { "Publish-Staging-Recovery" } elseif ($WorkflowStaging) { "Publish-Staging-Workflow" } elseif ($Staging) { "Publish-Staging-Bot" } else { "Publish" }
 $publish = Join-Path $root $publishName
 $running = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith("$publish\", [StringComparison]::OrdinalIgnoreCase) }
 if ($running) { throw "Close the running package before replacing it: $publish" }
-$env:ABYA_RELEASE_ID = 'workflow-document-reveal-20261008'
+$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } else { 'stage-workspace-20261009' }
 $env:ABYA_BUILD_UTC = [DateTime]::UtcNow.ToString('O')
 $packageVersion = (Get-Content -Raw -LiteralPath (Join-Path $root 'package.json') | ConvertFrom-Json).version
 $llmDirectories = @(".codex", ".grok")
@@ -129,7 +129,7 @@ try {
 $manifest = [ordered]@{
     product = "ABYA Desktop Development Tool"
     version = $packageVersion
-    workflowVersion = (Get-Content (Join-Path $root ".codex/skills/abya-game-development-task/assets/production/workflow-policy.json") -Raw | ConvertFrom-Json).workflowVersion
+    workflowVersion = (Get-Content (Join-Path $root ".codex/skills/abya-game-development-task/assets/production/workflow-policy.json") -Raw -Encoding UTF8 | ConvertFrom-Json).workflowVersion
     releaseLabel = $env:ABYA_RELEASE_ID
     sourceBuiltAtUtc = $env:ABYA_BUILD_UTC
     builtAtUtc = [DateTime]::UtcNow.ToString("O")

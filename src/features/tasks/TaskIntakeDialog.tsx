@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Modal } from "../../app/Modal";
 import { errorMessage } from "../../shared/api";
 import { productionApi, type IntakeQuestionGroup, type ProductionView, type IntakeContinuation, continuationMessages } from "../../shared/production";
@@ -78,15 +78,15 @@ export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnectio
     }
     setSelected("");
   }
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!group) return;
     const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { event.stopPropagation(); close(); } };
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);
   }, [selected, group?.status]);
   if (!group || !view?.record) return pending ? <button className="primary-button intake-pending-button"
-    onClick={() => setSelected(pending.id)}>需求有待回答问题 · 继续填写</button> : null;
-  return <Modal wide title="需求问答" onClose={close}>
+    onClick={() => setSelected(pending.id)}>有待回答问题 · 继续填写</button> : null;
+  return <Modal wide title="阶段问答" onClose={close}>
     <p className="intake-dialog-hint">可返回修改。关闭或稍后回答会保留草稿，不提交答案，也不取消问题。</p>
     {error && <p role="alert">{error}</p>}
     {feedback && <p role="status">{feedback === continuationMessages.queued && control ? controlText(control) : feedback}</p>}

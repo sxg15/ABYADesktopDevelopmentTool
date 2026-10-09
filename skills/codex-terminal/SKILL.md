@@ -39,7 +39,7 @@ A detached turn still running must be paused before replacing its executor.
 
 Fresh start/resume injects ABYA_DESKTOP_CLI, task/provider/conversation/workspace and the
 in-memory pipe capability/PID into the tool-executing backend, not just the remote TUI.
-No permission override or permanent token. Reopen runs the existing sandbox doctor
+No implicit permission override or permanent token; explicit user settings are described below. Reopen runs the existing sandbox doctor
 preflight; the managed instructions require actual tool-context doctor before operations.
 A preflight alone is not proof that a later model executor received the environment.
 
@@ -91,7 +91,10 @@ retain local records. Verify archive state from supported fields/storage layout;
 state fails closed. An archived conversation never resumes implicitly.
 
 Transcript replay is output-only, bounded to 256 KiB in 64 KiB chunks, ordered before live
-output on reattachment. Full transcript copying uses the shared streaming normalizer and
+output on reattachment. Strip historical ANSI controls, device queries and input modes; a new
+ConPTY handshake must receive replies only to its live queries. Input and resize command adapters
+run blocking pipe/Windows work in spawn_blocking rather than the UI or async worker threads.
+Full transcript copying uses the shared streaming normalizer and
 never returns the entire file to WebView. Stop drops UI/PTY handles before bounded Windows
 process-tree cleanup. Per-conversation history remains after stop.
 
@@ -108,3 +111,7 @@ executes doctor/capabilities with renewed credentials. Never replace these with 
 
 ## LLM Maintenance Rule
 Update this Skill with discovery, transport, lifecycle, contracts, diagnostics or test changes.
+
+## Stage workspace update
+
+Explicit user-selected per-conversation execution settings use native thread/settings/update, with model/list advertised effort choices. AI review maps to on-request + auto_review + task workspaceWrite; full consent maps to never + dangerFullAccess. Native managed-policy rejection remains visible. Save only acknowledged model/effort/reviewer/policy fields in execution-settings.json; capture native settings events, restore on executor recreation, and leave the global config unchanged. Both TUI and queued turns share native thread settings. Running changes target future turns; pause-and-apply interrupts and awaits acknowledgement before updating and user-requested continuation. Never start a model turn just to inspect settings. CLI plan reporting updates the same sanitized workflow under its write lock. New instructions require contextual plain-language progress and provide the plan-report fallback.

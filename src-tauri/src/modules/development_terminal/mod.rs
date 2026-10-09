@@ -1,3 +1,4 @@
+pub mod timing;
 pub(crate) mod transcript;
 pub(crate) mod workflow;
 

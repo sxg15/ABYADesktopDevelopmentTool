@@ -162,7 +162,13 @@ impl TaskService {
             }
             self.sync_managed_skills(&root)?;
             r.skill_pins = scan(&root)?;
-            r.policy = policy(); r.workflow_version = r.policy["workflowVersion"].as_str().unwrap().into();
+            let next_policy=policy();
+            let compatible=["rounds","questions","dimensions","stages","checkStatuses","stageStatuses"].iter().all(|key|r.policy[*key]==next_policy[*key]);
+            r.policy = next_policy; r.workflow_version = r.policy["workflowVersion"].as_str().unwrap().into();
+            if compatible {
+                r.issues.push(serde_json::json!({"id":format!("workflow-update-{}",r.revision),"kind":"suggestion","status":"resolved","stage":"closeout","description":"制作流程界面与沟通规则已更新，已确认的需求、计划和历史继续有效。","backup":backup,"updatedAt":now()}));
+                return Ok(());
+            }
             r.cycle += 1; r.current_round = 0; r.milestones.clear(); r.checks.clear();
             for status in r.stages.values_mut() { *status = "not-started".into(); }
             r.current_stage = "requirements".into();

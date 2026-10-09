@@ -15,6 +15,12 @@ pub struct ProductionRecord {
     pub player_mode: String,
     #[serde(default)]
     pub question_groups: Vec<QuestionGroup>,
+    #[serde(default)]
+    pub artifacts: Vec<Value>,
+    #[serde(default)]
+    pub stage_updates: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub events: Vec<Value>,
     pub task_template: Option<String>,
     pub art_template: Option<String>,
     pub current_stage: String,
@@ -54,6 +60,10 @@ pub struct IntakeQuestion {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuestionGroup {
+    #[serde(default = "requirements_stage")]
+    pub stage: String,
+    #[serde(default)]
+    pub cycle: u32,
     pub id: String,
     pub title: String,
     pub provider: String,
@@ -78,6 +88,8 @@ pub struct AnswerRevision {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Document {
+    #[serde(default)]
+    pub template_choices: BTreeMap<String, String>,
     pub kind: String,
     pub revision: u64,
     pub path: String,
@@ -101,6 +113,8 @@ pub struct Approval {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Evidence {
+    #[serde(default)]
+    pub stage: String,
     pub cycle: u32,
     pub id: String,
     pub path: String,
@@ -130,6 +144,8 @@ pub struct SkillEntry {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProductionView {
+    pub stage_statuses: BTreeMap<String, String>,
+    pub artifacts: Vec<Value>,
     pub record: Option<ProductionRecord>,
     pub policy: Value,
     pub warnings: Vec<String>,
@@ -161,4 +177,8 @@ pub struct ProductionDecision {
 
 fn empty_object() -> Value {
     serde_json::json!({})
+}
+
+fn requirements_stage() -> String {
+    "requirements".into()
 }

@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::fs;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -199,6 +199,10 @@ impl AppServerHandle {
                 "experimentalRawEvents": false
             }),
         )?;
+        let _ = super::settings::save(
+            &super::conversation_directory(Path::new(cwd), conversation_id),
+            &result,
+        );
         result
             .pointer("/thread/id")
             .and_then(Value::as_str)
@@ -229,6 +233,8 @@ impl AppServerHandle {
         task_id: &str,
         conversation_id: &str,
     ) -> AppResult<()> {
+        let settings_directory = super::conversation_directory(Path::new(cwd), conversation_id);
+        let saved_settings = super::settings::read(&settings_directory)?;
         let current = self.request(
             "thread/read",
             json!({"threadId":thread_id,"includeTurns":true}),
@@ -259,6 +265,15 @@ impl AppServerHandle {
             return Err(AppError::validation(
                 "Codex 返回了不同的会话 ID，已阻止继续。",
             ));
+        }
+        if saved_settings["model"].is_string() {
+            self.request(
+                "thread/settings/update",
+                super::settings::params(thread_id, &saved_settings),
+            )?;
+            super::settings::save(&settings_directory, &saved_settings)?;
+        } else {
+            super::settings::save(&settings_directory, &resumed)?;
         }
         Ok(())
     }

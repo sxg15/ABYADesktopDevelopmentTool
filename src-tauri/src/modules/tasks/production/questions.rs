@@ -11,11 +11,24 @@ pub(super) fn player_mode(data: &Value) -> AppResult<Option<&str>> {
 }
 
 pub(super) fn invalidate(r: &mut ProductionRecord) {
-    for status in r.stages.values_mut() {
-        *status = "not-started".into();
+    invalidate_from(r, "requirements");
+}
+
+fn invalidate_from(r: &mut ProductionRecord, stage: &str) {
+    let stages = [
+        "requirements",
+        "resources",
+        "plan",
+        "implementation",
+        "review",
+        "delivery",
+        "closeout",
+    ];
+    for id in stages.iter().skip_while(|s| **s != stage) {
+        r.stages.insert((*id).into(), "not-started".into());
     }
-    r.stages.insert("requirements".into(), "in-progress".into());
-    r.current_stage = "requirements".into();
+    r.stages.insert(stage.into(), "in-progress".into());
+    r.current_stage = stage.into();
 }
 
 fn answer(r: &mut ProductionRecord, operation: &str, data: &Value) -> AppResult<()> {
@@ -84,16 +97,21 @@ fn answer(r: &mut ProductionRecord, operation: &str, data: &Value) -> AppResult<
         _ => return Err(AppError::validation("问题状态已变化，请刷新后操作。")),
     }
     group.updated_at = now();
+    let stage = group.stage.clone();
     if operation != "save-draft" {
-        invalidate(r);
+        invalidate_from(r, &stage);
     }
     Ok(())
 }
 
 pub(super) fn publish(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
-    if r.question_mode != "ask" || r.current_stage != "requirements" {
+    let stage = data["stage"]
+        .as_str()
+        .unwrap_or(&r.current_stage)
+        .to_string();
+    if r.question_mode != "ask" || stage != r.current_stage || !r.stages.contains_key(&stage) {
         return Err(AppError::validation(
-            "仅需求梳理且允许提问时可以发布需求问题。",
+            "请在当前制作阶段发布问题，并开启允许追问。",
         ));
     }
     let id = mutation::text(data, "id")?;
@@ -144,6 +162,8 @@ pub(super) fn publish(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
         return Err(AppError::validation("问题必须关联有效的任务会话。"));
     }
     r.question_groups.push(QuestionGroup {
+        stage,
+        cycle: r.cycle,
         id: id.into(),
         title: title.into(),
         provider: provider.into(),

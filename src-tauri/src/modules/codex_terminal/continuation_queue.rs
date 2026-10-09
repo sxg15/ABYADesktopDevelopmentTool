@@ -352,7 +352,7 @@ impl CodexTerminalService {
             let receipt = directory.join(format!("task-continue-{}.json", request.id));
             let mut attempt = intake_receipt::start_attempt(&receipt, None, &request.native_id)?;
             let result=server.request("turn/start",json!({"threadId":request.native_id,"clientUserMessageId":attempt["messageId"],
-                "input":[{"type":"text","text":"用户在 APP 点击继续任务。先运行 doctor，读取当前任务状态与最新答案，核对中断前实际完成的操作，只继续未完成的当前阶段，不盲目重放写入。保留已确认决定；需求、执行计划、交付仍需用户确认。本轮完成以继续到必要的问答、文档确认或明确阻塞为界。"}]}));
+                "input":[{"type":"text","text":"用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。"}]}));
             result.and_then(|v| {
                 let id = v["turn"]["id"]
                     .as_str()

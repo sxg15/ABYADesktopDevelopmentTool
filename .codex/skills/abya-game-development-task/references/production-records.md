@@ -1,4 +1,4 @@
-# 任务资料与制作 CLI（v1.2.1）
+# 任务资料与制作 CLI（v1.3.0）
 
 仅完整制作、较大改动和指定阶段加载。普通任务不自动启用完整流程。
 状态以桌面数据库为准；artifacts/game-development/workflow.json、rounds/ 和 reports/
@@ -36,7 +36,7 @@ APP 创建完整任务已初始化时不要重复提问或初始化。旧文件�
 |---|---|
 | initialize | questionMode: ask/no-followup；可含 playerMode，未明确时 unspecified；仅尚未启用时 |
 | configure | questionMode、playerMode、taskTemplate、artTemplate；playerMode 为 unspecified/single/multiplayer；已明确的人数由策划在 APP 修改；模板使用真实 ID 或 none |
-| publish-questions | id/title/questions；仅需求阶段且允许提问，每次一组，发布后结束当前轮等待策划 |
+| publish-questions | id/title/questions/stage；当前阶段且允许提问，每次一组，发布后等待策划回答 |
 | submit-document | kind、path；需求确认后完成 resources，才提交计划 |
 | complete-stage | resources: stage/summary；implementation: stage/checks；closeout: stage |
 | register-evidence | id/path/kind/captureType/reviewed/description，可含 instanceId；必须是实际存在的任务内文件 |
@@ -99,3 +99,20 @@ JSON 模板只作字段示例，不复制覆盖数据库导出。制作报告用
 查看库用 skill list，仅在选中时用 skill read（provider/skillId）；不读取全部正文。
 APP“升级流程版本”保留旧 Skill 和历史，要求任务终端停止；普通读任务不更换固定版本。
 
+
+## 阶段工作台与对话步骤
+
+制作阶段与本轮对话计划分别登记。顶部步骤可通过 conversation report 提交：
+{"status":"progress","kind":"analysis","summary":"检查环境后整理执行计划","plan":[{"step":"检查制作环境","status":"inProgress"},{"step":"整理执行计划","status":"pending"}]}
+后续提交完整步骤列表更新状态；status 使用 pending、inProgress、completed、failed。每次只执行一个步骤。
+
+新增 production update 操作：
+- update-stage：stage、summary、nextAction，可选status（in-progress、blocked、stopped），用于当前阶段的实际进展。
+- register-artifact：stage、path、title、summary，文件先落盘再登记。草稿展示不改变文档批准。
+- publish-questions：增加stage，默认当前阶段；答案只影响该阶段及之后的工作。旧问题归入requirements。
+- submit-document：需求文档可带taskTemplate，执行计划可带artTemplate；正文写明ID，选择随该文档确认一起保存。
+- register-approved-template：key（taskTemplate/artTemplate）、templateId、documentHash。仅补登记已确认正文含明确ID且后台尚未登记的同一选择。
+- save-issue：可加title、affectedStages、blockedOperations。影响阶段须明确，操作为submit-document或complete-stage。调整既有问题范围需填写scopeChangeReason，说明判断依据。
+问题状态为open、in-progress、awaiting-recheck、resolved。只有完成解决与复验后使用resolved。
+旧blocker保留原全局影响；修改范围时记录原因。需要解决问题而编写的草稿可以登记，阶段完成仍检查必要问题。
+面向用户用“遇到了什么、如何处理、当前结果”表达，ID和测试细节放在详细记录。

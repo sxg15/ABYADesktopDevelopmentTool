@@ -1,6 +1,6 @@
 [package]
 name = "abya-desktop-development-tool"
-version = "0.2.1"
+version = "0.3.0"
 description = "Portable desktop tooling for ABYA game development workflows."
 authors = ["ABYA Production Team"]
 edition = "2024"
@@ -62,3 +62,6 @@ windows-sys = { version = "0.61", features = [
 
 [dev-dependencies]
 tokio-tungstenite = "0.29"
+
+[patch.crates-io]
+portable-pty = { path = "vendor/portable-pty" }

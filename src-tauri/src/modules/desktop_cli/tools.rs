@@ -328,6 +328,23 @@ impl DesktopToolDispatcher {
                 )
             })?;
         let input: ConversationActivityInput = decode(arguments)?;
+        if let Some(plan) = input.plan.as_ref() {
+            let steps = crate::modules::development_terminal::workflow::validate_report_plan(plan)?;
+            match provider {
+                TerminalProvider::Codex => self.dependencies.codex_terminal.record_reported_plan(
+                    &task_id,
+                    &conversation_id,
+                    &steps,
+                    &input.summary,
+                )?,
+                TerminalProvider::Grok => self.dependencies.grok_terminal.record_reported_plan(
+                    &task_id,
+                    &conversation_id,
+                    &steps,
+                    &input.summary,
+                )?,
+            };
+        }
         match provider {
             TerminalProvider::Codex => {
                 serialize(self.dependencies.codex_terminal.record_reported_activity(
@@ -439,7 +456,7 @@ impl DesktopToolDispatcher {
             "game_recording_tools" => {
                 let executable = crate::modules::instances::recorder_executable();
                 Ok(
-                    json!({"available":executable.is_ok(),"executable":executable.ok().map(|p|p.to_string_lossy().into_owned()),"method":"gdigrab-window","audio":false,"frameRate":15}),
+                    json!({"available":executable.is_ok(),"executable":executable.ok().map(|p|p.to_string_lossy().into_owned()),"method":"windows-graphics-capture","audio":false,"frameRate":15}),
                 )
             }
             "game_recording_start" => {
@@ -896,6 +913,7 @@ struct ConversationBindInput {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct ConversationActivityInput {
+    plan: Option<Vec<crate::modules::development_terminal::workflow::ReportPlanStep>>,
     status: CodexActivityStatus,
     kind: CodexActivityKind,
     summary: String,
@@ -1657,6 +1675,9 @@ mod tests {
         );
         assert!(!reported.is_error);
 
+        let planned=fixture.dispatcher.call_for_session(Some(session_id),"development_conversation_activity_report",json!({"status":"progress","kind":"analysis","summary":"检查后完成计划","plan":[{"step":"检查现有实例","status":"inProgress"},{"step":"整理计划","status":"pending"}]}));
+        assert!(!planned.is_error);
+
         let listed = fixture.dispatcher.call_for_session(
             Some(session_id),
             "game_instance_list",
@@ -1679,6 +1700,10 @@ mod tests {
             .find(|activity| activity.summary == "Using game_instance_list")
             .unwrap();
         assert_eq!(automatic.status, CodexActivityStatus::Completed);
+        assert_eq!(
+            automatic.step_id.as_deref(),
+            Some(workflow.turns[0].plan[0].id.as_str())
+        );
         assert!(automatic.detail.contains("taskId"));
     }
 

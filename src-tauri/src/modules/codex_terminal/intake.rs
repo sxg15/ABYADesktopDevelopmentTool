@@ -126,7 +126,7 @@ impl CodexTerminalService {
             ""
         };
         let result = server.request("turn/start", json!({"threadId":native,"clientUserMessageId":attempt["messageId"],
-            "input":[{"type":"text","text":format!("策划要求继续需求问题组 {} 第 {} 版答案的处理。{}请先运行 doctor，再 production get 读取最新答案和人数模式。文档确认状态以实际记录为准，提交问答本身不代表批准文档。",group.id,revision,recovery)}]}))?;
+            "input":[{"type":"text","text":format!("策划已提交阶段问题组 {} 第 {} 版答案的处理。{}请先运行 doctor，再 production get 读取最新答案和人数模式。文档确认状态以实际记录为准，提交问答本身不代表批准文档。",group.id,revision,recovery)}]}))?;
         let turn = result["turn"]["id"].as_str().ok_or_else(|| {
             AppError::validation("Codex 未返回执行 ID，请核对原生历史；未自动重发。")
         })?;

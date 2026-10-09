@@ -1,0 +1,37 @@
+{
+  "app": "0.2.2",
+  "isolated": true,
+  "conptyWithoutCursorReplyRuns": 10,
+  "checks": [
+    {
+      "scenario": "initial-open",
+      "ready": true,
+      "focus": "xterm-helper-textarea",
+      "markerVisible": true
+    },
+    {
+      "scenario": "pause-reconnect-resize",
+      "ready": true,
+      "focus": "xterm-helper-textarea",
+      "markerVisible": false
+    },
+    {
+      "scenario": "reconnect-resize-click-input",
+      "ready": true,
+      "focus": "xterm-helper-textarea",
+      "markerVisible": true
+    },
+    {
+      "scenario": "continue-button-input",
+      "ready": true,
+      "focus": "xterm-helper-textarea",
+      "markerVisible": true
+    },
+    {
+      "scenario": "second-reconnect-input",
+      "ready": true,
+      "focus": "xterm-helper-textarea",
+      "markerVisible": true
+    }
+  ]
+}

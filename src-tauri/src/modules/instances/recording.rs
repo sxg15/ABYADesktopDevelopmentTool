@@ -78,35 +78,20 @@ fn frames(directory: &Path) -> u64 {
 }
 
 fn capture_command(hwnd: isize, output: &Path, max_seconds: u32) -> AppResult<Command> {
+    // A zero HWND would let gfxcapture select an arbitrary window. Never fall
+    // back to a monitor/desktop source or a title/executable pattern.
+    if hwnd == 0 {
+        return Err(AppError::validation("录制必须绑定已验证的游戏窗口。"));
+    }
     let mut command = Command::new(recorder_executable()?);
     command
-        .args([
-            "-hide_banner",
-            "-loglevel",
-            "warning",
-            "-f",
-            "gdigrab",
-            "-framerate",
-            "15",
-            "-draw_mouse",
-            "0",
-            "-i",
-        ])
-        .arg(format!("hwnd={hwnd}"))
-        .args([
-            "-t",
-            &max_seconds.to_string(),
-            "-an",
-            "-vf",
-            "pad=ceil(iw/2)*2:ceil(ih/2)*2",
-            "-c:v",
-            "libopenh264",
-            "-b:v",
-            "4M",
-            "-pix_fmt",
-            "yuv420p",
-            "-progress",
-        ])
+        .args(["-hide_banner", "-loglevel", "warning", "-filter_complex"])
+        .arg(format!(
+            "gfxcapture=hwnd={}:capture_cursor=0:capture_border=0:display_border=0:max_framerate=15:output_fmt=bgra,hwdownload,format=bgra,fps=15,pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuv420p",
+            hwnd as usize
+        ))
+        .args(["-t", &max_seconds.to_string(), "-an", "-c:v", "libopenh264",
+            "-b:v", "4M", "-pix_fmt", "yuv420p", "-progress"])
         .arg(output.join("progress.txt"))
         .args(["-movflags", "+faststart"])
         .arg(output.join("capture.mp4"))
@@ -207,6 +192,7 @@ impl InstanceService {
         restore.armed = false;
         let service = self.clone();
         let instance_id = id.to_owned();
+        let capture_deadline = Instant::now() + Duration::from_secs(u64::from(max_seconds) + 5);
         std::thread::spawn(move || {
             loop {
                 std::thread::sleep(Duration::from_millis(500));
@@ -224,6 +210,17 @@ impl InstanceService {
                                 "failed"
                             }
                             .into();
+                            run.info.ended_at = Some(Utc::now().to_rfc3339());
+                            let _ = persist(&run.directory, &run.info);
+                            Some(run.restore_visibility)
+                        }
+                        Ok(None) if Instant::now() >= capture_deadline => {
+                            // WGC can stop delivering frames for a static/minimized
+                            // source. FFmpeg's media-time -t alone is not a wall clock.
+                            let _ = run.child.start_kill();
+                            let _ = run.child.wait();
+                            run.info.frame_count = frames(&run.directory);
+                            run.info.status = "failed".into();
                             run.info.ended_at = Some(Utc::now().to_rfc3339());
                             let _ = persist(&run.directory, &run.info);
                             Some(run.restore_visibility)
@@ -377,6 +374,32 @@ fn window_handle(_pid: u32) -> AppResult<isize> {
 mod tests {
     use super::*;
     #[test]
+    fn recorder_rejects_unbound_window() {
+        assert!(capture_command(0, Path::new("."), 5).is_err());
+    }
+
+    #[test]
+    fn recorder_uses_only_explicit_window_graphics_capture() {
+        let output =
+            std::env::temp_dir().join(format!("abya-recorder-args-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&output).unwrap();
+        let command = capture_command(12345, &output, 5).unwrap();
+        let args: Vec<_> = command
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        assert!(args.iter().any(|a| a.starts_with("gfxcapture=hwnd=12345:")));
+        assert!(
+            args.iter()
+                .any(|a| a.contains("hwdownload,format=bgra,fps=15"))
+        );
+        assert!(!args.iter().any(|a| a.contains("gdigrab")
+            || a.contains("monitor_idx")
+            || a.contains("window_title")));
+        assert!(args.iter().any(|a| a == "-an"));
+        assert!(args.windows(2).any(|w| w == ["-t", "5"]));
+    }
+    #[test]
     #[ignore = "Uses the installed recorder and a brief owned non-activating Windows fixture"]
     fn recorder_smoke_captures_owned_window() {
         use windows_sys::Win32::UI::WindowsAndMessaging::*;
@@ -387,7 +410,7 @@ mod tests {
                 WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
                 class.as_ptr(),
                 title.as_ptr(),
-                WS_POPUP | WS_VISIBLE,
+                WS_POPUP | WS_VISIBLE | 6, // WinUser.h: SS_WHITERECT
                 24,
                 24,
                 320,
@@ -408,14 +431,71 @@ mod tests {
             }
         }
         let _window = Window(hwnd);
+        // Animate a small child so WGC receives compositor updates even when
+        // the rest of this fixture stays static. Center pixels remain white.
+        let marker = unsafe {
+            CreateWindowExW(
+                0,
+                class.as_ptr(),
+                title.as_ptr(),
+                WS_CHILD | WS_VISIBLE | 4,
+                8,
+                8,
+                16,
+                16,
+                hwnd,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null(),
+            )
+        };
+        assert!(!marker.is_null());
         assert_eq!(window_handle(std::process::id()).unwrap(), hwnd as isize);
+        // A different black topmost window completely covers the white target.
+        // The encoded center must stay white, not capture the occluder.
+        let cover_title: Vec<u16> = "ABYA Recorder Occluder"
+            .encode_utf16()
+            .chain(Some(0))
+            .collect();
+        let cover = unsafe {
+            CreateWindowExW(
+                WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST,
+                class.as_ptr(),
+                cover_title.as_ptr(),
+                WS_POPUP | WS_VISIBLE | 4, // WinUser.h: SS_BLACKRECT
+                20,
+                20,
+                340,
+                260,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null(),
+            )
+        };
+        assert!(!cover.is_null());
+        let _cover = Window(cover);
         let output =
             std::env::temp_dir().join(format!("abya-recorder-smoke-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&output).unwrap();
         let mut command = capture_command(hwnd as isize, &output, 2).unwrap();
+        command.args(["-loglevel", "verbose"]);
         let mut child = command.spawn().unwrap();
         let deadline = Instant::now() + Duration::from_secs(12);
+        let mut frame_tick = 0;
         let status = loop {
+            frame_tick += 1;
+            unsafe {
+                SetWindowPos(
+                    marker,
+                    std::ptr::null_mut(),
+                    8 + frame_tick % 30,
+                    8,
+                    0,
+                    0,
+                    SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+                );
+            }
             let mut message = MSG::default();
             unsafe {
                 while PeekMessageW(&mut message, std::ptr::null_mut(), 0, 0, PM_REMOVE) != 0 {
@@ -454,6 +534,44 @@ mod tests {
         let data: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
         assert_eq!(data["streams"][0]["width"], 320);
         assert_eq!(data["streams"][0]["codec_name"], "h264");
-        println!("Owned recording fixture: {}", output.display());
+        let decoded = Command::new(recorder_executable().unwrap())
+            .args(["-hide_banner", "-loglevel", "error", "-i"])
+            .arg(output.join("capture.mp4"))
+            .args([
+                "-vf",
+                r"select=eq(n\,0)+eq(n\,15)",
+                "-fps_mode",
+                "vfr",
+                "-frames:v",
+                "2",
+                "-pix_fmt",
+                "rgb24",
+                "-f",
+                "rawvideo",
+                "pipe:1",
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            decoded.status.success(),
+            "{}",
+            String::from_utf8_lossy(&decoded.stderr)
+        );
+        let frame_bytes = 320 * 240 * 3;
+        assert!(
+            decoded.stdout.len() >= frame_bytes * 2,
+            "must decode two real frames"
+        );
+        for frame in decoded.stdout.chunks_exact(frame_bytes).take(2) {
+            let center = (120 * 320 + 160) * 3;
+            assert!(
+                frame[center..center + 3].iter().all(|c| *c > 220),
+                "captured occluder instead of white owned target"
+            );
+        }
+        println!(
+            "Owned occluded-window recording fixture: {}",
+            output.display()
+        );
     }
 }

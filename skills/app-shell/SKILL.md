@@ -119,3 +119,7 @@ in both terminal/history views and after terminal exit.
 
 Codex conversation rows include archive/restore in addition to rename/delete; reserve room for all three controls. Active/archived filters and explicit synchronization sit above the list. Add bilingual clipboard-ready/size errors and archive labels. Grok retains its existing lifecycle controls.
 
+
+## Stage workspace update
+
+Button descriptions now default above the owner, use measured viewport clamping and support titled text buttons as well as icons. Production stage navigation wraps at narrow widths and stays visible while scrolling. Terminal settings wrap without reducing the terminal to a fixed-height toolbar.

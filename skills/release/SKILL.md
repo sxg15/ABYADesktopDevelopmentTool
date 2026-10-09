@@ -9,13 +9,16 @@ Own repeatable checks and portable Windows release output.
 Owns dependency scripts, Tauri release configuration, `Publish` layout, build
 manifest generation, project LLM content publishing, and repository policy
 checks.
+Owns the minimal vendored portable-pty 0.9.0 patch and retained MIT license in src-tauri/vendor.
+It removes only Windows cursor inheritance for independent embedded terminals. Keep provenance,
+review the patch on dependency upgrades, and run the no-frontend-cursor-reply regression test.
 
 ## Public Contracts
 
 publish.ps1 -Validation builds Publish-Staging-Validation without replacing an active package.
 Historical staging switches remain mutually exclusive development destinations. Every build embeds
-version from the package (currently 0.2.1), release workflow-document-reveal-20261008 and UTC build time; manifest workflow version is
-read from policy (1.2.1). Live processes under the destination block replacement.
+version from the package (currently 0.3.0), release stage-workspace-20261009 and UTC build time; manifest workflow version is
+read from the UTF-8 policy (1.3.0). Live processes under the destination block replacement.
 After isolated validation, promote-validated.ps1 verifies APP/CLI hashes, stages a complete copy,
 backs up Publish, atomically renames the replacement and creates ABYA 开发工具.lnk through Explorer.
 Keep release backups; promotion never copies or replaces user databases. The stable user entry is
@@ -132,3 +135,9 @@ scripts/test-codex-conversation-lifecycle.mjs validates installed native project
 
 
 Historical organization may also use explicitly supplied ABYA_HISTORY_WORKSPACES; it verifies retained task IDs, matches older native threads by exact cwd, and skips unavailable rollouts without recreating task records.
+
+Recorder-only validation builds may use publish.ps1 -RecorderStaging. It uses the same checks/package pipeline in Publish-Staging-Recorder with release label window-recorder-fix-20261009, leaving Publish and existing Publish-Staging-Validation intact. Do not run promote-validated.ps1 against this destination: it promotes the separate Validation package. Switch to the recorder candidate explicitly only after closing the active APP; keep the normal data directory and approval history.
+
+## Stage workspace update
+
+Release 0.3.0 ships workflow 1.3.0 with stage workspace, native conversation settings and updated shared skills. Retain the terminal-input and recorder corrections already in 0.2.2. Use the Validation staging build and verify manifest hashes, frontend interaction, additive historical record compatibility and native settings before promotion.

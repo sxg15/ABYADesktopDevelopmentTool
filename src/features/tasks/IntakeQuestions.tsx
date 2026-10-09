@@ -78,10 +78,10 @@ export function IntakeQuestions({ taskId, group, revision, active, onSaved, onCo
   const answered = group.questions.filter(q => answers[q.id]?.trim()).length;
   return <section className="production-card intake-questions">
     <h4>{group.title} · 已回答 {answered}/{group.questions.length}</h4>
-    <p>可返回修改，整组提交。{pending ? "正在梳理需求" : group.status === "submitted" ? "已提交" : "已取消"}</p>
+    <p>可返回修改，整组提交。{pending ? "正在整理本阶段内容" : group.status === "submitted" ? "已提交" : "已取消"}</p>
     {error && <p role="alert" className="inline-error">{error}</p>}
     {notice && <p role="status">{notice}</p>}
-    <nav className="production-actions" aria-label="选择需求问题">{group.questions.map((q, i) =>
+    <nav className="production-actions" aria-label="选择阶段问题">{group.questions.map((q, i) =>
       <button key={q.id} className="secondary-button" aria-current={i === index ? "step" : undefined}
         onClick={() => setIndex(i)}>第 {i + 1} 题{answers[q.id]?.trim() ? " ✓" : ""}</button>)}</nav>
     {group.questions.filter((_, i) => all || i === index).map(q => <fieldset key={q.id} disabled={busy || !active || !pending}>

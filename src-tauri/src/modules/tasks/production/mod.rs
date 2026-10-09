@@ -6,6 +6,7 @@ mod questions;
 mod report;
 mod validation;
 mod versions;
+mod workspace;
 pub use versions::VersionSources;
 #[cfg(test)]
 mod tests;
@@ -85,6 +86,11 @@ impl TaskService {
                 .unwrap_or("unspecified")
                 .into(),
             question_groups: vec![],
+            artifacts: vec![],
+            stage_updates: BTreeMap::new(),
+            events: vec![
+                json!({"stage":"requirements","status":"in-progress","at":now(),"cycle":1,"revision":1}),
+            ],
             task_template: None,
             art_template: None,
             current_stage: "requirements".into(),
@@ -140,6 +146,8 @@ impl TaskService {
             }
             if input.accepted {
                 validation::document_gate(r, &root, &input.kind)?;
+                validation::clear_issues(r, &input.kind)?;
+                workspace::accept_templates(r, &root, &doc)?;
             }
             r.approvals.push(Approval {
                 kind: input.kind.clone(),
@@ -230,7 +238,17 @@ impl TaskService {
         })
         .collect();
         let effective_policy = record.as_ref().map_or_else(policy, |r| r.policy.clone());
+        let stage_statuses = record
+            .as_ref()
+            .map(workspace::stage_statuses)
+            .unwrap_or_default();
+        let artifacts = record
+            .as_ref()
+            .map(|r| workspace::artifacts(r, &root))
+            .unwrap_or_default();
         Ok(ProductionView {
+            stage_statuses,
+            artifacts,
             record,
             policy: effective_policy,
             warnings,
@@ -274,6 +292,7 @@ impl TaskService {
             }
             let previous = serde_json::to_string(&record)?;
             change(&mut record)?;
+            workspace::record_transition(&mut record, &previous)?;
             record.revision += 1;
             record.updated_at = now();
             let body = serde_json::to_string(&record)?;

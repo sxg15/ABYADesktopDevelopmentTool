@@ -48,7 +48,7 @@ fn document(r: &ProductionRecord, kind: &str) -> String {
         || "<p class=missing>尚未提交</p>".into(),
         |d| {
             format!(
-                "<p>版本 {} · {}</p><pre>{}</pre>",
+                "<p>第 {} 版</p><details><summary>查看文档正文</summary><small>{}</small><pre>{}</pre></details>",
                 d.revision,
                 escape(&d.sha256),
                 escape(&d.content)
@@ -71,7 +71,13 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
         escape(&r.updated_at)
     );
     body += "<nav><a href='plan-report.html'>需求与方案</a> · <a href='review-report.html'>开发与迭代</a> · <a href='closeout-report.html'>交付与复盘</a></nav>";
-    body += "<p>资料检查、实际运行、视觉审阅与策划验收分别记录；本报告不自动证明作品质量。</p>";
+    if let Some(update) = r.stage_updates.get(&r.current_stage) {
+        body += &format!(
+            "<p>{}</p><p>下一步：{}</p>",
+            cell(&update["summary"]),
+            cell(&update["nextAction"])
+        );
+    }
     for warning in warnings {
         body += &format!("<p class=missing>{}</p>", escape(warning));
     }
@@ -84,7 +90,8 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
             .map(|s| {
                 vec![
                     s["name"].as_str().unwrap().into(),
-                    r.stages[s["id"].as_str().unwrap()].clone(),
+                    status_text(&super::workspace::stage_statuses(r)[s["id"].as_str().unwrap()])
+                        .into(),
                 ]
             })
             .collect(),
@@ -94,7 +101,11 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
             "<h2>需求问答</h2><p>人数模式：{}</p>",
             escape(&r.player_mode)
         );
-        for group in &r.question_groups {
+        for group in r
+            .question_groups
+            .iter()
+            .filter(|g| ["requirements", "resources", "plan"].contains(&g.stage.as_str()))
+        {
             body += &format!(
                 "<details><summary>{} · {}</summary><p>发布 {} · 更新 {}</p>",
                 escape(&group.title),
@@ -181,15 +192,70 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
             );
         }
     }
-    body += "<h2>问题与阻塞</h2>";
-    for i in &r.issues {
+    body += "<h2>阶段成果</h2>";
+    for a in r
+        .artifacts
+        .iter()
+        .filter(|a| phase_for(a["stage"].as_str().unwrap_or("closeout")) == phase)
+    {
         body += &format!(
-            "<p>{} · {} · {} · {}</p>",
-            cell(&i["id"]),
-            cell(&i["status"]),
-            cell(&i["description"]),
-            cell(&i["recheck"])
+            "<p><a href='../../../{}'>{}</a> · {}</p>",
+            relative_url(a["path"].as_str().unwrap_or("")),
+            cell(&a["title"]),
+            cell(&a["summary"])
         );
+    }
+    body += "<h2>问题与处理</h2>";
+    for i in r
+        .issues
+        .iter()
+        .filter(|i| phase_for(i["stage"].as_str().unwrap_or("closeout")) == phase)
+    {
+        body += &format!(
+            "<details {}><summary>{} · {}</summary><p>{}</p><p>处理方案：{}</p><p>复验结果：{}</p><small>{}</small></details>",
+            if i["status"] == "resolved" {
+                ""
+            } else {
+                "open"
+            },
+            cell(i.get("title").unwrap_or(&i["id"])),
+            status_text(i["status"].as_str().unwrap_or("open")),
+            cell(&i["description"]),
+            cell(i.get("fix").unwrap_or(&i["resumeWhen"])),
+            cell(&i["recheck"]),
+            cell(&i["id"])
+        );
+    }
+    if phase != "plan" {
+        body += "<h2>阶段问答</h2>";
+        for g in r
+            .question_groups
+            .iter()
+            .filter(|g| phase_for(&g.stage) == phase)
+        {
+            body += &format!("<details><summary>{}</summary>", escape(&g.title));
+            for a in &g.answers {
+                for q in &g.questions {
+                    body += &format!(
+                        "<p>{}：{}</p>",
+                        escape(&q.text),
+                        escape(a.answers.get(&q.id).map(String::as_str).unwrap_or("未回答"))
+                    );
+                }
+            }
+            body += "</details>";
+        }
+    }
+    if phase == "closeout" {
+        body += "<h2>阶段时间记录</h2><p>时间来自APP记录的状态变化。执行区间包含工具与等待，旧记录缺少的时间保持未知。</p>";
+        for e in &r.events {
+            body += &format!(
+                "<p>{} · {} · {}</p>",
+                cell(&e["at"]),
+                cell(&e["stage"]),
+                status_text(e["status"].as_str().unwrap_or(""))
+            );
+        }
     }
     body += "<h2>用户确认历史</h2>";
     body += &rows(
@@ -227,6 +293,29 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
     format!(
         "<!doctype html><html lang=zh-CN><meta charset=utf-8><meta name=viewport content='width=device-width'><title>{title}</title><style>body{{max-width:1100px;margin:32px auto;padding:0 24px;font:16px/1.7 system-ui;color:#20303c;background:#fafbf9}}table{{border-collapse:collapse;width:100%}}td,th{{border:1px solid #ccd4d8;padding:8px;text-align:left}}pre{{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:16px}}details{{padding:12px;border-bottom:1px solid #ccc}}.missing{{color:#9c4210}}a{{color:#176852}}</style>{body}</html>"
     )
+}
+
+fn phase_for(stage: &str) -> &str {
+    match stage {
+        "requirements" | "resources" | "plan" => "plan",
+        "implementation" | "review" => "review",
+        _ => "closeout",
+    }
+}
+fn status_text(status: &str) -> &str {
+    match status {
+        "not-started" => "未开始",
+        "in-progress" => "进行中",
+        "awaiting-confirmation" => "待确认",
+        "waiting-for-answers" => "待回答",
+        "blocked" => "遇到问题",
+        "passed" => "已通过",
+        "stopped" => "已暂停",
+        "open" => "待处理",
+        "awaiting-recheck" => "待复验",
+        "resolved" => "已解决",
+        _ => status,
+    }
 }
 
 impl TaskService {

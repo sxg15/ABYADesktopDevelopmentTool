@@ -101,3 +101,7 @@ ownership to Windows. Copy has no paste-size/replay-tail limit. The typed
 terminalApi.copyHistory sends provider/task/conversation IDs and returns a bool;
 it never transports the transcript to the WebView.
 
+
+## Stage workspace update
+
+ProductionView adds effective stageStatuses and registered/legacy artifacts; production records default additive artifacts, stageUpdates and stage transition events. Question groups default to requirements and carry cycle. ExecutionSettingsView belongs to shared types; typed native adapters read/update per-conversation model, effort and permissions without credentials.

@@ -37,6 +37,9 @@ pub(super) fn apply(
     }
     match operation {
         "publish-questions" => super::questions::publish(r, data),
+        "register-artifact" => super::workspace::register_artifact(r, root, data),
+        "update-stage" => super::workspace::update_stage(r, root, data),
+        "register-approved-template" => super::workspace::backfill_template(r, root, data),
         "submit-document" => submit(r, root, data),
         "register-evidence" => evidence(r, root, data),
         "set-milestone" => {
@@ -110,6 +113,9 @@ pub(super) fn apply(
                 ("artTemplate", &mut r.art_template),
             ] {
                 if let Some(id) = data[key].as_str() {
+                    if target.as_deref() == Some(id) {
+                        continue;
+                    }
                     if (key == "taskTemplate" && requirements_approved)
                         || (key == "artTemplate" && plan_approved)
                     {
@@ -156,8 +162,34 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
         return Err(AppError::validation("请提交 Markdown 文档。"));
     }
     let (content, sha256) = files::text_file(root, path)?;
+    let mut template_choices = std::collections::BTreeMap::new();
+    for key in ["taskTemplate", "artTemplate"] {
+        if let Some(id) = data[key].as_str() {
+            if (key == "taskTemplate" && kind != "requirements")
+                || (key == "artTemplate" && kind != "plan")
+            {
+                return Err(AppError::validation(
+                    "任务模板随需求确认，美术模板随执行计划确认。",
+                ));
+            }
+            super::catalog::validate_choice(root, key, id)?;
+            if !content.contains(id) {
+                return Err(AppError::validation(
+                    "请在文档中写明所选模板ID，供策划确认。",
+                ));
+            }
+            template_choices.insert(key.into(), id.into());
+        }
+    }
+    if template_choices.is_empty()
+        && let Some(old) = r.documents.get(kind).filter(|d| d.sha256 == sha256)
+    {
+        template_choices = old.template_choices.clone();
+    }
     if r.documents.get(kind).is_some_and(|d| {
-        d.sha256 == sha256 && (kind != "delivery" || d.game_version == r.current_version)
+        d.sha256 == sha256
+            && d.template_choices == template_choices
+            && (kind != "delivery" || d.game_version == r.current_version)
     }) && r
         .stages
         .get(kind)
@@ -167,7 +199,9 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
     }
     let revision = r.documents.get(kind).map_or(1, |d| d.revision + 1);
     if ["requirements", "plan"].contains(&kind) && revision > 1 {
-        r.cycle += 1;
+        if kind == "requirements" {
+            r.cycle += 1;
+        }
         r.current_round = 0;
         r.milestones.clear();
         r.checks.clear();
@@ -180,6 +214,7 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
     r.documents.insert(
         kind.into(),
         Document {
+            template_choices,
             kind: kind.into(),
             revision,
             path: path.into(),
@@ -307,6 +342,7 @@ fn evidence(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
         }
     }
     r.evidence.push(Evidence {
+        stage: r.current_stage.clone(),
         id: id.into(),
         path: relative.into(),
         sha256,
@@ -336,9 +372,39 @@ fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
     text(data, "description")?;
     if !r.stages.contains_key(stage)
         || !["defect", "blocker", "checkpoint", "suggestion"].contains(&kind)
-        || !["open", "resolved"].contains(&status)
+        || !["open", "in-progress", "awaiting-recheck", "resolved"].contains(&status)
     {
         return Err(AppError::validation("无效问题状态或阶段。"));
+    }
+    if let Some(stages) = data.get("affectedStages") {
+        let stages = stages
+            .as_array()
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| AppError::validation("请填写受影响阶段。"))?;
+        if stages
+            .iter()
+            .any(|s| s.as_str().is_none_or(|s| !r.stages.contains_key(s)))
+        {
+            return Err(AppError::validation("受影响阶段无效。"));
+        }
+    }
+    if let Some(actions) = data.get("blockedOperations") {
+        let actions = actions
+            .as_array()
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| AppError::validation("请填写阻止的操作。"))?;
+        if actions
+            .iter()
+            .any(|s| !["submit-document", "complete-stage"].iter().any(|a| s == a))
+        {
+            return Err(AppError::validation("问题只能阻止提交确认或完成阶段。"));
+        }
+    }
+    if let Some(old) = r.issues.iter().find(|i| i["id"] == id)
+        && (old["affectedStages"] != data["affectedStages"]
+            || old["blockedOperations"] != data["blockedOperations"])
+    {
+        text(data, "scopeChangeReason")?;
     }
     if let Some(old) = r.issues.iter().find(|i| i["id"] == id)
         && old["kind"] != "suggestion"
@@ -472,6 +538,14 @@ fn round(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
 
 fn complete(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
     let stage = text(data, "stage")?;
+    if r.question_groups
+        .iter()
+        .any(|g| g.stage == stage && g.status == "pending")
+    {
+        return Err(AppError::validation(
+            "本阶段还有待回答的问题，请先提交答案。",
+        ));
+    }
     validation::clear_issues(r, stage)?;
     match stage {
         "resources" => {

@@ -830,5 +830,10 @@ tbody tr:hover { background: #f7faf8; }
   box-shadow: 0 3px 12px #0003;
 }
 .terminal-task-notice { padding: 8px 12px; background: #eef5f2; color: #25483e; font-size: 12px; line-height: 1.5; flex-shrink: 0; }
-.codex-terminal.with-task-control { grid-template-rows: 42px auto minmax(0,1fr); }
+.codex-terminal.with-task-control { grid-template-rows: auto auto minmax(0,1fr); }
+.codex-terminal.with-task-control .terminal-toolbar{display:flex;flex-wrap:wrap;min-height:42px;padding-top:8px;padding-bottom:8px}
+.codex-terminal.with-task-control .terminal-status{flex:1 1 180px;flex-wrap:wrap}.codex-terminal.with-task-control .terminal-status>span{white-space:nowrap}.codex-terminal.with-task-control .terminal-working-directory{flex:1 1 150px}.codex-terminal.with-task-control .terminal-actions{flex:0 0 auto}
+.execution-settings{display:flex;gap:10px;align-items:center;flex-wrap:wrap;width:100%;padding-bottom:7px;border-bottom:1px solid #3a4446;color:#bdd3c8;font-size:11px}
+.execution-settings label{display:flex;align-items:center;gap:6px;white-space:nowrap;flex:0 0 auto}.execution-settings select{width:auto;max-width:210px;min-height:28px;padding:4px 7px;border:1px solid #45605a;border-radius:6px;background:#253632;color:#edf6f1;font-size:12px}.execution-settings small{width:100%;color:#b4d3c4}.execution-settings [role=alert]{color:#ffbbac}
+@media(max-width:1000px){.app-shell{grid-template-columns:68px minmax(0,1fr)}.app-sidebar nav button{justify-content:center;padding:0}.app-sidebar nav button span,.brand>div:not(.brand-mark),.sidebar-footer>span,.sidebar-footer>strong{display:none}.brand{padding:0;justify-content:center}.tasks-workspace{grid-template-columns:180px minmax(0,1fr)}.content-header{padding:16px;gap:12px;flex-wrap:wrap;min-height:110px}.content-header>div:first-child{min-width:220px}.content-header h2{font-size:19px}.content-header .header-actions{margin-left:auto}.task-tabs{padding-left:0;flex-wrap:wrap}}
 .sidebar-footer { flex-direction: column; align-items: flex-start; overflow-wrap: anywhere; }

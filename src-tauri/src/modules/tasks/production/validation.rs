@@ -29,10 +29,17 @@ pub(super) fn approved(r: &ProductionRecord, root: &Path, kind: &str) -> AppResu
 }
 
 pub(super) fn clear_issues(r: &ProductionRecord, stage: &str) -> AppResult<()> {
+    clear_issues_for(r, stage, "complete-stage")
+}
+
+fn clear_issues_for(r: &ProductionRecord, stage: &str, operation: &str) -> AppResult<()> {
     if r.issues.iter().any(|i| {
         i["status"] != "resolved"
             && i["kind"] != "suggestion"
-            && (i["stage"] == stage || i["kind"] == "blocker")
+            && super::workspace::affects(i, stage)
+            && i["blockedOperations"]
+                .as_array()
+                .is_none_or(|actions| actions.iter().any(|a| a == operation))
     }) {
         return Err(AppError::validation(
             "仍有未关闭的问题或阻塞，请先处理并记录复验。",
@@ -99,10 +106,21 @@ pub(super) fn version(r: &ProductionRecord) -> AppResult<&str> {
 }
 
 pub(super) fn document_gate(r: &ProductionRecord, root: &Path, kind: &str) -> AppResult<()> {
-    clear_issues(r, kind)?;
+    clear_issues_for(r, kind, "submit-document")?;
+    if r.question_groups
+        .iter()
+        .any(|g| g.stage == kind && g.status == "pending")
+    {
+        return Err(AppError::validation(
+            "本阶段还有待回答的问题，请先提交答案。",
+        ));
+    }
     match kind {
         "requirements" => {
-            if r.question_groups.iter().any(|g| g.status == "pending") {
+            if r.question_groups
+                .iter()
+                .any(|g| g.stage == "requirements" && g.status == "pending")
+            {
                 return Err(AppError::validation(
                     "还有未提交的需求问题，请先回答或取消。",
                 ));

@@ -1,53 +1,205 @@
 {
   "schema": "abya.game-development-policy/v1",
-  "workflowVersion": "1.2.1",
+  "workflowVersion": "1.3.0",
   "scope": "完整玩法、较大改动；独立阶段仅执行明确范围",
-  "questionModes": ["ask", "no-followup"],
-  "stageStatuses": ["not-started", "in-progress", "awaiting-confirmation", "blocked", "passed", "not-applicable", "stopped"],
-  "checkStatuses": ["not-run", "passed", "failed", "blocked", "not-applicable"],
+  "questionModes": [
+    "ask",
+    "no-followup"
+  ],
+  "stageStatuses": [
+    "not-started",
+    "in-progress",
+    "awaiting-confirmation",
+    "blocked",
+    "passed",
+    "not-applicable",
+    "stopped"
+  ],
+  "checkStatuses": [
+    "not-run",
+    "passed",
+    "failed",
+    "blocked",
+    "not-applicable"
+  ],
   "stages": [
-    {"id": "requirements", "name": "需求整理", "artifact": "requirements.md", "approval": "requirements"},
-    {"id": "resources", "name": "现有资源与美术要求", "artifact": "plan.md", "approval": null},
-    {"id": "plan", "name": "方案与能力预检", "artifact": "plan.md", "approval": "plan"},
-    {"id": "implementation", "name": "Lua 实现与完整初版", "artifact": "workflow.json", "approval": null},
-    {"id": "review", "name": "8＋4 整体迭代", "artifact": "rounds/", "approval": null},
-    {"id": "delivery", "name": "交付与策划验收", "artifact": "delivery.md", "approval": "delivery"},
-    {"id": "closeout", "name": "收尾与知识分析", "artifact": "closeout.md", "approval": null}
+    {
+      "id": "requirements",
+      "name": "需求整理",
+      "artifact": "requirements.md",
+      "approval": "requirements"
+    },
+    {
+      "id": "resources",
+      "name": "现有资源与美术要求",
+      "artifact": "plan.md",
+      "approval": null
+    },
+    {
+      "id": "plan",
+      "name": "方案与能力预检",
+      "artifact": "plan.md",
+      "approval": "plan"
+    },
+    {
+      "id": "implementation",
+      "name": "Lua 实现与完整初版",
+      "artifact": "workflow.json",
+      "approval": null
+    },
+    {
+      "id": "review",
+      "name": "8＋4 整体迭代",
+      "artifact": "rounds/",
+      "approval": null
+    },
+    {
+      "id": "delivery",
+      "name": "交付与策划验收",
+      "artifact": "delivery.md",
+      "approval": "delivery"
+    },
+    {
+      "id": "closeout",
+      "name": "收尾与知识分析",
+      "artifact": "closeout.md",
+      "approval": null
+    }
   ],
   "rounds": {
     "count": 12,
-    "questionRounds": [9, 10, 11, 12],
-    "milestones": ["R0", "R8", "R12"],
+    "questionRounds": [
+      9,
+      10,
+      11,
+      12
+    ],
+    "milestones": [
+      "R0",
+      "R8",
+      "R12"
+    ],
     "allDimensionsEveryRound": true,
     "allQuestionsEachQuestionRound": true
   },
   "dimensions": [
-    {"id": "requirements", "name": "需求与规则"},
-    {"id": "lifecycle", "name": "进入、循环、结束、重开与清理"},
-    {"id": "interaction", "name": "输入、选择、取消与拒绝"},
-    {"id": "visual", "name": "UI、文字、资源与目标视口"},
-    {"id": "feedback", "name": "动态反馈、连续动作与恢复"},
-    {"id": "authority", "name": "适用的身份、权限及双端同步"},
-    {"id": "bots", "name": "适用的人机参与、规则及结算"},
-    {"id": "stability", "name": "稳定性、清理和约定性能"},
-    {"id": "persistence", "name": "保存、重载和版本一致性"}
+    {
+      "id": "requirements",
+      "name": "需求与规则"
+    },
+    {
+      "id": "lifecycle",
+      "name": "进入、循环、结束、重开与清理"
+    },
+    {
+      "id": "interaction",
+      "name": "输入、选择、取消与拒绝"
+    },
+    {
+      "id": "visual",
+      "name": "UI、文字、资源与目标视口"
+    },
+    {
+      "id": "feedback",
+      "name": "动态反馈、连续动作与恢复"
+    },
+    {
+      "id": "authority",
+      "name": "适用的身份、权限及双端同步"
+    },
+    {
+      "id": "bots",
+      "name": "适用的人机参与、规则及结算"
+    },
+    {
+      "id": "stability",
+      "name": "稳定性、清理和约定性能"
+    },
+    {
+      "id": "persistence",
+      "name": "保存、重载和版本一致性"
+    }
   ],
   "questions": [
-    {"id": "F01", "family": "functional", "text": "首次进入能否理解目标、当前状态和下一步操作？"},
-    {"id": "F02", "family": "functional", "text": "全部确认需求、特殊规则和必要页面是否实现并有检查依据？"},
-    {"id": "F03", "family": "functional", "text": "选择、执行、确认、取消、拒绝和结果是否组成完整过程？"},
-    {"id": "F04", "family": "functional", "text": "成功、失败、重开、退出及再次进入是否正确清理旧状态？"},
-    {"id": "F05", "family": "functional", "text": "连点、长按、错误输入和时机变化会否重复结算或卡住？"},
-    {"id": "F06", "family": "functional", "text": "适用的多端身份、归属、权限和结果是否正确，人机是否遵守相同规则？"},
-    {"id": "F07", "family": "functional", "text": "约定的拥挤状态、长文字、极值、负载及视口变化下是否仍可运行操作？"},
-    {"id": "F08", "family": "functional", "text": "保存冷启动、风险及旧问题回归是否检查，交付是否依赖未记录手工步骤？"},
-    {"id": "V01", "family": "visual", "text": "是否符合确认的视觉要求并突出关键内容？"},
-    {"id": "V02", "family": "visual", "text": "文字、数字、长文和复杂背景在实际画面中是否可读？"},
-    {"id": "V03", "family": "visual", "text": "布局、遮挡、裁切、边框、切片和控件状态是否正确？"},
-    {"id": "V04", "family": "visual", "text": "素材是否已导入应用，比例、状态及资源身份是否正确？"},
-    {"id": "V05", "family": "visual", "text": "玩家能否理解输入回应、动作来源、目标、过程与结果？"},
-    {"id": "V06", "family": "visual", "text": "约定的动画音效特效是否工作，连续触发或取消后能否恢复？"},
-    {"id": "V07", "family": "visual", "text": "可点区域与画面位置是否一致，目标分辨率与比例下是否可操作？"},
-    {"id": "V08", "family": "visual", "text": "是否擅自删减表现或改变设计，剩余差异是否有明确处理？"}
+    {
+      "id": "F01",
+      "family": "functional",
+      "text": "首次进入能否理解目标、当前状态和下一步操作？"
+    },
+    {
+      "id": "F02",
+      "family": "functional",
+      "text": "全部确认需求、特殊规则和必要页面是否实现并有检查依据？"
+    },
+    {
+      "id": "F03",
+      "family": "functional",
+      "text": "选择、执行、确认、取消、拒绝和结果是否组成完整过程？"
+    },
+    {
+      "id": "F04",
+      "family": "functional",
+      "text": "成功、失败、重开、退出及再次进入是否正确清理旧状态？"
+    },
+    {
+      "id": "F05",
+      "family": "functional",
+      "text": "连点、长按、错误输入和时机变化会否重复结算或卡住？"
+    },
+    {
+      "id": "F06",
+      "family": "functional",
+      "text": "适用的多端身份、归属、权限和结果是否正确，人机是否遵守相同规则？"
+    },
+    {
+      "id": "F07",
+      "family": "functional",
+      "text": "约定的拥挤状态、长文字、极值、负载及视口变化下是否仍可运行操作？"
+    },
+    {
+      "id": "F08",
+      "family": "functional",
+      "text": "保存冷启动、风险及旧问题回归是否检查，交付是否依赖未记录手工步骤？"
+    },
+    {
+      "id": "V01",
+      "family": "visual",
+      "text": "是否符合确认的视觉要求并突出关键内容？"
+    },
+    {
+      "id": "V02",
+      "family": "visual",
+      "text": "文字、数字、长文和复杂背景在实际画面中是否可读？"
+    },
+    {
+      "id": "V03",
+      "family": "visual",
+      "text": "布局、遮挡、裁切、边框、切片和控件状态是否正确？"
+    },
+    {
+      "id": "V04",
+      "family": "visual",
+      "text": "素材是否已导入应用，比例、状态及资源身份是否正确？"
+    },
+    {
+      "id": "V05",
+      "family": "visual",
+      "text": "玩家能否理解输入回应、动作来源、目标、过程与结果？"
+    },
+    {
+      "id": "V06",
+      "family": "visual",
+      "text": "约定的动画音效特效是否工作，连续触发或取消后能否恢复？"
+    },
+    {
+      "id": "V07",
+      "family": "visual",
+      "text": "可点区域与画面位置是否一致，目标分辨率与比例下是否可操作？"
+    },
+    {
+      "id": "V08",
+      "family": "visual",
+      "text": "是否擅自删减表现或改变设计，剩余差异是否有明确处理？"
+    }
   ]
 }

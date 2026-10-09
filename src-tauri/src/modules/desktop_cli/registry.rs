@@ -76,7 +76,7 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             "Update production workflow",
             object_schema(
                 json!({"taskId":{"type":"string"},"expectedRevision":{"type":"integer","minimum":0},
-                "operation":{"type":"string","enum":["initialize","configure","publish-questions","submit-document","register-evidence","set-milestone","save-issue","save-round","complete-stage","save-knowledge"]},
+                "operation":{"type":"string","enum":["initialize","configure","publish-questions","register-artifact","update-stage","register-approved-template","submit-document","register-evidence","set-milestone","save-issue","save-round","complete-stage","save-knowledge"]},
                 "data":{"type":"object","description":"initialize: questionMode; submit-document: kind/path; register-evidence: id/path/kind/captureType/reviewed/description; set-milestone: name/evidenceIds; save-issue: id/kind/status/stage/description/fix/recheck/evidenceIds/resumeWhen; save-round: number/close/checks/questions/evidenceIds; complete-stage: stage/summary/checks; save-knowledge: entries; configure: questionMode/playerMode/taskTemplate/artTemplate; publish-questions: id/title/questions (id/text/options/optional), binding supplied by Desktop. Record saved-file versions through production version."}}),
                 &["expectedRevision", "operation", "data"],
             ),
@@ -214,6 +214,7 @@ pub(crate) fn tools() -> Vec<CliCommand> {
                         "enum": ["analysis", "command", "fileChange", "mcp", "gameInstance", "test", "web", "agent", "other"]
                     },
                     "summary": { "type": "string", "minLength": 1, "maxLength": 240 },
+                    "plan": {"type":"array","minItems":1,"maxItems":16,"items":{"type":"object","additionalProperties":false,"required":["step","status"],"properties":{"step":{"type":"string","maxLength":120},"status":{"enum":["pending","inProgress","completed","failed"]}}}},
                     "detail": { "type": "string", "maxLength": 2000 }
                 }),
                 &["status", "kind", "summary"],

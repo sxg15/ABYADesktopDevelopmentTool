@@ -404,3 +404,9 @@ export interface ArchiveTransferRecord {
   updatedAt: string;
   completedAt?: string;
 }
+
+export interface ExecutionSettingsView {
+  settings:{model?:string;effort?:string;approvalPolicy?:string;approvalsReviewer?:string;sandboxPolicy?:{type:string}};
+  models:{model:string;displayName:string;defaultReasoningEffort:string;supportedReasoningEfforts:{reasoningEffort:string;description:string}[]}[];
+  running:boolean;connected:boolean;
+}

@@ -260,6 +260,36 @@ impl GrokTerminalService {
         self.conversation(task_id, conversation_id)
     }
 
+    pub fn record_reported_plan(
+        &self,
+        task_id: &str,
+        conversation_id: &str,
+        steps: &[(String, CodexPlanStepStatus)],
+        summary: &str,
+    ) -> AppResult<CodexWorkflowSnapshot> {
+        self.conversation(task_id, conversation_id)?;
+        let task = self.tasks.get(task_id)?;
+        let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);
+        let _guard = self.workflow_write_lock.lock();
+        let mut workflow = load_workflow(&directory, task_id, conversation_id)?;
+        let turn = workflow
+            .current_turn_id
+            .clone()
+            .ok_or_else(|| AppError::validation("请在运行中的会话登记步骤。"))?;
+        if workflow
+            .turns
+            .iter()
+            .find(|t| t.id == turn)
+            .is_some_and(|t| t.completed_at.is_some())
+        {
+            return Err(AppError::validation("这一轮已经结束，请在新一轮登记步骤。"));
+        }
+        workflow.update_plan(&turn, Some(summary), steps);
+        save_workflow(&directory, &workflow, "planUpdated")?;
+        send_workflow_to_live_session(&self.sessions, conversation_id, &workflow);
+        Ok(workflow)
+    }
+
     pub fn record_reported_activity(
         &self,
         task_id: &str,

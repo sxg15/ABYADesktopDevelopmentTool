@@ -142,6 +142,13 @@ impl CodexTerminalService {
             } else {
                 "waitingForApproval"
             }
+        } else if production.record.as_ref().is_some_and(|r| {
+            production
+                .stage_statuses
+                .get(&r.current_stage)
+                .is_some_and(|s| s == "blocked")
+        }) {
+            "blocked"
         } else if queue.as_ref().is_some_and(|q| q.status == "needsResume") {
             "failed"
         } else if active && !runtime {

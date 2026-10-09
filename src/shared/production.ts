@@ -5,6 +5,7 @@ export interface ProductionDocument {
   content: string; gameVersion?: string; submittedAt: string;
 }
 export interface ProductionEvidence {
+  stage?: string;
   id: string; path: string; sha256: string; bytes: number; kind: string;
   captureType: string; version: string; reviewed: boolean; description: string;
   recordedAt: string; cycle: number;
@@ -20,6 +21,7 @@ export interface ProductionPolicy {
   questions: { id: string; text: string; family: string }[];
 }
 export interface ProductionIssue {
+  title?: string; affectedStages?: string[]; blockedOperations?: string[];
   id: string; kind: string; status: string; stage: string; description: string;
   fix?: string; recheck?: string; resumeWhen?: string; evidenceIds?: string[];
 }
@@ -32,6 +34,9 @@ export interface ProductionRound {
   evidenceIds?: string[]; startedAt?: string; closedAt?: string;
 }
 export interface ProductionRecord {
+  artifacts?: ProductionArtifact[];
+  stageUpdates?: Record<string, { summary: string; nextAction?: string; updatedAt: string }>;
+  events?: {stage:string;status:string;at:string;cycle:number;revision:number}[];
   playerMode?: "unspecified" | "single" | "multiplayer";
   questionGroups?: IntakeQuestionGroup[];
   taskId: string; revision: number; workflowVersion: string; questionMode: string;
@@ -44,10 +49,13 @@ export interface ProductionRecord {
   skillPins: TaskSkill[]; legacyRecord?: string; updatedAt: string;
 }
 export interface ProductionView {
+  stageStatuses?: Record<string,string>;
+  artifacts?: ProductionArtifact[];
   record?: ProductionRecord; policy: ProductionPolicy; warnings: string[];
   reportPaths: string[]; availableUpdate: boolean;
 }
 export const productionApi = {
+  timing: (taskId:string)=>invoke<{executionMs:number|null;toolMs:number|null;answerWaitMs:number|null;approvalWaitMs:number|null;pauseMs:number|null;connectionMs:number|null;unfinishedTurns:number;note:string}>("get_production_timing",{taskId}),
   submitAnswers: (taskId:string,expectedRevision:number,id:string,answers:Record<string,string>) =>
     invoke<QuestionSubmission>("submit_intake_answers",{input:{taskId,expectedRevision,operation:"submit-answers",data:{id,answers}}}),
   continueTask: (taskId:string,conversationId:string,afterRevision?:number) => invoke<IntakeContinuation>("continue_codex_task",{taskId,conversationId,afterRevision}),
@@ -91,9 +99,15 @@ export const continuationMessages: Record<IntakeContinuation["status"],string> =
 };
 
 export interface IntakeQuestionGroup {
+  stage?: string; cycle?: number;
   id: string; title: string; provider: "codex" | "grok"; conversationId: string;
   nativeSessionId?: string; status: string; publishedAt: string; updatedAt: string;
   questions: { id: string; text: string; options: string[]; optional: boolean }[];
   draft: Record<string, string>;
   answers: { revision: number; answers: Record<string, string>; submittedAt: string }[];
+}
+
+export interface ProductionArtifact {
+  id: string; path: string; stage: string; title: string; summary?: string;
+  status: string; cycle?: number; updatedAt?: string; exists?: boolean; legacy?: boolean;
 }

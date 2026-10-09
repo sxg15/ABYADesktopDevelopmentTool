@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProductionPanel } from "./ProductionPanel";
 import { SkillLibrary } from "./SkillLibrary";
 import { productionApi, type ProductionView } from "../../shared/production";
-vi.mock("../../shared/production", () => ({ productionApi: { get: vi.fn(), update: vi.fn(), decide: vi.fn(), upgrade: vi.fn(), skills: vi.fn(), readSkill: vi.fn(), open: vi.fn() } }));
+vi.mock("../../shared/production", () => ({ productionApi: { get: vi.fn(), update: vi.fn(), decide: vi.fn(), upgrade: vi.fn(), skills: vi.fn(), readSkill: vi.fn(), open: vi.fn(), revealDocument: vi.fn(), revealReport: vi.fn(), answer: vi.fn() } }));
 const fixture = (): ProductionView => ({
   policy: { workflowVersion: "1.1.0", stages: [{ id: "requirements", name: "需求", approval: "requirements" }], dimensions: [], questions: [] },
   warnings: [], reportPaths: [], availableUpdate: false,
@@ -12,8 +12,25 @@ const fixture = (): ProductionView => ({
     stages: { requirements: "awaiting-confirmation" }, documents: { requirements: { kind: "requirements", revision: 2, path: "req.md", sha256: "hash-2", content: "Review this exact version", submittedAt: "now" } },
     approvals: [], versionDetails: {}, issues: [], evidence: [], rounds: [], milestones: {}, knowledge: [], skillPins: [], updatedAt: "now" },
 });
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); sessionStorage.clear(); });
 describe("Production decisions", () => {
+  it("filters by selected stage and keeps selection across refreshes without changing production", async () => {
+    const value=fixture();value.policy.stages.push({id:"plan",name:"方案",approval:"plan"});
+    value.record!.currentStage="plan";value.record!.stages.plan="blocked";
+    value.artifacts=[{id:"draft",stage:"plan",title:"Execution draft",path:"plan.md",status:"draft",exists:true}];
+    value.record!.issues=[{id:"recording",stage:"plan",kind:"blocker",status:"open",title:"Wrong recording",description:"Wrong window",affectedStages:["plan"]}];
+    vi.mocked(productionApi.get).mockResolvedValue(value);
+    render(<ProductionPanel taskId="a" active locale="en-US"/>);
+    await screen.findByText("Execution draft");expect(screen.queryByText(/Requirements · Version/)).toBeNull();
+    fireEvent.click(screen.getByRole("button",{name:/1 Requirements/}));
+    expect(screen.queryByText("Execution draft")).toBeNull();expect(screen.queryByText("Wrong recording")).toBeNull();
+    fireEvent.click(screen.getByRole("button",{name:"Refresh"}));
+    await waitFor(()=>expect(screen.getByRole("button",{name:/1 Requirements/}).getAttribute("aria-pressed")).toBe("true"));
+    expect(productionApi.update).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button",{name:/2 Plan/}));
+    fireEvent.click(screen.getByRole("button",{name:"Show in File Explorer"}));
+    expect(productionApi.revealDocument).toHaveBeenCalledWith("a","plan.md");
+  });
   it("submits only the displayed revision and hash after the user's click, then continues", async () => {
     const initial = fixture(); const accepted = fixture();
     accepted.record!.stages.requirements = "passed";
@@ -22,7 +39,8 @@ describe("Production decisions", () => {
     vi.mocked(productionApi.decide).mockImplementation(async () => { vi.mocked(productionApi.get).mockResolvedValue(accepted); return accepted; });
     const resume = vi.fn().mockResolvedValue(undefined);
     render(<ProductionPanel taskId="a" active locale="en-US" onContinue={resume} />);
-    expect(await screen.findByText("Review this exact version")).toBeTruthy();
+    expect(await screen.findByRole("button", {name:"Show in File Explorer"})).toBeTruthy();
+    expect(screen.queryByText("Review this exact version")).toBeNull();
     expect(productionApi.decide).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Accept and continue" }));
     await waitFor(() => expect(productionApi.decide).toHaveBeenCalledWith("a", 7, "requirements", "hash-2", true, ""));

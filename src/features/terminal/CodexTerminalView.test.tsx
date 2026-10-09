@@ -47,6 +47,7 @@ const terminalApiMock = vi.hoisted(() => ({
 }));
 
 const terminalGrid = vi.hoisted(() => ({ cols: 80, rows: 24 }));
+const terminalEvents = vi.hoisted(() => ({ resize: undefined as undefined | ((size:{cols:number;rows:number})=>void), focus:vi.fn() }));
 const resizeObservers = vi.hoisted(() => ({
   callbacks: [] as ResizeObserverCallback[],
 }));
@@ -91,8 +92,9 @@ vi.mock("@xterm/xterm", () => ({
     onData() {
       return { dispose() {} };
     }
-    onResize() {
-      return { dispose() {} };
+    onResize(callback:(size:{cols:number;rows:number})=>void) {
+      terminalEvents.resize=callback;
+      return { dispose() { terminalEvents.resize=undefined; } };
     }
     onScroll() {
       return { dispose() {} };
@@ -103,7 +105,7 @@ vi.mock("@xterm/xterm", () => ({
     }
     scrollToLine() {}
     scrollToBottom() {}
-    focus() {}
+    focus() { terminalEvents.focus(); }
     dispose() {}
   },
 }));
@@ -288,6 +290,19 @@ describe("Codex conversation list", () => {
 });
 
 describe("terminal open sizing", () => {
+  it("defers resize until attach completes and restores input focus", async () => {
+    let finish!:(state:Awaited<ReturnType<typeof terminalApiMock.open>>)=>void;
+    terminalApiMock.open.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;}));
+    renderView();await screen.findAllByText("Original title");giveHostLayout();notifyResize();
+    await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+    terminalGrid.cols=110;terminalGrid.rows=35;
+    terminalEvents.resize?.({cols:110,rows:35});
+    expect(terminalApiMock.resize).not.toHaveBeenCalled();
+    terminalEvents.focus.mockClear();
+    finish({taskId:"task-1",conversationId:"conversation-1",status:"running",pid:10,workingDirectory:"D:\\Workspaces\\task-1",lastError:""});
+    await waitFor(()=>expect(terminalApiMock.resize).toHaveBeenCalledWith("codex","conversation-1",110,35));
+    expect(terminalEvents.focus).toHaveBeenCalled();
+  });
   it("automatically connects the exact requested conversation and acknowledges only after open", async () => {
     const other = { ...conversation, id: "other", title: "Other conversation" };
     terminalApiMock.listConversations.mockResolvedValueOnce([conversation, other]);

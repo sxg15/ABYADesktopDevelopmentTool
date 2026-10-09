@@ -13,7 +13,7 @@ task-to-instance history relationships.
 
 Production v1.2 adds playerMode (unspecified/single/multiplayer) and durable questionGroups.
 Legacy records default to unspecified and no questions. Publishing questions is agent-accessible
-only during requirements/ask, with a validated Desktop-owned conversation binding. User-only
+in the current stage when questions are enabled, with a validated Desktop-owned conversation binding. User-only
 production_answer saves drafts, submits, amends, cancels or changes player mode. Revisions protect
 against stale writes and duplicate submission. Prior answers remain immutable; answers are not
 document approvals. Changes invalidate downstream stages; existing version resubmission starts
@@ -198,3 +198,7 @@ Runtime image paths in completed CLI activity details are previewable in the exi
 ## Legacy default workspace repair
 prepare_terminal_workspace runs before a new provider terminal opens. Only direct children of the old LOCALAPPDATA default root qualify; active session leases prevent migration. Copy into a unique staging directory under the new USERPROFILE default root, reject reparse points, then rename and conditionally update the database path. Keep the original directory as a recovery copy. Conflicts/errors preserve both source and any staging data for inspection; never overwrite or recursively delete user content. Task/conversation IDs and native session metadata remain unchanged. Repeated opens are idempotent. Test binary assets, conversation preservation, custom roots and database path updates.
 
+
+## Stage workspace update
+
+Workflow 1.3 adds a stage-selected workspace, draft artifact registration, current-stage progress, stage-specific questions, scoped issue impacts and approval-bound template choices. register-approved-template requires the approved document hash and explicit template ID. configure of the existing template is idempotent. Compatible policy upgrades keep decisions, rounds and cycle with Skill backups. Question answers invalidate their stage and downstream only. issue scope changes require a reason; completed stages still enforce unresolved required issues. ProductionView effective statuses explain pending answers/blockers without altering accepted documents on read. Fixed legacy draft paths appear as drafts; no recursive file discovery. Files remain validated before revealing. Stage transitions are timestamped automatically and exported in reports. Test scoped blockers, draft discovery, approval-preserving backfill and stage questions with real persistence fixtures.

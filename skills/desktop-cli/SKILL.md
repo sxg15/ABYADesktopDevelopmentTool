@@ -57,3 +57,9 @@ Managed terminals use a random local-only named pipe with explicit owner and ava
 
 
 Pipe clients request explicit data rights without FILE_CREATE_PIPE_INSTANCE and verify ABYA_DESKTOP_PID before transmitting their session credential. Sandbox SIDs cannot create additional server instances. Invalid sessions and server identity mismatches use CLI exit code 4.
+
+Recorder capability metadata reports windows-graphics-capture. The input remains a managed instance ID; arbitrary HWND/monitor selection is not exposed to callers. GPU window capture uses the existing pinned FFmpeg runtime, without a GDI fallback.
+
+## Stage workspace update
+
+conversation report accepts optional plan objects with step and pending/inProgress/completed/failed status. Provider identity comes from the authenticated binding. production update additionally accepts register-artifact, update-stage and register-approved-template. Stage questions and issue affectedStages/blockedOperations are documented in production-records; user answer/approval operations remain APP-only.

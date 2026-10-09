@@ -84,6 +84,8 @@ function App() {
             return (
               <button
                 key={item.id}
+                aria-label={t(item.label)}
+                title={t(item.label)}
                 className={view === item.id ? "active" : ""}
                 onClick={() => setView(item.id)}
               >

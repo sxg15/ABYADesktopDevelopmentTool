@@ -17,6 +17,14 @@ TerminalConnectionRequest connects an exact existing conversation requested by i
 It selects/mounts that terminal, waits for successful open/reattach, then resolves once. Missing
 or archived conversations fail; never create a replacement. A request waits for real layout,
 preserves normal native trust/approval handling and does not itself start a model turn.
+Do not send PTY resizes while attachment is unresolved; apply the latest measured size after it
+resolves, and focus the visible terminal after attach/Continue. A live connection can still be
+stopped while the model state is paused. PTY input/resize adapters use spawn_blocking, allowing
+cursor-query replies and UI commands to proceed while Windows terminal operations are blocked.
+Historical replay is plain text with CRLF; strip old ANSI queries and modes before xterm parsing.
+Only live output may request terminal replies. Preserve raw transcripts on disk for diagnostics.
+The pinned portable-pty patch disables Windows parent-cursor inheritance: each embedded terminal
+starts independently, without a ConPTY create/close handshake tied to old frontend coordinates.
 
 Codex controls distinguish Pause task, Continue task and Reconnect terminal. Continue goes through
 the persistent queue API; reconnection only restores the terminal attachment. Pause cancels pending
@@ -101,3 +109,7 @@ The terminal intercepts Ctrl+V/Shift+V before forwarding keystrokes. Read native
 
 
 The Codex project-folder icon opens a read-only task path and one-time saved-project instructions for desktop versions that do not show CLI-native projects. The user can select/copy the path; this never accepts an arbitrary cwd.
+
+## Stage workspace update
+
+The existing top conversation steps remain the per-turn plan surface. CLI conversation report can carry a validated plan (1-16 unique named steps, at most one inProgress). Plans preserve activity-linked historical IDs on edits. All-plan-completed does not imply native turn completed. Stage navigation and conversation plans remain separate. Execution settings are displayed above the terminal and use typed provider APIs, with pending edits, failure feedback and explicit next-turn timing.

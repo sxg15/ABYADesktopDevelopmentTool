@@ -9,7 +9,7 @@ const zh = {
   planReport: "需求与方案", reviewReport: "开发与迭代", closeoutReport: "交付与复盘", issues: "问题与阻塞",
   noIssues: "暂无已登记问题", rounds: "迭代记录", noRounds: "尚未开始整体迭代", evidence: "证据", noEvidence: "暂无已登记证据",
   open: "打开", search: "搜索名称、用途或阶段", readSkill: "查看正文", select: "采用此模板", selected: "已选", scope: "当前任务固定版本",
-  upgrade: "升级流程版本", upgradeConfirm: "升级会保留历史和旧 Skill 副本，重新确认适用需求与计划。请先停止本任务终端。继续升级？",
+  upgrade: "升级流程版本", upgradeConfirm: "升级会备份当前流程资料。兼容更新保留已确认决定；制作规则变化时提示重新确认。请先暂停本任务终端。继续升级？",
   newVersion: "有新的流程版本可用，当前任务仍使用原版本。", limit: "资料完整不等于实际体验通过；运行和策划验收仍需分别完成。",
   noSkills: "没有匹配的 Skill", back: "返回列表", source: "来源", verified: "已记录审阅", unreviewed: "未审阅", readonly: "只读查看",
   completed: "已完成", none: "未提供", continueHint: "决定已保存，请在此任务终端继续。", close: "关闭", fullTask: "完整制作 / 较大改动", scopedTask: "局部任务",
@@ -34,6 +34,6 @@ const en: Record<keyof typeof zh, string> = {
 };
 export const productionText = (locale?: string) => locale === "en-US" ? en : zh;
 const stages: Record<string, string> = { requirements: "Requirements", resources: "Resources", plan: "Plan", implementation: "Implementation", review: "8+4 review", delivery: "Delivery", closeout: "Closeout" };
-const statuses: Record<string, string> = { "not-started": "未开始", "in-progress": "进行中", "awaiting-confirmation": "待确认", blocked: "阻塞", passed: "已通过", closed: "已关闭", stopped: "已停止", open: "未关闭", resolved: "已解决", rejected: "已退回", accepted: "已确认", "not-applicable": "不适用" };
+const statuses: Record<string, string> = { "waiting-for-answers": "待回答", "awaiting-recheck": "待复验", "not-started": "未开始", "in-progress": "进行中", "awaiting-confirmation": "待确认", blocked: "遇到问题", passed: "已通过", closed: "已关闭", stopped: "已停止", open: "未关闭", resolved: "已解决", rejected: "已退回", accepted: "已确认", "not-applicable": "不适用" };
 export const stageName = (id: string, fallback: string, locale?: string) => locale === "en-US" ? stages[id] ?? id : fallback;
 export const statusName = (id: string, locale?: string) => locale === "en-US" ? id.replace(/-/g, " ") : statuses[id] ?? id;

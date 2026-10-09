@@ -31,12 +31,12 @@ it("keeps submit-and-continue alive when polling observes submitted answers befo
 });
 it("opens pending questions without requiring the production tab and keeps drafts after closing", async () => {
   render(<TaskIntakeDialog taskId="task" active />);
-  await screen.findByRole("dialog", { name: "需求问答" });
+  await screen.findByRole("dialog", { name: "阶段问答" });
   fireEvent.click(screen.getByLabelText("多人"));
   fireEvent.click(screen.getByText("稍后回答 / 关闭"));
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(productionApi.answer).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByText("需求有待回答问题 · 继续填写"));
+  fireEvent.click(screen.getByText("有待回答问题 · 继续填写"));
   await screen.findByRole("dialog");
   expect((screen.getByLabelText("单人还是多人？") as HTMLTextAreaElement).value).toBe("多人");
 });
@@ -51,7 +51,7 @@ it("Escape defers the question without submitting or cancelling it", async () =>
 it("does not reopen deferred questions on mounting again, but the explicit entry works", async () => {
   sessionStorage.setItem("abya-intake-later:task:rules:0", "1");
   render(<TaskIntakeDialog taskId="task" active />);
-  await screen.findByText("需求有待回答问题 · 继续填写");
+  await screen.findByText("有待回答问题 · 继续填写");
   expect(screen.queryByRole("dialog")).toBeNull();
   window.dispatchEvent(new CustomEvent("abya:open-intake", { detail: { taskId: "task", groupId: "rules" } }));
   await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
