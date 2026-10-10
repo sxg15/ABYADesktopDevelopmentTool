@@ -19,6 +19,10 @@ run through ComSpec; fixed workspace and no-alt-screen are not user-editable arg
 CLI settings, login, sandbox, approvals and trust remain user-owned. Never copy provider
 credentials into task workspaces or expose them through DTOs.
 
+The `app-server --help` capability probe runs without a Windows console, with all
+standard streams disconnected. It must not open Windows Terminal during availability
+checks; use the same CREATE_NO_WINDOW flag as the managed app-server process.
+
 Each APP conversation owns one runtime app-server and at most one live TUI. A separate
 cached app-server handles metadata only. TUI uses the authenticated loopback endpoint
 and exact saved native ID. Runtime isolation permits replacing a stopped executor without

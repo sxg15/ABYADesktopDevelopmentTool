@@ -383,6 +383,8 @@ pub(super) fn supports_app_server(codex: &ResolvedCodex) -> bool {
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
+    #[cfg(windows)]
+    std::os::windows::process::CommandExt::creation_flags(&mut command, super::CREATE_NO_WINDOW);
     command.status().is_ok_and(|status| status.success())
 }
 
