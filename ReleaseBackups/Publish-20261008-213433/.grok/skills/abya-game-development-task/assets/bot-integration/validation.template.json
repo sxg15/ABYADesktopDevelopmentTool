@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "status": "runtime-unverified",
+  "runId": "",
+  "target": { "archiveId": "", "levelId": "", "buildId": "" },
+  "provider": "codex",
+  "definitionsHash": "",
+  "archiveHash": "",
+  "staticChecks": [],
+  "evidence": [],
+  "cases": [],
+  "uncovered": ["尚未执行真实运行验收"]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "abya-cli",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "abya": "./bin/abya.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/cli.test.mjs test/desktop-contract.test.mjs"
+  }
+}

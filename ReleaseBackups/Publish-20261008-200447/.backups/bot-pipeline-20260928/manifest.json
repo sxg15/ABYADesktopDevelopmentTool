@@ -1,0 +1,182 @@
+[
+  {
+    "path": ".codex/skills/abya-game-development-task/SKILL.md",
+    "existedBefore": true,
+    "beforeHash": "824A47961D88189D31E4A4CC9855797771C574CBFFF2CB891E1898A6A4072183",
+    "afterHash": "21693A46B8A6F496B0494FCD15CD6B9E392B6271FA627B380702730F15511DED"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/assets/gameplay-architecture.v1.template.json",
+    "existedBefore": true,
+    "beforeHash": "3C775F33B18F97DD071B1F2D68D364FD4E5DE0A401FB46F98626DC1D8633001C",
+    "afterHash": "D6B1B0A086670A4202DD0EF1FD0EC833D95A1B7F6A6239051E528BADAA91D118"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/references/gameplay-architecture.md",
+    "existedBefore": true,
+    "beforeHash": "1F4C355EF88202D8291CFA1A320C4C417161E7F703BB394A758BAA09B2BF5EB6",
+    "afterHash": "69936F4B5DF0705D04EB29B0B96FF2E5FE7C71C3EF2BAB058063613CDEE6493C"
+  },
+  {
+    "path": ".codex/skills/abya-task-template-multiplayer-workflow/SKILL.md",
+    "existedBefore": true,
+    "beforeHash": "B024091870C1A2691354740D00B1DFF1CF27461797BA57FE8A04DB5537871E50",
+    "afterHash": "686C973DC7F3DB5DF8013CCB943E58711B03ED00FF29D2BA8B977553680942C4"
+  },
+  {
+    "path": ".codex/skills/abya-task-template-multiplayer-workflow/references/network-and-acceptance.md",
+    "existedBefore": true,
+    "beforeHash": "91D8C06B6E73DE4F68E207CB1C30E18AEDCAD5EC5A467B00E8355036946E65AA",
+    "afterHash": "C7CB97A15896009659FB7A0D633969D2B53010420446DA6B21BAABF41256D6F4"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/SKILL.md",
+    "existedBefore": true,
+    "beforeHash": "0B34A8632834777E53F6E5A9C2622F63710A251DA018374C4B30FE2CFCF49700",
+    "afterHash": "F46B949C7C479C54C1E3EF691FD8CF063A229A2412787B84BEC6E2658BDB0F9A"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/assets/gameplay-architecture.v1.template.json",
+    "existedBefore": true,
+    "beforeHash": "3C775F33B18F97DD071B1F2D68D364FD4E5DE0A401FB46F98626DC1D8633001C",
+    "afterHash": "D6B1B0A086670A4202DD0EF1FD0EC833D95A1B7F6A6239051E528BADAA91D118"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/references/gameplay-architecture.md",
+    "existedBefore": true,
+    "beforeHash": "1F4C355EF88202D8291CFA1A320C4C417161E7F703BB394A758BAA09B2BF5EB6",
+    "afterHash": "69936F4B5DF0705D04EB29B0B96FF2E5FE7C71C3EF2BAB058063613CDEE6493C"
+  },
+  {
+    "path": ".grok/skills/abya-task-template-multiplayer-workflow/SKILL.md",
+    "existedBefore": true,
+    "beforeHash": "B024091870C1A2691354740D00B1DFF1CF27461797BA57FE8A04DB5537871E50",
+    "afterHash": "686C973DC7F3DB5DF8013CCB943E58711B03ED00FF29D2BA8B977553680942C4"
+  },
+  {
+    "path": ".grok/skills/abya-task-template-multiplayer-workflow/references/network-and-acceptance.md",
+    "existedBefore": true,
+    "beforeHash": "91D8C06B6E73DE4F68E207CB1C30E18AEDCAD5EC5A467B00E8355036946E65AA",
+    "afterHash": "C7CB97A15896009659FB7A0D633969D2B53010420446DA6B21BAABF41256D6F4"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/assets/bot-integration/plan.schema.json",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "45164C73B85CC3D5C620CE184AC030C31D714F6383D5A208572DDF5BE3FBCF93"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/assets/bot-integration/plan.template.json",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "480F45D805D00290874A0C23E6723FF93F0082F2219A78F0DE8DC9758C4C5407"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/assets/bot-integration/validation.schema.json",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "882B8CB29D450E012E3CFC8697AC41AF556BE83B1DD771D8E5FD954D972D27FA"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/assets/bot-integration/validation.template.json",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "06A4C7148E018D9488FD6AAD0421228DF660605E36292B21B0B009BA1777F0AE"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/references/bot-artifacts.md",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "AC26A8DEF95C502D34843B98FE4C1DD8737128DDEC810094DCD48A1037580D76"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/references/bot-development.md",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "7C960DB5A864C581884DB4403BB3470FC4189FCA5E87725F20FF63292C6AE6D4"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/scripts/bot-artifact-core.mjs",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "7024D8B6A64EC7A20429017A0E1E9E1F3EF0A1B29B76EA33240F456E4506A571"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/scripts/bot-definition-checks.mjs",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "1FBB13CF7F66FFA06C3BD195F62FE90483D1652FC26615B8CF5456AC95C2EEEF"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/scripts/bot-evidence-checks.mjs",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "0DC58401761CCC34A8C91A1C068C22D0C40A0E2F682DF2A2E0628FA20502A1E1"
+  },
+  {
+    "path": ".codex/skills/abya-game-development-task/scripts/validate-bot-artifacts.mjs",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "D3249BC4824D96727BE1A33CE1E2E7B75ADC2AFCCD0A5E31824368920C5E203E"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/assets/bot-integration/plan.schema.json",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "45164C73B85CC3D5C620CE184AC030C31D714F6383D5A208572DDF5BE3FBCF93"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/assets/bot-integration/plan.template.json",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "480F45D805D00290874A0C23E6723FF93F0082F2219A78F0DE8DC9758C4C5407"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/assets/bot-integration/validation.schema.json",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "882B8CB29D450E012E3CFC8697AC41AF556BE83B1DD771D8E5FD954D972D27FA"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/assets/bot-integration/validation.template.json",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "06A4C7148E018D9488FD6AAD0421228DF660605E36292B21B0B009BA1777F0AE"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/references/bot-artifacts.md",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "AC26A8DEF95C502D34843B98FE4C1DD8737128DDEC810094DCD48A1037580D76"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/references/bot-development.md",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "7C960DB5A864C581884DB4403BB3470FC4189FCA5E87725F20FF63292C6AE6D4"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/scripts/bot-artifact-core.mjs",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "7024D8B6A64EC7A20429017A0E1E9E1F3EF0A1B29B76EA33240F456E4506A571"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/scripts/bot-definition-checks.mjs",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "1FBB13CF7F66FFA06C3BD195F62FE90483D1652FC26615B8CF5456AC95C2EEEF"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/scripts/bot-evidence-checks.mjs",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "0DC58401761CCC34A8C91A1C068C22D0C40A0E2F682DF2A2E0628FA20502A1E1"
+  },
+  {
+    "path": ".grok/skills/abya-game-development-task/scripts/validate-bot-artifacts.mjs",
+    "existedBefore": false,
+    "beforeHash": null,
+    "afterHash": "D3249BC4824D96727BE1A33CE1E2E7B75ADC2AFCCD0A5E31824368920C5E203E"
+  }
+]

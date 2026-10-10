@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "enabled": false,
+  "target": { "archiveId": "", "levelId": "" },
+  "networkMode": "multiplayer",
+  "playerModel": "manual",
+  "changedDefinitionIds": [],
+  "removedDefinitionIds": [],
+  "allowRemoveAll": false,
+  "bots": []
+}

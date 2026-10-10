@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABYA 多人游戏制作流程"
+  short_description: "从玩法与联机架构到内容导入、多端界面、存档发布和性能验收的通用流程"
+  default_prompt: "使用 $abya-task-template-multiplayer-workflow，按当前玩法要求制作或迭代多人游戏，并完成存档应用、真实联机与性能验证。"

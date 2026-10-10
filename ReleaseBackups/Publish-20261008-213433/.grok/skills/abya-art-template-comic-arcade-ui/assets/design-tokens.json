@@ -1,0 +1,57 @@
+{
+  "basis": "Reusable visual suggestions; adapt to target viewport and product semantics.",
+  "colors": {
+    "background": "#BFC0C2",
+    "paper": "#F4F4F0",
+    "ink": "#1C1D24",
+    "accent": "#00DFA9",
+    "action": "#FFD027",
+    "danger": "#F05261",
+    "secondary": "#555861"
+  },
+  "identityPalette": [
+    "#0EC0DB",
+    "#EC930B",
+    "#A060EC",
+    "#A6D34A",
+    "#DC51B7"
+  ],
+  "geometry": {
+    "referenceViewport": [
+      1920,
+      1080
+    ],
+    "safeMargin": 48,
+    "border": [
+      3,
+      4
+    ],
+    "shadowOffset": [
+      5,
+      8
+    ]
+  },
+  "typeSize": {
+    "title": [
+      40,
+      48
+    ],
+    "coreNumber": [
+      56,
+      72
+    ],
+    "body": [
+      24,
+      28
+    ],
+    "hint": [
+      20,
+      22
+    ]
+  },
+  "motionMs": {
+    "press": 80,
+    "hover": 100,
+    "iconPop": 120
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "product": "ABYA Desktop Development Tool",
+  "version": "0.1.0",
+  "builtAtUtc": "2026-09-24T14:45:32.0899195Z",
+  "executable": "ABYA Desktop Development Tool.exe",
+  "sha256": "61A5D15FD308A56CB07C9475177985E4D7ED50260201D519D34CF88A63895A4A",
+  "cliExecutable": "abya-desktop.exe",
+  "cliSha256": "F26068EF1159FFF72572D96EDC0286E6D6A6B1B9FEFBE5500F075F1340D8B7BA",
+  "runtimeCliVersion": "0.2.0",
+  "cliProtocolVersion": 1,
+  "nodeVersion": "v24.11.1"
+}
