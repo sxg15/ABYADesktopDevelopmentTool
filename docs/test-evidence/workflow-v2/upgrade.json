@@ -1,0 +1,9 @@
+{
+  "before": "1.2.1",
+  "after": "2.0.0",
+  "approvalsPreserved": true,
+  "roundsPreserved": true,
+  "cyclePreserved": true,
+  "selfTests": 0,
+  "stage": "implementation"
+}

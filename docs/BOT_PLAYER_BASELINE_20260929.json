@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sourceChangeset": 11355,
+  "unityVersion": "2022.3.62f2c1",
+  "buildRunId": "2702c517-13c1-478c-a9e0-3f703ff3a667",
+  "buildFinishedAt": "2026-09-29T05:28:46.897Z",
+  "buildType": "Windows x64 UGC Mono Diagnostic",
+  "playerBuildId": "b44efe8abf9147c3793830d308c940238cddda6942990862e3ad7ab856a168f7",
+  "botPrerequisitesVerified": true,
+  "botGameplayAccepted": false,
+  "evidenceDirectory": "D:/AbyaCliValidation/Bot-Player-Readiness-20260929"
+}

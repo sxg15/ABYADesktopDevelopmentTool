@@ -169,6 +169,7 @@
       "paths": [
         "scripts/",
         "src-tauri/tauri.conf.json",
+        "src-tauri/vendor/",
         "package.json",
         "tools/"
       ],

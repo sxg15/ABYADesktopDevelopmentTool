@@ -50,6 +50,14 @@ const workflow: CodexWorkflowSnapshot = {
 afterEach(cleanup);
 
 describe("Codex workflow bar", () => {
+  it("uses current model state when there is no structured plan", () => {
+    render(<CodexWorkflowBar provider="codex" conversation={conversation}
+      workflow={{...workflow,turns:workflow.turns.map(t=>({...t,plan:[]}))}}
+      control={{taskId:"task-1",conversationId:"conversation-1",state:"waitingForResponse",connection:"connected",queued:false,updatedAt:"now",sequence:1}}
+      t={translator("zh-CN")}/>);
+    expect(screen.getByText("等待模型响应，可随时暂停")).toBeTruthy();
+    expect(screen.queryByText(/等待 Codex 列出本轮计划/)).toBeNull();
+  });
   it("shows recent step activity on hover and opens the complete timeline", () => {
     render(
       <CodexWorkflowBar

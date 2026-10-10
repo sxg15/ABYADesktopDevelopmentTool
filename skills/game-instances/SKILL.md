@@ -66,6 +66,17 @@ Runtime CLI and log protocols remain outside this module.
 
 ## Validation
 
+The window recorder uses the bundled pinned FFmpeg LGPL shared build. Start selects
+the largest non-minimized window owned by the managed Player PID and captures that
+HWND through FFmpeg gfxcapture / Windows.Graphics.Capture at 15 fps to H.264 MP4, without audio. GDI is not a fallback: it may capture occluding windows over GPU-rendered content. A zero HWND is rejected; no monitor, title or executable matching is exposed. It temporarily restores and raises the
+game window without activation, then restores the prior visibility on stop, early
+failure or maximum duration. Occlusion must not replace the target content; minimization and resize can invalidate visual
+evidence. Metadata records task, instance, version, frames, times and final state.
+A Windows Job Object owns the encoder; process/APP stop finalizes or marks interruption.
+The native smoke test uses an owned brief non-activating fixture, checks actual
+encoding/dimensions and is run explicitly. Visual QA must inspect decoded frames;
+an earlier off-screen probe generated black frames and is not a passing capture.
+
 Test exact production launch and desktop-connection arguments, CLI autostart and absence of legacy launch arguments,
 Host port allocation, archive parsing, LAN client Host selection, launch
 report bounds, wait timeouts, background launch defaults, legacy visible
@@ -85,3 +96,15 @@ When changing launch options, instance data, process behavior, or validation,
 update this Skill in the same change.
 
 Rust test builds append an isolated --abya-data-root for real Player validation. Production builds do not change the game data root.
+
+A wall-clock watchdog bounds a stalled capture to maxSeconds plus five seconds of startup allowance, marks it failed and restores prior visibility. The occlusion regression decodes two video frames and checks target pixels under a separate topmost cover; static fixtures must animate to provide compositor updates.
+
+## Stage workspace update
+
+The stage workspace release retains the existing Windows Graphics Capture recorder fix. Verification must keep file completion separate from frame review and reuse the owned-window occlusion regression.
+
+## Acceptance launch consistency
+
+LAN clients inherit the selected live same-task Host's executable as well as archive/level/port. Validate the inherited executable before spawning so generic UI and CLI cannot mix Player builds within one pair.
+RuntimeBridge owns acceptance orchestration and calls this module's existing lifecycle APIs. Failed acceptance launches stop only instances created by that attempt; unrelated and reused instances are preserved.
+The generic launch dialog prefers the selected task's captured Player over global settings. The dedicated acceptance button additionally validates fingerprints and readiness. Test inherited executable/archive and task ownership.

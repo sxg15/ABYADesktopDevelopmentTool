@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::fs;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -58,9 +58,68 @@ pub(super) struct AppServerHandle {
     child: Arc<parking_lot::Mutex<Option<Child>>>,
     token_file: Arc<PathBuf>,
     executable_stamp: Option<ExecutableStamp>,
+    #[cfg(test)]
+    test_alive: bool,
 }
 
 impl AppServerHandle {
+    pub(super) fn interrupt_and_wait(&self, thread: &str) -> AppResult<()> {
+        let current = self.request(
+            "thread/read",
+            json!({"threadId":thread,"includeTurns":true}),
+        )?;
+        if let Some(turn) = current["thread"]["turns"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|t| t["status"] == "inProgress")
+        {
+            self.request(
+                "turn/interrupt",
+                json!({"threadId":thread,"turnId":turn["id"]}),
+            )?;
+            let start = Instant::now();
+            loop {
+                let state = self.request(
+                    "thread/read",
+                    json!({"threadId":thread,"includeTurns":true}),
+                )?;
+                if !state["thread"]["turns"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .any(|t| t["status"] == "inProgress")
+                {
+                    break;
+                }
+                if start.elapsed() > Duration::from_secs(10) {
+                    return Err(AppError::validation(
+                        "Codex 尚未确认暂停，权限和历史已保留，请重试暂停。",
+                    ));
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
+        }
+        Ok(())
+    }
+
+    pub(super) fn ensure_idle(&self, thread: &str) -> AppResult<()> {
+        let state = self.request(
+            "thread/read",
+            json!({"threadId":thread,"includeTurns":true}),
+        )?;
+        if state["thread"]["turns"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|t| t["status"] == "inProgress")
+        {
+            return Err(AppError::validation(
+                "原会话仍在后台执行，请先暂停 AI 再修复连接。",
+            ));
+        }
+        Ok(())
+    }
     pub(super) fn start(
         codex: &ResolvedCodex,
         on_notification: NotificationHandler,
@@ -99,6 +158,8 @@ impl AppServerHandle {
             child,
             token_file: Arc::new(token_file),
             executable_stamp: Some(executable_stamp),
+            #[cfg(test)]
+            test_alive: false,
         };
         if let Err(error) = handle.request(
             "initialize",
@@ -138,6 +199,10 @@ impl AppServerHandle {
                 "experimentalRawEvents": false
             }),
         )?;
+        let _ = super::settings::save(
+            &super::conversation_directory(Path::new(cwd), conversation_id),
+            &result,
+        );
         result
             .pointer("/thread/id")
             .and_then(Value::as_str)
@@ -168,7 +233,25 @@ impl AppServerHandle {
         task_id: &str,
         conversation_id: &str,
     ) -> AppResult<()> {
-        self.request(
+        let settings_directory = super::conversation_directory(Path::new(cwd), conversation_id);
+        let saved_settings = super::settings::read(&settings_directory)?;
+        let current = self.request(
+            "thread/read",
+            json!({"threadId":thread_id,"includeTurns":true}),
+        )?;
+        if current["thread"]["turns"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|t| t["status"] == "inProgress")
+        {
+            return Err(AppError::validation(
+                "该会话仍在后台执行。请先暂停 AI，再继续或修复连接。",
+            ));
+        }
+        // Resume of an already-loaded thread can retain its previous environment.
+        self.ensure_idle(thread_id)?;
+        let resumed = self.request(
             "thread/resume",
             json!({
                 "threadId": thread_id,
@@ -178,6 +261,20 @@ impl AppServerHandle {
                 "excludeTurns": true
             }),
         )?;
+        if resumed["thread"]["id"].as_str() != Some(thread_id) {
+            return Err(AppError::validation(
+                "Codex 返回了不同的会话 ID，已阻止继续。",
+            ));
+        }
+        if saved_settings["model"].is_string() {
+            self.request(
+                "thread/settings/update",
+                super::settings::params(thread_id, &saved_settings),
+            )?;
+            super::settings::save(&settings_directory, &saved_settings)?;
+        } else {
+            super::settings::save(&settings_directory, &resumed)?;
+        }
         Ok(())
     }
 
@@ -186,6 +283,14 @@ impl AppServerHandle {
             || self.executable_stamp != ExecutableStamp::read(&codex.path)
         {
             return false;
+        }
+        self.is_alive()
+    }
+
+    pub(super) fn is_alive(&self) -> bool {
+        #[cfg(test)]
+        if self.test_alive {
+            return true;
         }
         self.child
             .lock()
@@ -236,6 +341,37 @@ impl AppServerHandle {
             child: Arc::new(parking_lot::Mutex::new(None)),
             token_file: Arc::new(PathBuf::new()),
             executable_stamp: None,
+            test_alive: false,
+        }
+    }
+    #[cfg(test)]
+    pub(super) fn for_rpc_test(
+        handler: impl Fn(&str, Value) -> Result<Value, String> + Send + 'static,
+    ) -> Self {
+        let (sender, receiver) = mpsc::channel();
+        std::thread::spawn(move || {
+            while let Ok(command) = receiver.recv() {
+                match command {
+                    BridgeCommand::Request {
+                        method,
+                        params,
+                        response,
+                    } => {
+                        let _ = response.send(handler(&method, params));
+                    }
+                    BridgeCommand::Shutdown => break,
+                    _ => {}
+                }
+            }
+        });
+        Self {
+            endpoint: "test".into(),
+            token: String::new(),
+            sender,
+            child: Arc::new(parking_lot::Mutex::new(None)),
+            token_file: Arc::new(PathBuf::new()),
+            executable_stamp: None,
+            test_alive: true,
         }
     }
 }
@@ -502,7 +638,8 @@ fn run_bridge(
                 let Ok(value) = serde_json::from_str::<Value>(&text) else {
                     continue;
                 };
-                if let Some(id) = value.get("id").and_then(Value::as_u64)
+                if value.get("method").is_none()
+                    && let Some(id) = value.get("id").and_then(Value::as_u64)
                     && let Some(response) = pending.remove(&id)
                 {
                     if let Some(error) = value.get("error") {

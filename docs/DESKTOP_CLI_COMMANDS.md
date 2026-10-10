@@ -286,3 +286,53 @@ Input: required `sessionId`; optional `severity`, `provider`, `eventName`,
 
 Returns newest persisted WebSocket log events first. `limit` defaults to 200
 and must be from 1 through 1000. Read-only.
+
+## Production workflow (1.1)
+
+The authenticated task context owns these commands. `taskId` may be omitted in a managed session.
+`production get` returns record, pinned policy, warnings and report locations; no workflow is created by reading.
+`production update` accepts `expectedRevision`, `operation`, and object `data`. Supported operations:
+initialize, configure, submit-document, register-evidence, set-milestone, save-issue, save-round,
+complete-stage and save-knowledge. Their fields are documented in the distributed production-records.md.
+
+`production version` requires instanceId, expectedRevision and versionId. It resolves the task-owned
+instance's saved launch archive and Player files, computes their hashes, and binds the record to them.
+It accepts neither arbitrary filesystem sources nor agent-supplied hashes. Save and reload the matching
+archive/level before invoking it. Actual saved-file changes invalidate later round/delivery checks.
+`production report` regenerates three HTML reports and JSON exports from the database.
+There is no production approve command. Only a user decision in the APP can approve the current
+requirements, plan or delivery document; its displayed revision and hash are checked again.
+
+Writes reject stale revisions. Source JSON exports are not an import/approval channel. A write may
+persist in SQLite before report export fails: after any write error, read current state before retrying.
+Full tasks cannot be marked completed until current delivery acceptance and closeout have passed.
+
+`skill list` returns installed task Skills and fingerprints. `skill read` requires provider and skillId,
+and reads that entry only. Enabled production tasks retain their installed resources and policy until
+an explicit APP upgrade; upgrade requires stopped task terminals and preserves history and backups.
+
+## Managed-window recording
+
+`recording tools` reports the installed recorder. `recording start` requires instanceId and optionally
+maxSeconds (integer 5–7200, default 3600); get/stop require instanceId. Only owned running Player
+windows are permitted. The recorder targets that PID's HWND, shows it without activation for capture,
+and restores prior visibility on completion. Keep the window unobstructed and do not minimize/resize it.
+Output is 15 fps H.264 MP4 with no audio, plus task/instance/version/timing metadata and a frame count.
+A file or positive frame count is not visual acceptance. Inspect actual frames and the relevant process.
+Completed native recordings may be registered as production evidence only for the same task/version;
+interrupted or zero-frame captures are rejected. The original video and metadata remain task artifacts.
+# 2026-10-08：需求问答补充
+
+`production update` 新增 `publish-questions`：data 为 id、title、questions；每题为 id、text、options、optional。
+仅 requirements/ask 可发布，组 ID 不可重复，一次只能有一组待答。Desktop 从受管上下文注入原生会话关联。
+答案由 APP 保存、提交、修订；CLI 不提供代答或批准入口。`production get` 返回 questionGroups 和 playerMode。
+initialize/configure 支持 playerMode=unspecified/single/multiplayer；已明确人数由策划在 APP 修改。
+题目格式和续接流程见捆绑 Skill 的 production-records.md。旧任务需显式升级，普通读取不替换 Skill。
+
+## Workflow 2.0 acceptance and feedback
+
+- `production start-acceptance` → `development_production_start_acceptance`: task-bound, uses captured archive/Player fingerprints, opens a visible single-player or Host/Client group and checks initialization. No arbitrary Player override. Repeated requests reuse a live matching group or explain the partial-group conflict.
+- `production acceptance-status` → `development_production_acceptance_status`: read progress, version, instance IDs and failure/cleanup information.
+- Production mutations: `configure-acceptance` (seats, requiredTools, requireUi), `register-visual` (stage/path/title/sourceType/roles/visualVersion/groupId), `save-self-test` (id/status/observations/evidenceIds), `reuse-evidence` (id/sourceId/reason/unaffectedScope), `update-feedback` (id/status/fix/recheck/evidenceIds).
+- Agent feedback statuses are limited to in-progress and awaiting-recheck. Closing/reopening human feedback and document decisions are APP-only.
+- New tasks have no fixed rounds. Existing 1.x tasks retain pinned rules until an explicit backed-up upgrade. See the deployed production-records reference for details.

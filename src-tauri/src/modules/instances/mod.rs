@@ -1,7 +1,9 @@
 mod launch;
 mod models;
+mod recording;
 mod service;
 mod window;
+pub use recording::recorder_executable;
 
 pub use models::{
     ArchiveSelection, ConnectionState, GameInstance, InstanceOrigin, InstanceRuntimeInfo,

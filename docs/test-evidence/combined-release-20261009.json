@@ -1,0 +1,44 @@
+{
+  "manifest": {
+    "product": "ABYA Desktop Development Tool",
+    "version": "0.2.2",
+    "workflowVersion": "1.2.1",
+    "releaseLabel": "terminal-and-recorder-fix-20261009",
+    "sourceBuiltAtUtc": "2026-10-09T05:08:10.1203811Z",
+    "builtAtUtc": "2026-10-09T05:11:14.9082775Z",
+    "executable": "ABYA Desktop Development Tool.exe",
+    "sha256": "AE8AEC0DAD45EDAF58B888DC4632697B5164AECF8F291765486F5B130917FF56",
+    "cliExecutable": "abya-desktop.exe",
+    "cliSha256": "8E8770257D6A936236B07AE78DA4DE681CC324E5B2F8C3E35A620F504D093A25",
+    "runtimeCliVersion": "0.2.0",
+    "cliProtocolVersion": 1,
+    "nodeVersion": "v24.11.1"
+  },
+  "productionUnchanged": true,
+  "nativeSessionId": "01a11b8b-8a8c-7df1-b47a-3c842121c163",
+  "terminalState": {
+    "inputEnabled": true,
+    "livePasteMode": true
+  },
+  "verification": {
+    "doctor": {
+      "success": true
+    },
+    "recorder": {
+      "success": true,
+      "data": {
+        "audio": false,
+        "available": true,
+        "executable": "D:\\Unity项目\\ABYADesktopDevelopmentTool\\Publish\\tools/ffmpeg/runtime/bin/ffmpeg.exe",
+        "frameRate": 15,
+        "method": "windows-graphics-capture"
+      }
+    },
+    "production": {
+      "success": true,
+      "revision": 50,
+      "stage": "plan",
+      "approvalCount": 2
+    }
+  }
+}

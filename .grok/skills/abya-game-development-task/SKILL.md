@@ -1,272 +1,78 @@
 ---
 name: abya-game-development-task
-description: Define, assess, implement, and validate an ABYA game-development task through desktop-managed game instances and the selected instance Runtime CLI. Use for ABYA game creation, editing, testing, or feasibility work inside a desktop development task.
-when-to-use: Use when the user asks Grok to design, inspect, implement, fix, or validate an ABYA game through the ABYA Desktop Development Tool.
+description: 制作完整 ABYA 玩法、实施较大玩法改动，或执行用户指定的制作阶段。用于桌面开发任务；局部修复、查日志和阅读报告不启动整套流程。
+when-to-use: Use for complete ABYA gameplay, major gameplay changes, or an explicitly requested production stage.
 user-invocable: true
 ---
 
-# ABYA Game Development Task
+# ABYA 游戏开发任务
 
-Use this Skill inside an existing desktop development task. Do not create a
-second database task or change task status without the user's explicit
-acceptance.
+在已有桌面任务内工作，复用任务、存档、已有决定和授权。不要创建第二个数据库任务。
+仅在用户接受对应作品版本后更新任务完成状态；对话或计划结束不等于作品已验收。
 
-The desktop CLI is the control plane. Use it to discover archives, launch and
-stop task-owned game instances, inspect launch reports and logs, and proxy the
-selected instance's Runtime CLI. Never launch an unmanaged process when the
-desktop CLI can perform the operation.
+## 按本次请求加载
 
-## Workflow Visibility
+| 本次工作 | 读取资料 |
+|---|---|
+| 完整玩法或较大改动 | [制作阶段](references/production-stages.md)，到需要记录时读[任务资料](references/production-records.md) |
+| 只整理需求、选型、交付或收尾 | 只读制作阶段中对应部分及所需资料，不自动启动其他阶段 |
+| 检查或修改运行中的玩法 | [运行与实现](references/runtime-authoring.md)，按需要查 [CLI 映射](references/cli-commands.md) |
+| 可试玩版本后的反馈修改 | [人工反馈迭代](references/whole-experience-review.md)及本任务版本记录 |
+| 新增、修改或验收 Bot | 额外读[人机指南](references/bot-development.md)；未涉及的 Bot 保留 |
+| 已选多人或美术模板 | 只加载已选模板；模板补充专项约束，共同阶段和确认由本入口管理 |
 
-For every user request that needs more than one operation, publish a native
-Grok execution plan before any command, file edit, web call, CLI command, or
-game-instance action. Keep exactly one step in progress, update the plan as
-work advances, and complete or fail every step before the final response. Do
-not enter formal read-only plan mode unless ambiguity genuinely requires user
-approval.
+若本入口已在局部修复、读日志或报告任务中加载，只处理请求范围；不发起完整制作、
+模板菜单或固定轮次。已有玩法中的局部实现仍遵守适用的 Runtime、架构及保存约束。
+资料未变化且当前上下文已读过时复用，不每轮重读全部文档。
 
-The executable path is injected as ABYA_DESKTOP_CLI. In PowerShell use
-`& $env:ABYA_DESKTOP_CLI doctor --json` and then `capabilities --json`.
-Every command automatically carries ABYA_DEVELOPMENT_TASK_ID,
-ABYA_DEVELOPMENT_CONVERSATION_ID and ABYA_DEVELOPMENT_PROVIDER.
-Use `conversation bind` once to verify context and `conversation report`
-for semantic milestones. Pass a JSON object with `--input-file <file|->`.
-Read [references/cli-commands.md](references/cli-commands.md) for the exact mapping.
-Only use CLI commands for ABYA operations. There is no legacy transport fallback.
-Read capability schemas before invoking game operations. Inspect all returned
-content blocks and open every relevant image path for visual acceptance.
-Exit code 7 or outcome_unknown requires reading actual game state before retrying;
-never automatically replay a write. Reuse the same summary for milestone updates.
-Do not include credentials, raw output, patches or secrets in activity details.
+## 决策与持续执行
 
-## 0. Choose A Task Template
+完整流程保留需求文档、执行计划和最终交付三个人工确认点，确认绑定具体版本。
+通过 production update 提交待确认文档，在 APP 制作流程页由用户确认并继续。
+不要再要求用户在对话重复同一确认；不要通过任务 JSON 自行填写 approved/accepted。
+“允许提问/不追问”仅决定需求收集方式，不取消这三个决定。已明确的选择不重问。
+计划通过后，普通实现、检查、局部修复和隔离测试连续完成，不逐批询问是否继续。
+敏感操作仍须有覆盖对象与影响的授权；不要把普通实施计划当作丢弃未保存内容、
+覆盖原始存档、删除共用资源、对外发布或扩大权限的通用许可。
 
-Before game classification or instance assessment, inspect only the current
-provider's sibling skills/abya-task-template-*/abya-task-template.json files.
-A valid template has schemaVersion 1, kind "abya-task-template", an id matching
-its directory name, displayName, description, sourceSkillName and SKILL.md.
-Ignore ordinary Skills, the importer and incomplete/invalid markers. Do not
-read all template bodies just to build the menu.
+同一轮中对象、版本、运行状态、环境和检查目的相同的检查共享结果；相关变化后复验。
+问题保留同一反馈记录，修复后由策划复验，不能用新记录掩盖失败。停止条件是达到约定结果、用户停止，
+或存在具体阻塞；阻塞记录原因、证据、影响和恢复条件，继续不受影响的工作。
 
-- If templates exist, show their displayName and description plus
-  "不使用模板（通用开发流程）", and wait for the user's choice before starting
-  game classification, launching instances or implementing gameplay.
-- If the user already names a template or declines templates, honor that
-  choice immediately. Never choose multiplayer automatically from keywords.
-- If none exist, continue the general workflow below without an empty menu.
-- Record the choice in the task specification/conversation; reuse it on
-  follow-up turns. Do not ask again for routine edits or acceptance checks.
-  Reopen selection only when the user requests a new choice. If a selected
-  template disappears or cannot be read, explain and ask for another choice;
-  do not silently substitute the general workflow.
+## 桌面边界与进度
 
-For a selected template, read its SKILL.md and load references as needed.
-Use its task-definition questions, stages, outputs and acceptance details as
-the primary workflow. Reuse the shared rules below for provider binding,
-managed instances, read_me_first, feasibility/authorization, architecture,
-authoring and completion. Do not run two duplicate intake workflows or ask
-again for facts and authorization already supplied. The user's explicit
-requirements take priority; choosing a template alone does not authorize game
-mutation. A direct template invocation counts as selection and must not loop
-back through this menu. The generic path retains sections 1–3 below.
+游戏操作只走 ABYA_DESKTOP_CLI 和它选择的 Runtime CLI，沿用任务托管实例。
+首次需要桌面操作时 doctor、capabilities、conversation bind；每个新实例先 read_me_first。
+不要为只读本地文档启动实例。精确参数来自当前 schema，不凭历史端口或名称猜测。
+实例归属必须匹配 ABYA_DEVELOPMENT_TASK_ID；无托管上下文就报告缺少上下文，不自行启动游戏。
 
-## 1. Classify The Game
+多步骤执行使用可用的原生计划，并通过 conversation report 记录有意义的里程碑。
+可先做必要的范围判断与只读检查；不要因缺少计划工具停止安全的局部工作。
+计划如实标出完成、等待或阻塞，不为结束回答把未完成步骤写成已完成。
+活动说明不包含凭据、原始命令输出或补丁；运行证据单独保存在任务工作区。
 
-Before proposing implementation, ask the user to choose both dimensions:
+退出码 7 / outcome_unknown 后先读实际状态，不自动重发写入，也不把取消当作回滚。
+保留原有和未保存内容。Prefab 等广泛影响的写入遵守运行端授权、版本及读回约束。
 
-- Native system Player, or no system Player. The no-Player design uses
-  FreeObjects, CustomUI, and explicit input like an ordinary custom 2D game.
-- Single-player, or networked multiplayer.
+## 任务记录与版本
 
-Then collect the intended game content, core loop, victory condition, failure
-and restart behavior, input, camera, UI, resources, target archive/level,
-network authority model, and any reference videos or documents. Read accessible
-references with the appropriate tool and identify inaccessible material as an
-evidence gap.
+制作规则与资料模板版本见 [流程配置](assets/production/workflow-policy.json)。
+完整任务先通过 production get 读取后端状态；尚未启用时按用户已选提问模式 initialize。
+制作状态、确认、问题、证据、自测和反馈处理通过 production update 管理，参数见任务资料指南。
+workflow.json、单轮 JSON 和三个 HTML 是数据库的导出，不直接改它们来推动流程。
+进入制作流程后固定任务已安装 Skill 与题库，普通任务读取不再刷新它们。
+升级通过 APP 明确执行，保留历史和备份，停止任务终端后再升级。
+资料门槛不能证明玩法质量；实际运行、视觉审阅与用户验收仍分别完成。
 
-If the request needs bot participants, load
-[references/bot-development.md](references/bot-development.md) during feasibility.
-Record their roles, slots, visible information and difficulty goals. Reuse facts
-already supplied; do not add bots to unrelated requests or remove existing definitions.
+## 策划沟通与进度展示
 
-Unless the user supplies assets or explicitly requires existing resources,
-plan for the agent to create every visual, audio, and UI asset required by the
-accepted gameplay design, import it into the editor, and assign it to the
-intended scene objects and CustomUI nodes. Treat unavailable generation or
-import capability as an explicit feasibility gap; do not silently substitute
-unfinished placeholders.
+给策划看的回复、需求、计划和报告先说结果，再解释原因，最后说明下一步。
+用完整短句补足上下文；技术编号与命令细节放在详细记录中。
+只说明影响当前决定的限制，同一件事说明一次即可。
+用户已明确的选择沿用；新问题说明需要决定什么以及决定后的动作。
 
-Read [references/game-launch-parameters.md](references/game-launch-parameters.md)
-before selecting a launch profile. Prefer structured launch parameters that
-open the target archive/level or join the target Host directly.
-
-## 2. Assess With A Managed Instance
-
-Feasibility analysis may create and destroy temporary task-owned instances, but
-must remain read-only with respect to game/archive content until the user
-confirms implementation.
-
-1. Inspect desktop capabilities, archives, existing task instances, and the
-   configured executable.
-2. Launch `editor` for authoring inspection or `offline` for a single-player
-   runtime probe. For multiplayer, launch `lan-host` and an independent
-   `lan-client`; do not treat CreatorTest/Local as multiplayer evidence.
-   Managed instances launch in `background` mode by default. Use Runtime CLI
-   screenshots and UI state while the render-preserving Player window remains
-   off-screen; show the native window without activation only when direct
-   human inspection is required, then return it to background mode.
-3. Wait for the process and Runtime CLI with the desktop wait tools. Read the
-   launch report when startup is slow or fails.
-4. Call the target Runtime CLI `read_me_first` before every new instance
-   workflow. Dynamically list tools and Lua APIs; do not guess names, schemas,
-   event IDs, or capabilities.
-5. Inspect archive/level readiness, visible UI, screenshots, logs, and runtime
-   state relevant to the proposal. Do not save, bind, assign, or mutate.
-
-Report one feasibility grade:
-
-- `可直接实现`: supported by current authoring/runtime tools with routine work.
-- `可实现但复杂`: supported, but needs substantial gameplay, authority, UI, or
-  validation work.
-- `需要补充工具`: implementation is plausible but a concrete CLI/Lua/tool
-  capability is missing.
-- `当前阻塞`: required source material, runtime state, platform, or capability
-  is unavailable.
-
-Include evidence, major implementation stages, missing capabilities, risk,
-expected validation topology, and what cannot yet be proven. Then complete
-the art-style choice below and ask whether to execute if implementation is
-not already authorized.
-
-## 2A. Choose An Art Style After Feasibility
-
-After presenting the feasibility result and before implementation or asset
-creation, offer a separate art-style choice. Task templates and art templates
-are independent: declining a task template does not decline an art template.
-Discover the current provider's sibling abya-art-template-* folders using
-abya-art-template.json (schemaVersion 1, kind "abya-art-template", matching id,
-nonempty displayName, description and sourceSkillName, plus SKILL.md). Read
-only marker summaries until the user selects a style.
-
-- Present "使用美术模板（默认 comic-arcade-ui）" and "不使用美术模板";
-  list other available styles by name and summary when present.
-- A yes/use response without a named style selects
-  abya-art-template-comic-arcade-ui. Preselect/recommend it, but wait for the
-  user's choice; a default is not an answer. An explicit prior art selection
-  or decline already answers this question and must not be requested again.
-- The multiplayer task template defaults to this same comic-arcade-ui style.
-  The user can decline or choose another style. Selecting multiplayer alone
-  does not remove the post-feasibility art choice.
-- No available art templates: explain briefly and continue without a template.
-  If the requested/default comic style is missing while others exist, offer
-  those styles or no template; never silently substitute a different style.
-- Record the art template id or explicit none in the task specification and
-  conversation, and reuse it on follow-ups. Only reopen selection on request.
-  Do not apply a newly added default retroactively to an existing game.
-
-After selection, read only the chosen art Skill and required references.
-Inspect its actual visual references before visual design. Reuse suitable
-bundled art assets; generate missing assets as needed. Validate import support,
-font availability and device fit, and update feasibility if the style adds a
-capability gap. Report any blocker before implementation. Keep gameplay,
-network authority, input and acceptance contracts from the task workflow.
-An art template's font suggestions never override a task's required DingTalk
-font. Choosing no art template leaves explicit user art requirements and the
-existing general asset/CustomUI workflow in effect.
-
-Art selection can be asked together with the implementation confirmation;
-keep the two decisions explicit. Selecting a style alone is not authorization
-to mutate gameplay. Existing implementation authorization remains valid.
-
-## 3. Execute Only After Confirmation
-
-After confirmation, state a decision-complete task specification,
-implementation plan, test flow, and observable acceptance criteria before
-mutating content.
-
-Read [references/gameplay-architecture.md](references/gameplay-architecture.md),
-call `editor_gameplay_architecture_snapshot`, and create
-`artifacts/gameplay-architecture.v1.json` from
-[assets/gameplay-architecture.v1.template.json](assets/gameplay-architecture.v1.template.json).
-Bind the artifact to the returned archive, level, and `snapshotRevision`, then
-call `editor_gameplay_architecture_validate` with the complete manifest. Do not
-mutate gameplay while any deterministic `error` remains. Resolve heuristic
-warnings or record an exact warning exception with evidence and a concrete
-reason; an exception never suppresses an error. Begin mutation only when the
-validation response reports `ready=true`. For new Bot definitions, the narrowly
-scoped reversible candidate staging procedure in
-[references/bot-development.md](references/bot-development.md) applies: validate
-the current base and candidate Lua first, stage definitions without saving,
-then validate the complete candidate manifest before other gameplay writes.
-Do not omit existing bots from the base or bypass deterministic errors.
-
-- New or rewritten gameplay defaults to a complete self-contained ABYA-LUA
-  String. Read the Runtime Lua authoring guides, scaffold against the exact
-  event target, search and describe public APIs, validate, then bind.
-- Maintain existing APC only when the request targets it. Use APC for new work
-  only when the user requests visual programming or a required public Lua API
-  is confirmed missing; report the missing API and minimum APC scope.
-- A no-system-Player game must use `generatePlayerMode=Manual`. In multiplayer,
-  represent each participant with a FreeObject owned by that user and verify
-  local owner, server authority, and remote proxy behavior separately.
-- Unless the user directs otherwise, generate the accepted design's required
-  assets, import them through the validated resource workflow, assign them to
-  every intended scene object and CustomUI node, and re-read the assignments.
-  A generated file that is not imported and applied is not implemented.
-- For CustomUI, give every text element clear contrast against the background
-  directly behind it, including relevant gameplay and interaction states.
-  Build parent/child sizing, anchors, offsets, wrapping, and spacing so child
-  content stays within its parent and the visible screen without unintended
-  overlap or clipping.
-- Preserve dirty/unsaved content. Never discard, save, revert, or replace it
-  merely to run a test.
-- Put movement, weapons, projectiles, collisions, damage, health, death,
-  respawn, and presentation on the responsible Prefab or exact object event.
-  Global and Level logic may coordinate phases, timers, spawn schedules,
-  victory, loss, and reset; they must not update every entity each frame.
-- For shared FreeObject behavior, scaffold and validate against a `prefab`
-  target, then use `editor_prefab_logic_binding_*`. Prefab writes are
-  high-impact because they synchronize every linked instance. Prefer native
-  projectile and collision/trigger events over manual position or distance
-  polling.
-
-After each meaningful milestone, use the active game instance to collect
-screenshots, logs, runtime state, Lua/APC traces, and explicit assertions.
-Visual inspection alone is not sufficient when a state assertion is available.
-After implementation, call `editor_gameplay_architecture_lint` with the saved
-manifest. Fix every error. Resolve each warning or keep its evidence-backed
-exception visible in the final report. A gameplay result is not structurally
-accepted when entity behavior exists only inside a global per-frame loop.
-
-## Instance Recovery
-
-Manage only instances whose `taskId` matches `ABYA_DEVELOPMENT_TASK_ID`.
-
-If an instance stops responding, first make a best-effort five-second capture
-of its launch report, logs, Runtime CLI state, and screenshot. Then call the
-desktop stop tool, which verifies process-tree termination. Restart at most
-twice in one implementation stage. After that, report the repeated blocker and
-preserve the collected evidence.
-
-## Completion
-
-For single-player acceptance, prove launch, target archive/level readiness,
-core loop, victory, failure, restart, and cleanup. For multiplayer acceptance,
-use a Host plus standalone ClientOnly with distinct identities and prove join,
-ownership, synchronization, disconnect, and replay/reset on both peers.
-
-When CustomUI is present, inspect every relevant UI state with the authoring
-tree, resolved layout rectangles, and runtime screenshots at the target
-resolutions or aspect ratios. Do not accept it until text/background contrast
-is clearly readable and no child unintentionally exceeds its parent, overlaps
-other content, is clipped, or leaves the visible screen. Verify that every
-required generated asset is imported and visibly applied rather than merely
-present as a resource file.
-
-Separate source/static checks, validation calls, runtime assertions, and real
-Host plus ClientOnly evidence in the final report. Do not mark the development
-task complete until the user accepts the result.
-
-For Bot changes, follow the Bot guide's read/merge/readback workflow and run its
-local artifact checker. Report gameplay acceptance evidence separately from
-submitted counts and static readiness; blocked or unverified runs are not passed.
+顶部“对话步骤”展示本轮工作，制作流程页展示整个任务阶段。
+多步骤工作先登记步骤，工具活动跟随当前步骤；执行结果回来后再更新完成状态。
+原生计划工具不可用时，使用 conversation report 的 plan 字段，不能仅在聊天里列计划。
+步骤格式见任务资料指南。临时新增工作及时补充步骤。
+阶段进展使用 production update / update-stage；保存草稿后用 register-artifact 登记。

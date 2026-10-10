@@ -1,5 +1,17 @@
 mod app_server;
+mod diagnostics;
+mod recovery;
+pub use recovery::RecoveryCandidate;
+mod continuation_queue;
+#[cfg(test)]
+mod queue_tests;
+mod task_control;
+pub use task_control::{QuestionSubmission, TaskControlState};
+mod intake;
+mod intake_receipt;
+pub use intake_receipt::IntakeContinuation;
 mod lifecycle;
+mod settings;
 
 use crate::foundation::{AppError, AppResult};
 use crate::modules::development_terminal::transcript::read_transcript_replay;
@@ -86,6 +98,8 @@ pub enum CodexTerminalEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexConversation {
+    #[serde(default)]
+    pub binding_version: u8,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub native_sync_error: Option<String>,
     #[serde(default)]
@@ -131,9 +145,16 @@ pub struct CodexTerminalService {
     sessions: Arc<Mutex<HashMap<String, LiveTerminal>>>,
     resolver: CodexResolver,
     app_server: Arc<Mutex<Option<AppServerHandle>>>,
+    runtime_servers: Arc<Mutex<HashMap<String, AppServerHandle>>>,
     thread_conversations: Arc<Mutex<HashMap<String, (String, String)>>>,
     workflow_write_lock: Arc<Mutex<()>>,
     lifecycle_lock: Arc<Mutex<()>>,
+    process_epoch: String,
+    control_sequence: Arc<std::sync::atomic::AtomicU64>,
+    cancelled: Arc<Mutex<HashSet<String>>>,
+    stopping: Arc<Mutex<HashSet<String>>>,
+    queue_tasks: Arc<Mutex<HashMap<String, String>>>,
+    shutting_down: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl CodexTerminalService {
@@ -143,9 +164,16 @@ impl CodexTerminalService {
             sessions: Default::default(),
             resolver: Arc::new(resolve_codex),
             app_server: Default::default(),
+            runtime_servers: Default::default(),
             thread_conversations: Default::default(),
             workflow_write_lock: Default::default(),
             lifecycle_lock: Default::default(),
+            process_epoch: Uuid::new_v4().to_string(),
+            control_sequence: Default::default(),
+            cancelled: Default::default(),
+            stopping: Default::default(),
+            queue_tasks: Default::default(),
+            shutting_down: Default::default(),
         })
     }
 
@@ -173,6 +201,7 @@ impl CodexTerminalService {
     }
 
     pub fn list_conversations(&self, task_id: &str) -> AppResult<Vec<CodexConversation>> {
+        let guard = self.lifecycle_lock.lock();
         let task = self.tasks.get(task_id)?;
         let root = conversations_root(Path::new(&task.workspace_path));
         if !root.is_dir() {
@@ -196,6 +225,7 @@ impl CodexTerminalService {
         }
         conversations.sort_by(|left, right| right.updated_at.cmp(&left.updated_at));
         backfill_native_session_ids(Path::new(&task.workspace_path), &mut conversations)?;
+        drop(guard);
         #[cfg(not(test))]
         if let Err(error) = self.refresh_native_conversations(&task, &mut conversations) {
             for conversation in &mut conversations {
@@ -225,6 +255,7 @@ impl CodexTerminalService {
             validate_conversation_title(&title)?
         };
         let conversation = CodexConversation {
+            binding_version: 2,
             native_sync_error: None,
             archived: false,
             id: id.clone(),
@@ -264,6 +295,15 @@ impl CodexTerminalService {
         Ok(conversation)
     }
 
+    pub fn transcript_text(&self, task_id: &str, conversation_id: &str) -> AppResult<String> {
+        Uuid::parse_str(conversation_id).map_err(AppError::internal)?;
+        self.conversation(task_id, conversation_id)?;
+        let task = self.tasks.get(task_id)?;
+        let path = conversation_directory(Path::new(&task.workspace_path), conversation_id)
+            .join(CONVERSATION_TRANSCRIPT_FILE);
+        crate::modules::development_terminal::transcript::read_transcript_text(&path)
+    }
+
     pub fn workflow(
         &self,
         task_id: &str,
@@ -284,6 +324,36 @@ impl CodexTerminalService {
         conversation_id: &str,
     ) -> AppResult<CodexConversation> {
         self.conversation(task_id, conversation_id)
+    }
+
+    pub fn record_reported_plan(
+        &self,
+        task_id: &str,
+        conversation_id: &str,
+        steps: &[(String, CodexPlanStepStatus)],
+        summary: &str,
+    ) -> AppResult<CodexWorkflowSnapshot> {
+        self.conversation(task_id, conversation_id)?;
+        let task = self.tasks.get(task_id)?;
+        let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);
+        let _guard = self.workflow_write_lock.lock();
+        let mut workflow = load_workflow(&directory, task_id, conversation_id)?;
+        let turn = workflow
+            .current_turn_id
+            .clone()
+            .ok_or_else(|| AppError::validation("请在运行中的会话登记步骤。"))?;
+        if workflow
+            .turns
+            .iter()
+            .find(|t| t.id == turn)
+            .is_some_and(|t| t.completed_at.is_some())
+        {
+            return Err(AppError::validation("这一轮已经结束，请在新一轮登记步骤。"));
+        }
+        workflow.update_plan(&turn, Some(summary), steps);
+        save_workflow(&directory, &workflow, "planUpdated")?;
+        send_workflow_to_live_session(&self.sessions, conversation_id, &workflow);
+        Ok(workflow)
     }
 
     pub fn record_reported_activity(
@@ -344,7 +414,7 @@ impl CodexTerminalService {
         let _guard = self.lifecycle_lock.lock();
         self.set_conversation_archived_locked(task_id, conversation_id, true)?;
         let conversation = self.conversation(task_id, conversation_id)?;
-        self.stop(conversation_id)?;
+        self.stop_locked(conversation_id)?;
         self.thread_conversations
             .lock()
             .retain(|_, binding| binding != &(task_id.to_string(), conversation_id.to_string()));
@@ -399,10 +469,24 @@ impl CodexTerminalService {
             return Err(error);
         }
         let mut conversation = self.conversation(task_id, conversation_id)?;
-        let mut native_session_id = conversation
-            .native_session_id
-            .clone()
-            .or_else(|| find_native_session_id(&working_directory, &conversation.created_at));
+        let mut native_session_id = conversation.native_session_id.clone();
+        if native_session_id.is_none()
+            && conversation.binding_version == 0
+            && conversation_directory(&working_directory, conversation_id)
+                .join(CONVERSATION_TRANSCRIPT_FILE)
+                .metadata()
+                .is_ok_and(|m| m.len() > 0)
+        {
+            return Err(AppError::validation(
+                "旧对话缺少可靠的原生关联，请先在会话信息中查找历史并修复关联。",
+            ));
+        }
+        diagnostics::record(
+            &working_directory,
+            conversation_id,
+            "open-requested",
+            native_session_id.as_deref(),
+        );
         if conversation.native_session_id.is_none()
             && let Some(session_id) = native_session_id.as_deref()
         {
@@ -415,89 +499,96 @@ impl CodexTerminalService {
         }
         let mut remote = None;
         let observability = if supports_app_server(&codex) {
-            match self.ensure_app_server(&codex) {
-                Ok(server) => {
-                    let project = server.ensure_project(&task)?;
-                    let native_archived = match &native_session_id {
-                        Some(id) => server.is_archived(id)?,
-                        None => false,
-                    };
-                    if native_archived {
-                        conversation.archived = true;
-                        write_conversation(
-                            &conversation_directory(&working_directory, conversation_id),
-                            &conversation,
-                        )?;
-                        return Err(AppError::validation(
-                            "This conversation was archived in Codex. Refresh and restore it explicitly.",
+            {
+                let server = self.runtime_server(&codex, conversation_id)?;
+                let project = server.ensure_project(&task)?;
+                let native_archived = match &native_session_id {
+                    Some(id) => server.is_archived(id)?,
+                    None => false,
+                };
+                if native_archived {
+                    conversation.archived = true;
+                    write_conversation(
+                        &conversation_directory(&working_directory, conversation_id),
+                        &conversation,
+                    )?;
+                    return Err(AppError::validation(
+                        "This conversation was archived in Codex. Refresh and restore it explicitly.",
+                    ));
+                }
+                let mut instructions = managed_developer_instructions(task_id, conversation_id);
+                let recovery_note = conversation_directory(&working_directory, conversation_id)
+                    .join("recovery-notes.md");
+                if recovery_note.is_file() {
+                    instructions.push_str(&format!(" This conversation has a sourced recovery note at {}. Read it to retain later user corrections after history rebinding; verify current production state before proceeding.", display_path(&recovery_note)));
+                }
+                let prepared = if let Some(thread_id) = native_session_id.as_deref() {
+                    server
+                        .resume_thread(
+                            thread_id,
+                            &display_path(&working_directory),
+                            &instructions,
+                            task_id,
+                            conversation_id,
+                        )
+                        .map(|()| thread_id.to_string())
+                } else {
+                    server
+                        .start_thread(
+                            &display_path(&working_directory),
+                            &instructions,
+                            task_id,
+                            conversation_id,
+                        )
+                        .and_then(|thread_id| {
+                            // Persist identity before another RPC can fail or time out.
+                            conversation.native_session_id = Some(thread_id.clone());
+                            conversation.updated_at = Utc::now().to_rfc3339();
+                            write_conversation(
+                                &conversation_directory(&working_directory, conversation_id),
+                                &conversation,
+                            )?;
+                            server.persist_developer_instructions(&thread_id, &instructions)?;
+                            Ok(thread_id)
+                        })
+                };
+                match prepared {
+                    Ok(thread_id) => {
+                        if conversation.native_session_id.as_deref() != Some(&thread_id) {
+                            conversation.native_session_id = Some(thread_id.clone());
+                            conversation.updated_at = Utc::now().to_rfc3339();
+                            write_conversation(
+                                &conversation_directory(&working_directory, conversation_id),
+                                &conversation,
+                            )?;
+                        }
+                        native_session_id = Some(thread_id.clone());
+                        server.organize_thread(&project, &task, &conversation, &thread_id)?;
+                        self.thread_conversations.lock().insert(
+                            thread_id,
+                            (task_id.to_string(), conversation_id.to_string()),
+                        );
+                        remote = Some(server);
+                        (CodexObservabilityStatus::Native, String::new())
+                    }
+                    Err(error) => {
+                        return Err(AppError::new(
+                            "codex_resume_failed",
+                            "原生会话准备失败，历史已保留；未创建替代对话。",
+                            error.message,
                         ));
                     }
-                    let instructions = managed_developer_instructions(task_id, conversation_id);
-                    let prepared = if let Some(thread_id) = native_session_id.as_deref() {
-                        server
-                            .resume_thread(
-                                thread_id,
-                                &display_path(&working_directory),
-                                &instructions,
-                                task_id,
-                                conversation_id,
-                            )
-                            .map(|()| thread_id.to_string())
-                    } else {
-                        server
-                            .start_thread(
-                                &display_path(&working_directory),
-                                &instructions,
-                                task_id,
-                                conversation_id,
-                            )
-                            .and_then(|thread_id| {
-                                server
-                                    .persist_developer_instructions(&thread_id, &instructions)
-                                    .map(|()| thread_id)
-                            })
-                    };
-                    match prepared {
-                        Ok(thread_id) => {
-                            if conversation.native_session_id.as_deref() != Some(&thread_id) {
-                                conversation.native_session_id = Some(thread_id.clone());
-                                conversation.updated_at = Utc::now().to_rfc3339();
-                                write_conversation(
-                                    &conversation_directory(&working_directory, conversation_id),
-                                    &conversation,
-                                )?;
-                            }
-                            native_session_id = Some(thread_id.clone());
-                            server.organize_thread(&project, &task, &conversation, &thread_id)?;
-                            self.thread_conversations.lock().insert(
-                                thread_id,
-                                (task_id.to_string(), conversation_id.to_string()),
-                            );
-                            remote = Some(server);
-                            (CodexObservabilityStatus::Native, String::new())
-                        }
-                        Err(error) => (
-                            CodexObservabilityStatus::Compatibility,
-                            format!(
-                                "Native Codex activity stream is unavailable: {}",
-                                error.message
-                            ),
-                        ),
-                    }
                 }
-                Err(error) => (
-                    CodexObservabilityStatus::Compatibility,
-                    format!(
-                        "Native Codex activity stream is unavailable: {}",
-                        error.message
-                    ),
-                ),
             }
-        } else {
+        } else if cfg!(test) {
             (
                 CodexObservabilityStatus::Compatibility,
-                "This Codex version does not provide the native app-server event stream.".into(),
+                "Test PTY without native backend".into(),
             )
+        } else {
+            return Err(AppError::validation(
+                "当前 Codex 缺少可验证的会话接口，请更新 CLI 后重试；历史已保留。",
+            ));
         };
         let conversation_directory = conversation_directory(&working_directory, conversation_id);
         std::fs::create_dir_all(&conversation_directory)?;
@@ -593,6 +684,12 @@ impl CodexTerminalService {
                 conversation.created_at,
             );
         }
+        diagnostics::record(
+            Path::new(&task.workspace_path),
+            conversation_id,
+            "terminal-connected",
+            native_session_id.as_deref(),
+        );
         Ok(state)
     }
 
@@ -618,17 +715,82 @@ impl CodexTerminalService {
     }
 
     pub fn stop(&self, conversation_id: &str) -> AppResult<()> {
+        self.stopping.lock().insert(conversation_id.into());
+        self.cancelled.lock().insert(conversation_id.into());
+        let _guard = self.lifecycle_lock.lock();
+        let result = self.stop_locked(conversation_id);
+        self.stopping.lock().remove(conversation_id);
+        result
+    }
+
+    fn stop_locked(&self, conversation_id: &str) -> AppResult<()> {
+        self.cancelled.lock().insert(conversation_id.into());
+        self.pause_queued_locked(conversation_id)?;
+        let binding = self
+            .thread_conversations
+            .lock()
+            .iter()
+            .find(|(_, (_, id))| id == conversation_id)
+            .map(|(native, _)| native.clone());
+        let server = self.runtime_servers.lock().get(conversation_id).cloned();
+        if let (Some(server), Some(native)) = (&server, &binding)
+            && server.is_alive()
+        {
+            server.interrupt_and_wait(native)?;
+        }
+        if let Some(session) = self.sessions.lock().remove(conversation_id) {
+            disconnect_and_terminate(session)?;
+        }
+        if let Some(server) = self.runtime_servers.lock().remove(conversation_id) {
+            server.stop();
+        }
         crate::foundation::cli_sessions::revoke("codex", conversation_id);
-        let Some(session) = self.sessions.lock().remove(conversation_id) else {
-            return Ok(());
-        };
-        disconnect_and_terminate(session)
+        if let Some(native) = binding {
+            let task_id = self
+                .thread_conversations
+                .lock()
+                .get(&native)
+                .map(|(task, _)| task.clone());
+            if let Some(task_id) = task_id
+                && let Ok(task) = self.tasks.get(&task_id)
+            {
+                diagnostics::record(
+                    Path::new(&task.workspace_path),
+                    conversation_id,
+                    "paused",
+                    Some(&native),
+                );
+            }
+        }
+        Ok(())
+    }
+
+    pub fn begin_shutdown(&self) {
+        self.shutting_down
+            .store(true, std::sync::atomic::Ordering::SeqCst);
     }
 
     pub fn stop_all(&self) {
-        let conversation_ids = self.sessions.lock().keys().cloned().collect::<Vec<_>>();
+        // Exit may run on the UI thread: detach IPC before waiting on native interrupts.
+        for session in self.sessions.lock().values() {
+            session.subscriber.lock().take();
+        }
+        self.shutting_down
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+        let mut conversation_ids = self.sessions.lock().keys().cloned().collect::<HashSet<_>>();
+        conversation_ids.extend(self.queue_tasks.lock().keys().cloned());
+        conversation_ids.extend(self.runtime_servers.lock().keys().cloned());
         for conversation_id in conversation_ids {
             let _ = self.stop(&conversation_id);
+        }
+        let servers = self
+            .runtime_servers
+            .lock()
+            .drain()
+            .map(|(_, s)| s)
+            .collect::<Vec<_>>();
+        for server in servers {
+            server.stop();
         }
         if let Some(server) = self.app_server.lock().take() {
             server.stop();
@@ -642,7 +804,18 @@ impl CodexTerminalService {
             .iter()
             .filter(|(_, session)| session.task_id == task_id)
             .map(|(conversation_id, _)| conversation_id.clone())
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
+        let conversation_ids = conversation_ids
+            .into_iter()
+            .chain(
+                self.thread_conversations
+                    .lock()
+                    .values()
+                    .filter(|(task, _)| task == task_id)
+                    .map(|(_, id)| id.clone())
+                    .collect::<Vec<_>>(),
+            )
+            .collect::<HashSet<_>>();
         for conversation_id in conversation_ids {
             let _ = self.stop(&conversation_id);
         }
@@ -675,16 +848,8 @@ impl CodexTerminalService {
             if server.is_current(codex) {
                 return Ok(server.clone());
             }
-            if !self.sessions.lock().is_empty() {
-                return Err(AppError::new(
-                    "codexBackendRestartRequired",
-                    "Codex was updated or its backend exited. Stop the other Codex terminals and reopen to reload the backend.",
-                    "",
-                ));
-            }
             server.stop();
             *cached = None;
-            self.thread_conversations.lock().clear();
         }
         let tasks = self.tasks.clone();
         let sessions = self.sessions.clone();
@@ -706,6 +871,60 @@ impl CodexTerminalService {
         Ok(server)
     }
 
+    fn runtime_server(
+        &self,
+        codex: &ResolvedCodex,
+        conversation: &str,
+    ) -> AppResult<AppServerHandle> {
+        // Fresh per-conversation executor prevents a loaded thread retaining revoked credentials.
+        // The metadata server never owns model turns. Other tasks remain independent.
+        if let Some(old) = self.runtime_servers.lock().get(conversation).cloned() {
+            let native = self
+                .thread_conversations
+                .lock()
+                .iter()
+                .find(|(_, (_, id))| id == conversation)
+                .map(|(id, _)| id.clone());
+            if let Some(native) = native.filter(|_| old.is_alive()) {
+                old.ensure_idle(&native)?;
+            }
+            old.stop();
+        }
+        let tasks = self.tasks.clone();
+        let sessions = self.sessions.clone();
+        let bindings = self.thread_conversations.clone();
+        let writes = self.workflow_write_lock.clone();
+        let service = self.clone();
+        let server = AppServerHandle::start(
+            codex,
+            Arc::new(move |event| {
+                handle_app_server_notification(
+                    &tasks,
+                    &sessions,
+                    &bindings,
+                    &writes,
+                    event.clone(),
+                );
+                if event["method"] == "turn/completed"
+                    && let (Some(native), Some(turn)) = (
+                        event["params"]["threadId"].as_str(),
+                        event["params"]["turn"]["id"].as_str(),
+                    )
+                {
+                    service.queue_event(
+                        native,
+                        turn,
+                        event["params"]["turn"]["status"] == "completed",
+                    );
+                }
+            }),
+        )?;
+        self.runtime_servers
+            .lock()
+            .insert(conversation.into(), server.clone());
+        Ok(server)
+    }
+
     fn conversation(&self, task_id: &str, conversation_id: &str) -> AppResult<CodexConversation> {
         let task = self.tasks.get(task_id)?;
         let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);
@@ -719,6 +938,16 @@ impl CodexTerminalService {
             return Err(AppError::not_found("Codex conversation"));
         }
         Ok(conversation)
+    }
+
+    pub fn native_session_id(
+        &self,
+        task_id: &str,
+        conversation_id: &str,
+    ) -> AppResult<Option<String>> {
+        Ok(self
+            .conversation(task_id, conversation_id)?
+            .native_session_id)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -753,6 +982,11 @@ impl CodexTerminalService {
         subscriber: Arc<Mutex<Option<Channel<CodexTerminalEvent>>>>,
     ) {
         let sessions = self.sessions.clone();
+        let remote_bound = self
+            .thread_conversations
+            .lock()
+            .values()
+            .any(|(_, id)| id == &conversation_id);
         std::thread::spawn(move || {
             let result = loop {
                 match child.try_wait() {
@@ -767,7 +1001,10 @@ impl CodexTerminalService {
                 .is_some_and(|session| session.session_id == session_id);
             if is_current {
                 sessions.lock().remove(&conversation_id);
-                crate::foundation::cli_sessions::revoke("codex", &conversation_id);
+                // Closing a remote TUI detaches; its native turn may still be running.
+                if !remote_bound {
+                    crate::foundation::cli_sessions::revoke("codex", &conversation_id);
+                }
             }
             match result {
                 Ok(status) => update_state(
@@ -792,10 +1029,17 @@ impl CodexTerminalService {
     fn for_test(tasks: TaskService, _working_directory: PathBuf, codex: ResolvedCodex) -> Self {
         Self {
             lifecycle_lock: Default::default(),
+            process_epoch: Uuid::new_v4().to_string(),
+            control_sequence: Default::default(),
+            cancelled: Default::default(),
+            stopping: Default::default(),
+            queue_tasks: Default::default(),
+            shutting_down: Default::default(),
             tasks,
             sessions: Default::default(),
             resolver: Arc::new(move || Some(codex.clone())),
             app_server: Default::default(),
+            runtime_servers: Default::default(),
             thread_conversations: Default::default(),
             workflow_write_lock: Default::default(),
         }
@@ -970,7 +1214,7 @@ fn build_command(
 
 fn managed_developer_instructions(task_id: &str, conversation_id: &str) -> String {
     format!(
-        "You are working in ABYA task {task_id}, conversation {conversation_id}. Publish and maintain a plan for multi-step work. Use only the executable in ABYA_DESKTOP_CLI for ABYA operations. Run doctor and capabilities first. CLI commands inherit the task, provider and conversation context. Report semantic milestones with conversation report. Do not use MCP or start unmanaged game processes. Open returned screenshot paths for visual acceptance. Never include credentials, raw commands, outputs or patches in activity details."
+        "You are working in ABYA task {task_id}, conversation {conversation_id}. Publish and maintain a plan for multi-step work. If no native plan tool is available, use conversation report with plan:[{{step,status}}], where status is pending/inProgress/completed/failed. Use this for the top conversation steps and keep production stages separate. Explain progress in plain Chinese: outcome, reason, next action. Put technical identifiers in details. Avoid repeating unchanged scope disclaimers. Use only the executable in ABYA_DESKTOP_CLI for ABYA operations. Run doctor and capabilities first. CLI commands inherit the task, provider and conversation context. Report semantic milestones with conversation report. Do not use MCP or start unmanaged game processes. Open returned screenshot paths for visual acceptance. Never include credentials, raw commands, outputs or patches in activity details."
     )
 }
 
@@ -999,8 +1243,19 @@ fn handle_app_server_notification(
     let Ok(task) = tasks.get(&task_id) else {
         return;
     };
+    if method == "thread/settings/updated" {
+        let _ = settings::save(
+            &conversation_directory(Path::new(&task.workspace_path), &conversation_id),
+            &params["threadSettings"],
+        );
+        return;
+    }
     let _workflow_guard = workflow_write_lock.lock();
     let directory = conversation_directory(Path::new(&task.workspace_path), &conversation_id);
+    if method == "thread/tokenUsage/updated" {
+        diagnostics::usage(&directory, thread_id, &params);
+        return;
+    }
     let Ok(mut workflow) = load_workflow(&directory, &task_id, &conversation_id) else {
         return;
     };
@@ -1337,15 +1592,13 @@ fn find_native_session_id_in(
     working_directory: &Path,
     created_at: DateTime<Utc>,
 ) -> Option<String> {
-    native_session_records_in(root, working_directory)
+    let mut candidates = native_session_records_in(root, working_directory)
         .into_iter()
-        .filter(|record| paths_equal(&record.cwd, working_directory))
-        .filter_map(|record| {
-            let distance = (record.started_at - created_at).num_seconds().abs();
-            (distance <= NATIVE_SESSION_MATCH_SECONDS).then_some((distance, record))
-        })
-        .min_by_key(|(distance, _)| *distance)
-        .map(|(_, record)| record.id)
+        .filter(|r| {
+            (r.started_at - created_at).num_seconds().abs() <= NATIVE_SESSION_MATCH_SECONDS
+        });
+    let candidate = candidates.next()?;
+    candidates.next().is_none().then_some(candidate.id)
 }
 
 fn backfill_native_session_ids(
@@ -1377,57 +1630,22 @@ fn assign_native_session_ids(
         .iter()
         .filter_map(|conversation| conversation.native_session_id.as_deref())
         .collect::<HashSet<_>>();
-    let mut available_records = records
+    let mut available = records
         .into_iter()
-        .filter(|record| !reserved_ids.contains(record.id.as_str()))
+        .filter(|r| !reserved_ids.contains(r.id.as_str()))
         .collect::<Vec<_>>();
-    let mut pending_indices = conversations
+    let pending = conversations
         .iter()
         .enumerate()
-        .filter_map(|(index, conversation)| {
-            conversation.native_session_id.is_none().then_some(index)
-        })
+        .filter_map(|(i, c)| (c.binding_version == 0 && c.native_session_id.is_none()).then_some(i))
         .collect::<Vec<_>>();
-    let mut assignments = Vec::new();
-    while !pending_indices.is_empty() && !available_records.is_empty() {
-        let best = pending_indices
-            .iter()
-            .flat_map(|conversation_index| {
-                let conversation = &conversations[*conversation_index];
-                let Some(created_at) = DateTime::parse_from_rfc3339(&conversation.created_at)
-                    .ok()
-                    .map(|value| value.with_timezone(&Utc))
-                else {
-                    return Vec::new();
-                };
-                available_records
-                    .iter()
-                    .enumerate()
-                    .map(move |(record_index, record)| {
-                        (
-                            (record.started_at - created_at).num_seconds().abs(),
-                            *conversation_index,
-                            record_index,
-                        )
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .min_by_key(|candidate| *candidate);
-        let Some((distance, conversation_index, record_index)) = best else {
-            break;
-        };
-
-        let unique_legacy_match = pending_indices.len() == 1 && available_records.len() == 1;
-        if distance > NATIVE_SESSION_MATCH_SECONDS && !unique_legacy_match {
-            break;
-        }
-
-        let record = available_records.remove(record_index);
-        pending_indices.retain(|index| *index != conversation_index);
-        conversations[conversation_index].native_session_id = Some(record.id.clone());
-        assignments.push((conversation_index, record.id));
+    if pending.len() != 1 || available.len() != 1 {
+        return vec![];
     }
-    assignments
+    let index = pending[0];
+    let id = available.remove(0).id;
+    conversations[index].native_session_id = Some(id.clone());
+    vec![(index, id)]
 }
 
 fn native_session_records_in(root: &Path, working_directory: &Path) -> Vec<NativeSessionRecord> {
@@ -1983,6 +2201,7 @@ mod tests {
     fn assigns_a_unique_legacy_session_without_a_time_window() {
         let workspace = PathBuf::from(r"C:\Workspaces\legacy-task");
         let mut conversations = vec![CodexConversation {
+            binding_version: 0,
             native_sync_error: None,
             archived: false,
             id: "conversation-1".into(),
@@ -2006,6 +2225,23 @@ mod tests {
         assert_eq!(
             conversations[0].native_session_id.as_deref(),
             Some("native-session-1")
+        );
+        conversations[0].native_session_id = None;
+        let candidate = |id: &str| NativeSessionRecord {
+            id: id.into(),
+            cwd: PathBuf::from(r"C:\Workspaces\legacy-task"),
+            started_at: Utc::now(),
+        };
+        assert!(
+            assign_native_session_ids(&mut conversations, vec![candidate("one"), candidate("two")])
+                .is_empty()
+        );
+        assert!(conversations[0].native_session_id.is_none());
+        conversations[0].binding_version = 2;
+        assert!(assign_native_session_ids(&mut conversations, vec![candidate("one")]).is_empty());
+        assert!(
+            conversations[0].native_session_id.is_none(),
+            "A new conversation must never inherit old history"
         );
     }
 

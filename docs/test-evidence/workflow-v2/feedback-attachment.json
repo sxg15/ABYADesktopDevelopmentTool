@@ -1,0 +1,47 @@
+{
+  "feedback": {
+    "artifactId": null,
+    "attachmentIds": [
+      "e3f44870-650c-4913-bd61-fab1df5d206a"
+    ],
+    "createdAt": "2026-10-10T09:07:05.406494900+00:00",
+    "description": "隔离验证：带附件的玩法反馈，等待AI修复后人工复验。",
+    "history": [
+      {
+        "actor": "user",
+        "at": "2026-10-10T09:07:05.406494900+00:00",
+        "status": "open"
+      }
+    ],
+    "id": "e716ca7c-080f-4102-a1c0-1668f50fe7b3",
+    "instanceIds": [
+      "d5b4af41-4c16-4490-93e8-e44ea9d6f3e2",
+      "a3873c8b-eba8-40e4-a55c-23794fa87920"
+    ],
+    "stage": "review",
+    "status": "open",
+    "updatedAt": "2026-10-10T09:07:05.406494900+00:00",
+    "version": "cat-v2-monotonic-r8"
+  },
+  "attachment": {
+    "bytes": 565354,
+    "cycle": 3,
+    "groupId": "artifacts/feedback/1a2e750d-c719-42b1-b2f7-db710b0c63aa.png",
+    "id": "e3f44870-650c-4913-bd61-fab1df5d206a",
+    "mediaType": "image/png",
+    "path": "artifacts/feedback/1a2e750d-c719-42b1-b2f7-db710b0c63aa.png",
+    "roles": [
+      "feedback"
+    ],
+    "sha256": "9fd90e64851c7579af21b6259cf45daff86e70e515ca1052c8a9430136c58f64",
+    "source": "策划上传",
+    "sourceType": "feedback",
+    "stage": "implementation",
+    "status": "draft",
+    "summary": "",
+    "temporary": false,
+    "title": "cat.png",
+    "updatedAt": "2026-10-10T09:07:05.222323100+00:00",
+    "visualVersion": "cat-v2-monotonic-r8"
+  }
+}

@@ -1,3 +1,4 @@
+mod acceptance;
 mod process;
 use crate::foundation::{AppError, AppResult};
 use crate::modules::{instances::InstanceService, tasks::TaskService};
@@ -53,6 +54,8 @@ pub struct RuntimeBridgeService {
     tasks: TaskService,
     active: Arc<Mutex<ActiveOperations>>,
     in_flight: Arc<AtomicUsize>,
+    acceptance_busy: Arc<Mutex<std::collections::HashSet<String>>>,
+    acceptance_progress: Arc<Mutex<HashMap<String, Value>>>,
 }
 impl RuntimeBridgeService {
     pub fn new(instances: InstanceService, tasks: TaskService) -> Self {
@@ -61,6 +64,8 @@ impl RuntimeBridgeService {
             tasks,
             active: Default::default(),
             in_flight: Default::default(),
+            acceptance_busy: Default::default(),
+            acceptance_progress: Default::default(),
         }
     }
     #[allow(clippy::too_many_arguments)]

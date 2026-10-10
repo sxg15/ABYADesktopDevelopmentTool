@@ -12,6 +12,23 @@ process, log, or MCP business workflows.
 
 ## Public Contracts
 
+Shared adapters expose typed intake groups/answer versions/player mode, APP-only answer actions,
+native-bound Codex continuation, and scoped conversation recovery. They never transport session
+credentials. Intake answers and approvals remain separate domain actions; business logic stays
+inside task and provider services.
+IntakeContinuation includes queued, paused, waitingForAnswers, waitingForApproval, needsReview,
+needsConnection, started, resumed, running, completed and superseded, with request/native/turn IDs.
+TaskControlState separates connection, native execution, queue, human gates and last event time.
+BuildInfo validates the embedded release/version against the adjacent manifest and executable hash.
+Before database initialization, normal launches from the OpenAI.Codex Windows package are brokered
+through Explorer to avoid virtualized app data. ABYA_TEST_MODE explicitly permits isolated fixtures.
+A per-user canonical-data-directory Global mutex prevents concurrent APP owners and focuses the
+existing PID only after checking process creation time. Separate test directories remain independent.
+productionApi.revealReport sends a task ID and a fixed report phase to the native adapter;
+path validation and export remain in TaskService, and the adapter reveals the file in its folder.
+productionApi.revealDocument calls open_production_artifact with optional reveal=true, selecting a
+validated task artifact in the OS file manager. Omitted/false retains normal artifact opening.
+
 `AppError`, database access, application paths, settings values, and shared
 serialization helpers. Settings include the game gateway port, LAN broadcast
 switch, preferred adapter ID, and persistent discovery tool ID.
@@ -51,6 +68,13 @@ foundation; foundation must not depend on product modules.
 
 ## Validation
 
+Additive task_production and task_production_history tables retain authoritative
+versioned production JSON and prior revisions, with task-ID foreign keys. Existing
+task IDs and archives are not migrated or rewritten. Domain transitions stay in
+TaskService; shared TypeScript production adapters expose typed read/mutate/user
+decision, Skill browsing and artifact-opening commands. JSON exports do not import
+themselves back into the database.
+
 Run Rust unit tests, migration and storage-maintenance tests, TypeScript contract checks, and
 `npm run check:skills`, including workflow DTO serialization compatibility.
 
@@ -67,5 +91,23 @@ cli_sessions owns in-memory 12-hour capabilities bound to provider/task/conversa
 
 
 ## User-initiated clipboard access
-clipboard::read uses Windows clipboard APIs only on explicit terminal paste. Prefer bounded CF_UNICODETEXT (1 MiB UTF-8), otherwise identify bitmap/DIB/PNG without copying image bytes. Never log clipboard contents, monitor clipboard changes or modify clipboard data. Return typed text/image/empty results; close/unlock native handles on exit.
+clipboard::read uses Windows clipboard APIs only on explicit terminal paste. Prefer bounded CF_UNICODETEXT (1 MiB UTF-8), otherwise identify bitmap/DIB/PNG without copying image bytes. Never log clipboard contents or monitor clipboard changes. Return typed text/image/empty results; close/unlock native handles on exit.
 
+clipboard::write_text is only called for explicit copy-all history. Use the
+invoking desktop window as clipboard owner, allocate null-terminated Unicode
+text before opening/emptying the clipboard, retry temporary contention, and
+release handles on failure. Successful SetClipboardData transfers allocation
+ownership to Windows. Copy has no paste-size/replay-tail limit. The typed
+terminalApi.copyHistory sends provider/task/conversation IDs and returns a bool;
+it never transports the transcript to the WebView.
+
+
+## Stage workspace update
+
+ProductionView adds effective stageStatuses and registered/legacy artifacts; production records default additive artifacts, stageUpdates and stage transition events. Question groups default to requirements and carry cycle. ExecutionSettingsView belongs to shared types; typed native adapters read/update per-conversation model, effort and permissions without credentials.
+
+## Workflow 2.0 shared contracts
+
+Production DTOs add optional acceptanceConfig/acceptanceSessions, selfTests, feedback, visual artifact metadata and document artifactBindings. Serde defaults preserve 1.x records without creating approvals or test results.
+Typed frontend adapters expose acceptance start/status, registered media reads and APP-only feedback. Domain rules remain in owning services; no new database table or secret persistence is introduced.
+Timing adds elapsed/first-playable/human wait/blocked/feedback rework/recorded active progress; categories overlap and incomplete execution remains unknown.

@@ -1,0 +1,110 @@
+{
+  "testedAt": "2026-10-08T08:26:56.837Z",
+  "before": {
+    "receipt": {
+      "at": "2026-10-08T07:36:15.056767600+00:00",
+      "messageId": "9ca8e756-aa11-4e54-a4d8-7bd42fb549ea",
+      "nativeSessionId": "01a11a55-b850-7223-9ed0-71382c173985",
+      "status": "sent",
+      "turnId": "01a11a70-fdbf-7563-90bd-51be646a27ff"
+    },
+    "turns": [
+      {
+        "id": "01a11a58-ce99-7d11-958c-fa2a817880f0",
+        "status": "completed"
+      },
+      {
+        "id": "01a11a60-ef6f-7cc3-9f62-bfd1f328f98e",
+        "status": "interrupted"
+      },
+      {
+        "id": "01a11a63-cead-7f43-aeef-b3639715ef92",
+        "status": "completed"
+      },
+      {
+        "id": "01a11a70-fdbf-7563-90bd-51be646a27ff",
+        "status": "interrupted"
+      }
+    ],
+    "native": "01a11a55-b850-7223-9ed0-71382c173985"
+  },
+  "after": {
+    "native": "01a11a55-b850-7223-9ed0-71382c173985",
+    "receipt": {
+      "at": "2026-10-08T08:19:03.021687600+00:00",
+      "attempt": 3,
+      "messageId": "dd36f331-998f-43e4-84ef-e66fcae6b7e2",
+      "nativeSessionId": "01a11a55-b850-7223-9ed0-71382c173985",
+      "status": "sent",
+      "turnId": "01a11a98-2d5a-7642-b682-ac9d516431b7"
+    },
+    "attemptBackups": [
+      {
+        "file": "intake-cat-blocking-requirements-round-2-1.attempt-5f53f40e-a7a1-497b-b6b8-a5dbfa88865c.json",
+        "receipt": {
+          "at": "2026-10-08T08:17:24.102249800+00:00",
+          "attempt": 2,
+          "messageId": "d269ecf7-f763-48a1-bd49-926666ae79c8",
+          "nativeSessionId": "01a11a55-b850-7223-9ed0-71382c173985",
+          "status": "sent",
+          "turnId": "01a11a96-aaf4-7be2-8dd9-d8399b021aea"
+        }
+      },
+      {
+        "file": "intake-cat-blocking-requirements-round-2-1.attempt-7b772f09-bac3-496f-bb8e-856b6113c7d4.json",
+        "receipt": {
+          "at": "2026-10-08T07:36:15.056767600+00:00",
+          "messageId": "9ca8e756-aa11-4e54-a4d8-7bd42fb549ea",
+          "nativeSessionId": "01a11a55-b850-7223-9ed0-71382c173985",
+          "status": "sent",
+          "turnId": "01a11a70-fdbf-7563-90bd-51be646a27ff"
+        }
+      }
+    ],
+    "turns": [
+      {
+        "id": "01a11a58-ce99-7d11-958c-fa2a817880f0",
+        "status": "completed",
+        "startedAt": "2026-10-08T07:09:50.133513600+00:00",
+        "completedAt": "2026-10-08T07:13:09.571771100+00:00"
+      },
+      {
+        "id": "01a11a60-ef6f-7cc3-9f62-bfd1f328f98e",
+        "status": "interrupted",
+        "startedAt": "2026-10-08T07:18:42.954317100+00:00",
+        "completedAt": "2026-10-08T07:19:51.321286200+00:00"
+      },
+      {
+        "id": "01a11a63-cead-7f43-aeef-b3639715ef92",
+        "status": "completed",
+        "startedAt": "2026-10-08T07:21:51.051053700+00:00",
+        "completedAt": "2026-10-08T07:25:41.464725600+00:00"
+      },
+      {
+        "id": "01a11a70-fdbf-7563-90bd-51be646a27ff",
+        "status": "interrupted",
+        "startedAt": "2026-10-08T07:36:15.060996800+00:00",
+        "completedAt": "2026-10-08T07:36:15.314593800+00:00"
+      },
+      {
+        "id": "01a11a96-aaf4-7be2-8dd9-d8399b021aea",
+        "status": "interrupted",
+        "startedAt": "2026-10-08T08:17:24.230663600+00:00",
+        "completedAt": "2026-10-08T08:18:59.376886200+00:00"
+      },
+      {
+        "id": "01a11a98-2d5a-7642-b682-ac9d516431b7",
+        "status": "completed",
+        "startedAt": "2026-10-08T08:19:03.151899+00:00",
+        "completedAt": "2026-10-08T08:22:31.381245+00:00"
+      }
+    ]
+  },
+  "ui": {
+    "automaticConnectAndResumeMs": 6005,
+    "validation": "请先回答第 1 题，再提交本组答案。",
+    "runningRepeat": "本组答案正在处理中，未重复发送。",
+    "completedRepeat": "本组答案已处理完成，未重复发送。",
+    "superseded": "后续对话已经继续，请查看当前进度，未重放旧问题。"
+  }
+}

@@ -6,7 +6,8 @@ Bot 是服务端执行 Lua 策略的正常玩法参与者；复用现有 IUser�
 
 ## 可行性与设计
 
-先通过 ABYA_DESKTOP_CLI 的 doctor、capabilities 及托管实例的 read_me_first 获取真实契约。
+通过 ABYA_DESKTOP_CLI 的 doctor、capabilities 及托管实例的 read_me_first 获取真实契约；
+主流程在同一实例/版本取得的有效结果直接复用，变化或证据不足时再查。
 用 runtime describe 或 runtime run 包装 capability_describe 查询精确参数；不恢复 MCP 入口。
 确认 editor_get_bot_definitions、editor_set_bot_definitions、架构 snapshot/validate/lint、
 editor_save_archive、Lua API 发现和 runtime_bot_diagnostics 在实际 Player 中可用。

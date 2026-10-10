@@ -1,10 +1,16 @@
-param([switch]$Staging)
+param([switch]$Staging, [switch]$WorkflowStaging, [switch]$RecoveryStaging, [switch]$ContinuationStaging, [switch]$UiStaging, [switch]$Validation, [switch]$RecorderStaging)
 
 $ErrorActionPreference = "Stop"
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$publishName = if ($Staging) { "Publish-Staging-Bot" } else { "Publish" }
+if (@($Staging, $WorkflowStaging, $RecoveryStaging, $ContinuationStaging, $UiStaging, $Validation, $RecorderStaging).Where({ $_ }).Count -gt 1) { throw 'Choose only one staging destination.' }
+$publishName = if ($RecorderStaging) { "Publish-Staging-Recorder" } elseif ($Validation) { "Publish-Staging-Validation" } elseif ($UiStaging) { "Publish-Staging-UI" } elseif ($ContinuationStaging) { "Publish-Staging-Continuation" } elseif ($RecoveryStaging) { "Publish-Staging-Recovery" } elseif ($WorkflowStaging) { "Publish-Staging-Workflow" } elseif ($Staging) { "Publish-Staging-Bot" } else { "Publish" }
 $publish = Join-Path $root $publishName
+$running = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith("$publish\", [StringComparison]::OrdinalIgnoreCase) }
+if ($running) { throw "Close the running package before replacing it: $publish" }
+$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } else { 'acceptance-feedback-20261010' }
+$env:ABYA_BUILD_UTC = [DateTime]::UtcNow.ToString('O')
+$packageVersion = (Get-Content -Raw -LiteralPath (Join-Path $root 'package.json') | ConvertFrom-Json).version
 $llmDirectories = @(".codex", ".grok")
 $managedSkillRelativePath = "skills\abya-game-development-task\SKILL.md"
 $managedSkillRequiredFiles = @(
@@ -25,6 +31,8 @@ $managedSkillRequiredFiles = @(
     "skills\abya-import-task-template\scripts\import-template.mjs"
 )
 $target = Join-Path $root "src-tauri\target\release\abya-desktop-development-tool.exe"
+$recorder = Join-Path $root 'tools/ffmpeg'
+if (-not (Test-Path -LiteralPath (Join-Path $recorder 'runtime/bin/ffmpeg.exe'))) { throw 'Run scripts/setup-recorder.ps1 before publishing.' }
 
 if (-not (Test-Path -LiteralPath $publish)) {
     New-Item -ItemType Directory -Path $publish | Out-Null
@@ -64,6 +72,12 @@ if (-not (Test-Path -LiteralPath $target)) {
 $destination = Join-Path $publish "ABYA Desktop Development Tool.exe"
 Copy-Item -LiteralPath $target -Destination $destination -Force
 Copy-Item -LiteralPath (Join-Path $root "src-tauri/target/release/abya-desktop.exe") -Destination $publish -Force
+if ($RecoveryStaging) {
+    Copy-Item -LiteralPath (Join-Path $root 'docs/WORKFLOW_RECOVERY_TEST_GUIDE_20261008.md') -Destination (Join-Path $publish 'TESTING.md') -Force
+}
+if ($ContinuationStaging) {
+    Copy-Item -LiteralPath (Join-Path $root 'docs/WORKFLOW_CONTINUATION_FIX_20261008.md') -Destination (Join-Path $publish 'TESTING.md') -Force
+}
 $runtime = Join-Path $publish "runtime"
 New-Item -ItemType Directory -Path $runtime -Force | Out-Null
 $nodePath = (Get-Command node.exe -ErrorAction Stop).Source
@@ -73,6 +87,10 @@ Copy-Item -LiteralPath $nodePath -Destination (Join-Path $runtime "node.exe") -F
 $toolsPath = Join-Path $publish "tools"
 New-Item -ItemType Directory -Path $toolsPath -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $root "tools/abya") -Destination $toolsPath -Recurse -Force
+$recorderDestination = Join-Path $toolsPath 'ffmpeg'
+New-Item -ItemType Directory -Path $recorderDestination -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $recorder 'source.json') -Destination $recorderDestination -Force
+Copy-Item -LiteralPath (Join-Path $recorder 'runtime') -Destination $recorderDestination -Recurse -Force
 
 foreach ($directoryName in $llmDirectories) {
     $llmSource = Join-Path $root $directoryName
@@ -110,7 +128,10 @@ try {
 } finally { $cliStream.Dispose() }
 $manifest = [ordered]@{
     product = "ABYA Desktop Development Tool"
-    version = "0.1.0"
+    version = $packageVersion
+    workflowVersion = (Get-Content (Join-Path $root ".codex/skills/abya-game-development-task/assets/production/workflow-policy.json") -Raw -Encoding UTF8 | ConvertFrom-Json).workflowVersion
+    releaseLabel = $env:ABYA_RELEASE_ID
+    sourceBuiltAtUtc = $env:ABYA_BUILD_UTC
     builtAtUtc = [DateTime]::UtcNow.ToString("O")
     executable = [IO.Path]::GetFileName($destination)
     sha256 = $hash

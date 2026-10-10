@@ -1,0 +1,8 @@
+{
+  "rejected": true,
+  "error": {
+    "code": "validation",
+    "detail": "",
+    "message": "实际存档或 Player 文件已改变，请登记新版本并复验，不能沿用旧通过记录。"
+  }
+}

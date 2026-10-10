@@ -9,8 +9,22 @@ Own repeatable checks and portable Windows release output.
 Owns dependency scripts, Tauri release configuration, `Publish` layout, build
 manifest generation, project LLM content publishing, and repository policy
 checks.
+Owns the minimal vendored portable-pty 0.9.0 patch and retained MIT license in src-tauri/vendor.
+It removes only Windows cursor inheritance for independent embedded terminals. Keep provenance,
+review the patch on dependency upgrades, and run the no-frontend-cursor-reply regression test.
 
 ## Public Contracts
+
+publish.ps1 -Validation builds Publish-Staging-Validation without replacing an active package.
+Historical staging switches remain mutually exclusive development destinations. Every build embeds
+version from the package (currently 0.3.0), release stage-workspace-20261009 and UTC build time; manifest workflow version is
+read from the UTF-8 policy (1.3.0). Live processes under the destination block replacement.
+After isolated validation, promote-validated.ps1 verifies APP/CLI hashes, stages a complete copy,
+backs up Publish, atomically renames the replacement and creates ABYA 开发工具.lnk through Explorer.
+Keep release backups; promotion never copies or replaces user databases. The stable user entry is
+the shortcut/Publish, not a staging directory. Real-model tests use isolated data/workspaces and
+ABYA_TEST_MODE=1. Preserve pinned user Skills unless explicitly upgrading through TaskService with
+backups. Real-model test output contains identifiers and metrics only; credentials stay in memory.
 
 `npm run check`, `npm run build:portable`, the release executable, and
 `Publish/build-manifest.json`. The project-root `.codex/` and `.grok/`
@@ -50,7 +64,7 @@ The importer additionally accepts `--kind art` (default remains `task`) for
 `abya-art-template-<slug>` and `abya-art-template.json`, kind
 `abya-art-template`. Both kinds share preflight, identity protection, staging,
 rollback and binary resource preservation. Imported art instructions defer to
-task font requirements and the post-feasibility art choice. Checks validate
+task font requirements and the art choice confirmed in the execution plan. Checks validate
 both namespaces and provider parity; importer and task deployment tests cover
 both kinds. The comic-arcade-ui bundle includes its complete source artwork,
 preview HTML, PNG kit, design tokens, references and optional generation script.
@@ -61,6 +75,27 @@ Publishing copies all template resources through the existing complete-root
 copy, and fails on missing importer resources or malformed template metadata.
 
 ## Dependencies
+
+First-batch workflow content has a canonical source in .codex. npm run sync:workflow
+updates only the listed repository .grok resources, including importer routing and
+the two existing templates, while keeping Grok-specific entry metadata. It does
+not update installed Publish directories or user task workspaces. check:skills
+rejects stale copies and checks policy identities, all pilot rounds/questions,
+blank initial acceptance/evidence and relative resource links. The task-service
+tests verify real create/refresh deployment and preserve existing task records.
+Production resources in assets/production and conditional references ship
+through the existing complete-directory copy. These checks do not run an AI model
+or establish gameplay acceptance. Backend production gates have separate Rust
+tests; UI approval and record browsing have frontend tests.
+
+scripts/setup-recorder.ps1 downloads the pinned BtbN LGPL shared FFmpeg archive,
+checks its published SHA-256 and preserves the complete license/source manifest.
+The runtime is an ignored reproducible dependency under tools/ffmpeg/runtime;
+publishing requires it and copies it with source.json into the portable tools
+directory. -WorkflowStaging writes Publish-Staging-Workflow, preserving the
+in-use normal Publish executable and its resources. It is mutually exclusive
+with the older -Staging switch. Validate the bundled ffmpeg/ffprobe and the
+native owned-window smoke test separately from a real Unity gameplay task.
 
 May invoke frontend and Rust checks. It must not contain product business logic.
 Cargo dependency changes for the LAN WebSocket gateway must remain compatible
@@ -100,3 +135,14 @@ scripts/test-codex-conversation-lifecycle.mjs validates installed native project
 
 
 Historical organization may also use explicitly supplied ABYA_HISTORY_WORKSPACES; it verifies retained task IDs, matches older native threads by exact cwd, and skips unavailable rollouts without recreating task records.
+
+Recorder-only validation builds may use publish.ps1 -RecorderStaging. It uses the same checks/package pipeline in Publish-Staging-Recorder with release label window-recorder-fix-20261009, leaving Publish and existing Publish-Staging-Validation intact. Do not run promote-validated.ps1 against this destination: it promotes the separate Validation package. Switch to the recorder candidate explicitly only after closing the active APP; keep the normal data directory and approval history.
+
+## Stage workspace update
+
+Release 0.3.0 ships workflow 1.3.0 with stage workspace, native conversation settings and updated shared skills. Retain the terminal-input and recorder corrections already in 0.2.2. Use the Validation staging build and verify manifest hashes, frontend interaction, additive historical record compatibility and native settings before promotion.
+
+## Workflow 2.0 release
+
+Release 0.4.0 / acceptance-feedback-20261010 ships workflow 2.0.0, task-version acceptance launch, visual previews, user feedback and necessary self-tests. Explicit legacy upgrades retain approved requirements/plans and history; ordinary package updates do not upgrade pinned tasks.
+Use Validation staging, run all standard checks, and verify real APP controls plus the known CatTrapClockFix Player. Human mouse acceptance and the 3–4 hour next-game target must not be inferred from automated validation.

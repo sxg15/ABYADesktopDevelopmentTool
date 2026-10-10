@@ -1,6 +1,7 @@
 # Gameplay Architecture Contract
 
-Use this contract after feasibility approval and before gameplay mutation.
+Use this contract before gameplay mutation within the confirmed plan or an explicitly
+authorized scoped change. Reuse the existing task decisions and applicable validation.
 
 ## Target Ownership
 
@@ -44,9 +45,10 @@ Bot, before implementing other bindings. This explicit staging exception also
 applies to the multiplayer template. A topology snapshotRevision does not lock
 Bot content: re-read definitions and compare their separate content hash.
 
-Prefab writes synchronize all linked instances and therefore require explicit
-high-impact approval. Read the binding immediately before writing and pass its
-`prefabRevision` as `expectedRevision`.
+Prefab writes synchronize all linked instances. Confirm that authorization covers
+the exact Prefab and affected instances; reuse explicit existing authorization rather
+than asking again. Do not bypass runtime approval checks. Read the binding immediately
+before writing and pass its `prefabRevision` as `expectedRevision`.
 
 ## Example Decomposition
 

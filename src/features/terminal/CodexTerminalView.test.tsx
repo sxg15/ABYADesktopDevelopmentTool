@@ -22,6 +22,7 @@ const terminalApiMock = vi.hoisted(() => ({
   })),
   deleteConversation: vi.fn(),
   readClipboard: vi.fn(async () => ({ kind: "text", text: "pasted" })),
+  copyHistory: vi.fn(async () => true),
   projectWorkspace: vi.fn(async () => "D:\\Workspaces\\task-1"),
   setArchived: vi.fn(async (_task: string, _id: string, archived: boolean) => ({ ...conversation, archived })),
   workflow: vi.fn(async () => ({
@@ -46,6 +47,7 @@ const terminalApiMock = vi.hoisted(() => ({
 }));
 
 const terminalGrid = vi.hoisted(() => ({ cols: 80, rows: 24 }));
+const terminalEvents = vi.hoisted(() => ({ resize: undefined as undefined | ((size:{cols:number;rows:number})=>void), focus:vi.fn() }));
 const resizeObservers = vi.hoisted(() => ({
   callbacks: [] as ResizeObserverCallback[],
 }));
@@ -90,8 +92,9 @@ vi.mock("@xterm/xterm", () => ({
     onData() {
       return { dispose() {} };
     }
-    onResize() {
-      return { dispose() {} };
+    onResize(callback:(size:{cols:number;rows:number})=>void) {
+      terminalEvents.resize=callback;
+      return { dispose() { terminalEvents.resize=undefined; } };
     }
     onScroll() {
       return { dispose() {} };
@@ -102,7 +105,7 @@ vi.mock("@xterm/xterm", () => ({
     }
     scrollToLine() {}
     scrollToBottom() {}
-    focus() {}
+    focus() { terminalEvents.focus(); }
     dispose() {}
   },
 }));
@@ -181,6 +184,50 @@ function notifyResize() {
 }
 
 describe("Codex conversation list", () => {
+  it("copies persisted history while the terminal is stopped and shows success", async () => {
+    terminalApiMock.open.mockResolvedValueOnce({
+      taskId: "task-1", conversationId: "conversation-1", status: "exited",
+      pid: 0, workingDirectory: "D:\\Workspaces\\task-1", lastError: "",
+    });
+    renderView();
+    await screen.findAllByText("Original title");
+    giveHostLayout();
+    notifyResize();
+    await screen.findByTitle("Reconnect terminal");
+    fireEvent.click(await screen.findByRole("button", { name: "Copy all conversation history" }));
+    await screen.findByText("All conversation history copied");
+    expect(terminalApiMock.copyHistory).toHaveBeenCalledWith("codex", "task-1", "conversation-1");
+    expect(terminalApiMock.open).toHaveBeenCalledTimes(1);
+    expect(terminalApiMock.write).not.toHaveBeenCalled();
+  });
+
+  it("disables repeat copies, reports errors, and allows retry from history view", async () => {
+    let rejectCopy!: (error: Error) => void;
+    terminalApiMock.copyHistory.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectCopy = reject; }));
+    renderView();
+    const button = await screen.findByRole("button", { name: "Copy all conversation history" });
+    fireEvent.click(button);
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(button);
+    expect(terminalApiMock.copyHistory).toHaveBeenCalledTimes(1);
+    rejectCopy(new Error("Clipboard is busy"));
+    await screen.findByText(/Could not copy conversation history/);
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByTitle(translator("en-US")("terminalHistory")));
+    fireEvent.click(button);
+    await screen.findByText("All conversation history copied");
+  });
+
+  it("uses the selected Grok provider and reports empty history without success", async () => {
+    terminalApiMock.copyHistory.mockResolvedValueOnce(false);
+    render(<DevelopmentTerminalView provider="grok" taskId="task-1" visible
+      availability={availability} t={translator("en-US")} onRefreshAvailability={vi.fn()} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Copy all conversation history" }));
+    await screen.findByText("This conversation has no history to copy yet.");
+    expect(terminalApiMock.copyHistory).toHaveBeenCalledWith("grok", "task-1", "conversation-1");
+    expect(screen.queryByText("All conversation history copied")).toBeNull();
+  });
+
   it("shows a read-only task folder for desktop project compatibility", async () => {
     renderView();
     fireEvent.click(await screen.findByTitle("Codex project grouping"));
@@ -243,6 +290,55 @@ describe("Codex conversation list", () => {
 });
 
 describe("terminal open sizing", () => {
+  it("defers resize until attach completes and restores input focus", async () => {
+    let finish!:(state:Awaited<ReturnType<typeof terminalApiMock.open>>)=>void;
+    terminalApiMock.open.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;}));
+    renderView();await screen.findAllByText("Original title");giveHostLayout();notifyResize();
+    await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+    terminalGrid.cols=110;terminalGrid.rows=35;
+    terminalEvents.resize?.({cols:110,rows:35});
+    expect(terminalApiMock.resize).not.toHaveBeenCalled();
+    terminalEvents.focus.mockClear();
+    finish({taskId:"task-1",conversationId:"conversation-1",status:"running",pid:10,workingDirectory:"D:\\Workspaces\\task-1",lastError:""});
+    await waitFor(()=>expect(terminalApiMock.resize).toHaveBeenCalledWith("codex","conversation-1",110,35));
+    expect(terminalEvents.focus).toHaveBeenCalled();
+  });
+  it("automatically connects the exact requested conversation and acknowledges only after open", async () => {
+    const other = { ...conversation, id: "other", title: "Other conversation" };
+    terminalApiMock.listConversations.mockResolvedValueOnce([conversation, other]);
+    const finish = vi.fn();
+    render(<DevelopmentTerminalView provider="codex" taskId="task-1" visible availability={availability}
+      t={translator("en-US")} onRefreshAvailability={vi.fn()}
+      connectionRequest={{ id:"request",taskId:"task-1",provider:"codex",conversationId:"other",finish }} />);
+    await screen.findAllByText("Other conversation");
+    expect(finish).not.toHaveBeenCalled(); giveHostLayout(); notifyResize();
+    await waitFor(() => expect(finish).toHaveBeenCalledWith(undefined));
+    expect(terminalApiMock.open).toHaveBeenCalledWith("codex", "task-1", "other", 80, 24, expect.anything());
+    expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
+  });
+  it("does not create a replacement when the requested conversation is missing", async () => {
+    terminalApiMock.listConversations.mockResolvedValueOnce([]); const finish=vi.fn();
+    render(<DevelopmentTerminalView provider="codex" taskId="task-1" visible availability={availability}
+      t={translator("en-US")} onRefreshAvailability={vi.fn()}
+      connectionRequest={{id:"request",taskId:"task-1",provider:"codex",conversationId:"missing",finish}} />);
+    await waitFor(() => expect(finish).toHaveBeenCalled());
+    expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
+    expect(terminalApiMock.open).not.toHaveBeenCalled();
+  });
+  it("preserves visible history when continuing the original conversation fails", async () => {
+    renderView(); await screen.findAllByText("Original title");
+    giveHostLayout(); notifyResize();
+    await waitFor(() => expect(terminalApiMock.open).toHaveBeenCalled());
+    terminalChannels[terminalChannels.length - 1].onmessage?.({ type: "output", data: "Preserved original history\r\n" });
+    fireEvent.click(screen.getByTitle("Pause task"));
+    await screen.findByTitle("Reconnect terminal");
+    terminalApiMock.open.mockRejectedValueOnce(new Error("Native resume failed"));
+    fireEvent.click(screen.getByTitle("Reconnect terminal"));
+    await screen.findByText(/Native resume failed/);
+    fireEvent.click(screen.getByTitle("Output history"));
+    expect(screen.getByText(/Preserved original history/)).toBeTruthy();
+    expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
+  });
   it("does not open a PTY while the host has no layout", async () => {
     renderView();
     await screen.findAllByText("Original title");

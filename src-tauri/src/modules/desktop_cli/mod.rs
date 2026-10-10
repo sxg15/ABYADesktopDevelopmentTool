@@ -474,7 +474,8 @@ mod tests {
             let script =
                 PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/test-codex-pipe.mjs");
             let output = std::process::Command::new("node")
-                .arg(script)
+                .arg(&script)
+                .env("ABYA_TEST_KEEP_THREAD", "1")
                 .envs(environment.iter().cloned())
                 .env("ABYA_DESKTOP_CLI", &cli)
                 .env("ABYA_DEVELOPMENT_TASK_ID", "task-one")
@@ -487,6 +488,33 @@ mod tests {
                 "model smoke failed: {}",
                 String::from_utf8_lossy(&output.stderr)
             );
+            let first: Value = serde_json::from_slice(&output.stdout).unwrap();
+            cli_sessions::revoke("codex", "conversation-one");
+            assert!(!cli_sessions::authorize(&token, &context));
+            let renewed = cli_sessions::environment("codex", "task-one", "conversation-one");
+            let resumed = std::process::Command::new("node")
+                .arg(&script)
+                .envs(renewed)
+                .env(
+                    "ABYA_TEST_RESUME_THREAD",
+                    first["threadId"].as_str().unwrap(),
+                )
+                .env("ABYA_DESKTOP_CLI", &cli)
+                .env("ABYA_DEVELOPMENT_TASK_ID", "task-one")
+                .env("ABYA_DEVELOPMENT_CONVERSATION_ID", "conversation-one")
+                .output()
+                .unwrap();
+            println!(
+                "model recovery: {}",
+                String::from_utf8_lossy(&resumed.stdout)
+            );
+            assert!(
+                resumed.status.success(),
+                "recovery smoke failed: {}",
+                String::from_utf8_lossy(&resumed.stderr)
+            );
+            let second: Value = serde_json::from_slice(&resumed.stdout).unwrap();
+            assert_eq!(first["threadId"], second["threadId"]);
         }
         cli_sessions::revoke("codex", "conversation-one");
         assert_eq!(

@@ -72,6 +72,41 @@ pub struct CodexPlanStep {
     pub status: CodexPlanStepStatus,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReportPlanStep {
+    pub step: String,
+    pub status: CodexPlanStepStatus,
+}
+
+pub(crate) fn validate_report_plan(
+    steps: &[ReportPlanStep],
+) -> AppResult<Vec<(String, CodexPlanStepStatus)>> {
+    let mut seen = std::collections::HashSet::new();
+    if steps.is_empty()
+        || steps.len() > 16
+        || steps.iter().any(|s| {
+            s.step.trim().is_empty()
+                || s.step.chars().count() > 120
+                || !seen.insert(s.step.trim())
+                || s.status == CodexPlanStepStatus::Unplanned
+        })
+        || steps
+            .iter()
+            .filter(|s| s.status == CodexPlanStepStatus::InProgress)
+            .count()
+            > 1
+    {
+        return Err(AppError::validation(
+            "请提供1至16个名称不同的步骤，同时只执行一个步骤。",
+        ));
+    }
+    Ok(steps
+        .iter()
+        .map(|s| (s.step.trim().into(), s.status))
+        .collect())
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexActivity {
@@ -131,7 +166,6 @@ impl CodexWorkflowSnapshot {
 
     pub(crate) fn begin_turn(&mut self, turn_id: &str) {
         if self.turns.iter().any(|turn| turn.id == turn_id) {
-            self.current_turn_id = Some(turn_id.to_string());
             return;
         }
         self.turns.push(CodexWorkflowTurn {
@@ -163,7 +197,11 @@ impl CodexWorkflowSnapshot {
                 let id = previous
                     .iter()
                     .find(|candidate| candidate.step == *step)
-                    .or_else(|| previous.get(index))
+                    .or_else(|| {
+                        previous
+                            .get(index)
+                            .filter(|s| !steps.iter().any(|(name, _)| *name == s.step))
+                    })
                     .map(|candidate| candidate.id.clone())
                     .unwrap_or_else(|| Uuid::new_v4().to_string());
                 CodexPlanStep {
@@ -173,19 +211,23 @@ impl CodexWorkflowSnapshot {
                 }
             })
             .collect();
+        // Keep old referenced steps so adding/reordering a plan never loses activity history.
+        for step in previous {
+            if !turn.plan.iter().any(|s| s.id == step.id)
+                && turn
+                    .activities
+                    .iter()
+                    .any(|a| a.step_id.as_deref() == Some(&step.id))
+            {
+                turn.plan.push(step);
+            }
+        }
         turn.explanation = explanation
             .map(|value| bounded(value, MAX_ACTIVITY_DETAIL_CHARS))
             .unwrap_or_default();
-        turn.status = if turn
-            .plan
-            .iter()
-            .all(|step| step.status == CodexPlanStepStatus::Completed)
-            && !turn.plan.is_empty()
-        {
-            CodexWorkflowTurnStatus::Completed
-        } else {
-            CodexWorkflowTurnStatus::InProgress
-        };
+        if turn.completed_at.is_none() {
+            turn.status = CodexWorkflowTurnStatus::InProgress;
+        }
         self.touch();
     }
 
@@ -506,6 +548,63 @@ mod tests {
             ],
         );
         assert_eq!(workflow.turns[0].plan[0].id, id);
+    }
+
+    #[test]
+    fn reordered_steps_keep_unique_ids_and_do_not_finish_native_turn() {
+        let mut w = CodexWorkflowSnapshot::empty("t", "c", CodexObservabilityStatus::Native, "");
+        w.update_plan(
+            "turn",
+            None,
+            &[
+                ("Inspect".into(), CodexPlanStepStatus::InProgress),
+                ("Test".into(), CodexPlanStepStatus::Pending),
+            ],
+        );
+        let first = w.turns[0].plan[0].id.clone();
+        w.record_activity(
+            "turn",
+            Some("a"),
+            CodexActivityKind::Command,
+            CodexActivityStatus::Completed,
+            "Inspected",
+            "",
+            "native",
+        );
+        w.update_plan(
+            "turn",
+            None,
+            &[
+                ("Prepare".into(), CodexPlanStepStatus::Completed),
+                ("Inspect".into(), CodexPlanStepStatus::Completed),
+                ("Test".into(), CodexPlanStepStatus::Completed),
+            ],
+        );
+        assert_eq!(w.turns[0].plan[1].id, first);
+        assert_ne!(w.turns[0].plan[0].id, first);
+        assert_eq!(w.turns[0].status, CodexWorkflowTurnStatus::InProgress);
+        assert_eq!(
+            w.turns[0].activities[0].step_id.as_deref(),
+            Some(first.as_str())
+        );
+    }
+
+    #[test]
+    fn late_activity_does_not_select_an_older_turn() {
+        let mut w = CodexWorkflowSnapshot::empty("t", "c", CodexObservabilityStatus::Native, "");
+        w.begin_turn("old");
+        w.complete_turn("old", CodexWorkflowTurnStatus::Completed);
+        w.begin_turn("new");
+        w.record_activity(
+            "old",
+            Some("late"),
+            CodexActivityKind::Command,
+            CodexActivityStatus::Completed,
+            "Old result",
+            "",
+            "native",
+        );
+        assert_eq!(w.current_turn_id.as_deref(), Some("new"));
     }
 
     #[test]

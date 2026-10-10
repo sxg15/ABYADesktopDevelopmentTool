@@ -1,0 +1,46 @@
+[
+  {
+    "instanceId": "a3873c8b-eba8-40e4-a55c-23794fa87920",
+    "mode": "lan-client",
+    "context": {
+      "mode": "Gameplay",
+      "sceneName": "SandBox_0",
+      "scenePath": "Assets/Scenes/多人模式/SandBox/SandBox_0.unity",
+      "sceneLoaded": true,
+      "rootInitialized": true,
+      "isTransitioning": false,
+      "uiAvailable": true,
+      "isTestMode": false,
+      "networkGameplayReady": true,
+      "serverActive": false,
+      "clientActive": true,
+      "clientConnected": true
+    },
+    "roots": 1,
+    "screenshot": [
+      "D:\\Unity项目\\ABYADesktopDevelopmentTool\\src-tauri\\target\\workflow-v2-qa\\workspace\\artifacts\\runtime-qa\\a3873c8b-eba8-40e4-a55c-23794fa87920\\f413a13e-2f74-478b-9e61-5c8d2032d08c-1.png"
+    ]
+  },
+  {
+    "instanceId": "d5b4af41-4c16-4490-93e8-e44ea9d6f3e2",
+    "mode": "lan-host",
+    "context": {
+      "mode": "Gameplay",
+      "sceneName": "SandBox_0",
+      "scenePath": "Assets/Scenes/多人模式/SandBox/SandBox_0.unity",
+      "sceneLoaded": true,
+      "rootInitialized": true,
+      "isTransitioning": false,
+      "uiAvailable": true,
+      "isTestMode": false,
+      "networkGameplayReady": true,
+      "serverActive": true,
+      "clientActive": true,
+      "clientConnected": true
+    },
+    "roots": 1,
+    "screenshot": [
+      "D:\\Unity项目\\ABYADesktopDevelopmentTool\\src-tauri\\target\\workflow-v2-qa\\workspace\\artifacts\\runtime-qa\\d5b4af41-4c16-4490-93e8-e44ea9d6f3e2\\e2839879-8100-4c28-86c2-cb94469503fa-1.png"
+    ]
+  }
+]

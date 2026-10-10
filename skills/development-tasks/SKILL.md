@@ -11,12 +11,44 @@ task-to-instance history relationships.
 
 ## Public Contracts
 
+Production v1.2 adds playerMode (unspecified/single/multiplayer) and durable questionGroups.
+Legacy records default to unspecified and no questions. Publishing questions is agent-accessible
+in the current stage when questions are enabled, with a validated Desktop-owned conversation binding. User-only
+production_answer saves drafts, submits, amends, cancels or changes player mode. Revisions protect
+against stale writes and duplicate submission. Prior answers remain immutable; answers are not
+document approvals. Changes invalidate downstream stages; existing version resubmission starts
+the next cycle. CLI cannot override an already explicit player mode. Pending questions prevent
+requirements submission/approval; ask mode also requires an explicit player mode.
+APP drafts persist to SQLite plus immediate local browser recovery until successful submission.
+TaskIntakeDialog polls the selected task even while its terminal tab is active and opens an APP
+modal for a new pending group. Close/Escape/later retains drafts and never submits/cancels.
+Dismissed groups have a resume button; production shows summary/reopen entries, not a second
+answer editor. New groups and amendment versions can prompt again. Late responses are ignored.
+Question groups carry native identity; continuation must target their originating conversation.
+Submit and continue is one action. The parent dialog owns submission so a polling rerender or
+editor close cannot lose an already accepted intent. Revision checks reject stale views.
+Continuation feedback includes queued, paused, waiting gates and needsReview. If the backend
+requires a terminal, TasksView connects the exact conversation then flushes the saved request ID;
+it does not create a new intent. Document approval/rejection passes its saved production revision
+through the same queue; decisions remain saved when connection fails. Required answers are checked before submission
+and the first missing question is selected; only revision conflicts instruct the user to refresh.
+Editing clears stale validation errors and allows autosave again.
+Reports include question and answer history with timestamps. No-followup records explicit
+assumptions in the requirement document and does not publish business questions.
+Stage report buttons reveal the generated report in the OS file manager, selecting the exact
+plan/review/closeout HTML inside the common reports directory. The service accepts only those
+three phase IDs and reuses existing safe artifact validation/export. Evidence opening is unchanged.
+Requirements, plan and delivery document cards also expose Show in File Explorer above the details.
+The action selects the document's recorded path and remains available after approval or task closure.
+It uses the existing artifact path validation; missing files show an error without rewriting documents
+or changing approval state. It does not invoke a file editor or approve the displayed version.
+
 `DevelopmentTask` includes a durable `workspacePath`. Create/update/archive/
 delete commands and task list queries expose that path. New tasks create a
 unique, title-derived directory below the configured foundation workspace root.
 Legacy tasks with an empty path receive a workspace lazily on first read.
 
-Every created or read task receives provider-specific copies of the bundled
+Every created or unpinned task receives provider-specific copies of the bundled
 managed Skill at `.codex/skills/abya-game-development-task` and
 `.grok/skills/abya-game-development-task`. Synchronization is idempotent and
 may replace only those exact managed Skill directories. User-owned files and
@@ -24,8 +56,8 @@ other Skills under either provider root are never removed or overwritten. Each
 bundled source is resolved from the matching project-root directory in the
 development repository or beside the portable executable.
 
-The additional managed template namespace is `abya-task-template-*`. On each
-create/read, discover sibling bundled directories with `SKILL.md` and a valid
+The additional managed template namespace is `abya-task-template-*`. Before a
+task is pinned, discover sibling bundled directories with `SKILL.md` and a valid
 `abya-task-template.json`: schemaVersion 1, kind `abya-task-template`, matching
 id, nonempty displayName, description and sourceSkillName. Copy complete
 resources to the matching provider root. Existing destinations are replaceable
@@ -34,29 +66,22 @@ causes a validation error and is preserved. Ignore unmarked source Skills and
 invalid template markers. Templates absent from the bundle are not deleted
 from existing workspaces. The importer itself is not synced into tasks.
 
-Before gameplay intake the task Skill reads marker summaries and offers all
-templates plus `不使用模板（通用开发流程）`. No templates means the original
-workflow. Explicit selection/decline is reused across follow-ups. Load only
-the chosen template, use its stages, and retain shared provider binding,
-managed-instance, feasibility, authorization, architecture and acceptance
-contracts. Selection is conversation/specification context, not a database
-field. Already supplied facts and authorization are not requested again.
+The task Skill reads marker summaries when selecting a relevant template and
+includes a recommendation or none in the requirements document. An explicit
+selection/decline is reused. Load only the chosen template; it supplements the
+shared stages instead of starting another intake. Choices live in task-owned
+production records, not new database fields. A scoped request never implicitly
+starts the full production workflow or twelve rounds.
 
 Art templates use the separate `abya-art-template-*` namespace and
 `abya-art-template.json` marker, kind `abya-art-template`, with the same v1
 identity fields, synchronization and collision protection as task templates.
 Complete art resources (including images and nested directories) are deployed.
-They never appear in the initial task-template menu. After reporting
-feasibility, offer use/no-art-template; a use response without another named
-style selects `abya-art-template-comic-arcade-ui`. Multiplayer also recommends
-this default, while still allowing decline or another style. Wait for an
-actual choice unless the user already supplied one. Persist the choice in the
-conversation/specification and reuse it, not in a database field. No installed
-styles means continue without one; a missing requested/default style must be
-reported, never silently replaced. The selected art template governs visual
-design and asset reuse, not gameplay, and cannot override the multiplayer
-template's required DingTalk font. Additional style constraints can require
-updating the feasibility result before implementation.
+Task and art choices remain distinct. Existing art/resources are preferred;
+new style suggestions are confirmed with the execution plan, without a fourth
+approval gate or automatic comic-arcade-ui default. A missing chosen template,
+font, asset or tool is a feasibility gap. Art does not change gameplay or
+override the multiplayer template's DingTalk font requirement.
 
 The complete managed Skill directory is deployed, including its gameplay
 architecture reference and manifest template. During an approved gameplay
@@ -74,9 +99,33 @@ The local validator checks declared update scope, read-before-write content hash
 saved archive/Player hashes and evidence-bound gameplay assertions. It does not
 execute Lua, establish atomic write locking, authenticate evidence, or replace
 runtime acceptance. The multiplayer template uses the same Bot contract.
-The bundled Skill also makes agent-created, imported, and assigned gameplay
-assets the default when the user does not provide or require existing assets,
-and requires CustomUI text contrast plus parent-contained layout acceptance.
+The bundled Skill requires actual resource import/assignment/readback and
+CustomUI contrast/layout acceptance, but no longer defaults to generating all
+art. Missing assets are raised in the plan.
+
+Production v1.1 uses SQLite task_production and append-only revision history as
+the source of truth. Task-owned JSON/round files/three HTML reports are exports.
+Only explicit enablement starts a full task; old artifact records are preserved
+as legacy material without inferring acceptance. New-task UI offers full/scoped
+mode and ask/no-followup. Scoped tasks keep the existing terminal workflow.
+Revision-checked operations submit immutable document versions, issues, evidence,
+milestones and rounds. Tauri user decisions bind the displayed document revision
+and SHA; no agent/CLI approval operation exists. File changes invalidate approval.
+Required issues, missing/stale evidence and incomplete 8+4 prevent stage closure.
+Completed task status additionally requires accepted delivery and finished closeout.
+Saved versions are hashed from a task-owned instance's known launch archive and
+Player executable/Data/runtime files; callers cannot provide arbitrary source paths
+or hashes. Required checks revalidate those sources. This is saved-file evidence,
+not proof of the currently loaded runtime state; save/reload checks remain required.
+Document changes retain history and invalidate affected downstream stages. Reports
+escape all user text and percent-encode file links. Artifact paths reject traversal,
+alternate streams and symlinks/reparse points outside task-owned files.
+Production tasks pin installed Skills and their policy. Ordinary reads no longer
+refresh them. Explicit upgrade requires stopped terminals, preserves a backup and
+history, detects local managed changes and restarts appropriate confirmations.
+The task UI provides stage status, documents/approval/feedback, issues, rounds,
+evidence/report entry points and a searchable installed Skill library. It reads
+only a selected Skill body and protects against stale async task responses.
 
 The task workspace keeps persistent active, completed, and archived tasks.
 Only active tasks may launch new managed instances, and deleting a task is
@@ -131,6 +180,13 @@ refresh after instance deletion.
 Also compare every deployed Bot schema/reference/module with its bundled source
 for new tasks and stale-task refresh, and execute the deployed Node entrypoint to
 verify sibling imports. Preserve user-owned Skills and gameplay task artifacts.
+The same create/refresh tests compare all production resources byte for
+byte, preserving existing task records rather than reinitializing them.
+Production tests cover stale revision/hash decisions, no CLI approval bypass,
+source/evidence changes, invalid paths, complete twelve-round contracts, history,
+escaped reports and pinned task reads. UI tests check explicit approval, stale
+documents, task switching and selected-only Skill reads. Synthetic files test
+consistency only; they are not real gameplay acceptance evidence.
 
 ## LLM Maintenance Rule
 
@@ -142,3 +198,17 @@ Runtime image paths in completed CLI activity details are previewable in the exi
 ## Legacy default workspace repair
 prepare_terminal_workspace runs before a new provider terminal opens. Only direct children of the old LOCALAPPDATA default root qualify; active session leases prevent migration. Copy into a unique staging directory under the new USERPROFILE default root, reject reparse points, then rename and conditionally update the database path. Keep the original directory as a recovery copy. Conflicts/errors preserve both source and any staging data for inspection; never overwrite or recursively delete user content. Task/conversation IDs and native session metadata remain unchanged. Repeated opens are idempotent. Test binary assets, conversation preservation, custom roots and database path updates.
 
+
+## Stage workspace update
+
+Workflow 1.3 adds a stage-selected workspace, draft artifact registration, current-stage progress, stage-specific questions, scoped issue impacts and approval-bound template choices. register-approved-template requires the approved document hash and explicit template ID. configure of the existing template is idempotent. Compatible policy upgrades keep decisions, rounds and cycle with Skill backups. Question answers invalidate their stage and downstream only. issue scope changes require a reason; completed stages still enforce unresolved required issues. ProductionView effective statuses explain pending answers/blockers without altering accepted documents on read. Fixed legacy draft paths appear as drafts; no recursive file discovery. Files remain validated before revealing. Stage transitions are timestamped automatically and exported in reports. Test scoped blockers, draft discovery, approval-preserving backfill and stage questions with real persistence fixtures.
+
+## Workflow 2.0: visual proposals and human feedback
+
+New tasks use human-feedback iteration, with no fixed rounds. Existing pinned 1.x records retain their legacy gates. Explicit upgrade keeps requirement/plan approvals, cycle, documents, rounds and evidence, backs up managed Skills, and requires actual current-version self-tests rather than fabricating them.
+register-visual stores immutable file hashes, sourceType, roles, groupId, visualVersion and temporary/source metadata. Resource completion requires asset-board/layout/states coverage; a composite image may cover multiple roles. Plan submission binds current resource images and acceptance rechecks hashes. Overwriting a registered file is rejected.
+Only registered task artifacts may be previewed (PNG/JPEG/WebP/GIF up to 16 MiB; MP4/WebM up to 64 MiB). APP-only feedback attachment writes uniquely named task files. No HTML or SVG execution.
+save-self-test records version/cycle-bound architecture, lua, core-loop, input, visual, lifecycle, save-reload and authority. Single-player authority alone may be not-applicable. Delivery requires these checks, completed implementation and closed required issues/feedback, not R12. Evidence reuse needs an intact reviewed same-cycle source plus reason and unaffected scope; it is labelled reuse, not fresh execution.
+User feedback records versions, instance IDs, related visual/attachments and history. Agent update-feedback permits in-progress/awaiting-recheck only; APP closes/reopens it. Candidate versions and evidence are revalidated before gameplay feedback closure. Final acceptance remains the user's separate decision.
+acceptance_spec resolves only captured versionDetails sources and verifies hashes; configuration binds seats/requiredTools/requireUi to the current version. Defaults are one single-player seat or two multiplayer seats. TaskService never launches processes; RuntimeBridge orchestrates InstanceService. Acceptance session history is capped at 50 and exported.
+Reports show visual previews, self-tests, feedback and legacy rounds. Test no-round delivery, missing/stale checks, user-only closure, file/path/version mismatch, real upgrade preservation and legacy gates.

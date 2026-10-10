@@ -2,6 +2,71 @@ use super::{AppError, AppResult};
 use serde::Serialize;
 use windows_sys::Win32::System::{DataExchange::*, Memory::*};
 
+/// 仅在用户点击复制时写入；调用方传入桌面窗口句柄，不记录文本。
+pub fn write_text(text: &str, owner: isize) -> AppResult<()> {
+    use windows_sys::Win32::Foundation::GlobalFree;
+    if owner == 0 || text.contains('\0') {
+        return Err(AppError::validation("Clipboard text or window is invalid."));
+    }
+    struct ClipboardGuard;
+    impl Drop for ClipboardGuard {
+        fn drop(&mut self) {
+            unsafe {
+                CloseClipboard();
+            }
+        }
+    }
+    struct MemoryGuard(windows_sys::Win32::Foundation::HGLOBAL);
+    impl Drop for MemoryGuard {
+        fn drop(&mut self) {
+            unsafe {
+                GlobalFree(self.0);
+            }
+        }
+    }
+    unsafe {
+        let size = text
+            .encode_utf16()
+            .count()
+            .checked_add(1)
+            .and_then(|units| units.checked_mul(2))
+            .ok_or_else(|| AppError::validation("Clipboard text is too large."))?;
+        let memory = GlobalAlloc(GMEM_MOVEABLE, size);
+        if memory.is_null() {
+            return Err(AppError::validation("Cannot allocate clipboard text."));
+        }
+        let memory = MemoryGuard(memory);
+        let pointer = GlobalLock(memory.0) as *mut u16;
+        if pointer.is_null() {
+            return Err(AppError::validation("Cannot prepare clipboard text."));
+        }
+        for (index, unit) in text.encode_utf16().chain(std::iter::once(0)).enumerate() {
+            pointer.add(index).write(unit);
+        }
+        GlobalUnlock(memory.0);
+        let mut opened = false;
+        for _ in 0..5 {
+            if OpenClipboard(owner as _) != 0 {
+                opened = true;
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        if !opened {
+            return Err(AppError::validation(
+                "Clipboard is busy. Try copying again.",
+            ));
+        }
+        let _clipboard = ClipboardGuard;
+        if EmptyClipboard() == 0 || SetClipboardData(13, memory.0).is_null() {
+            return Err(AppError::validation("Cannot write clipboard text."));
+        }
+        // 成功后 Windows 接管内存；失败路径由 MemoryGuard 释放。
+        std::mem::forget(memory);
+    }
+    Ok(())
+}
+
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ClipboardContent {

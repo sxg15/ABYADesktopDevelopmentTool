@@ -11,6 +11,18 @@ fn command(group: &str, action: &str) -> Option<&'static str> {
         ("task", "create") => "development_task_create",
         ("task", "update") => "development_task_update",
         ("task", "status") => "development_task_set_status",
+        ("production", "get") => "development_production_get",
+        ("production", "start-acceptance") => "development_production_start_acceptance",
+        ("production", "acceptance-status") => "development_production_acceptance_status",
+        ("production", "update") => "development_production_update",
+        ("production", "report") => "development_production_report",
+        ("production", "version") => "development_production_version",
+        ("skill", "list") => "development_skill_list",
+        ("skill", "read") => "development_skill_read",
+        ("recording", "tools") => "game_recording_tools",
+        ("recording", "start") => "game_recording_start",
+        ("recording", "get") => "game_recording_get",
+        ("recording", "stop") => "game_recording_stop",
         ("conversation", "bind") => "development_conversation_bind",
         ("conversation", "report") => "development_conversation_activity_report",
         ("instance", "list") => "game_instance_list",
@@ -58,7 +70,7 @@ fn execute() -> Result<Value, Box<dyn std::error::Error>> {
             "--help" => {
                 return Ok(json!({"success":true,"data":{
                 "usage":"abya-desktop <group> <action> --input-file FILE|- --json",
-                "groups":["doctor","capabilities","task","conversation","instance","runtime","archive","log"],
+                "groups":["doctor","capabilities","task","production","skill","recording","conversation","instance","runtime","archive","log"],
                 "context":"ABYA_DEVELOPMENT_TASK_ID, ABYA_DEVELOPMENT_CONVERSATION_ID, ABYA_DEVELOPMENT_PROVIDER",
                 "schemas":"abya-desktop capabilities --json"}}));
             }

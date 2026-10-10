@@ -120,6 +120,30 @@ impl DesktopToolDispatcher {
         if name == "game_instance_list" {
             arguments["taskId"] = json!(input.task_id);
         }
+        if name.starts_with("development_production_") || name.starts_with("development_skill_") {
+            arguments["taskId"] = json!(input.task_id);
+        }
+        if name == "development_production_update" && arguments["operation"] == "publish-questions"
+        {
+            if !arguments["data"].is_object() {
+                return ToolCallResult::error(AppError::validation("data 必须为问题组对象。"));
+            }
+            let native = match input.provider {
+                TerminalProvider::Codex => self
+                    .dependencies
+                    .codex_terminal
+                    .native_session_id(&input.task_id, &input.conversation_id),
+                TerminalProvider::Grok => Ok(None),
+            };
+            match native {
+                Ok(id) => {
+                    arguments["data"]["provider"] = json!(input.provider);
+                    arguments["data"]["conversationId"] = json!(input.conversation_id);
+                    arguments["data"]["nativeSessionId"] = json!(id);
+                }
+                Err(error) => return ToolCallResult::error(error),
+            }
+        }
         if name == "game_runtime_cancel" {
             let id = arguments["instanceId"].as_str().unwrap_or("");
             let operation = arguments["operationId"].as_str().unwrap_or("");
@@ -304,6 +328,23 @@ impl DesktopToolDispatcher {
                 )
             })?;
         let input: ConversationActivityInput = decode(arguments)?;
+        if let Some(plan) = input.plan.as_ref() {
+            let steps = crate::modules::development_terminal::workflow::validate_report_plan(plan)?;
+            match provider {
+                TerminalProvider::Codex => self.dependencies.codex_terminal.record_reported_plan(
+                    &task_id,
+                    &conversation_id,
+                    &steps,
+                    &input.summary,
+                )?,
+                TerminalProvider::Grok => self.dependencies.grok_terminal.record_reported_plan(
+                    &task_id,
+                    &conversation_id,
+                    &steps,
+                    &input.summary,
+                )?,
+            };
+        }
         match provider {
             TerminalProvider::Codex => {
                 serialize(self.dependencies.codex_terminal.record_reported_activity(
@@ -374,6 +415,152 @@ impl DesktopToolDispatcher {
             ));
         }
         match name {
+            "development_production_start_acceptance" => {
+                self.dependencies.runtime_bridge.start_acceptance(
+                    arguments["taskId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("taskId is required."))?,
+                )
+            }
+            "development_production_acceptance_status" => {
+                self.dependencies.runtime_bridge.acceptance_status(
+                    arguments["taskId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("taskId is required."))?,
+                )
+            }
+            "development_production_version" => {
+                let task_id = arguments["taskId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("taskId is required."))?;
+                let instance_id = arguments["instanceId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("instanceId is required."))?;
+                let instance = self.dependencies.instances.read(instance_id)?;
+                if instance.task_id.as_deref() != Some(task_id) {
+                    return Err(AppError::validation(
+                        "Instance belongs to a different task.",
+                    ));
+                }
+                let archive = instance.profile.and_then(|p| p.archive).ok_or_else(|| {
+                    AppError::validation("Instance has no saved archive selection.")
+                })?;
+                let executable = instance
+                    .executable_path
+                    .ok_or_else(|| AppError::validation("Instance has no Player executable."))?;
+                let expected = arguments["expectedRevision"]
+                    .as_u64()
+                    .ok_or_else(|| AppError::validation("expectedRevision is required."))?;
+                let id = arguments["versionId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("versionId is required."))?;
+                serialize(self.dependencies.tasks.production_capture_version(
+                    task_id,
+                    expected,
+                    id,
+                    crate::modules::tasks::VersionSources {
+                        archive_path: archive.archive_path.into(),
+                        player_path: executable.into(),
+                        archive_guid: archive.archive_guid,
+                        level_guid: archive.level_guid,
+                        instance_id: instance_id.into(),
+                    },
+                )?)
+            }
+            "game_recording_tools" => {
+                let executable = crate::modules::instances::recorder_executable();
+                Ok(
+                    json!({"available":executable.is_ok(),"executable":executable.ok().map(|p|p.to_string_lossy().into_owned()),"method":"windows-graphics-capture","audio":false,"frameRate":15}),
+                )
+            }
+            "game_recording_start" => {
+                let instance_id = arguments["instanceId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("instanceId is required."))?;
+                let instance = self.dependencies.instances.read(instance_id)?;
+                let task_id = instance.task_id.ok_or_else(|| {
+                    AppError::validation("Only managed instances can be recorded.")
+                })?;
+                let task = self.dependencies.tasks.get(&task_id)?;
+                if task.status != TaskStatus::Active {
+                    return Err(AppError::validation("Task is not active."));
+                }
+                let source_version = self
+                    .dependencies
+                    .tasks
+                    .production_get(&task_id)?
+                    .record
+                    .and_then(|r| r.current_version);
+                let directory = self
+                    .dependencies
+                    .tasks
+                    .recording_directory(&task_id, instance_id)?;
+                let max_seconds = match arguments.get("maxSeconds") {
+                    Some(v) => v
+                        .as_u64()
+                        .ok_or_else(|| AppError::validation("maxSeconds must be an integer."))?,
+                    None => 3600,
+                };
+                if max_seconds > 7200 {
+                    return Err(AppError::validation("Recording limit exceeds two hours."));
+                }
+                serialize(self.dependencies.instances.recording_start(
+                    &task_id,
+                    instance_id,
+                    &directory,
+                    source_version,
+                    max_seconds as u32,
+                )?)
+            }
+            "game_recording_get" | "game_recording_stop" => {
+                let id = arguments["instanceId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("instanceId is required."))?;
+                if name == "game_recording_stop" {
+                    serialize(self.dependencies.instances.recording_stop(id)?)
+                } else {
+                    serialize(self.dependencies.instances.recording_get(id)?)
+                }
+            }
+            "development_production_get" => {
+                let id = arguments["taskId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("taskId is required."))?;
+                serialize(self.dependencies.tasks.production_get(id)?)
+            }
+            "development_production_update" => serialize(
+                self.dependencies
+                    .tasks
+                    .production_update(decode(arguments)?)?,
+            ),
+            "development_production_report" => {
+                let id = arguments["taskId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("taskId is required."))?;
+                serialize(self.dependencies.tasks.production_export(id)?)
+            }
+            "development_skill_list" => {
+                let id = arguments["taskId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("taskId is required."))?;
+                serialize(self.dependencies.tasks.production_catalog(id)?)
+            }
+            "development_skill_read" => {
+                let id = arguments["taskId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("taskId is required."))?;
+                let provider = arguments["provider"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("provider is required."))?;
+                let skill = arguments["skillId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("skillId is required."))?;
+                serialize(
+                    self.dependencies
+                        .tasks
+                        .production_skill_text(id, provider, skill)?,
+                )
+            }
             "desktop_get_capabilities" => {
                 let _: EmptyInput = decode(arguments)?;
                 Ok(json!({
@@ -740,6 +927,7 @@ struct ConversationBindInput {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct ConversationActivityInput {
+    plan: Option<Vec<crate::modules::development_terminal::workflow::ReportPlanStep>>,
     status: CodexActivityStatus,
     kind: CodexActivityKind,
     summary: String,
@@ -1138,6 +1326,64 @@ mod tests {
             json!({"instanceId":instance_id,"toolName":"runtime_get_status","arguments":{}}),
         );
         assert!(!result.is_error, "Grok context: {:?}", result);
+        // 可选的人机就绪检查走真实托管 Player；只读定义与 API，不生成或保存玩法。
+        let bot_prerequisites = std::env::var("ABYA_CLI_SMOKE_BOTS").as_deref() == Ok("1");
+        if bot_prerequisites {
+            for required in [
+                "editor_get_bot_definitions",
+                "editor_set_bot_definitions",
+                "runtime_bot_diagnostics",
+            ] {
+                assert!(
+                    tools.iter().any(|tool| tool["name"] == required),
+                    "缺少 {required}"
+                );
+            }
+            for (provider, conversation_id) in [("codex", &codex.id), ("grok", &grok.id)] {
+                let bot_context =
+                    json!({"provider":provider,"taskId":task.id,"conversationId":conversation_id});
+                for (name, tool, arguments) in [
+                    ("definitions", "editor_get_bot_definitions", json!({})),
+                    ("diagnostics", "runtime_bot_diagnostics", json!({})),
+                    (
+                        "receive",
+                        "lua_api_describe",
+                        json!({"api_id":"abya.domain.bots.receive"}),
+                    ),
+                    (
+                        "submit-action",
+                        "lua_api_describe",
+                        json!({"api_id":"abya.domain.bots.submit_action"}),
+                    ),
+                ] {
+                    let response = fixture.dispatcher.call_with_context(
+                        Some(bot_context.clone()),
+                        &Uuid::new_v4().to_string(),
+                        "game_runtime_call_tool",
+                        json!({"instanceId":instance_id,"toolName":tool,"arguments":arguments}),
+                    );
+                    std::fs::write(
+                        output.join(format!("bot-{provider}-{name}.json")),
+                        serde_json::to_vec_pretty(&response).unwrap(),
+                    )
+                    .unwrap();
+                    assert!(!response.is_error, "{provider}/{name}: {response:?}");
+                    let payload = result_json(response);
+                    match name {
+                        "definitions" => assert!(payload["definitions"].is_array()),
+                        "diagnostics" => {
+                            assert!(payload["bots"].is_array());
+                            assert_eq!(payload["acceptanceVerified"], false);
+                        }
+                        "receive" => assert_eq!(payload["apiId"], "abya.domain.bots.receive"),
+                        "submit-action" => {
+                            assert_eq!(payload["apiId"], "abya.domain.bots.submit_action");
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            }
+        }
         let multiplayer = std::env::var("ABYA_CLI_SMOKE_MULTIPLAYER").as_deref() == Ok("1");
         if multiplayer {
             deps.instances.stop(&instance_id).unwrap();
@@ -1211,7 +1457,7 @@ mod tests {
         }
         std::fs::write(
             output.join("summary.json"),
-            json!({"success":true,"capabilities":tools.len(),
+            json!({"success":true,"capabilities":tools.len(),"botPrerequisites":bot_prerequisites,
             "providers":["codex","grok"],"pureLua":true,"screenshot":true,"multiplayer":multiplayer})
             .to_string(),
         )
@@ -1443,6 +1689,9 @@ mod tests {
         );
         assert!(!reported.is_error);
 
+        let planned=fixture.dispatcher.call_for_session(Some(session_id),"development_conversation_activity_report",json!({"status":"progress","kind":"analysis","summary":"检查后完成计划","plan":[{"step":"检查现有实例","status":"inProgress"},{"step":"整理计划","status":"pending"}]}));
+        assert!(!planned.is_error);
+
         let listed = fixture.dispatcher.call_for_session(
             Some(session_id),
             "game_instance_list",
@@ -1465,6 +1714,10 @@ mod tests {
             .find(|activity| activity.summary == "Using game_instance_list")
             .unwrap();
         assert_eq!(automatic.status, CodexActivityStatus::Completed);
+        assert_eq!(
+            automatic.step_id.as_deref(),
+            Some(workflow.turns[0].plan[0].id.as_str())
+        );
         assert!(automatic.detail.contains("taskId"));
     }
 

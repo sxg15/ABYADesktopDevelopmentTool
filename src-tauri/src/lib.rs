@@ -29,7 +29,10 @@ use modules::instances::{
 };
 use modules::logs::{LogFilter, LogRepairReport, LogService, LogSession, RuntimeLogEvent};
 use modules::runtime_bridge::{RuntimeBridgeService, RuntimeBridgeState};
-use modules::tasks::{DevelopmentTask, TaskInput, TaskService, TaskStatus};
+use modules::tasks::{
+    DevelopmentTask, ProductionDecision, ProductionMutation, ProductionView, SkillEntry, TaskInput,
+    TaskService, TaskStatus,
+};
 use serde::Deserialize;
 use std::path::PathBuf;
 use tauri::{Manager, State, ipc::Channel};
@@ -117,6 +120,11 @@ struct SetTaskStatusInput {
 #[tauri::command]
 fn get_app_paths(state: State<'_, AppState>) -> AppPaths {
     state.paths.clone()
+}
+
+#[tauri::command(async)]
+fn get_build_info(state: State<'_, AppState>) -> AppResult<foundation::build_info::BuildInfo> {
+    foundation::build_info::read(&state.paths)
 }
 
 #[tauri::command]
@@ -210,6 +218,211 @@ fn create_task(input: TaskInput, state: State<'_, AppState>) -> AppResult<Develo
     state.tasks.create(input)
 }
 
+#[tauri::command(async)]
+fn get_task_production(task_id: String, state: State<'_, AppState>) -> AppResult<ProductionView> {
+    state.tasks.production_get(&task_id)
+}
+
+#[tauri::command(async)]
+fn start_task_acceptance(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state.runtime_bridge.start_acceptance(&task_id)
+}
+
+#[tauri::command(async)]
+fn get_task_acceptance(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state.runtime_bridge.acceptance_status(&task_id)
+}
+
+#[tauri::command(async)]
+fn read_production_media(
+    task_id: String,
+    artifact_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<String> {
+    state.tasks.production_media(&task_id, &artifact_id)
+}
+
+#[tauri::command(async)]
+fn submit_production_feedback(
+    input: ProductionMutation,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    state.tasks.production_feedback(input)
+}
+
+#[tauri::command(async)]
+fn update_task_production(
+    input: ProductionMutation,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    state.tasks.production_update(input)
+}
+
+#[tauri::command(async)]
+fn answer_task_questions(
+    input: ProductionMutation,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    state.tasks.production_answer(input)
+}
+
+#[tauri::command(async)]
+fn continue_intake_questions(
+    task_id: String,
+    group_id: String,
+    revision: u64,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::IntakeContinuation> {
+    state
+        .codex_terminal
+        .continue_questions(&task_id, &group_id, revision)
+}
+
+#[tauri::command(async)]
+fn submit_intake_answers(
+    input: ProductionMutation,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::QuestionSubmission> {
+    state.codex_terminal.submit_questions(input)
+}
+#[tauri::command(async)]
+fn continue_codex_task(
+    task_id: String,
+    conversation_id: String,
+    after_revision: Option<u64>,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::IntakeContinuation> {
+    state
+        .codex_terminal
+        .continue_after_revision(&task_id, &conversation_id, after_revision)
+}
+#[tauri::command(async)]
+fn flush_codex_continuation(
+    task_id: String,
+    conversation_id: String,
+    request_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::IntakeContinuation> {
+    state
+        .codex_terminal
+        .flush_continuation(&task_id, &conversation_id, &request_id)
+}
+#[tauri::command(async)]
+fn get_codex_task_control(
+    task_id: String,
+    conversation_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::TaskControlState> {
+    state
+        .codex_terminal
+        .task_control(&task_id, &conversation_id)
+}
+
+#[tauri::command(async)]
+fn get_codex_execution_settings(
+    task_id: String,
+    conversation_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state
+        .codex_terminal
+        .execution_settings(&task_id, &conversation_id)
+}
+#[tauri::command(async)]
+fn update_codex_execution_settings(
+    task_id: String,
+    conversation_id: String,
+    input: serde_json::Value,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state
+        .codex_terminal
+        .update_execution_settings(&task_id, &conversation_id, input)
+}
+
+#[tauri::command(async)]
+fn decide_task_production(
+    input: ProductionDecision,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    state.tasks.production_decide(input)
+}
+
+#[tauri::command(async)]
+fn get_production_timing(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    modules::development_terminal::timing::task_timing(&state.tasks, &task_id)
+}
+
+#[tauri::command(async)]
+fn upgrade_task_production(
+    task_id: String,
+    expected_revision: u64,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    state.tasks.production_upgrade(&task_id, expected_revision)
+}
+
+#[tauri::command(async)]
+fn get_task_skills(task_id: String, state: State<'_, AppState>) -> AppResult<Vec<SkillEntry>> {
+    state.tasks.production_catalog(&task_id)
+}
+
+#[tauri::command(async)]
+fn read_task_skill(
+    task_id: String,
+    provider: String,
+    skill_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<String> {
+    state
+        .tasks
+        .production_skill_text(&task_id, &provider, &skill_id)
+}
+
+#[tauri::command(async)]
+fn open_production_artifact(
+    task_id: String,
+    path: String,
+    reveal: Option<bool>,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let path = state.tasks.production_artifact_path(&task_id, &path)?;
+    if reveal.unwrap_or(false) {
+        return app
+            .opener()
+            .reveal_item_in_dir(path)
+            .map_err(foundation::AppError::internal);
+    }
+    app.opener()
+        .open_path(path, None::<&str>)
+        .map_err(foundation::AppError::internal)
+}
+
+#[tauri::command(async)]
+fn reveal_production_report(
+    task_id: String,
+    phase: String,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let path = state.tasks.production_report_path(&task_id, &phase)?;
+    app.opener()
+        .reveal_item_in_dir(path)
+        .map_err(foundation::AppError::internal)
+}
+
 #[tauri::command]
 fn update_task(
     id: String,
@@ -255,22 +468,28 @@ fn open_codex_terminal(
 }
 
 #[tauri::command]
-fn write_codex_terminal(
+async fn write_codex_terminal(
     conversation_id: String,
     data: String,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    state.codex_terminal.write(&conversation_id, &data)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.write(&conversation_id, &data))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command]
-fn resize_codex_terminal(
+async fn resize_codex_terminal(
     conversation_id: String,
     columns: u16,
     rows: u16,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    state.codex_terminal.resize(&conversation_id, columns, rows)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.resize(&conversation_id, columns, rows))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command(async)]
@@ -295,8 +514,62 @@ fn read_terminal_clipboard() -> AppResult<foundation::clipboard::ClipboardConten
 }
 
 #[tauri::command(async)]
+fn copy_terminal_history(
+    provider: modules::development_terminal::TerminalProvider,
+    task_id: String,
+    conversation_id: String,
+    window: tauri::WebviewWindow,
+    state: State<'_, AppState>,
+) -> AppResult<bool> {
+    use modules::development_terminal::TerminalProvider;
+    let text = match provider {
+        TerminalProvider::Codex => state
+            .codex_terminal
+            .transcript_text(&task_id, &conversation_id)?,
+        TerminalProvider::Grok => state
+            .grok_terminal
+            .transcript_text(&task_id, &conversation_id)?,
+    };
+    if text.trim().is_empty() {
+        return Ok(false);
+    }
+    let owner = window.hwnd().map_err(foundation::AppError::internal)?;
+    foundation::clipboard::write_text(&text, owner.0 as isize)?;
+    Ok(true)
+}
+
+#[tauri::command(async)]
 fn get_codex_project_workspace(task_id: String, state: State<'_, AppState>) -> AppResult<String> {
     state.codex_terminal.project_workspace(&task_id)
+}
+
+#[tauri::command(async)]
+fn codex_conversation_metrics(
+    task_id: String,
+    conversation_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state.codex_terminal.metrics(&task_id, &conversation_id)
+}
+
+#[tauri::command(async)]
+fn codex_recovery_candidates(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<Vec<modules::codex_terminal::RecoveryCandidate>> {
+    state.codex_terminal.recovery_candidates(&task_id)
+}
+
+#[tauri::command(async)]
+fn repair_codex_binding(
+    task_id: String,
+    conversation_id: String,
+    native_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<CodexConversation> {
+    state
+        .codex_terminal
+        .repair_binding(&task_id, &conversation_id, &native_id)
 }
 
 #[tauri::command(async)]
@@ -372,22 +645,28 @@ fn open_grok_terminal(
 }
 
 #[tauri::command]
-fn write_grok_terminal(
+async fn write_grok_terminal(
     conversation_id: String,
     data: String,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    state.grok_terminal.write(&conversation_id, &data)
+    let service = state.grok_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.write(&conversation_id, &data))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command]
-fn resize_grok_terminal(
+async fn resize_grok_terminal(
     conversation_id: String,
     columns: u16,
     rows: u16,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    state.grok_terminal.resize(&conversation_id, columns, rows)
+    let service = state.grok_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.resize(&conversation_id, columns, rows))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command(async)]
@@ -613,6 +892,17 @@ fn query_log_events(
 }
 
 pub fn run() {
+    if foundation::single_instance::redirect_packaged_launch()
+        .expect("Cannot establish normal Windows data context")
+    {
+        return;
+    }
+    let paths = AppPaths::discover().expect("ABYA data directory unavailable");
+    let Some(_instance_guard) = foundation::single_instance::acquire(&paths.data_dir)
+        .expect("Cannot acquire ABYA instance lock")
+    else {
+        return;
+    };
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -679,7 +969,29 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            get_task_production,
+            start_task_acceptance,
+            get_task_acceptance,
+            read_production_media,
+            submit_production_feedback,
+            update_task_production,
+            answer_task_questions,
+            continue_intake_questions,
+            submit_intake_answers,
+            continue_codex_task,
+            flush_codex_continuation,
+            get_codex_task_control,
+            get_codex_execution_settings,
+            get_production_timing,
+            update_codex_execution_settings,
+            decide_task_production,
+            upgrade_task_production,
+            get_task_skills,
+            read_task_skill,
+            open_production_artifact,
+            reveal_production_report,
             get_app_paths,
+            get_build_info,
             get_settings,
             update_settings,
             regenerate_desktop_cli_token,
@@ -701,7 +1013,11 @@ pub fn run() {
             stop_codex_terminal,
             list_codex_conversations,
             read_terminal_clipboard,
+            copy_terminal_history,
             get_codex_project_workspace,
+            codex_conversation_metrics,
+            codex_recovery_candidates,
+            repair_codex_binding,
             set_codex_conversation_archived,
             create_codex_conversation,
             rename_codex_conversation,
@@ -743,18 +1059,37 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("failed to build ABYA Desktop Development Tool");
 
-    app.run(|app_handle, event| {
-        if matches!(
-            event,
-            tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }
-        ) {
-            let state = app_handle.state::<AppState>();
-            state.archive_transfers.stop_all();
-            state.codex_terminal.stop_all();
-            state.grok_terminal.stop_all();
-            state.instances.stop_all();
-            state.connections.stop();
-            state.desktop_cli.stop();
+    let shutdown_started = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let shutdown_finished = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    app.run(move |app_handle, event| {
+        if let tauri::RunEvent::ExitRequested { api, .. } = event {
+            use std::sync::atomic::Ordering;
+            if shutdown_finished.load(Ordering::SeqCst) {
+                return;
+            }
+            api.prevent_exit();
+            if shutdown_started.swap(true, Ordering::SeqCst) {
+                return;
+            }
+            app_handle
+                .state::<AppState>()
+                .codex_terminal
+                .begin_shutdown();
+            let handle = app_handle.clone();
+            let finished = shutdown_finished.clone();
+            // Keep the WebView event loop alive while IPC and native children are drained.
+            // Cleanup must run once, off the UI thread, before releasing the instance guard.
+            std::thread::spawn(move || {
+                let state = handle.state::<AppState>();
+                state.archive_transfers.stop_all();
+                state.codex_terminal.stop_all();
+                state.grok_terminal.stop_all();
+                state.instances.stop_all();
+                state.connections.stop();
+                state.desktop_cli.stop();
+                finished.store(true, Ordering::SeqCst);
+                handle.exit(0);
+            });
         }
     });
 }

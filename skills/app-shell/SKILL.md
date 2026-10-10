@@ -11,6 +11,17 @@ Owns page composition but not task, process, log, or MCP business logic.
 
 ## Public Contracts
 
+IconButtonTooltips renders immediate in-app hover/focus help for SVG-only buttons using their
+existing title/accessible label, including disabled controls and modal/inline icon buttons.
+It preserves accessible names/descriptions, restores native attributes on exit and dismisses
+on pointer down, Escape, scroll or blur. Tooltip placement stays within the WebView viewport.
+
+Codex labels distinguish Pause task, Continue task and Reconnect terminal. Sidebar identity comes
+from embedded BuildInfo: version, release/date and validation/test status, never a hardcoded version.
+ExitRequested marks native shutdown immediately and runs cleanup once on a worker, while the UI
+event loop remains available for IPC teardown. Only completed cleanup requests final exit; do not
+repeat blocking cleanup on Exit or hold the UI thread while waiting for native/PTY shutdown.
+
 Navigation view IDs, locale keys, shared UI primitives, and application-level
 refresh events.
 
@@ -101,5 +112,19 @@ When changing navigation, localization, shared controls, or layout behavior,
 update this Skill in the same change.
 
 ## Conversation controls
+The terminal toolbar includes Copy all conversation history for both Codex and
+Grok. Keep its accessible name stable while copying; show localized pending,
+success (live status), empty-history and failure feedback. It remains available
+in both terminal/history views and after terminal exit.
+
 Codex conversation rows include archive/restore in addition to rename/delete; reserve room for all three controls. Active/archived filters and explicit synchronization sit above the list. Add bilingual clipboard-ready/size errors and archive labels. Grok retains its existing lifecycle controls.
 
+
+## Stage workspace update
+
+Button descriptions now default above the owner, use measured viewport clamping and support titled text buttons as well as icons. Production stage navigation wraps at narrow widths and stays visible while scrolling. Terminal settings wrap without reducing the terminal to a fixed-height toolbar.
+
+## Acceptance and feedback UI
+
+Production and instance surfaces expose a task-version acceptance button with progress and actionable errors. Visual cards identify reference/mockup/render/gameplay, temporary resources and plan bindings; at most two selected previews compare side by side.
+User feedback supports related visuals and bounded screenshot/video uploads. AI recheck and user closure remain separate controls. New human-feedback tasks have no 8+4 progress wording; legacy rounds remain visible.

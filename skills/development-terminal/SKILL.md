@@ -13,6 +13,31 @@ DTO implementation, title validation, sanitization, and workflow persistence.
 
 ## Public Contracts
 
+TerminalConnectionRequest connects an exact existing conversation requested by intake UI.
+It selects/mounts that terminal, waits for successful open/reattach, then resolves once. Missing
+or archived conversations fail; never create a replacement. A request waits for real layout,
+preserves normal native trust/approval handling and does not itself start a model turn.
+Do not send PTY resizes while attachment is unresolved; apply the latest measured size after it
+resolves, and focus the visible terminal after attach/Continue. A live connection can still be
+stopped while the model state is paused. PTY input/resize adapters use spawn_blocking, allowing
+cursor-query replies and UI commands to proceed while Windows terminal operations are blocked.
+Historical replay is plain text with CRLF; strip old ANSI queries and modes before xterm parsing.
+Only live output may request terminal replies. Preserve raw transcripts on disk for diagnostics.
+The pinned portable-pty patch disables Windows parent-cursor inheritance: each embedded terminal
+starts independently, without a ConPTY create/close handshake tied to old frontend coordinates.
+
+Codex controls distinguish Pause task, Continue task and Reconnect terminal. Continue goes through
+the persistent queue API; reconnection only restores the terminal attachment. Pause cancels pending
+intents and interrupts the native turn. useTaskControl polls one backend projection with stale
+response guards; the toolbar and workflow bar use it rather than historical TUI text. Inactive
+transcripts have an explicit historical label; elapsed time is time since observed progress,
+not an inferred networking error. Completed/archived tasks disable Continue until restored instead
+of showing ready. TUI closure alone may leave work running. Failed reattachment retains
+visible history; replay replacement occurs only after successful open. Project help shows native
+ID and workspace and offers scoped history recovery after pause, with metadata backup. It does
+not guarantee sidebar enrollment or simultaneous execution from another client. Recovery does
+not merge native histories or auto-resume. Refresh list is separate from continue execution.
+
 `TerminalProvider` is `codex` or `grok`. Each selected provider exposes
 availability, conversation CRUD, PTY open/write/resize/stop, workflow reads,
 and terminal events through typed frontend adapters. The user explicitly
@@ -38,6 +63,18 @@ New output follows only when the user is already at the bottom. The UI history
 keeps a rolling recent window of at most 2 MiB of normalized text so sustained
 PTY redraw traffic cannot exhaust the WebView; the provider transcript remains
 persisted on disk.
+
+The toolbar's copy-all action copies the selected conversation's entire persisted
+PTY transcript, including output older than replay and UI retention windows. It
+works in terminal/history modes and after exit for both providers. The async
+copy_terminal_history adapter returns true only after native clipboard success;
+false means no text and preserves the clipboard. Disable concurrent clicks and
+show bilingual success, empty-history and retryable failure feedback. Read a
+fixed file-length snapshot in chunks and strip ANSI/control strings with parser
+state across chunk boundaries. Do not send the complete transcript through IPC
+or mount it in the DOM. This is terminal output, including provider redraws;
+it does not expand tool results hidden by the provider UI. Tests cover multi-MiB
+history, Unicode, split escape sequences, empty files, errors and provider routing.
 
 PTY open and live resize clamp columns to 20–500 and rows to 5–200, matching
 Codex/Grok backend limits. The PTY is not opened until the selected host is
@@ -72,3 +109,12 @@ The terminal intercepts Ctrl+V/Shift+V before forwarding keystrokes. Read native
 
 
 The Codex project-folder icon opens a read-only task path and one-time saved-project instructions for desktop versions that do not show CLI-native projects. The user can select/copy the path; this never accepts an arbitrary cwd.
+
+## Stage workspace update
+
+The existing top conversation steps remain the per-turn plan surface. CLI conversation report can carry a validated plan (1-16 unique named steps, at most one inProgress). Plans preserve activity-linked historical IDs on edits. All-plan-completed does not imply native turn completed. Stage navigation and conversation plans remain separate. Execution settings are displayed above the terminal and use typed provider APIs, with pending edits, failure feedback and explicit next-turn timing.
+
+## Workflow timing
+
+Timing merges overlapping recorded execution intervals, and subtracts known human-wait, blocked and pause intervals for recorded active progress. It is not pure model time. Unknown/incomplete turns remain counted as unknown; no synthetic completion is written to native history.
+Stage events provide total elapsed, first playable, observed review wait and blocked spans; feedback history provides rework and recheck wait. Tools and rework overlap execution and cannot be summed as independent totals.

@@ -16,9 +16,18 @@ import {
 } from "lucide-react";
 import { Modal } from "../../app/Modal";
 import { LaunchInstanceModal } from "../instances/LaunchInstanceModal";
+import { AcceptanceLauncher } from "./AcceptanceLauncher";
 import { InstanceDetailsModal } from "../instances/InstanceDetailsModal";
 import { DevelopmentTerminalView } from "../terminal/CodexTerminalView";
 import { CodexWorkflowBar } from "./CodexWorkflowBar";
+import { ProductionPanel } from "./ProductionPanel";
+import { TaskIntakeDialog } from "./TaskIntakeDialog";
+import { SkillLibrary } from "./SkillLibrary";
+import { productionText } from "./productionText";
+import { productionApi, continuationMessages } from "../../shared/production";
+import type { IntakeQuestionGroup } from "../../shared/production";
+import type { TerminalConnectionRequest } from "../terminal/terminalConnection";
+import { useTaskControl } from "../terminal/useTaskControl";
 import { api, errorMessage, terminalApi } from "../../shared/api";
 import type {
   AppSettings,
@@ -59,6 +68,49 @@ export function TasksView({
     Record<string, TaskTerminalContext>
   >({});
   const selectedConversationIdsRef = useRef<Record<string, string>>({});
+  const [connectionRequest, setConnectionRequest] = useState<TerminalConnectionRequest>();
+  const pendingConnection = useRef<TerminalConnectionRequest | undefined>(undefined);
+
+  useEffect(() => {
+    if (pendingConnection.current && pendingConnection.current.taskId !== selectedId) {
+      pendingConnection.current.finish(new Error("已切换任务，未发送继续请求。"));
+    }
+  }, [selectedId]);
+  useEffect(() => () => pendingConnection.current?.finish(new Error("页面已关闭，未发送继续请求。")), []);
+
+  function ensureIntakeConnection(group: Pick<IntakeQuestionGroup, "provider" | "conversationId">): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!selectedId || pendingConnection.current) { reject(new Error("正在连接，请稍候。")); return; }
+      const request: TerminalConnectionRequest = { id: crypto.randomUUID(), taskId: selectedId,
+        provider: group.provider, conversationId: group.conversationId,
+        finish: error => {
+          if (pendingConnection.current !== request) return;
+          window.clearTimeout(timeout); pendingConnection.current = undefined; setConnectionRequest(undefined);
+          if (error) reject(error); else resolve();
+        } };
+      const timeout = window.setTimeout(() => request.finish(new Error("原会话连接超时，答案已保存，未发送继续请求。")), 60000);
+      pendingConnection.current = request; setConnectionRequest(request);
+      selectTerminalProvider(selectedId, group.provider);
+      setOpenedTerminalIds(ids => ids.includes(selectedId) ? ids : [...ids, selectedId]);
+      setTaskTabs(tabs => ({ ...tabs, [selectedId]: "terminal" }));
+    });
+  }
+
+  async function continueSelectedTask(message: string, afterRevision?: number) {
+    const conversation = selectedTerminalContext?.conversation;
+    if (!selected || !conversation) throw new Error("请打开原会话后点击继续任务，决定已保存。");
+    if (selectedProvider !== "codex") {
+      await terminalApi.write(selectedProvider, conversation.id, `\x1b[200~${message}\x1b[201~\r`);
+      return;
+    }
+    let result = await productionApi.continueTask(selected.id, conversation.id, afterRevision);
+    if (result.status === "needsConnection" && result.requestId) {
+      await ensureIntakeConnection({ provider: "codex", conversationId: conversation.id });
+      result = await productionApi.flushContinuation(selected.id, conversation.id, result.requestId);
+    }
+    window.dispatchEvent(new Event("abya:control-changed"));
+    notify(continuationMessages[result.status]);
+  }
 
   const selected = tasks.find((task) => task.id === selectedId);
   const selectedTab = selected ? (taskTabs[selected.id] ?? "instances") : "instances";
@@ -71,6 +123,7 @@ export function TasksView({
   const selectedTerminalContext = selected
     ? terminalContexts[selectedContextKey]
     : undefined;
+  const selectedControl=useTaskControl(selected?.id??"",selectedTerminalContext?.conversation?.id,selectedProvider);
   const taskInstances = useMemo(
     () => instances.filter((instance) => instance.taskId === selectedId),
     [instances, selectedId],
@@ -504,6 +557,7 @@ export function TasksView({
             </header>
 
             <CodexWorkflowBar
+              control={selectedControl}
               provider={selectedProvider}
               conversation={selectedTerminalContext?.conversation}
               workflow={selectedTerminalContext?.workflow}
@@ -512,6 +566,8 @@ export function TasksView({
             />
 
             <div className="task-tabs" role="tablist">
+              <button role="tab" className={selectedTab === "production" ? "selected" : ""} aria-selected={selectedTab === "production"} onClick={() => selectTab("production")}>{productionText(settings?.locale).title}</button>
+              <button role="tab" className={selectedTab === "skills" ? "selected" : ""} aria-selected={selectedTab === "skills"} onClick={() => selectTab("skills")}>{productionText(settings?.locale).skills}</button>
               <button
                 className={selectedTab === "instances" ? "selected" : ""}
                 role="tab"
@@ -533,6 +589,19 @@ export function TasksView({
             </div>
 
             <div className="task-tab-content">
+              <TaskIntakeDialog key={`intake:${selected.id}`} taskId={selected.id} active={selected.status === "active"}
+                onEnsureConnection={ensureIntakeConnection}
+                onContinue={async (message, group) => {
+                  const conversation = selectedTerminalContext?.conversation;
+                  if (!conversation || group?.provider !== selectedProvider || group.conversationId !== conversation.id) {
+                    throw new Error("请先打开发布这组问题的原会话，答案已保存。");
+                  }
+                  await terminalApi.write(selectedProvider, conversation.id, `\x1b[200~${message}\x1b[201~\r`);
+                }} />
+              {selectedTab === "production" && <ProductionPanel key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
+                onContinue={async (message, _group, afterRevision) => continueSelectedTask(message, afterRevision)} />}
+              {selectedTab === "skills" && <SkillLibrary key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
+                onContinue={continueSelectedTask} />}
               <div
                 className="instance-tab-panel"
                 hidden={selectedTab !== "instances"}
@@ -552,6 +621,7 @@ export function TasksView({
                   </button>
                 </div>
 
+                <AcceptanceLauncher key={selected.id} taskId={selected.id} active={selected.status === "active"} en={settings?.locale === "en-US"} />
                 <div className="table-wrap instances-table">
                   <table>
                     <thead>
@@ -674,6 +744,7 @@ export function TasksView({
                         key={provider}
                       >
                         <DevelopmentTerminalView
+                          connectionRequest={connectionRequest?.taskId === taskId && connectionRequest.provider === provider ? connectionRequest : undefined}
                           provider={provider}
                           taskId={taskId}
                           visible={
@@ -708,6 +779,7 @@ export function TasksView({
       {showCreate && (
         <CreateTaskModal
           t={t}
+          locale={settings?.locale}
           onClose={() => setShowCreate(false)}
           onCreated={async (task) => {
             setSelectedId(task.id);
@@ -743,10 +815,12 @@ export function TasksView({
 
 function CreateTaskModal({
   t,
+  locale,
   onClose,
   onCreated,
 }: {
   t: (key: MessageKey) => string;
+  locale?: string;
   onClose: () => void;
   onCreated: (task: DevelopmentTask) => void;
 }) {
@@ -754,18 +828,37 @@ function CreateTaskModal({
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
 
+  const [mode, setMode] = useState("full");
+  const [questions, setQuestions] = useState("ask");
+  const [playerMode, setPlayerMode] = useState("unspecified");
+  const [created, setCreated] = useState<DevelopmentTask>();
+  const [creating, setCreating] = useState(false);
+  const s = productionText(locale);
+
   async function create() {
+    setCreating(true);
     try {
-      onCreated(await api.createTask(title, description));
+      const task = created ?? await api.createTask(title, description);
+      setCreated(task);
+      if (mode === "full") {
+        const existing = await productionApi.get(task.id);
+        if (!existing.record) await productionApi.update(task.id, 0, "initialize", { questionMode: questions, playerMode });
+      }
+      onCreated(task);
       onClose();
     } catch (value) {
       setError(errorMessage(value));
-    }
+    } finally { setCreating(false); }
   }
 
   return (
     <Modal title={t("newTask")} onClose={onClose}>
       <div className="form-stack">
+        <label className="field"><span>{s.taskMode}</span><select value={mode} disabled={creating || Boolean(created)} onChange={e => setMode(e.target.value)}><option value="full">{s.fullTask}</option><option value="scoped">{s.scopedTask}</option></select></label>
+        {mode === "full" && <label className="field"><span>{s.questionMode}</span><select value={questions} disabled={creating} onChange={e => setQuestions(e.target.value)}><option value="ask">{s.ask}</option><option value="no-followup">{s.noAsk}</option></select></label>}
+        {mode === "full" && <label className="field">玩法人数<select value={playerMode} disabled={creating} onChange={e => setPlayerMode(e.target.value)}>
+          <option value="unspecified">未明确，在需求阶段敲定</option><option value="single">单人</option><option value="multiplayer">多人</option>
+        </select></label>}
         <label className="field">
           <span>{t("taskTitle")}</span>
           <input
@@ -788,7 +881,7 @@ function CreateTaskModal({
         <button className="secondary-button" onClick={onClose}>
           {t("cancel")}
         </button>
-        <button className="primary-button" disabled={!title.trim()} onClick={create}>
+        <button className="primary-button" disabled={!title.trim() || creating} onClick={create}>
           {t("create")}
         </button>
       </footer>
@@ -807,7 +900,7 @@ function isActiveInstance(instance: GameInstance) {
   );
 }
 
-type TaskTab = "instances" | "terminal";
+type TaskTab = "instances" | "terminal" | "production" | "skills";
 
 interface TaskTerminalContext {
   conversation?: CodexConversation;

@@ -34,6 +34,7 @@ pub struct InstanceService {
     paths: AppPaths,
     connections: GameConnectionService,
     live: Arc<Mutex<HashMap<String, LiveInstance>>>,
+    pub(super) recordings: Arc<Mutex<HashMap<String, super::recording::LiveRecording>>>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -50,6 +51,7 @@ impl InstanceService {
             paths,
             connections,
             live: Default::default(),
+            recordings: Default::default(),
         }
     }
 
@@ -92,7 +94,9 @@ impl InstanceService {
         if name.is_empty() {
             return Err(AppError::validation("Instance name is required."));
         }
-        validate_executable(input.executable_path.trim())?;
+        if input.profile.mode != LaunchMode::LanClient {
+            validate_executable(input.executable_path.trim())?;
+        }
         self.ensure_active_task(task_id)?;
 
         let inherited = if input.profile.mode == LaunchMode::LanClient {
@@ -115,11 +119,17 @@ impl InstanceService {
                 .profile
                 .as_ref()
                 .and_then(|profile| profile.archive.clone());
+            input.executable_path = host
+                .executable_path
+                .clone()
+                .ok_or_else(|| AppError::validation("Host has no Player executable."))?;
+            validate_executable(&input.executable_path)?;
             host.host_port
         } else {
             None
         };
 
+        validate_executable(input.executable_path.trim())?;
         let id = Uuid::new_v4().to_string();
         let gateway_endpoint = self.connections.preferred_endpoint()?;
         let contract = build_launch_contract(
@@ -227,6 +237,7 @@ impl InstanceService {
     }
 
     pub fn stop(&self, id: &str) -> AppResult<InstanceStopResult> {
+        self.stop_instance_recording(id);
         let instance = self.read(id)?;
         if instance.origin != InstanceOrigin::Managed {
             return Err(AppError::validation(
@@ -511,6 +522,10 @@ impl InstanceService {
     }
 
     pub fn stop_all(&self) {
+        let recording_ids: Vec<_> = self.recordings.lock().keys().cloned().collect();
+        for id in recording_ids {
+            self.stop_instance_recording(&id);
+        }
         let children = self
             .live
             .lock()

@@ -30,6 +30,9 @@ The complete PTY transcript remains on disk. Terminal attachment replays only
 the recent 256 KiB in 64 KiB events and reports omitted older bytes; reattaching
 a live session serializes this replay before the replacement subscriber starts
 receiving live output.
+Replay uses the shared ANSI-stripped text projection so historic queries cannot produce input
+for the new process. Input and resize adapters use spawn_blocking to keep Windows PTY operations
+off the GUI and async worker threads; live output remains unchanged.
 
 Stop and task deletion remove the live session, drop its UI Channel and PTY
 handles, then terminate the process tree without sending terminal events from
@@ -52,6 +55,11 @@ discovers it from the task working directory. The Skill explicitly receives CLI 
 updates without forcing formal read-only plan mode.
 
 ## Dependencies
+
+transcript_text validates the conversation UUID and task ownership, then reads
+the entire persisted transcript through development-terminal's streaming text
+normalizer. Copying also works after exit without opening/resuming the PTY;
+it bypasses the replay tail and never reads native provider credentials.
 
 Depends on foundation, development tasks, and the shared development-terminal
 workflow model. It does not depend on Codex, game instances, logs, Runtime MCP,
@@ -78,3 +86,7 @@ ABYA_DESKTOP_CLI carries the absolute desktop CLI executable path. Commands auto
 ## Managed CLI session
 On a new terminal open, prepare the legacy default workspace through TaskService. Issue the same scoped pipe environment as Codex through foundation cli_sessions with provider grok. Explicit stop and natural exit revoke its capability. No credentials are written to task files or logs. Grok authentication and native provider behavior remain unchanged.
 
+
+## Stage workspace update
+
+The shared CLI conversation report optionally publishes a structured per-turn plan through record_reported_plan, validated before activity logging. It uses the same workflow write lock and live notification path as ACP plans. Codex permission selectors are not exposed for Grok.

@@ -1,0 +1,22 @@
+{
+  "isolated": true,
+  "verified": [
+    "task-bound Player despite stale global setting",
+    "Host and Client same room",
+    "Lua and UI initialization",
+    "repeat launch reuses IDs",
+    "visual image preview",
+    "image-specific feedback",
+    "feedback attachment version",
+    "user feedback closure",
+    "explicit 1.2.1 to 2.0.0 upgrade retains approvals rounds and cycle"
+  ],
+  "notClaimed": [
+    "hardware mouse gameplay acceptance",
+    "different-machine LAN",
+    "3–4 hour new-game target"
+  ],
+  "sourceTaskId": "c89029c4-ce48-4145-b54d-82184514f523",
+  "sourceTaskRevision": 194,
+  "qaTaskId": "3fda5efd-f043-4770-9ba3-8099bb64cbb1"
+}

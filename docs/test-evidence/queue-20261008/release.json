@@ -1,0 +1,15 @@
+{
+  "product": "ABYA Desktop Development Tool",
+  "version": "0.2.0",
+  "workflowVersion": "1.2.1",
+  "releaseLabel": "workflow-queue-20261008",
+  "sourceBuiltAtUtc": "2026-10-08T12:06:36.3522008Z",
+  "builtAtUtc": "2026-10-08T12:09:44.3233085Z",
+  "executable": "ABYA Desktop Development Tool.exe",
+  "sha256": "548D6B64513E067B2F9116A6E8100A37B67E4B9D5F36471CBA23544A08DE8DEF",
+  "cliExecutable": "abya-desktop.exe",
+  "cliSha256": "9E1AD436759491C22B5B17BB3FF5B30D9F6A11B88813D40CC76AA7C07263E930",
+  "runtimeCliVersion": "0.2.0",
+  "cliProtocolVersion": 1,
+  "nodeVersion": "v24.11.1"
+}

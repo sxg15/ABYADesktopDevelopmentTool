@@ -1,0 +1,48 @@
+{
+  "manifest": {
+    "product": "ABYA Desktop Development Tool",
+    "version": "0.4.0",
+    "workflowVersion": "2.0.0",
+    "releaseLabel": "acceptance-feedback-20261010",
+    "sourceBuiltAtUtc": "2026-10-10T09:07:08.9278093Z",
+    "builtAtUtc": "2026-10-10T09:10:09.6347277Z",
+    "executable": "ABYA Desktop Development Tool.exe",
+    "sha256": "B9AEC5CD9D0EBE7F18B1E3D9BDD9E7962E94AAC80C6984BBD6D9FCFECB41AA86",
+    "cliExecutable": "abya-desktop.exe",
+    "cliSha256": "8F6E5C6F21D385486EC30E5D8323A1D60041FCC3619A182324CBF81B2AD13496",
+    "runtimeCliVersion": "0.2.0",
+    "cliProtocolVersion": 1,
+    "nodeVersion": "v24.11.1"
+  },
+  "session": {
+    "id": "29d30a58-c5c2-440d-8d5b-82c77a0a27b8",
+    "instanceIds": [
+      "07a4ba69-8748-45dd-8994-867e4460591e",
+      "c987ed72-4bdd-4223-8302-a55cf4e9b894"
+    ],
+    "message": "玩法入口与 Lua 初始化检查通过，可以人工试玩；尚不代表验收通过。",
+    "startedAt": "2026-10-10T09:11:53.433143700+00:00",
+    "status": "ready",
+    "taskId": "3fda5efd-f043-4770-9ba3-8099bb64cbb1",
+    "updatedAt": "2026-10-10T09:12:41.528897800+00:00",
+    "version": "cat-v2-monotonic-r8"
+  },
+  "instances": [
+    {
+      "id": "07a4ba69-8748-45dd-8994-867e4460591e",
+      "pid": 19352,
+      "mode": "lan-host",
+      "executable_path": "D:\\AbyaBuild\\CatTrapClockFix-20261009\\ABYA_PB.exe",
+      "host_instance_id": null,
+      "host_port": 58826
+    },
+    {
+      "id": "c987ed72-4bdd-4223-8302-a55cf4e9b894",
+      "pid": 73012,
+      "mode": "lan-client",
+      "executable_path": "D:\\AbyaBuild\\CatTrapClockFix-20261009\\ABYA_PB.exe",
+      "host_instance_id": "07a4ba69-8748-45dd-8994-867e4460591e",
+      "host_port": 58826
+    }
+  ]
+}
