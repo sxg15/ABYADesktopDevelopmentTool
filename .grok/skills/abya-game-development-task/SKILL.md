@@ -17,12 +17,12 @@ user-invocable: true
 | 完整玩法或较大改动 | [制作阶段](references/production-stages.md)，到需要记录时读[任务资料](references/production-records.md) |
 | 只整理需求、选型、交付或收尾 | 只读制作阶段中对应部分及所需资料，不自动启动其他阶段 |
 | 检查或修改运行中的玩法 | [运行与实现](references/runtime-authoring.md)，按需要查 [CLI 映射](references/cli-commands.md) |
-| 完整初版后的整体迭代 | [8＋4 检查](references/whole-experience-review.md)及本任务版本记录 |
+| 可试玩版本后的反馈修改 | [人工反馈迭代](references/whole-experience-review.md)及本任务版本记录 |
 | 新增、修改或验收 Bot | 额外读[人机指南](references/bot-development.md)；未涉及的 Bot 保留 |
 | 已选多人或美术模板 | 只加载已选模板；模板补充专项约束，共同阶段和确认由本入口管理 |
 
 若本入口已在局部修复、读日志或报告任务中加载，只处理请求范围；不发起完整制作、
-模板菜单或十二轮。已有玩法中的局部实现仍遵守适用的 Runtime、架构及保存约束。
+模板菜单或固定轮次。已有玩法中的局部实现仍遵守适用的 Runtime、架构及保存约束。
 资料未变化且当前上下文已读过时复用，不每轮重读全部文档。
 
 ## 决策与持续执行
@@ -36,7 +36,7 @@ user-invocable: true
 覆盖原始存档、删除共用资源、对外发布或扩大权限的通用许可。
 
 同一轮中对象、版本、运行状态、环境和检查目的相同的检查共享结果；相关变化后复验。
-本轮问题留在本轮修复，不能用新的轮次掩盖失败。停止条件是达到约定结果、用户停止，
+问题保留同一反馈记录，修复后由策划复验，不能用新记录掩盖失败。停止条件是达到约定结果、用户停止，
 或存在具体阻塞；阻塞记录原因、证据、影响和恢复条件，继续不受影响的工作。
 
 ## 桌面边界与进度
@@ -58,7 +58,7 @@ user-invocable: true
 
 制作规则与资料模板版本见 [流程配置](assets/production/workflow-policy.json)。
 完整任务先通过 production get 读取后端状态；尚未启用时按用户已选提问模式 initialize。
-制作状态、确认、问题、证据、轮次通过 production update 管理，参数见任务资料指南。
+制作状态、确认、问题、证据、自测和反馈处理通过 production update 管理，参数见任务资料指南。
 workflow.json、单轮 JSON 和三个 HTML 是数据库的导出，不直接改它们来推动流程。
 进入制作流程后固定任务已安装 Skill 与题库，普通任务读取不再刷新它们。
 升级通过 APP 明确执行，保留历史和备份，停止任务终端后再升级。

@@ -328,3 +328,11 @@ interrupted or zero-frame captures are rejected. The original video and metadata
 答案由 APP 保存、提交、修订；CLI 不提供代答或批准入口。`production get` 返回 questionGroups 和 playerMode。
 initialize/configure 支持 playerMode=unspecified/single/multiplayer；已明确人数由策划在 APP 修改。
 题目格式和续接流程见捆绑 Skill 的 production-records.md。旧任务需显式升级，普通读取不替换 Skill。
+
+## Workflow 2.0 acceptance and feedback
+
+- `production start-acceptance` → `development_production_start_acceptance`: task-bound, uses captured archive/Player fingerprints, opens a visible single-player or Host/Client group and checks initialization. No arbitrary Player override. Repeated requests reuse a live matching group or explain the partial-group conflict.
+- `production acceptance-status` → `development_production_acceptance_status`: read progress, version, instance IDs and failure/cleanup information.
+- Production mutations: `configure-acceptance` (seats, requiredTools, requireUi), `register-visual` (stage/path/title/sourceType/roles/visualVersion/groupId), `save-self-test` (id/status/observations/evidenceIds), `reuse-evidence` (id/sourceId/reason/unaffectedScope), `update-feedback` (id/status/fix/recheck/evidenceIds).
+- Agent feedback statuses are limited to in-progress and awaiting-recheck. Closing/reopening human feedback and document decisions are APP-only.
+- New tasks have no fixed rounds. Existing 1.x tasks retain pinned rules until an explicit backed-up upgrade. See the deployed production-records reference for details.

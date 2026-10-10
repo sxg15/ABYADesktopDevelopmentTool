@@ -32,3 +32,9 @@ runtime run 的输入为 {"instanceId":"桌面实例 ID","toolName":"能力 ID",
 窗口保持后台渲染。通过 instance window 显示窗口以供人工检查，再恢复后台。
 需要取消时调用 runtime cancel，传入 instanceId 和 operationId；取消请求不保证回滚。
 保存日志、状态断言、Lua/APC 追踪及图片，完成原有单机或独立 Host + Client 验收。
+
+流程2.0验收入口：
+- production start-acceptance → development_production_start_acceptance，启动任务当前版本的可试玩实例。
+- production acceptance-status → development_production_acceptance_status，读取进度、版本与实例。
+两者绑定当前任务；启动前验证保存版本，不会使用全局旧运行包替代任务运行包。
+策划关闭反馈和接受作品没有Agent CLI入口。

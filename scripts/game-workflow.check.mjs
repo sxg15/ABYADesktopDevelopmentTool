@@ -17,11 +17,13 @@ for (const provider of ['.codex', '.grok']) {
     unique(policy.questions.map(question => question.id));
     assert.deepEqual(policy.stages.flatMap(stage => stage.approval ? [stage.approval] : []),
       ['requirements', 'plan', 'delivery']);
-    assert.equal(policy.rounds.count, 12);
-    assert.deepEqual(policy.rounds.questionRounds, [9, 10, 11, 12]);
-    assert.deepEqual(policy.rounds.milestones, ['R0', 'R8', 'R12']);
-    assert.equal(policy.rounds.allDimensionsEveryRound, true);
-    assert.equal(policy.rounds.allQuestionsEachQuestionRound, true);
+    assert.equal(policy.iterationMode, 'human-feedback');
+    assert.equal(policy.rounds.count, 0);
+    assert.deepEqual(policy.rounds.questionRounds, []);
+    assert.deepEqual(policy.rounds.milestones, []);
+    assert.equal(policy.rounds.allDimensionsEveryRound, false);
+    assert.equal(policy.rounds.allQuestionsEachQuestionRound, false);
+    assert.deepEqual(policy.selfTestChecks, ['architecture', 'lua', 'core-loop', 'input', 'visual', 'lifecycle', 'save-reload', 'authority']);
     for (const family of ['functional', 'visual']) {
       assert.equal(policy.questions.filter(question => question.family === family).length, 8);
     }

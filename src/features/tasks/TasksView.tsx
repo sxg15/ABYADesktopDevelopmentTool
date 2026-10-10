@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Modal } from "../../app/Modal";
 import { LaunchInstanceModal } from "../instances/LaunchInstanceModal";
+import { AcceptanceLauncher } from "./AcceptanceLauncher";
 import { InstanceDetailsModal } from "../instances/InstanceDetailsModal";
 import { DevelopmentTerminalView } from "../terminal/CodexTerminalView";
 import { CodexWorkflowBar } from "./CodexWorkflowBar";
@@ -620,6 +621,7 @@ export function TasksView({
                   </button>
                 </div>
 
+                <AcceptanceLauncher key={selected.id} taskId={selected.id} active={selected.status === "active"} en={settings?.locale === "en-US"} />
                 <div className="table-wrap instances-table">
                   <table>
                     <thead>

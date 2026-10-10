@@ -25,6 +25,7 @@ pub(super) fn approved(r: &ProductionRecord, root: &Path, kind: &str) -> AppResu
     if kind == "delivery" && d.game_version != r.current_version {
         return Err(AppError::validation("作品版本变化，原交付确认已失效。"));
     }
+    super::visuals::verify_bindings(d, root)?;
     Ok(())
 }
 
@@ -130,6 +131,11 @@ pub(super) fn document_gate(r: &ProductionRecord, root: &Path, kind: &str) -> Ap
             }
         }
         "plan" => {
+            if r.feedback.iter().any(|f| {
+                (f["stage"] == "resources" || f["stage"] == "plan") && f["status"] != "resolved"
+            }) {
+                return Err(AppError::validation("资源方案还有未关闭的策划反馈。"));
+            }
             approved(r, root, "requirements")?;
             if r.stages.get("resources").map(String::as_str) != Some("passed") {
                 return Err(AppError::validation("请先完成现有资源与美术要求整理。"));
@@ -144,6 +150,17 @@ pub(super) fn document_gate(r: &ProductionRecord, root: &Path, kind: &str) -> Ap
             }
             approved(r, root, "requirements")?;
             approved(r, root, "plan")?;
+            if super::iteration::enabled(r) {
+                super::iteration::ready(r, root)?;
+                if r.stages.get("implementation").map(String::as_str) != Some("passed")
+                    || r.feedback.iter().any(|f| f["status"] != "resolved")
+                {
+                    return Err(AppError::validation(
+                        "请完成实现和必要自测，并处理策划尚未关闭的反馈。",
+                    ));
+                }
+                return Ok(());
+            }
             let final_round = r
                 .rounds
                 .iter()
@@ -160,6 +177,9 @@ pub(super) fn document_gate(r: &ProductionRecord, root: &Path, kind: &str) -> Ap
 pub(super) fn warnings(r: &ProductionRecord, root: &Path) -> Vec<String> {
     let mut result = Vec::new();
     for (kind, d) in &r.documents {
+        if super::visuals::verify_bindings(d, root).is_err() {
+            result.push(format!("{kind} 关联的视觉方案已变化，请重新提交确认。"));
+        }
         if files::text_file(root, &d.path).map_or(true, |(_, hash)| hash != d.sha256) {
             result.push(format!(
                 "{kind} 文件已修改或不可读，需重新提交；旧确认不可用于推进。"

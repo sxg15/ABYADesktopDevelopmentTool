@@ -1,6 +1,6 @@
 [package]
 name = "abya-desktop-development-tool"
-version = "0.3.0"
+version = "0.4.0"
 description = "Portable desktop tooling for ABYA game development workflows."
 authors = ["ABYA Production Team"]
 edition = "2024"

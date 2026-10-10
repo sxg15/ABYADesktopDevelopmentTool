@@ -1,6 +1,6 @@
 {
   "schema": "abya.game-development-policy/v1",
-  "workflowVersion": "1.3.0",
+  "workflowVersion": "2.0.0",
   "scope": "完整玩法、较大改动；独立阶段仅执行明确范围",
   "questionModes": [
     "ask",
@@ -13,7 +13,8 @@
     "blocked",
     "passed",
     "not-applicable",
-    "stopped"
+    "stopped",
+    "awaiting-feedback"
   ],
   "checkStatuses": [
     "not-run",
@@ -31,7 +32,7 @@
     },
     {
       "id": "resources",
-      "name": "现有资源与美术要求",
+      "name": "资源与美术预览",
       "artifact": "plan.md",
       "approval": null
     },
@@ -43,19 +44,19 @@
     },
     {
       "id": "implementation",
-      "name": "Lua 实现与完整初版",
+      "name": "Lua 实现与必要自测",
       "artifact": "workflow.json",
       "approval": null
     },
     {
       "id": "review",
-      "name": "8＋4 整体迭代",
-      "artifact": "rounds/",
+      "name": "人工验收与修改迭代",
+      "artifact": "workflow.json",
       "approval": null
     },
     {
       "id": "delivery",
-      "name": "交付与策划验收",
+      "name": "最终交付确认",
       "artifact": "delivery.md",
       "approval": "delivery"
     },
@@ -67,20 +68,11 @@
     }
   ],
   "rounds": {
-    "count": 12,
-    "questionRounds": [
-      9,
-      10,
-      11,
-      12
-    ],
-    "milestones": [
-      "R0",
-      "R8",
-      "R12"
-    ],
-    "allDimensionsEveryRound": true,
-    "allQuestionsEachQuestionRound": true
+    "count": 0,
+    "questionRounds": [],
+    "milestones": [],
+    "allDimensionsEveryRound": false,
+    "allQuestionsEachQuestionRound": false
   },
   "dimensions": [
     {
@@ -201,5 +193,16 @@
       "family": "visual",
       "text": "是否擅自删减表现或改变设计，剩余差异是否有明确处理？"
     }
+  ],
+  "iterationMode": "human-feedback",
+  "selfTestChecks": [
+    "architecture",
+    "lua",
+    "core-loop",
+    "input",
+    "visual",
+    "lifecycle",
+    "save-reload",
+    "authority"
   ]
 }

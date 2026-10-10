@@ -206,6 +206,13 @@ impl Fixture {
         };
         f.apply("initialize", json!({"questionMode":"no-followup"}))
             .unwrap();
+        f.service
+            .production_commit(&f.id, f.record().revision, |r| {
+                r.policy = serde_json::from_str(include_str!("legacy-policy.json"))?;
+                r.workflow_version = "1.3.0".into();
+                Ok(())
+            })
+            .unwrap();
         f
     }
     fn record(&self) -> ProductionRecord {
@@ -491,7 +498,7 @@ fn complete_pilot_requires_all_rounds_questions_evidence_and_user_acceptance() {
             )
             .unwrap();
         }
-        let p = policy();
+        let p = f.record().policy;
         let checks: Vec<_> = p["dimensions"].as_array().unwrap().iter().map(|d|
             json!({"dimensionId":d["id"],"status":"passed","observations":"fixture assertion","evidenceIds":[id]})).collect();
         let questions: Vec<_> = if number >= 9 {
@@ -622,4 +629,218 @@ fn changing_pending_choices_requires_document_resubmission() {
     f.doc("requirements", "Questions are now allowed.");
     f.accept("requirements");
     assert_eq!(f.record().stages["requirements"], "passed");
+}
+
+fn modern_fixture() -> Fixture {
+    let f = Fixture::new();
+    f.initial();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.policy = policy();
+            r.workflow_version = "2.0.0".into();
+            r.player_mode = "single".into();
+            r.current_stage = "implementation".into();
+            r.stages
+                .insert("implementation".into(), "in-progress".into());
+            Ok(())
+        })
+        .unwrap();
+    f
+}
+
+fn self_tests(f: &Fixture) {
+    for id in policy()["selfTestChecks"].as_array().unwrap() {
+        f.apply("save-self-test",json!({"id":id,"status":"passed","observations":"Synthetic contract check","evidenceIds":["initial-state"]})).unwrap();
+    }
+    f.apply("complete-stage", json!({"stage":"implementation"}))
+        .unwrap();
+}
+
+fn human(f: &Fixture, op: &str, data: Value) -> AppResult<ProductionView> {
+    f.service.production_feedback(ProductionMutation {
+        task_id: f.id.clone(),
+        expected_revision: f.record().revision,
+        operation: op.into(),
+        data,
+    })
+}
+
+#[test]
+fn feedback_flow_delivers_without_rounds_but_never_without_required_checks() {
+    let f = modern_fixture();
+    assert_eq!(f.record().policy["rounds"]["count"], 0);
+    assert!(
+        f.apply("complete-stage", json!({"stage":"implementation"}))
+            .is_err()
+    );
+    assert!(f.apply("save-round", json!({"number":1})).is_err());
+    self_tests(&f);
+    assert_eq!(f.record().stages["review"], "awaiting-feedback");
+    f.doc("delivery", "Current playable candidate");
+    assert!(f.service.set_status(&f.id, TaskStatus::Completed).is_err());
+    f.accept("delivery");
+    f.doc("closeout", "Retained evidence and lessons");
+    f.apply(
+        "save-knowledge",
+        json!({"entries":[{"summary":"Synthetic","status":"candidate"}]}),
+    )
+    .unwrap();
+    f.apply("complete-stage", json!({"stage":"closeout"}))
+        .unwrap();
+    f.service.set_status(&f.id, TaskStatus::Completed).unwrap();
+    assert!(f.record().rounds.is_empty());
+}
+
+#[test]
+fn only_user_can_close_feedback_and_stale_candidate_cannot_be_confirmed() {
+    let f = modern_fixture();
+    self_tests(&f);
+    human(&f, "add", json!({"description":"Score is wrong"})).unwrap();
+    let id = f.record().feedback[0]["id"].clone();
+    assert!(
+        f.apply(
+            "update-feedback",
+            json!({"id":id,"status":"resolved","fix":"Fixed"})
+        )
+        .is_err()
+    );
+    assert!(human(&f, "resolve", json!({"id":id})).is_err());
+    f.apply("update-feedback",json!({"id":id,"status":"awaiting-recheck","fix":"Correct score","recheck":"Actual inputs checked","evidenceIds":["initial-state"]})).unwrap();
+    let path = format!("{ROOT}/delivery.md");
+    files::write_file(&f.workspace, &path, b"Candidate").unwrap();
+    assert!(
+        f.apply("submit-document", json!({"kind":"delivery","path":path}))
+            .is_err()
+    );
+    human(&f, "resolve", json!({"id":id})).unwrap();
+    f.doc("delivery", "Candidate");
+    f.accept("delivery");
+    human(&f, "reopen", json!({"id":id})).unwrap();
+    assert_ne!(f.record().stages["delivery"], "passed");
+    assert_eq!(
+        f.record().feedback[0]["history"].as_array().unwrap().len(),
+        4
+    );
+}
+
+#[test]
+fn acceptance_uses_recorded_player_and_rejects_changed_files() {
+    let f = modern_fixture();
+    let spec = f.service.acceptance_spec(&f.id).unwrap();
+    assert_eq!(
+        std::fs::canonicalize(&spec.executable_path).unwrap(),
+        f.workspace
+            .join("fixture-player.exe")
+            .canonicalize()
+            .unwrap()
+    );
+    assert_eq!(spec.seats, 1);
+    assert!(f.apply("configure-acceptance", json!({"seats":2})).is_err());
+    std::fs::write(&spec.executable_path, b"new incompatible player").unwrap();
+    assert!(f.service.acceptance_spec(&f.id).is_err());
+}
+
+#[test]
+fn visual_plan_binds_exact_files_and_preserves_prior_versions() {
+    let f = Fixture::new();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.policy = policy();
+            Ok(())
+        })
+        .unwrap();
+    f.doc("requirements", "Visual requirements");
+    f.accept("requirements");
+    assert!(
+        f.apply(
+            "complete-stage",
+            json!({"stage":"resources","summary":"Text only"})
+        )
+        .is_err()
+    );
+    let path = "artifacts/visuals/proposal-v1.png";
+    files::write_file(&f.workspace, path, b"synthetic image fixture").unwrap();
+    let data = json!({"stage":"resources","path":path,"title":"Game layout","sourceType":"mockup",
+        "roles":["asset-board","layout","states"],"groupId":"proposal","visualVersion":"v1"});
+    f.apply("register-visual", data.clone()).unwrap();
+    f.apply(
+        "complete-stage",
+        json!({"stage":"resources","summary":"Visual proposal"}),
+    )
+    .unwrap();
+    f.doc("plan", "Use proposed visuals");
+    assert_eq!(f.record().documents["plan"].artifact_bindings.len(), 1);
+    let id = f.record().artifacts[0]["id"].as_str().unwrap().to_owned();
+    assert!(
+        f.service
+            .production_media(&f.id, &id)
+            .unwrap()
+            .starts_with("data:image/png;base64,")
+    );
+    assert!(
+        f.service
+            .production_media(&f.id, "foreign-artifact")
+            .is_err()
+    );
+    files::write_file(&f.workspace, path, b"changed image").unwrap();
+    assert!(f.apply("register-visual", data).is_err());
+    let r = f.record();
+    assert!(
+        f.service
+            .production_decide(ProductionDecision {
+                task_id: f.id.clone(),
+                expected_revision: r.revision,
+                kind: "plan".into(),
+                document_hash: r.documents["plan"].sha256.clone(),
+                accepted: true,
+                feedback: String::new()
+            })
+            .is_err()
+    );
+}
+
+#[test]
+fn explicit_upgrade_preserves_approvals_and_round_history_without_inventing_self_tests() {
+    let f = Fixture::new();
+    f.initial();
+    let old = f.record();
+    let view = f.service.production_upgrade(&f.id, old.revision).unwrap();
+    let r = view.record.unwrap();
+    assert_eq!(r.workflow_version, "2.0.0");
+    assert_eq!(r.cycle, old.cycle);
+    assert_eq!(r.approvals.len(), old.approvals.len());
+    assert_eq!(r.documents["plan"].sha256, old.documents["plan"].sha256);
+    assert_eq!(r.rounds, old.rounds);
+    assert!(r.self_tests.is_empty());
+    assert_eq!(r.current_stage, "implementation");
+}
+
+#[test]
+fn evidence_reuse_requires_intact_reviewed_source_and_explicit_impact() {
+    let f = modern_fixture();
+    assert!(
+        f.apply(
+            "reuse-evidence",
+            json!({"id":"copy","sourceId":"initial-state"})
+        )
+        .is_err()
+    );
+    f.apply("reuse-evidence",json!({"id":"copy","sourceId":"initial-state","reason":"Only copy changed","unaffectedScope":"Rules"})).unwrap();
+    assert!(
+        f.record()
+            .evidence
+            .last()
+            .unwrap()
+            .description
+            .contains("不是本版本重新执行")
+    );
+    let e = f.record().evidence[0].clone();
+    files::write_file(&f.workspace, &e.path, b"changed").unwrap();
+    assert!(
+        f.apply(
+            "reuse-evidence",
+            json!({"id":"changed","sourceId":e.id,"reason":"Unchanged","unaffectedScope":"Rules"})
+        )
+        .is_err()
+    );
 }

@@ -105,3 +105,9 @@ it never transports the transcript to the WebView.
 ## Stage workspace update
 
 ProductionView adds effective stageStatuses and registered/legacy artifacts; production records default additive artifacts, stageUpdates and stage transition events. Question groups default to requirements and carry cycle. ExecutionSettingsView belongs to shared types; typed native adapters read/update per-conversation model, effort and permissions without credentials.
+
+## Workflow 2.0 shared contracts
+
+Production DTOs add optional acceptanceConfig/acceptanceSessions, selfTests, feedback, visual artifact metadata and document artifactBindings. Serde defaults preserve 1.x records without creating approvals or test results.
+Typed frontend adapters expose acceptance start/status, registered media reads and APP-only feedback. Domain rules remain in owning services; no new database table or secret persistence is introduced.
+Timing adds elapsed/first-playable/human wait/blocked/feedback rework/recorded active progress; categories overlap and incomplete execution remains unknown.

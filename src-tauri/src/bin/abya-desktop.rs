@@ -12,6 +12,8 @@ fn command(group: &str, action: &str) -> Option<&'static str> {
         ("task", "update") => "development_task_update",
         ("task", "status") => "development_task_set_status",
         ("production", "get") => "development_production_get",
+        ("production", "start-acceptance") => "development_production_start_acceptance",
+        ("production", "acceptance-status") => "development_production_acceptance_status",
         ("production", "update") => "development_production_update",
         ("production", "report") => "development_production_report",
         ("production", "version") => "development_production_version",

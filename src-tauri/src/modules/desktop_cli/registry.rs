@@ -23,6 +23,20 @@ struct ToolAnnotations {
 pub(crate) fn tools() -> Vec<CliCommand> {
     vec![
         tool(
+            "development_production_start_acceptance",
+            "Open the task's fingerprinted Player/archive as a verified playable group. Does not approve delivery.",
+            "Start acceptance",
+            object_schema(json!({"taskId":{"type":"string"}}), &[]),
+            process_create(),
+        ),
+        tool(
+            "development_production_acceptance_status",
+            "Read acceptance launch progress and managed instances.",
+            "Acceptance status",
+            object_schema(json!({"taskId":{"type":"string"}}), &[]),
+            read_only(),
+        ),
+        tool(
             "game_recording_tools",
             "Check bundled window recorder availability. Video only; no microphone, desktop-wide capture or audio.",
             "Check recorder",
@@ -76,7 +90,7 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             "Update production workflow",
             object_schema(
                 json!({"taskId":{"type":"string"},"expectedRevision":{"type":"integer","minimum":0},
-                "operation":{"type":"string","enum":["initialize","configure","publish-questions","register-artifact","update-stage","register-approved-template","submit-document","register-evidence","set-milestone","save-issue","save-round","complete-stage","save-knowledge"]},
+                "operation":{"type":"string","enum":["initialize","configure","configure-acceptance","register-visual","save-self-test","update-feedback","reuse-evidence","publish-questions","register-artifact","update-stage","register-approved-template","submit-document","register-evidence","set-milestone","save-issue","save-round","complete-stage","save-knowledge"]},
                 "data":{"type":"object","description":"initialize: questionMode; submit-document: kind/path; register-evidence: id/path/kind/captureType/reviewed/description; set-milestone: name/evidenceIds; save-issue: id/kind/status/stage/description/fix/recheck/evidenceIds/resumeWhen; save-round: number/close/checks/questions/evidenceIds; complete-stage: stage/summary/checks; save-knowledge: entries; configure: questionMode/playerMode/taskTemplate/artTemplate; publish-questions: id/title/questions (id/text/options/optional), binding supplied by Desktop. Record saved-file versions through production version."}}),
                 &["expectedRevision", "operation", "data"],
             ),

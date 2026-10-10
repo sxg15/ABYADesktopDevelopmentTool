@@ -123,3 +123,8 @@ Codex conversation rows include archive/restore in addition to rename/delete; re
 ## Stage workspace update
 
 Button descriptions now default above the owner, use measured viewport clamping and support titled text buttons as well as icons. Production stage navigation wraps at narrow widths and stays visible while scrolling. Terminal settings wrap without reducing the terminal to a fixed-height toolbar.
+
+## Acceptance and feedback UI
+
+Production and instance surfaces expose a task-version acceptance button with progress and actionable errors. Visual cards identify reference/mockup/render/gameplay, temporary resources and plan bindings; at most two selected previews compare side by side.
+User feedback supports related visuals and bounded screenshot/video uploads. AI recheck and user closure remain separate controls. New human-feedback tasks have no 8+4 progress wording; legacy rounds remain visible.

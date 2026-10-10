@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Play, RefreshCw } from "lucide-react";
 import { Modal } from "../../app/Modal";
 import { api, errorMessage } from "../../shared/api";
+import { productionApi } from "../../shared/production";
 import type {
   ArchiveOption,
   GameInstance,
@@ -46,6 +47,18 @@ export function LaunchInstanceModal({
   const [hostInstanceId, setHostInstanceId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [taskExecutable, setTaskExecutable] = useState("");
+  const [sourceLoaded, setSourceLoaded] = useState(false);
+  const launchExecutable = taskExecutable || executablePath;
+  useEffect(() => {
+    let cancelled = false;
+    setTaskExecutable("");
+    setSourceLoaded(false);
+    void productionApi.get(taskId).then(value => {
+      if (!cancelled) { setTaskExecutable(value.record?.versionDetails?.playerSource ?? ""); setSourceLoaded(true); }
+    }).catch(reason => { if (!cancelled) setError(errorMessage(reason)); });
+    return () => { cancelled = true; };
+  }, [taskId]);
 
   const hosts = taskInstances.filter(
     (instance) =>
@@ -71,10 +84,10 @@ export function LaunchInstanceModal({
   }, [archiveGuid]);
 
   const canLaunch = useMemo(() => {
-    if (!name.trim() || !executablePath) return false;
+    if (!sourceLoaded || !name.trim() || !launchExecutable) return false;
     if (mode === "lan-client") return Boolean(hostInstanceId);
     return Boolean(archiveGuid);
-  }, [archiveGuid, executablePath, hostInstanceId, levelGuid, mode, name]);
+  }, [archiveGuid, launchExecutable, sourceLoaded, hostInstanceId, levelGuid, mode, name]);
 
   async function refreshArchives() {
     try {
@@ -111,7 +124,7 @@ export function LaunchInstanceModal({
     setBusy(true);
     setError("");
     try {
-      await api.launchInstance(taskId, name, executablePath, profile);
+      await api.launchInstance(taskId, name, launchExecutable, profile);
       onLaunched();
       onClose();
     } catch (value) {
@@ -123,7 +136,7 @@ export function LaunchInstanceModal({
 
   return (
     <Modal title={t("launch")} onClose={onClose}>
-      {!executablePath && <div className="inline-warning">{t("executableMissing")}</div>}
+      {!launchExecutable && <div className="inline-warning">{t("executableMissing")}</div>}
       <div className="form-grid">
         <label className="field field-span">
           <span>{t("instanceName")}</span>

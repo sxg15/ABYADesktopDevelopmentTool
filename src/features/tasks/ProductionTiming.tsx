@@ -28,6 +28,12 @@ export function ProductionTiming({
     };
   }, [taskId]);
   const names = [
+    ["elapsedMs", en ? "Total elapsed" : "总历时"],
+    ["firstPlayableMs", en ? "First playable elapsed" : "首次可玩历时"],
+    ["activeWorkMs", en ? "Recorded active progress" : "有记录的推进时间"],
+    ["humanWaitMs", en ? "Human review wait" : "人工等待"],
+    ["blockedMs", en ? "Blocked stage time" : "阶段阻塞"],
+    ["feedbackReworkMs", en ? "Feedback rework" : "反馈返工"],
     ["executionMs", en ? "Completed turn intervals" : "已结束轮次区间"],
     ["toolMs", en ? "Tool activity" : "工具活动"],
     ["answerWaitMs", en ? "Waiting for first answers" : "首次答题等待"],
@@ -62,7 +68,7 @@ export function ProductionTiming({
   );
 }
 function duration(value: number | null, en: boolean) {
-  if (value === null) return en ? "Unknown" : "未知";
+  if (value == null) return en ? "Unknown" : "未知";
   const s = Math.floor(value / 1000);
   return `${Math.floor(s / 3600)}${en ? "h" : "小时"} ${Math.floor((s % 3600) / 60)}${en ? "m" : "分"} ${s % 60}${en ? "s" : "秒"}`;
 }

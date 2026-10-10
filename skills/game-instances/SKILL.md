@@ -102,3 +102,9 @@ A wall-clock watchdog bounds a stalled capture to maxSeconds plus five seconds o
 ## Stage workspace update
 
 The stage workspace release retains the existing Windows Graphics Capture recorder fix. Verification must keep file completion separate from frame review and reuse the owned-window occlusion regression.
+
+## Acceptance launch consistency
+
+LAN clients inherit the selected live same-task Host's executable as well as archive/level/port. Validate the inherited executable before spawning so generic UI and CLI cannot mix Player builds within one pair.
+RuntimeBridge owns acceptance orchestration and calls this module's existing lifecycle APIs. Failed acceptance launches stop only instances created by that attempt; unrelated and reused instances are preserved.
+The generic launch dialog prefers the selected task's captured Player over global settings. The dedicated acceptance button additionally validates fingerprints and readiness. Test inherited executable/archive and task ownership.

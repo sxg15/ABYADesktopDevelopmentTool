@@ -163,8 +163,22 @@ impl TaskService {
             self.sync_managed_skills(&root)?;
             r.skill_pins = scan(&root)?;
             let next_policy=policy();
+            let feedback_upgrade = !super::iteration::enabled(r) && next_policy["iterationMode"] == "human-feedback";
             let compatible=["rounds","questions","dimensions","stages","checkStatuses","stageStatuses"].iter().all(|key|r.policy[*key]==next_policy[*key]);
             r.policy = next_policy; r.workflow_version = r.policy["workflowVersion"].as_str().unwrap().into();
+            if feedback_upgrade {
+                for s in r.policy["stages"].as_array().unwrap() {
+                    r.stages.entry(s["id"].as_str().unwrap().into()).or_insert("not-started".into());
+                }
+                if r.stages.get("plan").is_some_and(|s| s == "passed") {
+                    r.current_stage = "implementation".into();
+                    r.stages.insert("implementation".into(), "in-progress".into());
+                    for stage in ["review", "delivery", "closeout"] { r.stages.insert(stage.into(), "not-started".into()); }
+                }
+                r.issues.push(serde_json::json!({"id":format!("feedback-upgrade-{}",r.revision),"kind":"suggestion","status":"resolved","stage":"closeout",
+                    "description":"已切换人工反馈流程；需求和计划确认、旧轮次与证据保留。当前作品须登记必要自测后交给策划验收，不补造新流程通过。","backup":backup,"updatedAt":now()}));
+                return Ok(());
+            }
             if compatible {
                 r.issues.push(serde_json::json!({"id":format!("workflow-update-{}",r.revision),"kind":"suggestion","status":"resolved","stage":"closeout","description":"制作流程界面与沟通规则已更新，已确认的需求、计划和历史继续有效。","backup":backup,"updatedAt":now()}));
                 return Ok(());

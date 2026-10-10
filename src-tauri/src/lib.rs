@@ -224,6 +224,39 @@ fn get_task_production(task_id: String, state: State<'_, AppState>) -> AppResult
 }
 
 #[tauri::command(async)]
+fn start_task_acceptance(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state.runtime_bridge.start_acceptance(&task_id)
+}
+
+#[tauri::command(async)]
+fn get_task_acceptance(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state.runtime_bridge.acceptance_status(&task_id)
+}
+
+#[tauri::command(async)]
+fn read_production_media(
+    task_id: String,
+    artifact_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<String> {
+    state.tasks.production_media(&task_id, &artifact_id)
+}
+
+#[tauri::command(async)]
+fn submit_production_feedback(
+    input: ProductionMutation,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    state.tasks.production_feedback(input)
+}
+
+#[tauri::command(async)]
 fn update_task_production(
     input: ProductionMutation,
     state: State<'_, AppState>,
@@ -937,6 +970,10 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_task_production,
+            start_task_acceptance,
+            get_task_acceptance,
+            read_production_media,
+            submit_production_feedback,
             update_task_production,
             answer_task_questions,
             continue_intake_questions,

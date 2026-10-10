@@ -1,0 +1,16 @@
+{
+  "sameInstances": true,
+  "session": {
+    "id": "026609ab-20f8-44eb-a45d-2e5cfb607be8",
+    "instanceIds": [
+      "d5b4af41-4c16-4490-93e8-e44ea9d6f3e2",
+      "a3873c8b-eba8-40e4-a55c-23794fa87920"
+    ],
+    "message": "玩法入口与 Lua 初始化检查通过，可以人工试玩；尚不代表验收通过。",
+    "startedAt": "2026-10-10T09:03:22.215962500+00:00",
+    "status": "ready",
+    "taskId": "3fda5efd-f043-4770-9ba3-8099bb64cbb1",
+    "updatedAt": "2026-10-10T09:03:33.162775200+00:00",
+    "version": "cat-v2-monotonic-r8"
+  }
+}

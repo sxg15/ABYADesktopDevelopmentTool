@@ -97,6 +97,36 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
             .collect(),
     );
     if phase == "plan" {
+        body += "<h2>资源与视觉预览</h2>";
+        for a in r.artifacts.iter().filter(|a| a["mediaType"].is_string()) {
+            let url = format!(
+                "../../../{}",
+                relative_url(a["path"].as_str().unwrap_or(""))
+            );
+            body += &format!(
+                "<figure><figcaption>{} · {} · {}</figcaption>",
+                cell(&a["title"]),
+                cell(&a["sourceType"]),
+                cell(&a["visualVersion"])
+            );
+            if a["mediaType"]
+                .as_str()
+                .is_some_and(|s| s.starts_with("image/"))
+            {
+                body += &format!(
+                    "<a href='{}'><img style='max-width:100%;max-height:400px' loading='lazy' src='{}' alt='{}'></a>",
+                    escape(&url),
+                    escape(&url),
+                    cell(&a["title"])
+                );
+            } else {
+                body += &format!(
+                    "<video controls preload='metadata' style='max-width:100%' src='{}'></video>",
+                    escape(&url)
+                );
+            }
+            body += "</figure>";
+        }
         body += &format!(
             "<h2>需求问答</h2><p>人数模式：{}</p>",
             escape(&r.player_mode)
@@ -140,6 +170,16 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
         body += "<h2>执行计划</h2>";
         body += &document(r, "plan");
     } else if phase == "review" {
+        body += "<h2>必要自测与人工反馈</h2>";
+        for c in &r.self_tests {
+            body += &format!(
+                "<p>{} · {} · {} · {}</p>",
+                cell(&c["version"]),
+                cell(&c["id"]),
+                cell(&c["status"]),
+                cell(&c["observations"])
+            );
+        }
         body += &format!(
             "<h2>当前版本</h2><pre>{}</pre>",
             escape(&serde_json::to_string_pretty(&r.version_details).unwrap_or_default())
@@ -256,6 +296,19 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
                 status_text(e["status"].as_str().unwrap_or(""))
             );
         }
+    }
+    body += "<h2>策划反馈与处理历史</h2>";
+    for f in &r.feedback {
+        body += &format!(
+            "<details><summary>{} · {}</summary><p>{} → {}</p><p>{}</p><p>{}</p><pre>{}</pre></details>",
+            cell(&f["description"]),
+            cell(&f["status"]),
+            cell(&f["version"]),
+            cell(&f["candidateVersion"]),
+            cell(&f["fix"]),
+            cell(&f["recheck"]),
+            escape(&serde_json::to_string_pretty(&f["history"]).unwrap_or_default())
+        );
     }
     body += "<h2>用户确认历史</h2>";
     body += &rows(

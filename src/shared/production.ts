@@ -1,6 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
+export interface AcceptanceSession {
+  id?: string; version?: string; status: string; message?: string; instanceIds?: string[];
+  startedAt?: string; updatedAt?: string; cleanupFailures?: string[];
+}
 
 export interface ProductionDocument {
+  artifactBindings?: Record<string, string>;
   kind: string; revision: number; path: string; sha256: string;
   content: string; gameVersion?: string; submittedAt: string;
 }
@@ -15,6 +20,8 @@ export interface TaskSkill {
   path: string; sha256: string;
 }
 export interface ProductionPolicy {
+  iterationMode?: string;
+  selfTestChecks?: string[];
   workflowVersion: string;
   stages: { id: string; name: string; approval: string | null }[];
   dimensions: { id: string; name: string }[];
@@ -34,6 +41,10 @@ export interface ProductionRound {
   evidenceIds?: string[]; startedAt?: string; closedAt?: string;
 }
 export interface ProductionRecord {
+  acceptanceConfig?: { version: string; seats: number; requireUi: boolean; requiredTools: string[] } | null;
+  acceptanceSessions?: AcceptanceSession[];
+  feedback?: ProductionFeedback[];
+  selfTests?: { id: string; status: string; observations: string; version: string; cycle: number; recordedAt: string }[];
   artifacts?: ProductionArtifact[];
   stageUpdates?: Record<string, { summary: string; nextAction?: string; updatedAt: string }>;
   events?: {stage:string;status:string;at:string;cycle:number;revision:number}[];
@@ -55,7 +66,12 @@ export interface ProductionView {
   reportPaths: string[]; availableUpdate: boolean;
 }
 export const productionApi = {
-  timing: (taskId:string)=>invoke<{executionMs:number|null;toolMs:number|null;answerWaitMs:number|null;approvalWaitMs:number|null;pauseMs:number|null;connectionMs:number|null;unfinishedTurns:number;note:string}>("get_production_timing",{taskId}),
+  media: (taskId: string, artifactId: string) => invoke<string>("read_production_media", { taskId, artifactId }),
+  feedback: (taskId: string, expectedRevision: number, operation: string, data: unknown) =>
+    invoke<ProductionView>("submit_production_feedback", { input: { taskId, expectedRevision, operation, data } }),
+  startAcceptance: (taskId: string) => invoke<AcceptanceSession>("start_task_acceptance", { taskId }),
+  acceptanceStatus: (taskId: string) => invoke<AcceptanceSession>("get_task_acceptance", { taskId }),
+  timing: (taskId:string)=>invoke<{elapsedMs:number|null;firstPlayableMs:number|null;humanWaitMs:number|null;blockedMs:number|null;feedbackReworkMs:number|null;activeWorkMs:number|null;executionMs:number|null;toolMs:number|null;answerWaitMs:number|null;approvalWaitMs:number|null;pauseMs:number|null;connectionMs:number|null;unfinishedTurns:number;note:string}>("get_production_timing",{taskId}),
   submitAnswers: (taskId:string,expectedRevision:number,id:string,answers:Record<string,string>) =>
     invoke<QuestionSubmission>("submit_intake_answers",{input:{taskId,expectedRevision,operation:"submit-answers",data:{id,answers}}}),
   continueTask: (taskId:string,conversationId:string,afterRevision?:number) => invoke<IntakeContinuation>("continue_codex_task",{taskId,conversationId,afterRevision}),
@@ -108,6 +124,15 @@ export interface IntakeQuestionGroup {
 }
 
 export interface ProductionArtifact {
+  mediaType?: string; sourceType?: string; roles?: string[]; visualVersion?: string; groupId?: string;
+  sha256?: string; temporary?: boolean; source?: string;
   id: string; path: string; stage: string; title: string; summary?: string;
   status: string; cycle?: number; updatedAt?: string; exists?: boolean; legacy?: boolean;
+}
+
+export interface ProductionFeedback {
+  id: string; description: string; status: string; version?: string; candidateVersion?: string;
+  artifactId?: string; attachmentIds?: string[]; instanceIds?: string[]; stage: string;
+  fix?: string; recheck?: string; createdAt: string; updatedAt: string;
+  history?: { actor: string; status: string; at: string; version?: string; fix?: string }[];
 }

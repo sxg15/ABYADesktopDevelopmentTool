@@ -5,6 +5,14 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProductionRecord {
+    #[serde(default)]
+    pub acceptance_config: Value,
+    #[serde(default)]
+    pub acceptance_sessions: Vec<Value>,
+    #[serde(default)]
+    pub feedback: Vec<Value>,
+    #[serde(default)]
+    pub self_tests: Vec<Value>,
     pub schema: String,
     pub task_id: String,
     pub revision: u64,
@@ -88,6 +96,8 @@ pub struct AnswerRevision {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Document {
+    #[serde(default)]
+    pub artifact_bindings: BTreeMap<String, String>,
     #[serde(default)]
     pub template_choices: BTreeMap<String, String>,
     pub kind: String,

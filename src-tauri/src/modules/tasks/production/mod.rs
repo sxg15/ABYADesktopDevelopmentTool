@@ -1,11 +1,15 @@
+mod acceptance;
+pub use acceptance::AcceptanceSpec;
 mod catalog;
 mod files;
+mod iteration;
 mod models;
 mod mutation;
 mod questions;
 mod report;
 mod validation;
 mod versions;
+mod visuals;
 mod workspace;
 pub use versions::VersionSources;
 #[cfg(test)]
@@ -87,6 +91,10 @@ impl TaskService {
                 .into(),
             question_groups: vec![],
             artifacts: vec![],
+            acceptance_config: Value::Null,
+            acceptance_sessions: vec![],
+            feedback: vec![],
+            self_tests: vec![],
             stage_updates: BTreeMap::new(),
             events: vec![
                 json!({"stage":"requirements","status":"in-progress","at":now(),"cycle":1,"revision":1}),
@@ -145,6 +153,7 @@ impl TaskService {
                 return Err(conflict());
             }
             if input.accepted {
+                visuals::verify_bindings(&doc, &root)?;
                 validation::document_gate(r, &root, &input.kind)?;
                 validation::clear_issues(r, &input.kind)?;
                 workspace::accept_templates(r, &root, &doc)?;
@@ -162,6 +171,9 @@ impl TaskService {
                 feedback: input.feedback.chars().take(4000).collect(),
                 decided_at: now(),
             });
+            if input.kind == "delivery" && input.accepted && iteration::enabled(r) {
+                r.stages.insert("review".into(), "passed".into());
+            }
             let status = if input.accepted {
                 "passed"
             } else {

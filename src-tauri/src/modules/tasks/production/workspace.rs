@@ -71,6 +71,14 @@ pub(super) fn register_artifact(
         return Err(AppError::validation("请选择有效制作阶段。"));
     }
     let path = mutation::text(data, "path")?;
+    if r.artifacts
+        .iter()
+        .any(|a| a["path"] == path && a["mediaType"].is_string())
+    {
+        return Err(AppError::validation(
+            "已登记视觉产物不能被草稿覆盖，请登记新的视觉版本。",
+        ));
+    }
     let full = files::safe_path(root, path)?;
     if !full.is_file() {
         return Err(AppError::validation("文件尚未保存，请保存后再登记。"));

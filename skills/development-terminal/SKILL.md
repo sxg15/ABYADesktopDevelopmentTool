@@ -113,3 +113,8 @@ The Codex project-folder icon opens a read-only task path and one-time saved-pro
 ## Stage workspace update
 
 The existing top conversation steps remain the per-turn plan surface. CLI conversation report can carry a validated plan (1-16 unique named steps, at most one inProgress). Plans preserve activity-linked historical IDs on edits. All-plan-completed does not imply native turn completed. Stage navigation and conversation plans remain separate. Execution settings are displayed above the terminal and use typed provider APIs, with pending edits, failure feedback and explicit next-turn timing.
+
+## Workflow timing
+
+Timing merges overlapping recorded execution intervals, and subtracts known human-wait, blocked and pause intervals for recorded active progress. It is not pure model time. Unknown/incomplete turns remain counted as unknown; no synthetic completion is written to native history.
+Stage events provide total elapsed, first playable, observed review wait and blocked spans; feedback history provides rework and recheck wait. Tools and rework overlap execution and cannot be summed as independent totals.

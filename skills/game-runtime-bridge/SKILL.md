@@ -27,3 +27,11 @@ Update this Skill, command documentation and tests whenever these contracts chan
 read_artifact canonicalizes both the task runtime artifact root and requested file, rejects path escape and non-PNG/JPEG files, and bounds images to 16 MiB before returning a data URL.
 
 The shared process budget allows eight concurrent runtime CLI calls. Stopping a terminal requests cancellation for its active session. Release builds require bundled CLI and Node files and never fall back to the developer source tree.
+
+## Task acceptance orchestration
+
+start_acceptance resolves TaskService's fingerprinted version specification, launches a visible single-player or Host/Client group through InstanceService, and rechecks every seat after joining.
+Check exact launch archive/level, CLI capabilities, initialized game context/network readiness, failed Lua traces and optional CustomUI roots. This is startup readiness, not human acceptance or a full gameplay test.
+A task-scoped launch lease prevents concurrent duplicate groups. An intact same-version group is rechecked and shown; partial or old groups require closing first. APP restart checks persisted session IDs against live owned processes.
+Progress distinguishes version checking, Host start, joining, gameplay checks, ready, failed and stopped. Failure records the reason and cleanup failures, stops only newly created instances, and retains task/user decisions. No inference calls or automatic gameplay input occur.
+Required tools and seats are version-bound, with at most eight seats. Readiness operations are bounded read-only CLI calls; runtime secrets remain in memory. Unit tests reject connected-but-failed Lua and mismatched launch reports; real Player validation is separate.

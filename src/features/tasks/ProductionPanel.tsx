@@ -11,6 +11,9 @@ import { errorMessage } from "../../shared/api";
 import { productionText, stageName, statusName } from "./productionText";
 import "./production.css";
 import { ProductionTiming } from "./ProductionTiming";
+import { AcceptanceLauncher } from "./AcceptanceLauncher";
+import { VisualGallery } from "./VisualGallery";
+import { FeedbackPanel } from "./FeedbackPanel";
 
 const names: Record<string, string> = {
   requirements: "需求整理",
@@ -81,6 +84,7 @@ export function ProductionPanel({
   const [editingPlayers, setEditingPlayers] = useState(false);
   const [feedback, setFeedback] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState(() => remembered(taskId));
+  const [visualFeedback, setVisualFeedback] = useState<string>();
   const sequence = useRef(0),
     alive = useRef(true),
     mutating = useRef(false);
@@ -133,7 +137,8 @@ export function ProductionPanel({
   const stage = view?.policy.stages.some((x) => x.id === selected)
     ? selected
     : (r?.currentStage ?? "requirements");
-  const label = (id: string) => stageName(id, names[id] ?? id, locale);
+  const modern = view?.policy.iterationMode === "human-feedback";
+  const label = (id: string) => modern && id === "review" ? (en ? "Playtest and iteration" : "人工验收与修改迭代") : stageName(id, view?.policy.stages.find(s => s.id === id)?.name ?? names[id] ?? id, locale);
   const issues =
     r?.issues.filter(
       (i) =>
@@ -282,7 +287,7 @@ export function ProductionPanel({
                   <strong>
                     {en
                       ? label(item.id)
-                      : (shortNames[item.id] ?? label(item.id))}
+                      : (modern && item.id === "review" ? "试玩与修改" : modern && item.id === "implementation" ? "Lua 实现" : shortNames[item.id] ?? label(item.id))}
                   </strong>
                   <small>
                     {statusName(states[item.id], locale)}
@@ -369,7 +374,7 @@ export function ProductionPanel({
               {r.stageUpdates?.[stage]?.summary ||
                 (en
                   ? `Progress and results for ${label(stage)}.`
-                  : hints[stage])}
+                  : modern && stage === "review" ? "直接试玩并提出问题，AI修改后复验，直到达到预期。" : hints[stage])}
             </p>
             <small>
               {r.stageUpdates?.[stage]?.nextAction ||
@@ -482,7 +487,7 @@ export function ProductionPanel({
             {(view.artifacts ?? r.artifacts ?? [])
               .filter(
                 (a) =>
-                  a.stage === stage &&
+                  a.stage === stage && !a.mediaType &&
                   !Object.values(r.documents).some((d) => d.path === a.path),
               )
               .map((a) => (
@@ -693,10 +698,19 @@ export function ProductionPanel({
               </p>
             </section>
           )}
-          {stage === "review" && (
+          {["review", "delivery"].includes(stage) && <AcceptanceLauncher key={taskId} taskId={taskId} active={active} en={en} />}
+          {["resources", "plan", "review", "delivery"].includes(stage) && <VisualGallery taskId={taskId}
+            artifacts={(view.artifacts ?? r.artifacts ?? []).filter(a => a.stage === "resources" || a.sourceType === "gameplay" || a.sourceType === "feedback")}
+            bindings={r.documents.plan?.artifactBindings} en={en} onFeedback={active ? setVisualFeedback : undefined} />}
+          {["resources", "plan", "review", "delivery"].includes(stage) && <FeedbackPanel key={taskId} taskId={taskId} record={r} active={active} en={en}
+            selectedArtifact={visualFeedback} onUpdated={setView} onContinue={async (message, revision) => onContinue?.(message, undefined, revision)} />}
+          {stage === "review" && modern && <section className="production-card"><h4>{en ? "Required checks" : "当前版本必要自测"}</h4>
+            {(r.selfTests ?? []).filter(c => c.version === r.currentVersion).map((c, i) => <p key={i}>{c.id} · {statusName(c.status, locale)} · {c.observations}</p>)}
+            <p>{en ? "Play, give feedback, and accept the final candidate when satisfied. There is no fixed round count." : "现在可以试玩并反馈；修改后复验，满意后确认交付。没有固定迭代轮数。"}</p></section>}
+          {stage === "review" && (!modern || r.rounds.length > 0) && (
             <section className="production-card">
               <h4>
-                {s.rounds} · R{r.currentRound}
+                {modern ? (en ? "Legacy review history" : "旧流程轮次（历史）") : `${s.rounds} · R${r.currentRound}`}
               </h4>
               {!r.rounds.length && <p>{s.noRounds}</p>}
               {r.rounds.map((round) => (

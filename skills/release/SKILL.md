@@ -141,3 +141,8 @@ Recorder-only validation builds may use publish.ps1 -RecorderStaging. It uses th
 ## Stage workspace update
 
 Release 0.3.0 ships workflow 1.3.0 with stage workspace, native conversation settings and updated shared skills. Retain the terminal-input and recorder corrections already in 0.2.2. Use the Validation staging build and verify manifest hashes, frontend interaction, additive historical record compatibility and native settings before promotion.
+
+## Workflow 2.0 release
+
+Release 0.4.0 / acceptance-feedback-20261010 ships workflow 2.0.0, task-version acceptance launch, visual previews, user feedback and necessary self-tests. Explicit legacy upgrades retain approved requirements/plans and history; ordinary package updates do not upgrade pinned tasks.
+Use Validation staging, run all standard checks, and verify real APP controls plus the known CatTrapClockFix Player. Human mouse acceptance and the 3–4 hour next-game target must not be inferred from automated validation.

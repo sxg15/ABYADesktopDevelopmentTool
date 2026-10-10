@@ -8,7 +8,7 @@ $publishName = if ($RecorderStaging) { "Publish-Staging-Recorder" } elseif ($Val
 $publish = Join-Path $root $publishName
 $running = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith("$publish\", [StringComparison]::OrdinalIgnoreCase) }
 if ($running) { throw "Close the running package before replacing it: $publish" }
-$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } else { 'stage-workspace-20261009' }
+$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } else { 'acceptance-feedback-20261010' }
 $env:ABYA_BUILD_UTC = [DateTime]::UtcNow.ToString('O')
 $packageVersion = (Get-Content -Raw -LiteralPath (Join-Path $root 'package.json') | ConvertFrom-Json).version
 $llmDirectories = @(".codex", ".grok")

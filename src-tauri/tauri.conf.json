@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ABYA Desktop Development Tool",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "identifier": "com.abya.desktop-development-tool",
   "build": {
     "beforeDevCommand": "npm run build:cli && npm run dev",

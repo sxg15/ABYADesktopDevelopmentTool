@@ -415,6 +415,20 @@ impl DesktopToolDispatcher {
             ));
         }
         match name {
+            "development_production_start_acceptance" => {
+                self.dependencies.runtime_bridge.start_acceptance(
+                    arguments["taskId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("taskId is required."))?,
+                )
+            }
+            "development_production_acceptance_status" => {
+                self.dependencies.runtime_bridge.acceptance_status(
+                    arguments["taskId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("taskId is required."))?,
+                )
+            }
             "development_production_version" => {
                 let task_id = arguments["taskId"]
                     .as_str()

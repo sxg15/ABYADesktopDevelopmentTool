@@ -55,14 +55,14 @@ are exports, distinct from terminal workflow projections. Revision-checked mutat
 manage documents, evidence, issues, versions and rounds. Only a Tauri user action
 can decide the three document approvals; CLI cannot approve or fabricate acceptance.
 Stage gates check current document hashes, actual saved archive/Player fingerprints,
-evidence files, complete rounds/questions and issue closure. They validate declared
+evidence files and issue closure. Pinned 1.x tasks retain round/question gates; workflow 2.0 uses current-version self-tests and user-closed feedback. They validate declared
 materials, not gameplay quality or user experience. Scoped tasks remain opt-in.
 First-batch common workflow resources are maintained in the repository .codex
 bundle and synchronized into .grok by npm run sync:workflow, preserving Grok
 entry metadata. The check command rejects drift; remaining resources retain
 their existing ownership. Once production is enabled, ordinary task reads stop
 refreshing managed Skills. Explicit upgrades require stopped terminals, check for
-local modifications, preserve backups/history and restart document confirmation.
+local modifications, preserve backups/history; migration to human feedback retains valid requirement/plan approvals and requests actual current-version self-tests.
 The task UI separates production, installed Skill browsing and native conversation
 activity. Approval continues an already-open task terminal without creating a chat.
 

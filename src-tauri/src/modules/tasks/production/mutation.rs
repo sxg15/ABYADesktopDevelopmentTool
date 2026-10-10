@@ -36,6 +36,11 @@ pub(super) fn apply(
         return Err(AppError::validation("data 必须为对象。"));
     }
     match operation {
+        "configure-acceptance" => super::acceptance::configure(r, data),
+        "register-visual" => super::visuals::register(r, root, data),
+        "save-self-test" => super::iteration::save_test(r, root, data),
+        "update-feedback" => super::iteration::update_feedback(r, root, data),
+        "reuse-evidence" => super::iteration::reuse_evidence(r, root, data),
         "publish-questions" => super::questions::publish(r, data),
         "register-artifact" => super::workspace::register_artifact(r, root, data),
         "update-stage" => super::workspace::update_stage(r, root, data),
@@ -162,6 +167,11 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
         return Err(AppError::validation("请提交 Markdown 文档。"));
     }
     let (content, sha256) = files::text_file(root, path)?;
+    let artifact_bindings = if kind == "plan" {
+        super::visuals::bindings(r, root)?
+    } else {
+        Default::default()
+    };
     let mut template_choices = std::collections::BTreeMap::new();
     for key in ["taskTemplate", "artTemplate"] {
         if let Some(id) = data[key].as_str() {
@@ -188,6 +198,7 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
     }
     if r.documents.get(kind).is_some_and(|d| {
         d.sha256 == sha256
+            && d.artifact_bindings == artifact_bindings
             && d.template_choices == template_choices
             && (kind != "delivery" || d.game_version == r.current_version)
     }) && r
@@ -214,6 +225,7 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
     r.documents.insert(
         kind.into(),
         Document {
+            artifact_bindings,
             template_choices,
             kind: kind.into(),
             revision,
@@ -257,7 +269,13 @@ pub(super) fn set_version(r: &mut ProductionRecord, root: &Path, data: &Value) -
     if r.current_version.as_deref() == Some(id) && r.version_details != *data {
         return Err(AppError::validation("版本内容改变时必须使用新的版本 ID。"));
     }
-    if r.current_version.as_deref() != Some(id)
+    if super::iteration::enabled(r) && r.current_version.as_deref() != Some(id) {
+        r.stages.insert("delivery".into(), "not-started".into());
+        r.stages.insert("closeout".into(), "not-started".into());
+        r.stages
+            .insert("implementation".into(), "in-progress".into());
+        r.acceptance_config = Value::Null;
+    } else if r.current_version.as_deref() != Some(id)
         && r.stages.get("review").is_some_and(|s| s == "passed")
     {
         for round in &mut r.rounds {
@@ -434,6 +452,11 @@ fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
 }
 
 fn round(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
+    if super::iteration::enabled(r) {
+        return Err(AppError::validation(
+            "当前流程已取消固定轮次，请使用必要自测和人工反馈。",
+        ));
+    }
     for field in ["checks", "questions"] {
         if let Some(items) = data.get(field) {
             let items = items
@@ -550,11 +573,23 @@ fn complete(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
     match stage {
         "resources" => {
             validation::approved(r, root, "requirements")?;
+            if super::iteration::enabled(r) {
+                super::visuals::bindings(r, root)?;
+            }
             text(data, "summary")?;
             set_stage(r, "resources", "passed");
             r.current_stage = "plan".into();
         }
         "implementation" => {
+            if super::iteration::enabled(r) {
+                validation::approved(r, root, "requirements")?;
+                validation::approved(r, root, "plan")?;
+                super::iteration::ready(r, root)?;
+                set_stage(r, "implementation", "passed");
+                r.current_stage = "review".into();
+                r.stages.insert("review".into(), "awaiting-feedback".into());
+                return Ok(());
+            }
             super::versions::verify(&r.version_details)?;
             validation::approved(r, root, "requirements")?;
             validation::approved(r, root, "plan")?;
