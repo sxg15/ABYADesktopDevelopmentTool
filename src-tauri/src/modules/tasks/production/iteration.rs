@@ -123,7 +123,16 @@ pub(super) fn update_feedback(
         ));
     }
     if status == "awaiting-recheck" {
-        validation::evidence_refs(r, root, &data["evidenceIds"], validation::version(r)?)?;
+        if let Some(original) = r.feedback[index]["artifactId"].as_str() {
+            super::interaction::visual_candidate(
+                r,
+                root,
+                original,
+                mutation::text(data, "candidateArtifactId")?,
+            )?;
+        } else {
+            validation::evidence_refs(r, root, &data["evidenceIds"], validation::version(r)?)?;
+        }
         mutation::text(data, "recheck")?;
     }
     let at = now();
@@ -133,6 +142,7 @@ pub(super) fn update_feedback(
     f["fix"] = json!(fix);
     f["recheck"] = data["recheck"].clone();
     f["candidateVersion"] = json!(version);
+    f["candidateArtifactId"] = data["candidateArtifactId"].clone();
     f["evidenceIds"] = data["evidenceIds"].clone();
     f["updatedAt"] = json!(at);
     if let Some(history) = f["history"].as_array_mut() {
@@ -148,11 +158,15 @@ impl TaskService {
         self.production_commit(&input.task_id,input.expected_revision,|r| {
             let data = &input.data;
             match input.operation.as_str() {
-                "attach" => super::visuals::attach_feedback(r, &root, data)?,
+                "attach" => {
+                    super::interaction::feedback(r, &root, data["artifactId"].as_str())?;
+                    super::visuals::attach_feedback(r, &root, data)?;
+                }
                 "add" => {
                     let description = mutation::text(data,"description")?;
                     if description.chars().count() > 8000 { return Err(AppError::validation("反馈请控制在8000字以内。")); }
                     let artifact = data["artifactId"].as_str();
+                    super::interaction::feedback(r, &root, artifact)?;
                     if let Some(id) = artifact && !r.artifacts.iter().any(|a| a["id"] == id) {
                         return Err(AppError::validation("所选视觉产物不属于此任务。"));
                     }
@@ -167,7 +181,13 @@ impl TaskService {
                         "artifactId":artifact,"attachmentIds":attachments,"version":r.current_version,
                         "instanceIds":instances,"status":"open","stage":if artifact.is_some() {"resources"} else if r.current_version.is_none() {r.current_stage.as_str()} else {"review"},
                         "createdAt":at,"updatedAt":at,"history":[{"actor":"user","status":"open","at":at}]}));
-                    if r.current_version.is_some() {
+                    if artifact.is_some() {
+                        let stage = if super::interaction::art_approval(r) { "resources" } else { "plan" };
+                        let stages = ["resources", "plan", "implementation", "review", "delivery", "closeout"];
+                        for id in stages.iter().skip_while(|id| **id != stage) { r.stages.insert((*id).into(), "not-started".into()); }
+                        r.stages.insert(stage.into(), "in-progress".into());
+                        r.current_stage = stage.into();
+                    } else if r.current_version.is_some() {
                         r.stages.insert("delivery".into(),"not-started".into());
                         r.stages.insert("closeout".into(),"not-started".into());
                         r.stages.insert("review".into(),"in-progress".into());
@@ -178,6 +198,10 @@ impl TaskService {
                     let id = mutation::text(data,"id")?;
                     let index = r.feedback.iter().position(|f| f["id"] == id).ok_or_else(|| AppError::validation("反馈不存在。"))?;
                     let resolving = input.operation == "resolve";
+                    if resolving && let Some(original) = r.feedback[index]["artifactId"].as_str() {
+                        if r.feedback[index]["status"] != "awaiting-recheck" { return Err(AppError::validation("请先等待 AI 提交视觉修改与复验说明。")); }
+                        super::interaction::visual_candidate(r, &root, original, mutation::text(&r.feedback[index], "candidateArtifactId")?)?;
+                    }
                     if resolving && r.feedback[index]["stage"] == "review" && r.feedback[index]["artifactId"].is_null() {
                         if r.feedback[index]["status"] != "awaiting-recheck" || r.feedback[index]["candidateVersion"] != json!(r.current_version) {
                             return Err(AppError::validation("请先等待当前版本修复与复验完成。"));
@@ -189,7 +213,11 @@ impl TaskService {
                     let at = now();
                     r.feedback[index]["status"] = json!(status); r.feedback[index]["updatedAt"] = json!(at);
                     r.feedback[index]["history"].as_array_mut().unwrap().push(json!({"actor":"user","status":status,"at":at,"version":r.current_version}));
-                    if !resolving && r.current_version.is_some() {
+                    if !resolving && r.feedback[index]["artifactId"].is_string() {
+                        let stage = if super::interaction::art_approval(r) {"resources"} else {"plan"};
+                        for id in ["resources", "plan", "implementation", "review", "delivery", "closeout"].iter().skip_while(|id| **id != stage) { r.stages.insert((*id).into(), "not-started".into()); }
+                        r.stages.insert(stage.into(), "in-progress".into()); r.current_stage = stage.into();
+                    } else if !resolving && r.current_version.is_some() {
                         r.stages.insert("delivery".into(),"not-started".into());
                         r.stages.insert("closeout".into(),"not-started".into());
                         r.stages.insert("review".into(),"in-progress".into()); r.current_stage="review".into();

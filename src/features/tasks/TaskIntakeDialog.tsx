@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Modal } from "../../app/Modal";
 import { errorMessage } from "../../shared/api";
 import { productionApi, type IntakeQuestionGroup, type ProductionView, type IntakeContinuation, continuationMessages } from "../../shared/production";
@@ -15,15 +15,18 @@ export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnectio
   const [selected, setSelected] = useState("");
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [retryGroup, setRetryGroup] = useState<IntakeQuestionGroup>();
+  const [retrying, setRetrying] = useState(false);
   const sequence = useRef(0);
   const alive = useRef(true);
   const seen = useRef(new Set<string>());
-  useEffect(() => { setFeedback(""); setError(""); }, [selected]);
+  const autoOpened = useRef(false);
+  const submitted = useRef(new Set<string>());
   async function refresh() {
     const request = ++sequence.current;
     try {
       const next = await productionApi.get(taskId);
-      if (alive.current && request === sequence.current) { setView(next); setError(""); }
+      if (alive.current && request === sequence.current) { setView(old => (old?.record?.revision ?? 0) > (next.record?.revision ?? 0) ? old : next); }
     } catch (e) { if (alive.current) setError(errorMessage(e)); }
   }
   useEffect(() => {
@@ -46,29 +49,43 @@ export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnectio
         setFeedback(continuationMessages[result.status]);
       } catch(e) { if(alive.current) setError(errorMessage(e)); }
     }
+    if (["needsConnection", "paused", "needsReview"].includes(result.status)) setRetryGroup(group);
+    else setRetryGroup(undefined);
     window.dispatchEvent(new Event("abya:control-changed"));
   }
   const groups = view?.record?.questionGroups ?? [];
-  const pending = groups.find(g => g.status === "pending");
+  const pending = groups.find(g => g.status === "pending" && !submitted.current.has(`${g.id}:${g.answers.length}`));
   const pendingKey = pending ? `${taskId}:${pending.id}:${pending.answers.length}` : "";
   useEffect(() => {
-    if (!pending || !active || seen.current.has(pendingKey)) return;
+    if (!pending || !active || autoOpened.current || seen.current.has(pendingKey)) return;
+    if (document.querySelector('[aria-modal="true"]')) return;
     seen.current.add(pendingKey);
     try { if (sessionStorage.getItem(`abya-intake-later:${pendingKey}`)) return; } catch { /* Optional dismissal memory. */ }
-    setSelected(pending.id);
+    autoOpened.current = true; setSelected(pending.id);
   }, [pendingKey, active]);
   const group = groups.find(g => g.id === selected);
-  const control = useTaskControl(taskId, group?.provider === "codex" ? group.conversationId : undefined, "codex");
+  const trackedGroup = group ?? retryGroup;
+  const control = useTaskControl(taskId, trackedGroup?.provider === "codex" ? trackedGroup.conversationId : undefined, "codex");
   function acceptView(next:ProductionView) {
     sequence.current++; setView(current=>(current?.record?.revision??0)>(next.record?.revision??0)?current:next);
   }
   async function submit(answers:Record<string,string>,revision:number) {
     if(!group)throw new Error("问题组已变化，请重新打开。");
-    const result=await productionApi.submitAnswers(taskId,revision,group.id,answers);
+    const result=group.provider === "codex" ? await productionApi.submitAnswers(taskId,revision,group.id,answers)
+      : { production: await productionApi.answer(taskId,revision,"submit-answers",{id:group.id,answers}) };
     if(alive.current) {
       acceptView(result.production);
-      if(result.warning)setError(result.warning);
-      if(result.continuation)await continueResult(result.continuation,result.production.record?.questionGroups?.find(g=>g.id===group.id)??group);
+      submitted.current.add(`${group.id}:${group.answers.length}`); setSelected(current => current === group.id ? "" : current); autoOpened.current = true;
+      const savedGroup = result.production.record?.questionGroups?.find(g => g.id === group.id) ?? group;
+      setFeedback("答案已提交，无需重复提交。"); setError(result.warning ?? "");
+      if (result.warning) setRetryGroup(savedGroup);
+      if(result.continuation)void continueResult(result.continuation,result.production.record?.questionGroups?.find(g=>g.id===group.id)??group);
+      else if (group.provider === "grok") void (async () => {
+        try {
+          if (!onContinue) throw new Error("请连接原会话后继续。");
+          await onContinue(`问题组 ${group.id} 的答案已在 APP 提交，请读取最新制作记录继续。`,group);
+        } catch (e) { if (alive.current) { setError(`答案已保存。${errorMessage(e)}`); setRetryGroup(savedGroup); } }
+      })();
     }
     return result.production;
   }
@@ -78,22 +95,38 @@ export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnectio
     }
     setSelected("");
   }
-  useLayoutEffect(() => {
-    if (!group) return;
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { event.stopPropagation(); close(); } };
-    window.addEventListener("keydown", escape);
-    return () => window.removeEventListener("keydown", escape);
-  }, [selected, group?.status]);
-  if (!group || !view?.record) return pending ? <button className="primary-button intake-pending-button"
-    onClick={() => setSelected(pending.id)}>有待回答问题 · 继续填写</button> : null;
+  async function retryContinuation() {
+    if (!retryGroup || retrying) return;
+    setRetrying(true); setError("");
+    try {
+      if (onEnsureConnection) await onEnsureConnection(retryGroup);
+      if (!alive.current) return;
+      if (retryGroup.provider === "codex") {
+        const version = retryGroup.answers[retryGroup.answers.length - 1]?.revision;
+        if (version === undefined) throw new Error("正在核对已提交答案，请稍后重试。");
+        await continueResult(await productionApi.continueQuestions(taskId, retryGroup.id, version), retryGroup);
+      } else {
+        if (!onContinue) throw new Error("请在原会话继续任务。");
+        await onContinue(`问题组 ${retryGroup.id} 已提交，请读取最新记录继续。`, retryGroup);
+        setFeedback("继续请求已发送，请查看原会话。"); setRetryGroup(undefined);
+      }
+    } catch (e) { if (alive.current) setError(errorMessage(e)); }
+    finally { if (alive.current) setRetrying(false); }
+  }
+  if (!group || !view?.record) return <>
+    {feedback && <p role="status" className="task-action-notice">{feedback}</p>}
+    {error && <p role="alert" className="inline-error">{error} 请前往终端核对并恢复连接。</p>}
+    {retryGroup && <button className="secondary-button" disabled={retrying} onClick={() => void retryContinuation()}>{retrying ? "正在恢复原会话…" : "重试继续（不重复提交答案）"}</button>}
+    {pending && <button className="primary-button intake-pending-button"
+      onClick={() => setSelected(pending.id)}>有待回答问题 · 继续填写</button>}
+  </>;
   return <Modal wide title="阶段问答" onClose={close}>
-    <p className="intake-dialog-hint">可返回修改。关闭或稍后回答会保留草稿，不提交答案，也不取消问题。</p>
+    <p className="intake-dialog-hint">可返回修改，内容自动保存。稍后回答会保留当前填写内容。</p>
     {error && <p role="alert">{error}</p>}
     {feedback && <p role="status">{feedback === continuationMessages.queued && control ? controlText(control) : feedback}</p>}
     <IntakeQuestions key={`${taskId}:${group.id}`} taskId={taskId} group={group}
       revision={view.record.revision} active={active} onContinue={onContinue}
       onEnsureConnection={onEnsureConnection} onContinuation={continueResult}
-      onSaved={acceptView} onSubmit={submit} />
-    <div className="modal-actions"><button className="secondary-button" onClick={close}>稍后回答 / 关闭</button></div>
+      onSaved={acceptView} onSubmit={submit} onDefer={close} />
   </Modal>;
 }

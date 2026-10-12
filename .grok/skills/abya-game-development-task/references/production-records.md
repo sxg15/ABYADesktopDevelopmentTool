@@ -15,11 +15,13 @@ rounds/ 和 reports/ 是导出，不能手改来批准文档、关闭反馈或�
 ~~~
 冲突时读回合并，不盲目重放。outcome_unknown 可能已经保存，先读实际状态。
 
-## 三处人工决定与问答
+## 人工决定与问答
 
-requirements/plan/delivery 的确认只有 APP 用户入口，没有 approve CLI。
+流程 2.1 的 requirements/resources/plan/delivery 确认只有 APP 用户入口，没有 approve CLI。旧任务以固定 policy 为准。
 文档由 AI 写任务内 .md，通过 submit-document 提交，后端记录摘要、修订和实际作品版本。
-plan 自动绑定资源节点当前视觉产物的路径与摘要；提交后不得覆盖图片，修订用新文件。
+resources 美术需求确认单及 plan 自动绑定资源节点当前视觉产物的路径与摘要；提交后不得覆盖图片，修订用新文件。
+resources 提交必含 artScope（new-art/reuse-only/no-art）与 artScopeReason，正文须包含理由。new-art 须有素材板、布局、关键状态预览。
+仅复用/无新增美术也提交确认单列明范围和依据，可不新增概念图。未正式提交的草稿不开放反馈。
 用户确认后正文变化须重新提交；范围改变修订相关需求/计划，缺陷修正不重审无关决定。
 问答 publish-questions 使用 id/title/questions/stage，当前阶段每组1–12题：
 questions 项为 id/text/options/optional。绑定由桌面注入，不填写原生会话身份。
@@ -36,15 +38,15 @@ questions 项为 id/text/options/optional。绑定由桌面注入，不填写原
 | register-artifact | stage/path/title/summary；普通草稿先保存再登记 |
 | register-visual | stage/path/title/sourceType/roles/visualVersion/groupId，可含summary/source/temporary |
 | update-stage | stage/summary/nextAction，可选status: in-progress/blocked/stopped；当前阶段 |
-| submit-document | kind/path；需求可含taskTemplate，计划可含artTemplate，正文明确ID |
+| submit-document | kind/path；需求可含taskTemplate；2.1美术确认单可含artTemplate及上述artScope/artScopeReason，正文明确ID与依据；旧版美术模板随plan |
 | register-approved-template | key/templateId/documentHash；仅补登记批准文档明确的同一选择 |
 | register-evidence | id/path/kind/captureType/reviewed/description，可含instanceId |
 | reuse-evidence | id/sourceId/reason/unaffectedScope；只复用同周期、已审阅、文件未变的证据 |
 | configure-acceptance | seats:1–8，requiredTools:能力ID数组，requireUi:默认true；绑定当前登记版本 |
 | save-self-test | id/status/observations/evidenceIds；绑定当前版本与周期，保留历史 |
-| update-feedback | id/status/fix；status仅in-progress或awaiting-recheck；后者另需recheck/evidenceIds |
+| update-feedback | id/status/fix；status仅in-progress或awaiting-recheck；后者另需recheck；玩法反馈需evidenceIds，视觉反馈需candidateArtifactId指向同组最新视觉修订，无需先有可玩版本 |
 | save-issue | id/kind/status/stage/description；解决需fix/recheck/evidenceIds；blocker另需resumeWhen |
-| complete-stage | resources:stage/summary；implementation:stage（验证必要自测）；closeout:stage |
+| complete-stage | implementation:stage（验证必要自测）；closeout:stage；仅旧policy允许resources:stage/summary，2.1由APP确认美术文档推进 |
 | save-knowledge | entries，每项summary/status，可补采用位置与证据；无复用亦说明原因 |
 
 问题 kind 为 defect/blocker/checkpoint/suggestion；status 为 open/in-progress/awaiting-recheck/resolved。

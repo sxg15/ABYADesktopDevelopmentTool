@@ -163,9 +163,18 @@ impl TaskService {
             self.sync_managed_skills(&root)?;
             r.skill_pins = scan(&root)?;
             let next_policy=policy();
+            let art_upgrade = !super::interaction::art_approval(r) && next_policy["stages"].as_array().is_some_and(|stages| stages.iter().any(|s| s["approval"] == "resources"));
             let feedback_upgrade = !super::iteration::enabled(r) && next_policy["iterationMode"] == "human-feedback";
             let compatible=["rounds","questions","dimensions","stages","checkStatuses","stageStatuses"].iter().all(|key|r.policy[*key]==next_policy[*key]);
             r.policy = next_policy; r.workflow_version = r.policy["workflowVersion"].as_str().unwrap().into();
+            if art_upgrade {
+                for stage in ["resources", "plan", "implementation", "review", "delivery", "closeout"] { r.stages.insert(stage.into(), "not-started".into()); }
+                r.current_stage = if r.stages.get("requirements").is_some_and(|s| s == "passed") { "resources" } else { "requirements" }.into();
+                r.stages.insert(r.current_stage.clone(), "in-progress".into());
+                r.issues.push(serde_json::json!({"id":format!("art-review-upgrade-{}",r.revision),"kind":"suggestion","status":"resolved","stage":"resources",
+                    "description":"已增加美术需求确认单。既有文档、批准、轮次与证据保留为历史；需提交并确认美术范围，再审查受影响的后续阶段，不补造确认。","backup":backup,"updatedAt":now()}));
+                return Ok(());
+            }
             if feedback_upgrade {
                 for s in r.policy["stages"].as_array().unwrap() {
                     r.stages.entry(s["id"].as_str().unwrap().into()).or_insert("not-started".into());

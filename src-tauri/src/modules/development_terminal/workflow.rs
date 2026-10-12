@@ -137,6 +137,8 @@ pub struct CodexWorkflowTurn {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexWorkflowSnapshot {
+    #[serde(default)]
+    pub terminal_interaction: bool,
     pub task_id: String,
     pub conversation_id: String,
     pub observability: CodexObservabilityStatus,
@@ -154,6 +156,7 @@ impl CodexWorkflowSnapshot {
         warning: impl Into<String>,
     ) -> Self {
         Self {
+            terminal_interaction: false,
             task_id: task_id.to_string(),
             conversation_id: conversation_id.to_string(),
             observability,
@@ -168,6 +171,7 @@ impl CodexWorkflowSnapshot {
         if self.turns.iter().any(|turn| turn.id == turn_id) {
             return;
         }
+        self.terminal_interaction = false;
         self.turns.push(CodexWorkflowTurn {
             id: turn_id.to_string(),
             status: CodexWorkflowTurnStatus::WaitingForPlan,
@@ -318,6 +322,7 @@ impl CodexWorkflowSnapshot {
     }
 
     pub(crate) fn complete_turn(&mut self, turn_id: &str, status: CodexWorkflowTurnStatus) {
+        self.terminal_interaction = false;
         self.begin_turn(turn_id);
         let turn = self.current_turn_mut(turn_id);
         turn.status = status;

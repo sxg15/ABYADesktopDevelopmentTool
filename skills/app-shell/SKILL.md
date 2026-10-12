@@ -128,3 +128,12 @@ Button descriptions now default above the owner, use measured viewport clamping 
 
 Production and instance surfaces expose a task-version acceptance button with progress and actionable errors. Visual cards identify reference/mockup/render/gameplay, temporary resources and plan bindings; at most two selected previews compare side by side.
 User feedback supports related visuals and bounded screenshot/video uploads. AI recheck and user closure remain separate controls. New human-feedback tasks have no 8+4 progress wording; legacy rounds remain visible.
+
+## Modal interaction update (2026-10-12)
+Modal focuses its container once, traps keyboard focus inside the topmost dialog,
+handles Escape without submitting, and restores the prior connected focus target.
+Nested image previews return to the review dialog. Background terminal attachment
+cannot steal focus from an active dialog. Review decisions are never preselected.
+Question navigation, sticky action rows and responsive review columns remain usable
+in small windows and at increased display scaling. Document text is rendered through
+React text nodes, never executable HTML. State guidance uses text plus icons and color.

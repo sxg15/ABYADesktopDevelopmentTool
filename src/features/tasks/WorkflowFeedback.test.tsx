@@ -53,8 +53,9 @@ it("saves feedback before continuation and never silently closes a stale candida
     candidateVersion:"v1",createdAt:"now",updatedAt:"now"}];
   vi.mocked(productionApi.feedback).mockResolvedValue({record:r,policy:{workflowVersion:"2.0.0",stages:[],dimensions:[],questions:[]},warnings:[],reportPaths:[],availableUpdate:false});
   const next=vi.fn().mockRejectedValue(new Error("Conversation disconnected"));
-  render(<FeedbackPanel taskId="task" record={r} active en onUpdated={vi.fn()} onContinue={next} />);
-  expect((screen.getByRole("button",{name:"Verified, close"}) as HTMLButtonElement).disabled).toBe(true);
+  render(<FeedbackPanel taskId="task" record={r} active en actions={{gameplay:""}} onUpdated={vi.fn()} onContinue={next} />);
+  expect((screen.getByRole("button",{name:"Review fix"}) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByRole("button",{name:"Review playable version / feedback"}));
   fireEvent.change(screen.getByRole("textbox"),{target:{value:"The score is wrong"}});
   fireEvent.click(screen.getByRole("button",{name:"Submit and continue"}));
   await screen.findByText(/Feedback saved.*Conversation disconnected/);

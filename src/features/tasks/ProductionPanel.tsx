@@ -14,6 +14,7 @@ import { ProductionTiming } from "./ProductionTiming";
 import { AcceptanceLauncher } from "./AcceptanceLauncher";
 import { VisualGallery } from "./VisualGallery";
 import { FeedbackPanel } from "./FeedbackPanel";
+import { DocumentReview } from "./DocumentReview";
 
 const names: Record<string, string> = {
   requirements: "需求整理",
@@ -82,7 +83,7 @@ export function ProductionPanel({
   const [question, setQuestion] = useState("ask");
   const [playerMode, setPlayerMode] = useState("unspecified");
   const [editingPlayers, setEditingPlayers] = useState(false);
-  const [feedback, setFeedback] = useState<Record<string, string>>({});
+  const [reviewDocument, setReviewDocument] = useState<ProductionDocument>();
   const [selected, setSelected] = useState(() => remembered(taskId));
   const [visualFeedback, setVisualFeedback] = useState<string>();
   const sequence = useRef(0),
@@ -101,9 +102,11 @@ export function ProductionPanel({
   }
   useEffect(() => {
     alive.current = true;
+    const showStage = (event: Event) => { const detail = (event as CustomEvent<{taskId:string;stage:string}>).detail; if (detail.taskId === taskId) setSelected(detail.stage); };
+    window.addEventListener("abya:show-stage", showStage);
     setSelected(remembered(taskId));
     setEditingPlayers(false);
-    setFeedback({});
+    setReviewDocument(undefined);
     setError("");
     setNotice("");
     void refresh();
@@ -112,6 +115,7 @@ export function ProductionPanel({
       alive.current = false;
       sequence.current++;
       window.clearInterval(timer);
+      window.removeEventListener("abya:show-stage", showStage);
     };
   }, [taskId]);
   async function change(run: () => Promise<ProductionView>) {
@@ -158,7 +162,7 @@ export function ProductionPanel({
       /* Selection works without storage. */
     }
   }
-  async function decide(d: ProductionDocument, accepted: boolean) {
+  async function decide(d: ProductionDocument, accepted: boolean, feedback: string) {
     if (!r) return;
     await change(async () => {
       const result = await productionApi.decide(
@@ -167,9 +171,9 @@ export function ProductionPanel({
         d.kind,
         d.sha256,
         accepted,
-        feedback[d.kind] ?? "",
+        feedback,
       );
-      setFeedback((v) => ({ ...v, [d.kind]: "" }));
+      setReviewDocument(undefined);
       try {
         await onContinue?.(
           `${label(d.kind)}文档第${d.revision}版已${accepted ? "确认" : "退回修改"}。请读取最新记录和反馈，继续当前阶段。`,
@@ -252,16 +256,13 @@ export function ProductionPanel({
   );
   return (
     <div className="production-panel">
+      {reviewDocument && view && <DocumentReview taskId={taskId} document={reviewDocument} view={view}
+        active={active} busy={busy} error={error} en={en} onClose={() => setReviewDocument(undefined)} onDecide={decide} />}
       {r && view && (
         <nav className="production-stage-nav" aria-label={s.method}>
           {view.policy.stages.map((item, index) => {
             const count =
-              r.issues.filter(
-                (i) =>
-                  i.status !== "resolved" &&
-                  affected(i, item.id) &&
-                  (states[item.id] !== "passed" || i.stage === item.id),
-              ).length +
+              (view.actions?.review[item.id] === "" ? 1 : 0) +
               (r.questionGroups ?? []).filter(
                 (g) =>
                   (g.stage ?? "requirements") === item.id &&
@@ -312,6 +313,8 @@ export function ProductionPanel({
           {s.refresh}
         </button>
       </header>
+      {r && stage !== r.currentStage && <p className="production-history-hint">{en ? "Viewing a different stage." : "正在查看历史或其他阶段。"}
+        <button className="text-button" onClick={() => select(r.currentStage)}>{en ? "Return to current stage" : "返回当前阶段"}</button></p>}
       {error && (
         <div role="alert" className="inline-error">
           {error}
@@ -377,16 +380,15 @@ export function ProductionPanel({
                   : modern && stage === "review" ? "直接试玩并提出问题，AI修改后复验，直到达到预期。" : hints[stage])}
             </p>
             <small>
-              {r.stageUpdates?.[stage]?.nextAction ||
-                (openIssues.length
+              {(openIssues.length
                   ? en
-                    ? `${openIssues.length} items need attention below.`
-                    : `有${openIssues.length}项问题需要处理，见下方处理方案。`
+                    ? `${openIssues.length} issues are recorded below.`
+                    : `本阶段登记了 ${openIssues.length} 项问题，处理记录见下方。`
                   : groups.some((g) => g.status === "pending")
                     ? en
                       ? "Please answer the questions below."
                       : "请完成下方阶段问答，提交后继续。"
-                    : states[stage] === "awaiting-confirmation"
+                    : view.actions?.review[stage] === ""
                       ? en
                         ? "Read the document and confirm or request changes."
                         : "请阅读本阶段文档，确认或填写修改意见。"
@@ -407,6 +409,9 @@ export function ProductionPanel({
               <FileText size={17} />
               {en ? "Results and reports" : "阶段成果与报告"}
             </h4>
+            {!Object.values(r.documents).some(d => d.kind === stage) && <p className="production-empty">
+              {en ? "No submitted review document yet. Drafts can be read; review opens after submission." : "AI 尚未提交本阶段可审查文档。草稿可查看，正式提交后开放审查。"}
+            </p>}
             {Object.values(r.documents)
               .filter((d) => d.kind === stage)
               .map((d) => {
@@ -442,45 +447,10 @@ export function ProductionPanel({
                       <FolderOpen size={15} />
                       {s.revealDocument}
                     </button>
-                    {pending && (
-                      <div className="production-approval">
-                        <label className="field">
-                          {s.feedback}
-                          <textarea
-                            value={feedback[d.kind] ?? ""}
-                            onChange={(e) =>
-                              setFeedback((v) => ({
-                                ...v,
-                                [d.kind]: e.target.value,
-                              }))
-                            }
-                            rows={3}
-                          />
-                        </label>
-                        <div className="production-actions">
-                          <button
-                            className="primary-button"
-                            disabled={
-                              busy ||
-                              !active ||
-                              view.warnings.some((w) => w.startsWith(d.kind))
-                            }
-                            onClick={() => void decide(d, true)}
-                          >
-                            {s.confirm}
-                          </button>
-                          <button
-                            className="secondary-button"
-                            disabled={
-                              busy || !active || !feedback[d.kind]?.trim()
-                            }
-                            onClick={() => void decide(d, false)}
-                          >
-                            {s.reject}
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    <button className="secondary-button" onClick={() => { setError(""); setReviewDocument(d); }}>
+                      {pending ? (en ? "View and review" : "查看并审查") : (en ? "View document and history" : "查看成果与记录")}
+                    </button>
+                    {pending && view.actions?.review[d.kind] && <p className="production-empty">{view.actions.review[d.kind]}</p>}
                   </article>
                 );
               })}
@@ -612,7 +582,7 @@ export function ProductionPanel({
                       : "继续填写"
                     : en
                       ? "View / edit answers"
-                      : "查看 / 修改答案"}
+                      : "查看已提交答案"}
                 </button>
               </article>
             ))}
@@ -701,9 +671,9 @@ export function ProductionPanel({
           {["review", "delivery"].includes(stage) && <AcceptanceLauncher key={taskId} taskId={taskId} active={active} en={en} />}
           {["resources", "plan", "review", "delivery"].includes(stage) && <VisualGallery taskId={taskId}
             artifacts={(view.artifacts ?? r.artifacts ?? []).filter(a => a.stage === "resources" || a.sourceType === "gameplay" || a.sourceType === "feedback")}
-            bindings={r.documents.plan?.artifactBindings} en={en} onFeedback={active ? setVisualFeedback : undefined} />}
-          {["resources", "plan", "review", "delivery"].includes(stage) && <FeedbackPanel key={taskId} taskId={taskId} record={r} active={active} en={en}
-            selectedArtifact={visualFeedback} onUpdated={setView} onContinue={async (message, revision) => onContinue?.(message, undefined, revision)} />}
+            bindings={r.documents.resources?.artifactBindings ?? r.documents.plan?.artifactBindings} en={en} onFeedback={active ? setVisualFeedback : undefined} feedbackActions={view.actions?.feedback} />}
+          {["resources", "plan", "review", "delivery"].includes(stage) && <FeedbackPanel key={taskId} taskId={taskId} record={{...r,artifacts:view.artifacts ?? r.artifacts}} active={active} en={en}
+            actions={view.actions?.feedback} onDismiss={() => setVisualFeedback(undefined)} selectedArtifact={visualFeedback} onUpdated={setView} onContinue={async (message, revision) => onContinue?.(message, undefined, revision)} />}
           {stage === "review" && modern && <section className="production-card"><h4>{en ? "Required checks" : "当前版本必要自测"}</h4>
             {(r.selfTests ?? []).filter(c => c.version === r.currentVersion).map((c, i) => <p key={i}>{c.id} · {statusName(c.status, locale)} · {c.observations}</p>)}
             <p>{en ? "Play, give feedback, and accept the final candidate when satisfied. There is no fixed round count." : "现在可以试玩并反馈；修改后复验，满意后确认交付。没有固定迭代轮数。"}</p></section>}

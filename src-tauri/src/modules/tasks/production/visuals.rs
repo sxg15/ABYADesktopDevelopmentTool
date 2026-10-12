@@ -130,6 +130,19 @@ pub(super) fn register(r: &mut ProductionRecord, root: &Path, data: &Value) -> A
 }
 
 pub(super) fn bindings(r: &ProductionRecord, root: &Path) -> AppResult<BTreeMap<String, String>> {
+    let exempt = r
+        .documents
+        .get("resources")
+        .and_then(|d| d.art_scope.as_deref())
+        .is_some_and(|scope| ["no-art", "reuse-only"].contains(&scope));
+    bindings_for(r, root, !exempt)
+}
+
+pub(super) fn bindings_for(
+    r: &ProductionRecord,
+    root: &Path,
+    require_previews: bool,
+) -> AppResult<BTreeMap<String, String>> {
     let mut groups = BTreeMap::new();
     for a in &r.artifacts {
         if a["stage"] == "resources"
@@ -152,7 +165,8 @@ pub(super) fn bindings(r: &ProductionRecord, root: &Path) -> AppResult<BTreeMap<
         }
         result.insert(path.into(), hash);
     }
-    if super::iteration::enabled(r)
+    if require_previews
+        && super::iteration::enabled(r)
         && ["asset-board", "layout", "states"].iter().any(|role| {
             !groups.values().any(|a| {
                 a["roles"]

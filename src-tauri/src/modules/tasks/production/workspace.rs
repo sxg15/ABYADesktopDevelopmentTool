@@ -135,7 +135,16 @@ pub(super) fn accept_templates(
         super::catalog::validate_choice(root, key, id)?;
         match key.as_str() {
             "taskTemplate" if d.kind == "requirements" => r.task_template = Some(id.clone()),
-            "artTemplate" if d.kind == "plan" => r.art_template = Some(id.clone()),
+            "artTemplate"
+                if d.kind
+                    == if super::interaction::art_approval(r) {
+                        "resources"
+                    } else {
+                        "plan"
+                    } =>
+            {
+                r.art_template = Some(id.clone())
+            }
             _ => return Err(AppError::validation("模板选择与文档阶段不匹配。")),
         }
     }
@@ -150,7 +159,13 @@ pub(super) fn backfill_template(
     let key = mutation::text(data, "key")?;
     let kind = match key {
         "taskTemplate" => "requirements",
-        "artTemplate" => "plan",
+        "artTemplate" => {
+            if super::interaction::art_approval(r) {
+                "resources"
+            } else {
+                "plan"
+            }
+        }
         _ => return Err(AppError::validation("请选择任务模板或美术模板。")),
     };
     validation::approved(r, root, kind)?;

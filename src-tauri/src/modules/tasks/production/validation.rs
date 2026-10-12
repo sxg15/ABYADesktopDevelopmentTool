@@ -4,6 +4,9 @@ use serde_json::Value;
 use std::path::Path;
 
 pub(super) fn approved(r: &ProductionRecord, root: &Path, kind: &str) -> AppResult<()> {
+    if kind == "plan" && super::interaction::art_approval(r) {
+        approved(r, root, "resources")?;
+    }
     if r.stages.get(kind).map(String::as_str) != Some("passed") {
         return Err(AppError::validation(format!("{kind} 当前版本尚未确认。")));
     }
@@ -26,6 +29,7 @@ pub(super) fn approved(r: &ProductionRecord, root: &Path, kind: &str) -> AppResu
         return Err(AppError::validation("作品版本变化，原交付确认已失效。"));
     }
     super::visuals::verify_bindings(d, root)?;
+    super::interaction::current_art(r, root, d)?;
     Ok(())
 }
 
@@ -130,7 +134,13 @@ pub(super) fn document_gate(r: &ProductionRecord, root: &Path, kind: &str) -> Ap
                 return Err(AppError::validation("请先敲定单人或多人玩法。"));
             }
         }
+        "resources" => {
+            approved(r, root, "requirements")?;
+        }
         "plan" => {
+            if super::interaction::art_approval(r) {
+                approved(r, root, "resources")?;
+            }
             if r.feedback.iter().any(|f| {
                 (f["stage"] == "resources" || f["stage"] == "plan") && f["status"] != "resolved"
             }) {
@@ -177,7 +187,9 @@ pub(super) fn document_gate(r: &ProductionRecord, root: &Path, kind: &str) -> Ap
 pub(super) fn warnings(r: &ProductionRecord, root: &Path) -> Vec<String> {
     let mut result = Vec::new();
     for (kind, d) in &r.documents {
-        if super::visuals::verify_bindings(d, root).is_err() {
+        if super::visuals::verify_bindings(d, root).is_err()
+            || super::interaction::current_art(r, root, d).is_err()
+        {
             result.push(format!("{kind} 关联的视觉方案已变化，请重新提交确认。"));
         }
         if files::text_file(root, &d.path).map_or(true, |(_, hash)| hash != d.sha256) {

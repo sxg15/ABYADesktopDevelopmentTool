@@ -21,7 +21,11 @@
 资源阶段可做组合示意及独立资源预览，不提前实现完整玩法来生成所谓最终截图。
 涉及必要动作或特效时提供短视频；静态素材不强制录像。
 用 register-visual 登记实际文件、用途、来源和方案版本；保持旧文件不被覆盖。
-完成 resources 后，视觉方案随执行计划一起确认，不增加第四个强制批准节点。
+流程 2.1 以 [美术需求确认单](../assets/production/art-requirements.template.md) 梳理风格、资源清单、复用/新增范围、关联概念图版本、制作约束及验收标准。
+提交 resources 文档并等待 APP 用户确认，禁止用 complete-stage resources 跳过审查。
+submit-document data 必填 artScope（new-art/reuse-only/no-art）及 artScopeReason，正文必须包含该理由；美术模板 artTemplate 随此文档确认。
+新增美术须提供上述预览；仅复用或无美术需求也提交确认单，列出复用对象、范围和依据，可不新增概念图。
+文档及关联图片有变化时重新提交相应版本；确认后进入执行计划。旧任务没有 resources 批准节点时仍按旧 policy 完成资源阶段。
 
 ## 3. 方案、选型与预检 → 确认执行计划
 

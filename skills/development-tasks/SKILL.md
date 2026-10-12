@@ -78,8 +78,8 @@ Art templates use the separate `abya-art-template-*` namespace and
 identity fields, synchronization and collision protection as task templates.
 Complete art resources (including images and nested directories) are deployed.
 Task and art choices remain distinct. Existing art/resources are preferred;
-new style suggestions are confirmed with the execution plan, without a fourth
-approval gate or automatic comic-arcade-ui default. A missing chosen template,
+new style suggestions are confirmed with resources in 2.1 (execution plan in older
+pinned policies), without an automatic comic-arcade-ui default. A missing chosen template,
 font, asset or tool is a feasibility gap. Art does not change gameplay or
 override the multiplayer template's DingTalk font requirement.
 
@@ -212,3 +212,39 @@ save-self-test records version/cycle-bound architecture, lua, core-loop, input, 
 User feedback records versions, instance IDs, related visual/attachments and history. Agent update-feedback permits in-progress/awaiting-recheck only; APP closes/reopens it. Candidate versions and evidence are revalidated before gameplay feedback closure. Final acceptance remains the user's separate decision.
 acceptance_spec resolves only captured versionDetails sources and verifies hashes; configuration binds seats/requiredTools/requireUi to the current version. Defaults are one single-player seat or two multiplayer seats. TaskService never launches processes; RuntimeBridge orchestrates InstanceService. Acceptance session history is capped at 50 and exported.
 Reports show visual previews, self-tests, feedback and legacy rounds. Test no-round delivery, missing/stale checks, user-only closure, file/path/version mismatch, real upgrade preservation and legacy gates.
+
+## Interaction and art review (2026-10-12)
+Workflow 2.1 adds APP-only resources approval and art-requirements.md. submit-document
+requires artScope new-art/reuse-only/no-art and artScopeReason present in the content.
+Only new-art requires new visual previews. Resources binds exact current visual groups;
+new versions invalidate current review and downstream approval checks. Art templates
+join resources confirmation in 2.1; older pinned policies keep plan confirmation.
+Explicit upgrade preserves documents/approvals/evidence as history, reopens resources
+and affected downstream stages, and never fabricates an art approval.
+ProductionView.actions projects review/approve/feedback availability as reason maps
+(empty string means available); final mutations revalidate files, revision and gates.
+Polling does not rehash an entire Player install; feedback/acceptance submissions do.
+No unbound feedback before a completed playable initial version; visual feedback needs
+an intact current-cycle visual bound to a submitted document. Drafts and uploaded
+feedback attachments cannot unlock feedback. Rejection requires a nonempty explanation.
+Questions provide Other and separate optional notes with compatible string answers.
+Local drafts retain separate choice/Other/note fields; old string drafts remain readable.
+Autosave never disables inputs and serializes snapshots; newer edits stay dirty.
+Successful submission closes the modal after persistence, while continuation and errors
+remain visible in the task page. Retrying continuation never resubmits answers.
+Overview cards only open second-level document/feedback dialogs. Review starts without
+a decision, binds the viewed hash/revision and blocks stale versions while retaining notes.
+Registered images open a zoomable/pannable modal by mouse or keyboard, returning focus
+on close; comparison is separate. Previews never approve or submit feedback.
+TaskGuidance prioritizes native terminal interaction, pending questions and valid review
+requests, then runtime state. It explicitly says no action is needed during execution.
+Grok uses recent observable workflow evidence; stale/unobservable state stays unknown.
+Validate IME composition, in-flight edits, late polling, duplicate submit, exact-version
+review, empty/draft/missing visual feedback, upgrade history and both provider bundles.
+
+Visual feedback reopens the owning art/plan stage and affected downstream stages so
+the continuation queue can deliver the requested changes. AI awaiting-recheck binds
+candidateArtifactId to the same group's latest intact visual, without requiring a
+playable version. Only user review closes it; art approval waits for open feedback.
+Recheck closure also happens in a second-level review dialog. Backend revalidates the
+candidate again at closure. Old document/visual approval history remains unchanged.

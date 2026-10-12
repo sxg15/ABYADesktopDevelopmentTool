@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { translator } from "../../i18n";
 import type { CodexConversation } from "../../shared/types";
@@ -315,6 +315,20 @@ describe("terminal open sizing", () => {
     await waitFor(() => expect(finish).toHaveBeenCalledWith(undefined));
     expect(terminalApiMock.open).toHaveBeenCalledWith("codex", "task-1", "other", 80, 24, expect.anything());
     expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
+  });
+  it("does not steal focus when attachment completes behind an active dialog", async () => {
+    let finish!: (value: Awaited<ReturnType<typeof terminalApiMock.open>>) => void;
+    terminalApiMock.open.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    renderView(); await screen.findAllByText("Original title");
+    giveHostLayout(); notifyResize();
+    await waitFor(() => expect(terminalApiMock.open).toHaveBeenCalled());
+    const dialog=document.createElement("section"); dialog.setAttribute("aria-modal","true");
+    const input=document.createElement("textarea"); dialog.append(input); document.body.append(dialog); input.focus();
+    terminalEvents.focus.mockClear();
+    try {
+      await act(async () => {finish({taskId:"task-1",conversationId:"conversation-1",status:"running",pid:10,workingDirectory:"D:\\Workspaces\\task-1",lastError:""});});
+      expect(terminalEvents.focus).not.toHaveBeenCalled(); expect(document.activeElement).toBe(input);
+    } finally { dialog.remove(); }
   });
   it("does not create a replacement when the requested conversation is missing", async () => {
     terminalApiMock.listConversations.mockResolvedValueOnce([]); const finish=vi.fn();

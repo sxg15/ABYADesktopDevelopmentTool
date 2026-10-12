@@ -6,6 +6,7 @@ import { SkillLibrary } from "./SkillLibrary";
 import { productionApi, type ProductionView } from "../../shared/production";
 vi.mock("../../shared/production", () => ({ productionApi: { get: vi.fn(), update: vi.fn(), decide: vi.fn(), upgrade: vi.fn(), skills: vi.fn(), readSkill: vi.fn(), open: vi.fn(), revealDocument: vi.fn(), revealReport: vi.fn(), answer: vi.fn() } }));
 const fixture = (): ProductionView => ({
+  actions: { review: { requirements: "" }, approve: { requirements: "" }, feedback: { gameplay: "尚无作品" } },
   policy: { workflowVersion: "1.1.0", stages: [{ id: "requirements", name: "需求", approval: "requirements" }], dimensions: [], questions: [] },
   warnings: [], reportPaths: [], availableUpdate: false,
   record: { taskId: "a", revision: 7, workflowVersion: "1.1.0", questionMode: "ask", currentStage: "requirements", currentRound: 0, cycle: 1,
@@ -42,15 +43,21 @@ describe("Production decisions", () => {
     expect(await screen.findByRole("button", {name:"Show in File Explorer"})).toBeTruthy();
     expect(screen.queryByText("Review this exact version")).toBeNull();
     expect(productionApi.decide).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Accept and continue" }));
+    fireEvent.click(screen.getByRole("button", { name: "View and review" }));
+    expect(screen.getByText("Review this exact version")).toBeTruthy();
+    expect((screen.getByRole("button", {name:"Confirm this version and continue"}) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText("Approve this version"));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm this version and continue" }));
     await waitFor(() => expect(productionApi.decide).toHaveBeenCalledWith("a", 7, "requirements", "hash-2", true, ""));
     await waitFor(() => expect(resume).toHaveBeenCalledOnce());
   });
   it("shows stale-document warnings and cannot approve the stale version", async () => {
     const value = fixture(); value.warnings = ["requirements 文件已变化"];
+    value.actions!.review.requirements = "文件已变化";
     vi.mocked(productionApi.get).mockResolvedValue(value);
     render(<ProductionPanel taskId="a" active locale="en-US" />);
-    const button = await screen.findByRole("button", { name: "Accept and continue" });
+    fireEvent.click(await screen.findByRole("button", { name: "View and review" }));
+    const button = screen.getByRole("button", { name: "Confirm this version and continue" });
     expect((button as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(button); expect(productionApi.decide).not.toHaveBeenCalled();
   });

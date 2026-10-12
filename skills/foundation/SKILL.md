@@ -111,3 +111,10 @@ ProductionView adds effective stageStatuses and registered/legacy artifacts; pro
 Production DTOs add optional acceptanceConfig/acceptanceSessions, selfTests, feedback, visual artifact metadata and document artifactBindings. Serde defaults preserve 1.x records without creating approvals or test results.
 Typed frontend adapters expose acceptance start/status, registered media reads and APP-only feedback. Domain rules remain in owning services; no new database table or secret persistence is introduced.
 Timing adds elapsed/first-playable/human wait/blocked/feedback rework/recorded active progress; categories overlap and incomplete execution remains unknown.
+
+## Review availability contracts (2026-10-12)
+ProductionView exposes additive actions maps (review/approve/feedback), keyed by
+stage or artifact ID/gameplay. Empty reason means preliminarily available; missing
+entries fail closed. Full file/version/gate checks still run at submission.
+Workflow snapshots add optional terminalInteraction; control state adds waitingForTerminal.
+Document artScope is additive, preserving old serialized records. No new secrets or tables.

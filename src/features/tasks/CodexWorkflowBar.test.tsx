@@ -55,7 +55,7 @@ describe("Codex workflow bar", () => {
       workflow={{...workflow,turns:workflow.turns.map(t=>({...t,plan:[]}))}}
       control={{taskId:"task-1",conversationId:"conversation-1",state:"waitingForResponse",connection:"connected",queued:false,updatedAt:"now",sequence:1}}
       t={translator("zh-CN")}/>);
-    expect(screen.getByText("等待模型响应，可随时暂停")).toBeTruthy();
+    expect(screen.getByText("正在等待 AI 输出，当前无需操作")).toBeTruthy();
     expect(screen.queryByText(/等待 Codex 列出本轮计划/)).toBeNull();
   });
   it("shows recent step activity on hover and opens the complete timeline", () => {

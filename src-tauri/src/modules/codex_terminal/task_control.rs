@@ -108,6 +108,8 @@ impl CodexTerminalService {
         });
         let state = if self.stopping.lock().contains(conversation_id) {
             "pausing"
+        } else if runtime && workflow.terminal_interaction {
+            "waitingForTerminal"
         } else if runtime && active {
             if queued {
                 "queued"

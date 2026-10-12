@@ -119,3 +119,11 @@ Update this Skill with discovery, transport, lifecycle, contracts, diagnostics o
 ## Stage workspace update
 
 Explicit user-selected per-conversation execution settings use native thread/settings/update, with model/list advertised effort choices. AI review maps to on-request + auto_review + task workspaceWrite; full consent maps to never + dangerFullAccess. Native managed-policy rejection remains visible. Save only acknowledged model/effort/reviewer/policy fields in execution-settings.json; capture native settings events, restore on executor recreation, and leave the global config unchanged. Both TUI and queued turns share native thread settings. Running changes target future turns; pause-and-apply interrupts and awaits acknowledgement before updating and user-requested continuation. Never start a model turn just to inspect settings. CLI plan reporting updates the same sanitized workflow under its write lock. New instructions require contextual plain-language progress and provide the plan-report fallback.
+
+## Native interaction visibility (2026-10-12)
+thread/status/changed status.activeFlags waitingOnApproval/waitingOnUserInput sets
+workflow terminalInteraction. Other flags/states clear it. A live runtime projects
+waitingForTerminal before running/queued; the UI directs users to the original terminal.
+Only the existing native terminal handles the request; no approval is auto-answered.
+Contract verified with the locally installed app-server JSON schema. Persist only the
+boolean, not native approval request contents, commands or user input.

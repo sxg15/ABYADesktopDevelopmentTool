@@ -16,7 +16,7 @@ for (const provider of ['.codex', '.grok']) {
     unique(policy.dimensions.map(dimension => dimension.id));
     unique(policy.questions.map(question => question.id));
     assert.deepEqual(policy.stages.flatMap(stage => stage.approval ? [stage.approval] : []),
-      ['requirements', 'plan', 'delivery']);
+      ['requirements', 'resources', 'plan', 'delivery']);
     assert.equal(policy.iterationMode, 'human-feedback');
     assert.equal(policy.rounds.count, 0);
     assert.deepEqual(policy.rounds.questionRounds, []);

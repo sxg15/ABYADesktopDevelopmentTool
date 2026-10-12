@@ -1263,6 +1263,18 @@ fn handle_app_server_notification(
     workflow.warning.clear();
 
     let event_type = match method {
+        "thread/status/changed" => {
+            workflow.terminal_interaction = params["status"]["type"] == "active"
+                && params["status"]["activeFlags"]
+                    .as_array()
+                    .is_some_and(|flags| {
+                        flags
+                            .iter()
+                            .any(|flag| flag == "waitingOnApproval" || flag == "waitingOnUserInput")
+                    });
+            workflow.updated_at = Utc::now().to_rfc3339();
+            "interactionChanged"
+        }
         "turn/started" => {
             let Some(turn_id) = params
                 .pointer("/turn/id")
@@ -2440,6 +2452,26 @@ mod tests {
             CodexActivityKind::Command
         );
         assert!(!workflow.turns[0].activities[0].unplanned);
+        for (flags, expected) in [
+            (serde_json::json!(["waitingOnApproval"]), true),
+            (serde_json::json!(["waitingOnUserInput"]), true),
+            (serde_json::json!([]), false),
+        ] {
+            handle_app_server_notification(
+                &tasks,
+                &service.sessions,
+                &service.thread_conversations,
+                &service.workflow_write_lock,
+                serde_json::json!({"method":"thread/status/changed","params":{"threadId":"thread-1","status":{"type":"active","activeFlags":flags}}}),
+            );
+            assert_eq!(
+                service
+                    .workflow(&task.id, &conversation.id)
+                    .unwrap()
+                    .terminal_interaction,
+                expected
+            );
+        }
         let _ = fs::remove_dir_all(root);
     }
 

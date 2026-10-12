@@ -22,6 +22,7 @@ import { DevelopmentTerminalView } from "../terminal/CodexTerminalView";
 import { CodexWorkflowBar } from "./CodexWorkflowBar";
 import { ProductionPanel } from "./ProductionPanel";
 import { TaskIntakeDialog } from "./TaskIntakeDialog";
+import { TaskGuidance } from "./TaskGuidance";
 import { SkillLibrary } from "./SkillLibrary";
 import { productionText } from "./productionText";
 import { productionApi, continuationMessages } from "../../shared/production";
@@ -589,6 +590,12 @@ export function TasksView({
             </div>
 
             <div className="task-tab-content">
+              <TaskGuidance key={`guidance:${selected.id}`} taskId={selected.id} active={selected.status === "active"}
+                control={selectedControl} workflow={selectedTerminalContext?.workflow} en={settings?.locale === "en-US"}
+                onTerminal={() => selectTab("terminal")} onStage={stage => {
+                  sessionStorage.setItem(`abya:production-stage:${selected.id}`, stage); selectTab("production");
+                  window.dispatchEvent(new CustomEvent("abya:show-stage", { detail: { taskId: selected.id, stage } }));
+                }} />
               <TaskIntakeDialog key={`intake:${selected.id}`} taskId={selected.id} active={selected.status === "active"}
                 onEnsureConnection={ensureIntakeConnection}
                 onContinue={async (message, group) => {

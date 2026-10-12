@@ -638,6 +638,8 @@ fn modern_fixture() -> Fixture {
         .production_commit(&f.id, f.record().revision, |r| {
             r.policy = policy();
             r.workflow_version = "2.0.0".into();
+            r.policy["stages"][1]["approval"] = Value::Null;
+            r.policy["workflowVersion"] = json!("2.0.0");
             r.player_mode = "single".into();
             r.current_stage = "implementation".into();
             r.stages
@@ -663,6 +665,131 @@ fn human(f: &Fixture, op: &str, data: Value) -> AppResult<ProductionView> {
         operation: op.into(),
         data,
     })
+}
+
+#[test]
+fn art_confirmation_is_required_and_no_art_scope_is_explicitly_reviewed() {
+    let f = Fixture::new();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.policy = policy();
+            r.workflow_version = "2.1.0".into();
+            Ok(())
+        })
+        .unwrap();
+    f.doc("requirements", "Rules");
+    f.accept("requirements");
+    assert!(
+        f.apply(
+            "complete-stage",
+            json!({"stage":"resources","summary":"Nothing to do"})
+        )
+        .is_err()
+    );
+    let path = format!("{ROOT}/art-requirements.md");
+    files::write_file(
+        &f.workspace,
+        &path,
+        b"No new art: reuse existing board and icons.",
+    )
+    .unwrap();
+    assert!(
+        f.apply("submit-document", json!({"kind":"resources","path":path}))
+            .is_err()
+    );
+    f.apply("submit-document", json!({"kind":"resources","path":path,"artScope":"reuse-only","artScopeReason":"reuse existing board and icons"})).unwrap();
+    let view = f.service.production_get(&f.id).unwrap();
+    assert_eq!(view.actions["review"]["resources"], "");
+    assert_ne!(view.actions["feedback"]["gameplay"], "");
+    let r = f.record();
+    assert!(
+        f.service
+            .production_decide(ProductionDecision {
+                task_id: f.id.clone(),
+                expected_revision: r.revision,
+                kind: "resources".into(),
+                document_hash: r.documents["resources"].sha256.clone(),
+                accepted: false,
+                feedback: " ".into()
+            })
+            .is_err()
+    );
+    f.accept("resources");
+    assert_eq!(f.record().current_stage, "plan");
+    f.doc("plan", "Use the existing board");
+    f.accept("plan");
+    files::write_file(&f.workspace, &path, b"Changed scope").unwrap();
+    assert!(validation::approved(&f.record(), &f.workspace, "plan").is_err());
+}
+
+#[test]
+fn feedback_rejects_empty_stage_drafts_missing_files_and_replaced_visual_versions() {
+    let f = Fixture::new();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.policy = policy();
+            Ok(())
+        })
+        .unwrap();
+    assert!(human(&f, "add", json!({"description":"No output yet"})).is_err());
+    assert!(human(&f, "attach", json!({"name":"x.png","base64":"eA=="})).is_err());
+    f.doc("requirements", "Rules");
+    f.accept("requirements");
+    let path = "artifacts/art-v1.png";
+    files::write_file(&f.workspace, path, b"image").unwrap();
+    f.apply("register-visual",json!({"stage":"resources","path":path,"title":"Layout","sourceType":"mockup","roles":["asset-board","layout","states"],"groupId":"layout","visualVersion":"1"})).unwrap();
+    let id = f.record().artifacts[0]["id"].as_str().unwrap().to_string();
+    assert!(human(&f, "add", json!({"description":"Draft","artifactId":id})).is_err());
+    let doc = format!("{ROOT}/art.md");
+    files::write_file(&f.workspace, &doc, b"Create new art").unwrap();
+    f.apply("submit-document",json!({"kind":"resources","path":doc,"artScope":"new-art","artScopeReason":"Create new art"})).unwrap();
+    assert!(
+        human(
+            &f,
+            "add",
+            json!({"description":"Change color","artifactId":id})
+        )
+        .is_ok()
+    );
+    files::write_file(&f.workspace, "artifacts/art-v2.png", b"new image").unwrap();
+    f.apply("register-visual",json!({"stage":"resources","path":"artifacts/art-v2.png","title":"Layout","sourceType":"mockup","roles":["asset-board","layout","states"],"groupId":"layout","visualVersion":"2"})).unwrap();
+    assert!(
+        human(
+            &f,
+            "add",
+            json!({"description":"Old version","artifactId":id})
+        )
+        .is_err()
+    );
+    assert_ne!(
+        f.service.production_get(&f.id).unwrap().actions["review"]["resources"],
+        ""
+    );
+    let record = f.record();
+    let feedback_id = record.feedback[0]["id"].as_str().unwrap();
+    let candidate = record.artifacts[1]["id"].as_str().unwrap();
+    assert_eq!(record.current_stage, "resources");
+    assert_ne!(record.stages["resources"], "awaiting-confirmation");
+    assert!(record.current_version.is_none());
+    assert!(human(&f, "resolve", json!({"id":feedback_id})).is_err());
+    f.apply("update-feedback", json!({"id":feedback_id,"status":"awaiting-recheck","fix":"Improved contrast","recheck":"Inspected revised concept","candidateArtifactId":candidate})).unwrap();
+    f.apply("submit-document",json!({"kind":"resources","path":doc,"artScope":"new-art","artScopeReason":"Create new art"})).unwrap();
+    assert_ne!(
+        f.service.production_get(&f.id).unwrap().actions["approve"]["resources"],
+        ""
+    );
+    human(&f, "resolve", json!({"id":feedback_id})).unwrap();
+    f.accept("resources");
+    assert_eq!(f.record().current_stage, "plan");
+    files::write_file(&f.workspace, path, b"changed").unwrap();
+    assert!(
+        human(
+            &f,
+            "add",
+            json!({"description":"Missing or changed","artifactId":id})
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -763,11 +890,10 @@ fn visual_plan_binds_exact_files_and_preserves_prior_versions() {
     let data = json!({"stage":"resources","path":path,"title":"Game layout","sourceType":"mockup",
         "roles":["asset-board","layout","states"],"groupId":"proposal","visualVersion":"v1"});
     f.apply("register-visual", data.clone()).unwrap();
-    f.apply(
-        "complete-stage",
-        json!({"stage":"resources","summary":"Visual proposal"}),
-    )
-    .unwrap();
+    let art_path = format!("{ROOT}/art-requirements.md");
+    files::write_file(&f.workspace, &art_path, b"New visual proposal").unwrap();
+    f.apply("submit-document", json!({"kind":"resources","path":art_path,"artScope":"new-art","artScopeReason":"New visual proposal"})).unwrap();
+    f.accept("resources");
     f.doc("plan", "Use proposed visuals");
     assert_eq!(f.record().documents["plan"].artifact_bindings.len(), 1);
     let id = f.record().artifacts[0]["id"].as_str().unwrap().to_owned();
@@ -806,13 +932,13 @@ fn explicit_upgrade_preserves_approvals_and_round_history_without_inventing_self
     let old = f.record();
     let view = f.service.production_upgrade(&f.id, old.revision).unwrap();
     let r = view.record.unwrap();
-    assert_eq!(r.workflow_version, "2.0.0");
+    assert_eq!(r.workflow_version, "2.1.0");
     assert_eq!(r.cycle, old.cycle);
     assert_eq!(r.approvals.len(), old.approvals.len());
     assert_eq!(r.documents["plan"].sha256, old.documents["plan"].sha256);
     assert_eq!(r.rounds, old.rounds);
     assert!(r.self_tests.is_empty());
-    assert_eq!(r.current_stage, "implementation");
+    assert_eq!(r.current_stage, "resources");
 }
 
 #[test]

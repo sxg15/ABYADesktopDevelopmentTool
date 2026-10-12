@@ -1,6 +1,6 @@
 {
   "schema": "abya.game-development-policy/v1",
-  "workflowVersion": "2.0.0",
+  "workflowVersion": "2.1.0",
   "scope": "完整玩法、较大改动；独立阶段仅执行明确范围",
   "questionModes": [
     "ask",
@@ -32,9 +32,9 @@
     },
     {
       "id": "resources",
-      "name": "资源与美术预览",
-      "artifact": "plan.md",
-      "approval": null
+      "name": "美术需求与资源确认",
+      "artifact": "art-requirements.md",
+      "approval": "resources"
     },
     {
       "id": "plan",

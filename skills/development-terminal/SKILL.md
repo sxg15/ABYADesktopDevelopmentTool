@@ -118,3 +118,11 @@ The existing top conversation steps remain the per-turn plan surface. CLI conver
 
 Timing merges overlapping recorded execution intervals, and subtracts known human-wait, blocked and pause intervals for recorded active progress. It is not pure model time. Unknown/incomplete turns remain counted as unknown; no synthetic completion is written to native history.
 Stage events provide total elapsed, first playable, observed review wait and blocked spans; feedback history provides rework and recheck wait. Tools and rework overlap execution and cannot be summed as independent totals.
+
+## Interaction guidance (2026-10-12)
+Terminal focus after attachment/Continue/view restoration is conditional on no active
+modal. Snapshot terminalInteraction defaults false for old records; native status
+notifications map only waitingOnApproval/waitingOnUserInput flags, without storing
+request contents. New/completed turns clear the flag. Guidance displays terminal
+interaction separately from production document approval and ordinary AI execution.
+Failed control polling clears stale state rather than continuing to claim running.

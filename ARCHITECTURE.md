@@ -45,7 +45,7 @@ full workflows or in scoped-task conversation context. The maintenance-only
 templates into both provider roots and is not a gameplay template.
 The same deployment boundary supports `abya-art-template-*` with a valid
 `abya-art-template.json` marker. Task-template suggestions join requirements
-confirmation; art-template suggestions join execution-plan confirmation.
+confirmation; art-template suggestions join resources confirmation in 2.1 and execution-plan confirmation in older pinned policies.
 Explicit choices are reused, no style is automatically selected, and existing
 assets take priority. Templates add domain constraints to the shared stages.
 
@@ -53,7 +53,7 @@ The production workflow is owned by development-tasks. SQLite task_production an
 task_production_history are authoritative; artifacts/game-development JSON/HTML
 are exports, distinct from terminal workflow projections. Revision-checked mutations
 manage documents, evidence, issues, versions and rounds. Only a Tauri user action
-can decide the three document approvals; CLI cannot approve or fabricate acceptance.
+can decide document approvals (requirements/resources/plan/delivery in 2.1); CLI cannot approve or fabricate acceptance.
 Stage gates check current document hashes, actual saved archive/Player fingerprints,
 evidence files and issue closure. Pinned 1.x tasks retain round/question gates; workflow 2.0 uses current-version self-tests and user-closed feedback. They validate declared
 materials, not gameplay quality or user experience. Scoped tasks remain opt-in.

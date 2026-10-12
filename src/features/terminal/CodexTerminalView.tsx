@@ -511,7 +511,7 @@ function ConversationTerminal({
     if(actionBusy)return;setActionBusy(true);setError("");
     try {
       const result=await productionApi.continueTask(taskId,conversation.id);
-      if (visibleRef.current) terminalRef.current?.focus();
+      if (visibleRef.current && !document.querySelector('[aria-modal="true"]')) terminalRef.current?.focus();
       setActionNotice(continuationMessages[result.status]);
       if(result.status==="needsConnection"&&result.requestId) {
         pendingContinue.current=result.requestId; startRef.current(true);
@@ -706,7 +706,7 @@ function ConversationTerminal({
           for (const data of buffered) channel.onmessage({ type: "output", data });
           buffered.length = 0;
           setState(next);
-          if (visibleRef.current) terminal.focus();
+          if (visibleRef.current && !document.querySelector('[aria-modal="true"]')) terminal.focus();
           const currentSize = measureSize();
           if (currentSize && (currentSize.columns !== size.columns || currentSize.rows !== size.rows)) {
             void terminalApi.resize(provider, conversation.id, currentSize.columns, currentSize.rows).catch(() => undefined);
@@ -823,7 +823,7 @@ function ConversationTerminal({
     const frame = window.requestAnimationFrame(() => {
       if (hostHasTerminalLayout(hostRef.current)) {
         fitRef.current?.fit();
-        terminalRef.current?.focus();
+        if (!document.querySelector('[aria-modal="true"]')) terminalRef.current?.focus();
       }
       tryStartRef.current();
     });

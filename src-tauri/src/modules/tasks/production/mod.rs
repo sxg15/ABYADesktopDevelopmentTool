@@ -2,6 +2,7 @@ mod acceptance;
 pub use acceptance::AcceptanceSpec;
 mod catalog;
 mod files;
+mod interaction;
 mod iteration;
 mod models;
 mod mutation;
@@ -136,8 +137,9 @@ impl TaskService {
     pub fn production_decide(&self, input: ProductionDecision) -> AppResult<ProductionView> {
         let root = self.production_workspace(&input.task_id)?;
         self.production_commit(&input.task_id, input.expected_revision, |r| {
-            if !["requirements", "plan", "delivery"].contains(&input.kind.as_str()) {
-                return Err(AppError::validation("该阶段不需要人工确认。"));
+            interaction::review(r, &root, &input.kind)?;
+            if !input.accepted && input.feedback.trim().is_empty() {
+                return Err(AppError::validation("退回修改时请填写具体修改意见。"));
             }
             let doc = r
                 .documents
@@ -153,6 +155,7 @@ impl TaskService {
                 return Err(conflict());
             }
             if input.accepted {
+                interaction::approve(r, &root, &input.kind)?;
                 visuals::verify_bindings(&doc, &root)?;
                 validation::document_gate(r, &root, &input.kind)?;
                 validation::clear_issues(r, &input.kind)?;
@@ -183,6 +186,7 @@ impl TaskService {
             r.current_stage = if input.accepted {
                 match input.kind.as_str() {
                     "requirements" => "resources",
+                    "resources" => "plan",
                     "plan" => "implementation",
                     _ => "closeout",
                 }
@@ -258,7 +262,15 @@ impl TaskService {
             .as_ref()
             .map(|r| workspace::artifacts(r, &root))
             .unwrap_or_default();
+        let active = self
+            .database
+            .with_connection(|c| Ok(read_task(c, id)?.status == TaskStatus::Active))?;
+        let actions = record
+            .as_ref()
+            .map(|r| interaction::actions(r, &root, active))
+            .unwrap_or_else(|| json!({}));
         Ok(ProductionView {
+            actions,
             stage_statuses,
             artifacts,
             record,

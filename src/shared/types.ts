@@ -166,6 +166,7 @@ export interface CodexWorkflowTurn {
 }
 
 export interface CodexWorkflowSnapshot {
+  terminalInteraction?: boolean;
   taskId: string;
   conversationId: string;
   observability: CodexObservabilityStatus;

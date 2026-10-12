@@ -81,7 +81,12 @@ pub(super) fn apply(
             let mut invalidate_requirements = false;
             let mut invalidate_plan = false;
             let requirements_approved = validation::approved(r, root, "requirements").is_ok();
-            let plan_approved = validation::approved(r, root, "plan").is_ok();
+            let art_stage = if super::interaction::art_approval(r) {
+                "resources"
+            } else {
+                "plan"
+            };
+            let plan_approved = validation::approved(r, root, art_stage).is_ok();
             if let Some(mode) = super::questions::player_mode(data)? {
                 if r.player_mode != "unspecified" && r.player_mode != mode {
                     return Err(AppError::validation(
@@ -139,8 +144,8 @@ pub(super) fn apply(
                     *target = Some(id.into());
                 }
             }
-            if invalidate_plan && r.documents.contains_key("plan") {
-                set_stage(r, "plan", "in-progress");
+            if invalidate_plan && r.documents.contains_key(art_stage) {
+                set_stage(r, art_stage, "in-progress");
             }
             if invalidate_requirements && r.documents.contains_key("requirements") {
                 set_stage(r, "requirements", "in-progress");
@@ -155,7 +160,9 @@ pub(super) fn apply(
 
 fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
     let kind = text(data, "kind")?;
-    if !["requirements", "plan", "delivery", "closeout"].contains(&kind) {
+    if !["requirements", "resources", "plan", "delivery", "closeout"].contains(&kind)
+        || kind == "resources" && !super::interaction::art_approval(r)
+    {
         return Err(AppError::validation("无效文档种类。"));
     }
     validation::document_gate(r, root, kind)?;
@@ -167,7 +174,26 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
         return Err(AppError::validation("请提交 Markdown 文档。"));
     }
     let (content, sha256) = files::text_file(root, path)?;
-    let artifact_bindings = if kind == "plan" {
+    let art_scope = if kind == "resources" {
+        let scope = text(data, "artScope")?;
+        if !["new-art", "reuse-only", "no-art"].contains(&scope) {
+            return Err(AppError::validation(
+                "请选择 new-art、reuse-only 或 no-art 美术范围。",
+            ));
+        }
+        let reason = text(data, "artScopeReason")?;
+        if !content.contains(reason) {
+            return Err(AppError::validation(
+                "请在美术需求确认单中写明美术范围及依据。",
+            ));
+        }
+        Some(scope.to_owned())
+    } else {
+        None
+    };
+    let artifact_bindings = if kind == "resources" {
+        super::visuals::bindings_for(r, root, art_scope.as_deref() == Some("new-art"))?
+    } else if kind == "plan" {
         super::visuals::bindings(r, root)?
     } else {
         Default::default()
@@ -176,10 +202,16 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
     for key in ["taskTemplate", "artTemplate"] {
         if let Some(id) = data[key].as_str() {
             if (key == "taskTemplate" && kind != "requirements")
-                || (key == "artTemplate" && kind != "plan")
+                || (key == "artTemplate"
+                    && kind
+                        != if super::interaction::art_approval(r) {
+                            "resources"
+                        } else {
+                            "plan"
+                        })
             {
                 return Err(AppError::validation(
-                    "任务模板随需求确认，美术模板随执行计划确认。",
+                    "任务模板随需求确认，美术模板随当前流程的美术确认节点确认。",
                 ));
             }
             super::catalog::validate_choice(root, key, id)?;
@@ -198,6 +230,7 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
     }
     if r.documents.get(kind).is_some_and(|d| {
         d.sha256 == sha256
+            && d.art_scope == art_scope
             && d.artifact_bindings == artifact_bindings
             && d.template_choices == template_choices
             && (kind != "delivery" || d.game_version == r.current_version)
@@ -209,14 +242,20 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
         return Ok(());
     }
     let revision = r.documents.get(kind).map_or(1, |d| d.revision + 1);
-    if ["requirements", "plan"].contains(&kind) && revision > 1 {
+    if ["requirements", "resources", "plan"].contains(&kind) && revision > 1 {
         if kind == "requirements" {
             r.cycle += 1;
         }
         r.current_round = 0;
         r.milestones.clear();
         r.checks.clear();
-        let start = if kind == "requirements" { 0 } else { 2 };
+        let start = if kind == "requirements" {
+            0
+        } else if kind == "resources" {
+            1
+        } else {
+            2
+        };
         for stage in r.policy["stages"].as_array().unwrap().iter().skip(start) {
             r.stages
                 .insert(stage["id"].as_str().unwrap().into(), "not-started".into());
@@ -225,6 +264,7 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
     r.documents.insert(
         kind.into(),
         Document {
+            art_scope,
             artifact_bindings,
             template_choices,
             kind: kind.into(),
@@ -572,6 +612,11 @@ fn complete(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
     validation::clear_issues(r, stage)?;
     match stage {
         "resources" => {
+            if super::interaction::art_approval(r) {
+                return Err(AppError::validation(
+                    "请提交美术需求确认单，由用户在 APP 审查；不能直接完成美术阶段。",
+                ));
+            }
             validation::approved(r, root, "requirements")?;
             if super::iteration::enabled(r) {
                 super::visuals::bindings(r, root)?;

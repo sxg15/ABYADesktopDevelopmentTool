@@ -97,6 +97,8 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
             .collect(),
     );
     if phase == "plan" {
+        body += "<h2>美术需求确认单</h2>";
+        body += &document(r, "resources");
         body += "<h2>资源与视觉预览</h2>";
         for a in r.artifacts.iter().filter(|a| a["mediaType"].is_string()) {
             let url = format!(

@@ -18,6 +18,7 @@ const commonFiles = [
   'assets/production/workflow.template.json',
   'assets/production/round.template.json',
   'assets/production/requirements.template.md',
+  'assets/production/art-requirements.template.md',
   'assets/production/plan.template.md',
   'assets/production/delivery.template.md',
   'assets/production/closeout.template.md',

@@ -24,9 +24,10 @@ it("keeps submit-and-continue alive when polling observes submitted answers befo
   saved.record!.questionGroups![0].status="submitted";saved.record!.questionGroups![0].answers=[{revision:1,answers:{mode:"多人"},submittedAt:"now"}];
   vi.mocked(productionApi.get).mockResolvedValue(saved);
   window.dispatchEvent(new CustomEvent("abya:open-intake",{detail:{taskId:"task",groupId:"rules"}}));
-  await screen.findByText("修改已提交答案");
+  await screen.findByText("继续任务");
   finish({production:saved,continuation:{status:"queued",conversationId:"chat",nativeSessionId:"native",requestId:"request"}});
   await screen.findByText("操作已保存，当前回复结束后继续。");
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(productionApi.submitAnswers).toHaveBeenCalledTimes(1);expect(productionApi.answer).not.toHaveBeenCalled();
 });
 it("opens pending questions without requiring the production tab and keeps drafts after closing", async () => {
@@ -38,12 +39,12 @@ it("opens pending questions without requiring the production tab and keeps draft
   expect(productionApi.answer).not.toHaveBeenCalled();
   fireEvent.click(screen.getByText("有待回答问题 · 继续填写"));
   await screen.findByRole("dialog");
-  expect((screen.getByLabelText("单人还是多人？") as HTMLTextAreaElement).value).toBe("多人");
+  expect((screen.getByLabelText("多人") as HTMLInputElement).checked).toBe(true);
 });
 it("Escape defers the question without submitting or cancelling it", async () => {
   render(<TaskIntakeDialog taskId="task" active />);
   await screen.findByRole("dialog");
-  fireEvent.keyDown(window, { key: "Escape" });
+  fireEvent.keyDown(document, { key: "Escape" });
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(productionApi.answer).not.toHaveBeenCalled();
   expect(sessionStorage.getItem("abya-intake-later:task:rules:0")).toBe("1");
@@ -55,4 +56,20 @@ it("does not reopen deferred questions on mounting again, but the explicit entry
   expect(screen.queryByRole("dialog")).toBeNull();
   window.dispatchEvent(new CustomEvent("abya:open-intake", { detail: { taskId: "task", groupId: "rules" } }));
   await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+});
+
+it("closes after saved answers even when continuation fails, and retries without submitting twice", async () => {
+  const saved=structuredClone(view); saved.record!.revision=2;
+  saved.record!.questionGroups![0].status="submitted";
+  saved.record!.questionGroups![0].answers=[{revision:1,answers:{mode:"多人"},submittedAt:"now"}];
+  vi.mocked(productionApi.submitAnswers).mockResolvedValue({production:saved,continuation:{status:"needsConnection",conversationId:"chat",nativeSessionId:"native",requestId:"request"}});
+  const connect=vi.fn().mockRejectedValue(new Error("连接失败"));
+  render(<TaskIntakeDialog taskId="task" active onEnsureConnection={connect}/>);
+  fireEvent.click(await screen.findByLabelText("多人"));
+  fireEvent.click(screen.getByText("提交并继续"));
+  await screen.findByText(/连接失败/);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  fireEvent.click(screen.getByText("重试继续（不重复提交答案）"));
+  await waitFor(()=>expect(connect).toHaveBeenCalledTimes(2));
+  expect(productionApi.submitAnswers).toHaveBeenCalledTimes(1);
 });

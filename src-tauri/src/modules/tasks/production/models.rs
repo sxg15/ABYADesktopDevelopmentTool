@@ -97,6 +97,8 @@ pub struct AnswerRevision {
 #[serde(rename_all = "camelCase")]
 pub struct Document {
     #[serde(default)]
+    pub art_scope: Option<String>,
+    #[serde(default)]
     pub artifact_bindings: BTreeMap<String, String>,
     #[serde(default)]
     pub template_choices: BTreeMap<String, String>,
@@ -154,6 +156,7 @@ pub struct SkillEntry {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProductionView {
+    pub actions: Value,
     pub stage_statuses: BTreeMap<String, String>,
     pub artifacts: Vec<Value>,
     pub record: Option<ProductionRecord>,

@@ -60,6 +60,7 @@ export interface ProductionRecord {
   skillPins: TaskSkill[]; legacyRecord?: string; updatedAt: string;
 }
 export interface ProductionView {
+  actions?: { review: Record<string,string>; approve: Record<string,string>; feedback: Record<string,string> };
   stageStatuses?: Record<string,string>;
   artifacts?: ProductionArtifact[];
   record?: ProductionRecord; policy: ProductionPolicy; warnings: string[];
@@ -131,6 +132,7 @@ export interface ProductionArtifact {
 }
 
 export interface ProductionFeedback {
+  candidateArtifactId?: string;
   id: string; description: string; status: string; version?: string; candidateVersion?: string;
   artifactId?: string; attachmentIds?: string[]; instanceIds?: string[]; stage: string;
   fix?: string; recheck?: string; createdAt: string; updatedAt: string;

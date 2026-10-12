@@ -146,3 +146,9 @@ Release 0.3.0 ships workflow 1.3.0 with stage workspace, native conversation set
 
 Release 0.4.0 / acceptance-feedback-20261010 ships workflow 2.0.0, task-version acceptance launch, visual previews, user feedback and necessary self-tests. Explicit legacy upgrades retain approved requirements/plans and history; ordinary package updates do not upgrade pinned tasks.
 Use Validation staging, run all standard checks, and verify real APP controls plus the known CatTrapClockFix Player. Human mouse acceptance and the 3–4 hour next-game target must not be inferred from automated validation.
+
+## Workflow 2.1 interaction release
+Sync/check bundles include art-requirements.template.md and four approval gates
+(requirements/resources/plan/delivery). Frontend, Rust and workflow tests cover art
+confirmation and legacy policy compatibility. Source changes do not upgrade running
+user task workspaces or replace the installed Publish package implicitly.
