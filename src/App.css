@@ -324,7 +324,18 @@ h1, h2, h3, p { margin: 0; letter-spacing: 0; }
   white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .workflow-activity-empty { padding: 16px 4px; color: var(--muted); font-size: 10px; }
-.task-tab-content { position: relative; min-height: 0; flex: 1 1 auto; }
+.task-tab-content { position: relative; display:flex; flex-direction:column; min-height: 0; flex: 1 1 auto; overflow:hidden; }
+.task-tab-content>.production-panel,.task-tab-content>.instance-tab-panel,.task-tab-content>.terminal-tab-panel{height:auto;flex:1 1 0;min-height:0}
+.task-inline-notices{flex:0 0 auto;max-height:120px;overflow:auto}
+.task-inline-notices:empty{display:none}
+.content-pane:has(.task-guidance-shell)>.content-header{min-height:104px;padding:16px 20px 12px;gap:16px}
+.content-pane:has(.task-guidance-shell)>.content-header p{margin-top:4px}
+.content-pane:has(.task-guidance-shell) .task-workspace-path{margin-top:4px}
+.content-pane:has(.task-guidance-shell) .workflow-track-viewport:has(.workflow-placeholder){display:none}
+.task-tabs .task-tab-badge{font-size:11px;font-weight:600;line-height:1.4;padding:3px 6px;border-radius:4px;color:#7b4d0d;background:#fff0d5;white-space:nowrap}
+.task-tabs .terminal-badge{color:#634094;background:#eee4ff}
+.task-tabs button{flex-wrap:wrap;row-gap:3px;padding-top:7px;padding-bottom:7px}
+@media(max-height:650px){.content-pane:has(.task-guidance-shell)>.content-header{min-height:76px;padding-top:10px;padding-bottom:10px}.content-header p{display:none}.content-header h2{font-size:19px}.task-workspace-path{margin-top:4px}.workflow-track-viewport{display:none}.task-tabs{min-height:38px}.task-tabs button{min-height:36px}}
 .instance-tab-panel, .terminal-tab-panel { width: 100%; height: 100%; min-height: 0; }
 .instance-tab-panel { display: flex; flex-direction: column; }
 .terminal-tab-panel {

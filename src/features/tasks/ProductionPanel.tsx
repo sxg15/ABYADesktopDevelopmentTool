@@ -64,10 +64,14 @@ export function ProductionPanel({
   active,
   locale,
   onContinue,
+  requestedReview,
+  onReviewOpened,
 }: {
   taskId: string;
   active: boolean;
   locale?: string;
+  requestedReview?: ProductionDocument;
+  onReviewOpened?: () => void;
   onContinue?: (
     message: string,
     group?: IntakeQuestionGroup,
@@ -118,6 +122,12 @@ export function ProductionPanel({
       window.removeEventListener("abya:show-stage", showStage);
     };
   }, [taskId]);
+  useEffect(() => {
+    if (!requestedReview) return;
+    setSelected(requestedReview.kind); setError(""); setReviewDocument(requestedReview);
+    try { sessionStorage.setItem(`abya:production-stage:${taskId}`, requestedReview.kind); } catch { /* Optional stage memory. */ }
+    onReviewOpened?.();
+  }, [taskId, requestedReview, onReviewOpened]);
   async function change(run: () => Promise<ProductionView>) {
     setBusy(true);
     mutating.current = true;

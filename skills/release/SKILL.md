@@ -148,6 +148,10 @@ Release 0.4.0 / acceptance-feedback-20261010 ships workflow 2.0.0, task-version 
 Use Validation staging, run all standard checks, and verify real APP controls plus the known CatTrapClockFix Player. Human mouse acceptance and the 3–4 hour next-game target must not be inferred from automated validation.
 
 ## Workflow 2.1 interaction release
+UI staging builds carry guidance-action-panel-20261012 so their manifest and embedded
+release identity distinguish them from the prior acceptance-feedback package.
+scripts/guidance-preview.html mounts real TasksView against isolated browser fixtures
+for status, route and viewport checks; it never opens native sessions or user tasks.
 Sync/check bundles include art-requirements.template.md and four approval gates
 (requirements/resources/plan/delivery). Frontend, Rust and workflow tests cover art
 confirmation and legacy policy compatibility. Source changes do not upgrade running

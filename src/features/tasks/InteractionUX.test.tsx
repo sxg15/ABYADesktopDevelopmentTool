@@ -60,7 +60,8 @@ it("gives human questions priority over running AI and explains waiting when non
   vi.mocked(productionApi.get).mockResolvedValue(view);
   const props={taskId:"task",active:true,control:{state:"running"} as TaskControlState,onStage:vi.fn(),onTerminal:vi.fn()};
   const page=render(<TaskGuidance {...props} />);
-  await screen.findByText(/AI 正在执行，请等待/);
+  await screen.findByRole("heading",{name:"AI 正在执行"});
+  expect(screen.getByText("当前无需操作，请等待结果。")).toBeTruthy();
   view.record!.questionGroups=[{id:"q",title:"玩法",provider:"codex",conversationId:"c",status:"pending",publishedAt:"now",updatedAt:"now",draft:{},answers:[],questions:[{id:"a",text:"请选择",options:[],optional:false}]}];
   page.unmount(); render(<TaskGuidance {...props} />);
   await screen.findByText(/需要你回答 1 个问题/);
@@ -70,5 +71,22 @@ it("gives human questions priority over running AI and explains waiting when non
 it("directs an observed native approval to the terminal", async () => {
   vi.mocked(productionApi.get).mockResolvedValue(fixture()); const terminal=vi.fn();
   render(<TaskGuidance taskId="task" active control={{state:"waitingForTerminal"} as TaskControlState} onStage={vi.fn()} onTerminal={terminal} />);
-  fireEvent.click(await screen.findByText("前往终端")); await waitFor(() => expect(terminal).toHaveBeenCalledOnce());
+  fireEvent.click(await screen.findByText("前往终端处理")); await waitFor(() => expect(terminal).toHaveBeenCalledOnce());
+});
+
+it("opens the exact review snapshot and reports pending badges without an approval mutation", async () => {
+  const view=fixture(), open=vi.fn(), pending=vi.fn(); vi.mocked(productionApi.get).mockResolvedValue(view);
+  render(<TaskGuidance taskId="task" active onStage={vi.fn()} onTerminal={vi.fn()} onReview={open} onPendingChange={pending} />);
+  fireEvent.click(await screen.findByRole("button",{name:"查看并审查"}));
+  expect(open).toHaveBeenCalledWith(view.record!.documents.resources);
+  expect(pending).toHaveBeenLastCalledWith({taskId:"task",questions:0,reviews:1,terminal:0});
+  expect(screen.getByText("处理位置：制作流程")).toBeTruthy();
+});
+
+it("clears stale human actions when a later status read fails", async () => {
+  vi.mocked(productionApi.get).mockResolvedValueOnce(fixture()).mockRejectedValue(new Error("offline"));
+  render(<TaskGuidance taskId="task" active onStage={vi.fn()} onTerminal={vi.fn()} />);
+  await screen.findByText("查看并审查");
+  window.dispatchEvent(new Event("abya:control-changed"));
+  await screen.findByText("正在核对任务状态"); expect(screen.queryByText("查看并审查")).toBeNull();
 });

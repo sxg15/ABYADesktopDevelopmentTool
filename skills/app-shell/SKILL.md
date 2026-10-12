@@ -108,6 +108,16 @@ unavailable/compatibility Codex and Grok presentation.
 
 ## LLM Maintenance Rule
 
+### Split action panel (2026-10-12)
+Task header, action panel, workflow summary and tabs are non-scrolling flex siblings.
+Only the remaining tab content scrolls. Notices take a bounded natural-height row,
+so a pending answer or saved-operation notice cannot push a 100%-height terminal
+below the viewport. Container queries reflow the guide based on actual task-pane
+width; title/instruction/button sizes are 24/16/15px at normal size.
+Short windows compact the task header and show only the workflow summary with its
+existing detail-drawer entry, retaining content space. Pending badges have text and
+distinct stage/terminal colors. No absolute-position overlay covers the terminal.
+
 When changing navigation, localization, shared controls, or layout behavior,
 update this Skill in the same change.
 

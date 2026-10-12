@@ -190,6 +190,22 @@ consistency only; they are not real gameplay acceptance evidence.
 
 ## LLM Maintenance Rule
 
+### Persistent action guidance (2026-10-12)
+The approved split layout places TaskGuidance immediately after the task header,
+outside all tab scroll areas. Status and instruction occupy the left column; the
+destination and primary action occupy a separate tinted right column. Waiting,
+stage action, native terminal interaction, failure and unknown have distinct text,
+icons and blue/orange/purple/red/neutral surfaces. Waiting actions stay secondary.
+Task-scoped pending counts drive page-tab badges; native terminal requests take
+priority over questions and document review. More pending work remains discoverable.
+Read-and-review sends the displayed document snapshot to ProductionPanel and opens
+its review dialog once, including when mounting from another tab. It never approves.
+Only meaningful transitions to human action get one short emphasis animation;
+polling does not focus, flash or open a dialog. Reduced motion disables the animation.
+Failed/stale reads clear pending actions instead of claiming no user action is needed.
+Validate exact-version routing, badge reset, stale task isolation, state tones,
+short/narrow layouts and continued terminal visibility with the real TasksView fixture.
+
 When changing task fields, lifecycle rules, persistence, commands, or tests,
 update this Skill in the same change.
 

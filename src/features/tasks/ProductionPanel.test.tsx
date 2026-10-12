@@ -15,6 +15,13 @@ const fixture = (): ProductionView => ({
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); sessionStorage.clear(); });
 describe("Production decisions", () => {
+  it("opens a requested review after loading the production tab and leaves the decision unselected", async () => {
+    const view=fixture(), opened=vi.fn(); vi.mocked(productionApi.get).mockResolvedValue(view);
+    render(<ProductionPanel taskId="a" active locale="en-US" requestedReview={view.record!.documents.requirements} onReviewOpened={opened} />);
+    await screen.findByRole("dialog"); expect(screen.getByText("Review this exact version")).toBeTruthy();
+    expect(opened).toHaveBeenCalledOnce(); expect(productionApi.decide).not.toHaveBeenCalled();
+    expect((screen.getByRole("button",{name:"Confirm this version and continue"}) as HTMLButtonElement).disabled).toBe(true);
+  });
   it("filters by selected stage and keeps selection across refreshes without changing production", async () => {
     const value=fixture();value.policy.stages.push({id:"plan",name:"方案",approval:"plan"});
     value.record!.currentStage="plan";value.record!.stages.plan="blocked";

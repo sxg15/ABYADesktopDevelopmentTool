@@ -23,10 +23,11 @@ import { CodexWorkflowBar } from "./CodexWorkflowBar";
 import { ProductionPanel } from "./ProductionPanel";
 import { TaskIntakeDialog } from "./TaskIntakeDialog";
 import { TaskGuidance } from "./TaskGuidance";
+import type { GuidancePending } from "./taskGuidanceState";
 import { SkillLibrary } from "./SkillLibrary";
 import { productionText } from "./productionText";
 import { productionApi, continuationMessages } from "../../shared/production";
-import type { IntakeQuestionGroup } from "../../shared/production";
+import type { IntakeQuestionGroup, ProductionDocument } from "../../shared/production";
 import type { TerminalConnectionRequest } from "../terminal/terminalConnection";
 import { useTaskControl } from "../terminal/useTaskControl";
 import { api, errorMessage, terminalApi } from "../../shared/api";
@@ -54,6 +55,9 @@ export function TasksView({
   const [tasks, setTasks] = useState<DevelopmentTask[]>([]);
   const [instances, setInstances] = useState<GameInstance[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [guidancePending, setGuidancePending] = useState<GuidancePending>();
+  const [requestedReview, setRequestedReview] = useState<{taskId:string;document:ProductionDocument}>();
+  const currentPending = guidancePending?.taskId === selectedId ? guidancePending : undefined;
   const [showCreate, setShowCreate] = useState(false);
   const [showLaunch, setShowLaunch] = useState(false);
   const [detail, setDetail] = useState<GameInstance>();
@@ -557,6 +561,15 @@ export function TasksView({
               </div>
             </header>
 
+            <TaskGuidance key={`guidance:${selected.id}`} taskId={selected.id} active={selected.status === "active"}
+              control={selectedControl} workflow={selectedTerminalContext?.workflow} en={settings?.locale === "en-US"}
+              onPendingChange={setGuidancePending} onTerminal={() => selectTab("terminal")}
+              onReview={document => { setRequestedReview({taskId:selected.id,document}); selectTab("production"); }}
+              onStage={stage => {
+                try { sessionStorage.setItem(`abya:production-stage:${selected.id}`, stage); } catch { /* Navigation remains available. */ }
+                selectTab("production");
+                window.dispatchEvent(new CustomEvent("abya:show-stage", { detail: { taskId: selected.id, stage } }));
+              }} />
             <CodexWorkflowBar
               control={selectedControl}
               provider={selectedProvider}
@@ -567,7 +580,11 @@ export function TasksView({
             />
 
             <div className="task-tabs" role="tablist">
-              <button role="tab" className={selectedTab === "production" ? "selected" : ""} aria-selected={selectedTab === "production"} onClick={() => selectTab("production")}>{productionText(settings?.locale).title}</button>
+              <button role="tab" className={selectedTab === "production" ? "selected" : ""} aria-selected={selectedTab === "production"} onClick={() => selectTab("production")}>
+                {productionText(settings?.locale).title}
+                {!!currentPending?.questions && <span className="task-tab-badge">{settings?.locale === "en-US" ? "Questions" : "待回答"} {currentPending.questions}</span>}
+                {!!currentPending?.reviews && <span className="task-tab-badge">{settings?.locale === "en-US" ? "Review" : "待审查"} {currentPending.reviews}</span>}
+              </button>
               <button role="tab" className={selectedTab === "skills" ? "selected" : ""} aria-selected={selectedTab === "skills"} onClick={() => selectTab("skills")}>{productionText(settings?.locale).skills}</button>
               <button
                 className={selectedTab === "instances" ? "selected" : ""}
@@ -586,16 +603,12 @@ export function TasksView({
               >
                 <SquareTerminal size={16} />
                 {t("terminal")}
+                {!!currentPending?.terminal && <span className="task-tab-badge terminal-badge">{settings?.locale === "en-US" ? "Action needed" : "待处理"} {currentPending.terminal}</span>}
               </button>
             </div>
 
             <div className="task-tab-content">
-              <TaskGuidance key={`guidance:${selected.id}`} taskId={selected.id} active={selected.status === "active"}
-                control={selectedControl} workflow={selectedTerminalContext?.workflow} en={settings?.locale === "en-US"}
-                onTerminal={() => selectTab("terminal")} onStage={stage => {
-                  sessionStorage.setItem(`abya:production-stage:${selected.id}`, stage); selectTab("production");
-                  window.dispatchEvent(new CustomEvent("abya:show-stage", { detail: { taskId: selected.id, stage } }));
-                }} />
+              <div className="task-inline-notices">
               <TaskIntakeDialog key={`intake:${selected.id}`} taskId={selected.id} active={selected.status === "active"}
                 onEnsureConnection={ensureIntakeConnection}
                 onContinue={async (message, group) => {
@@ -605,7 +618,9 @@ export function TasksView({
                   }
                   await terminalApi.write(selectedProvider, conversation.id, `\x1b[200~${message}\x1b[201~\r`);
                 }} />
+              </div>
               {selectedTab === "production" && <ProductionPanel key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
+                requestedReview={requestedReview?.taskId === selected.id ? requestedReview.document : undefined} onReviewOpened={() => setRequestedReview(undefined)}
                 onContinue={async (message, _group, afterRevision) => continueSelectedTask(message, afterRevision)} />}
               {selectedTab === "skills" && <SkillLibrary key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
                 onContinue={continueSelectedTask} />}
