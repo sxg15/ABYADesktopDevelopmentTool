@@ -1,6 +1,7 @@
 mod app_server;
 mod diagnostics;
 mod recovery;
+mod resume_failure;
 pub use recovery::RecoveryCandidate;
 mod continuation_queue;
 #[cfg(test)]
@@ -458,9 +459,67 @@ impl CodexTerminalService {
             return Ok(state);
         }
 
+        let mut attempt = resume_failure::OpenAttempt::new();
+        let result = self.open_new(
+            task_id,
+            conversation_id,
+            columns,
+            rows,
+            subscriber,
+            &mut attempt,
+        );
+        if let (Ok(task), Ok(conversation)) = (
+            self.tasks.get(task_id),
+            self.conversation(task_id, conversation_id),
+        ) {
+            let reported = attempt.finish(
+                task_id,
+                &conversation,
+                Path::new(&task.workspace_path),
+                result.as_ref().err(),
+            );
+            if let Some(error) = reported {
+                self.cleanup_failed_open(conversation_id, &attempt);
+                return Err(error);
+            }
+        }
+        if result.is_err() {
+            self.cleanup_failed_open(conversation_id, &attempt);
+        }
+        result
+    }
+
+    fn cleanup_failed_open(&self, conversation: &str, attempt: &resume_failure::OpenAttempt) {
+        // This executor was created solely for attachment; no turn/start was issued.
+        // Never stop the old running executor if the preflight/idle check rejected opening.
+        if let Some(server) = &attempt.server {
+            server.stop();
+            self.runtime_servers.lock().remove(conversation);
+            crate::foundation::cli_sessions::revoke("codex", conversation);
+        }
+    }
+
+    fn open_new(
+        &self,
+        task_id: &str,
+        conversation_id: &str,
+        columns: u16,
+        rows: u16,
+        subscriber: Channel<CodexTerminalEvent>,
+        attempt: &mut resume_failure::OpenAttempt,
+    ) -> AppResult<CodexTerminalState> {
         let (codex, task) = self.validate_open_request(task_id, conversation_id)?;
         let task = self.tasks.prepare_terminal_workspace(&task.id)?;
         let working_directory = PathBuf::from(&task.workspace_path);
+        // Do not rotate/revoke scoped credentials of a detached running executor.
+        if let Some(server) = self.runtime_servers.lock().get(conversation_id).cloned()
+            && server.is_alive()
+            && let Some(native) = self
+                .conversation(task_id, conversation_id)?
+                .native_session_id
+        {
+            server.ensure_idle(&native)?;
+        }
         #[cfg(not(test))]
         if let Err(error) =
             app_server::preflight_cli(&codex, &working_directory, task_id, conversation_id)
@@ -500,8 +559,12 @@ impl CodexTerminalService {
         let mut remote = None;
         let observability = if supports_app_server(&codex) {
             {
+                attempt.stage = "backend-start";
                 let server = self.runtime_server(&codex, conversation_id)?;
+                attempt.server = Some(server.clone());
+                attempt.stage = "project-registration";
                 let project = server.ensure_project(&task)?;
+                attempt.stage = "archive-check";
                 let native_archived = match &native_session_id {
                     Some(id) => server.is_archived(id)?,
                     None => false,
@@ -522,6 +585,7 @@ impl CodexTerminalService {
                 if recovery_note.is_file() {
                     instructions.push_str(&format!(" This conversation has a sourced recovery note at {}. Read it to retain later user corrections after history rebinding; verify current production state before proceeding.", display_path(&recovery_note)));
                 }
+                attempt.stage = "native-prepare";
                 let prepared = if let Some(thread_id) = native_session_id.as_deref() {
                     server
                         .resume_thread(
@@ -552,32 +616,25 @@ impl CodexTerminalService {
                             Ok(thread_id)
                         })
                 };
-                match prepared {
-                    Ok(thread_id) => {
-                        if conversation.native_session_id.as_deref() != Some(&thread_id) {
-                            conversation.native_session_id = Some(thread_id.clone());
-                            conversation.updated_at = Utc::now().to_rfc3339();
-                            write_conversation(
-                                &conversation_directory(&working_directory, conversation_id),
-                                &conversation,
-                            )?;
-                        }
-                        native_session_id = Some(thread_id.clone());
-                        server.organize_thread(&project, &task, &conversation, &thread_id)?;
-                        self.thread_conversations.lock().insert(
-                            thread_id,
-                            (task_id.to_string(), conversation_id.to_string()),
-                        );
-                        remote = Some(server);
-                        (CodexObservabilityStatus::Native, String::new())
+                {
+                    let thread_id = prepared?;
+                    if conversation.native_session_id.as_deref() != Some(&thread_id) {
+                        conversation.native_session_id = Some(thread_id.clone());
+                        conversation.updated_at = Utc::now().to_rfc3339();
+                        write_conversation(
+                            &conversation_directory(&working_directory, conversation_id),
+                            &conversation,
+                        )?;
                     }
-                    Err(error) => {
-                        return Err(AppError::new(
-                            "codex_resume_failed",
-                            "原生会话准备失败，历史已保留；未创建替代对话。",
-                            error.message,
-                        ));
-                    }
+                    native_session_id = Some(thread_id.clone());
+                    attempt.stage = "thread-metadata";
+                    server.organize_thread(&project, &task, &conversation, &thread_id)?;
+                    self.thread_conversations.lock().insert(
+                        thread_id,
+                        (task_id.to_string(), conversation_id.to_string()),
+                    );
+                    remote = Some(server);
+                    (CodexObservabilityStatus::Native, String::new())
                 }
             }
         } else if cfg!(test) {
@@ -590,6 +647,7 @@ impl CodexTerminalService {
                 "当前 Codex 缺少可验证的会话接口，请更新 CLI 后重试；历史已保留。",
             ));
         };
+        attempt.stage = "terminal-attach";
         let conversation_directory = conversation_directory(&working_directory, conversation_id);
         std::fs::create_dir_all(&conversation_directory)?;
         let _workflow_guard = self.workflow_write_lock.lock();

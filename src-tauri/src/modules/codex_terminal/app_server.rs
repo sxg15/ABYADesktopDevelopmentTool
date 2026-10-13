@@ -307,6 +307,10 @@ impl AppServerHandle {
         let _ = fs::remove_file(self.token_file.as_path());
     }
 
+    pub(super) fn pid(&self) -> Option<u32> {
+        self.child.lock().as_ref().map(Child::id)
+    }
+
     pub(super) fn request(&self, method: &str, params: Value) -> AppResult<Value> {
         let (response, receiver) = mpsc::channel();
         self.sender
@@ -315,11 +319,23 @@ impl AppServerHandle {
                 params,
                 response,
             })
-            .map_err(AppError::internal)?;
+            .map_err(|_| super::resume_failure::rpc_error(method, "connection channel closed"))?;
         receiver
             .recv_timeout(REQUEST_TIMEOUT)
-            .map_err(|_| AppError::internal("Timed out waiting for Codex app-server."))?
-            .map_err(AppError::internal)
+            .map_err(|error| {
+                super::resume_failure::rpc_error(
+                    method,
+                    match error {
+                        mpsc::RecvTimeoutError::Timeout => {
+                            "Timed out waiting for Codex app-server."
+                        }
+                        mpsc::RecvTimeoutError::Disconnected => {
+                            "Codex app-server connection closed."
+                        }
+                    },
+                )
+            })?
+            .map_err(|raw| super::resume_failure::rpc_error(method, &raw))
     }
 
     fn notify(&self, method: &str, params: Value) -> AppResult<()> {

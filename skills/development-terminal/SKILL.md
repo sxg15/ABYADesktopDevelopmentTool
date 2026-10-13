@@ -126,3 +126,13 @@ notifications map only waitingOnApproval/waitingOnUserInput flags, without stori
 request contents. New/completed turns clear the flag. Guidance displays terminal
 interaction separately from production document approval and ordinary AI execution.
 Failed control polling clears stale state rather than continuing to claim running.
+
+## Original-conversation reconnect (2026-10-13)
+Render physical connection from TaskControlState.connection independently of task
+state. awaitingContinue means connected with a saved continuation awaiting explicit
+user action. Refresh control immediately after open success/failure. Failed Codex
+open exposes the complete diagnostic message in an accessible wrapping alert and
+an explicit Reconnect original conversation button. Resize/poll must not retry it.
+A manual reconnect only attaches the exact ID; it neither creates nor flushes an
+intent. Continue task remains separate and unavailable while attachment has failed.
+Validate busy-error visibility, same-ID manual retry and no archive/new-chat calls.

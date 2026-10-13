@@ -416,3 +416,101 @@ fn failed_producer_does_not_silently_start_a_queued_model_turn() {
     );
     assert!(f.calls.lock().is_empty());
 }
+
+#[test]
+fn reattached_terminal_does_not_report_disconnected_or_resend_pending_work() {
+    let f = Fixture::new();
+    f.busy("publisher");
+    f.question("one");
+    f.answer("one");
+    f.complete();
+    let task = f.service.tasks.get(&f.task).unwrap();
+    let directory = conversation_directory(Path::new(&task.workspace_path), &f.conversation);
+    let mut request = continuation_queue::read(&directory).unwrap().unwrap();
+    request.status = "needsConnection".into();
+    continuation_queue::save(&directory, &mut request).unwrap();
+    let original = std::fs::read(directory.join("continuation.json")).unwrap();
+    let state = f.service.task_control(&f.task, &f.conversation).unwrap();
+    assert_eq!(state.connection, "connected");
+    assert_eq!(state.state, "awaitingContinue");
+    assert_eq!(state.request_id.as_deref(), Some(request.id.as_str()));
+    assert_eq!(state.native_session_id.as_deref(), Some(f.native.as_str()));
+    assert!(f.calls.lock().is_empty());
+    assert_eq!(
+        original,
+        std::fs::read(directory.join("continuation.json")).unwrap()
+    );
+    f.service.sessions.lock().remove(&f.conversation);
+    assert_eq!(
+        f.service
+            .task_control(&f.task, &f.conversation)
+            .unwrap()
+            .connection,
+        "background"
+    );
+}
+
+#[test]
+fn failed_attach_releases_only_its_executor_and_logs_safe_correlated_diagnostics() {
+    let f = Fixture::new();
+    let server = f
+        .service
+        .runtime_servers
+        .lock()
+        .get(&f.conversation)
+        .unwrap()
+        .clone();
+    let mut attempt = resume_failure::OpenAttempt::new();
+    // Failure before a fresh executor exists must preserve the existing backend.
+    f.service.cleanup_failed_open(&f.conversation, &attempt);
+    assert!(
+        f.service
+            .runtime_servers
+            .lock()
+            .contains_key(&f.conversation)
+    );
+    attempt.server = Some(server);
+    attempt.stage = "native-prepare";
+    let task = f.service.tasks.get(&f.task).unwrap();
+    let conversation = f.service.conversation(&f.task, &f.conversation).unwrap();
+    let error = resume_failure::rpc_error(
+        "thread/resume",
+        r#"{"code":-32600,"message":"active writer secret-canary"}"#,
+    );
+    let reported = attempt
+        .finish(
+            &f.task,
+            &conversation,
+            Path::new(&task.workspace_path),
+            Some(&error),
+        )
+        .unwrap();
+    assert_eq!(reported.code, "codex_session_in_use");
+    assert!(reported.detail.contains("-32600"));
+    let directory = conversation_directory(Path::new(&task.workspace_path), &f.conversation);
+    let log = std::fs::read_to_string(directory.join("connection-events.jsonl")).unwrap();
+    let entry: Value = serde_json::from_str(log.lines().last().unwrap()).unwrap();
+    assert_eq!(entry["nativeSessionId"], f.native);
+    assert_eq!(entry["method"], "thread/resume");
+    assert_eq!(entry["stage"], "native-prepare");
+    assert!(
+        reported
+            .detail
+            .contains(entry["requestId"].as_str().unwrap())
+    );
+    assert!(!log.contains("secret-canary"));
+    f.service.cleanup_failed_open(&f.conversation, &attempt);
+    assert!(
+        !f.service
+            .runtime_servers
+            .lock()
+            .contains_key(&f.conversation)
+    );
+    assert_eq!(
+        f.service
+            .conversation(&f.task, &f.conversation)
+            .unwrap()
+            .native_session_id,
+        Some(f.native.clone())
+    );
+}

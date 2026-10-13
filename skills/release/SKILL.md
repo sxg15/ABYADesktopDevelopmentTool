@@ -1,5 +1,13 @@
 # Release Skill
 
+## Session recovery release (2026-10-13)
+Default and Validation builds use session-recovery-20261013. Ship the complete
+tracked Publish package after checks. test-codex-writer-recovery.mjs is an opt-in
+two-backend native integration test requiring ABYA_TEST_CODEX and a disposable
+ABYA_TEST_WORKSPACE. It creates only a fresh test thread, proves active-writer
+rejection then same-ID recovery after its own first backend exits, starts no model
+turn and archives only its own test history. Never apply it to a user's thread ID.
+
 ## Purpose
 
 Own repeatable checks and portable Windows release output.

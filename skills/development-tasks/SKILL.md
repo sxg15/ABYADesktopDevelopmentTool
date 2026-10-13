@@ -264,3 +264,9 @@ candidateArtifactId to the same group's latest intact visual, without requiring 
 playable version. Only user review closes it; art approval waits for open feedback.
 Recheck closure also happens in a second-level review dialog. Backend revalidates the
 candidate again at closure. Old document/visual approval history remains unchanged.
+
+## Reconnected task guidance (2026-10-13)
+awaitingContinue is an idle terminal with saved pending work, presented as terminal
+connected / task waiting to continue with an explicit terminal action. It is not a
+connection failure and does not authorize replay. Reconnection-needed guidance does
+not infer physical disconnection from the execution/queue state alone.

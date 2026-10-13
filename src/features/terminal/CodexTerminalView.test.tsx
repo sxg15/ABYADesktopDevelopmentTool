@@ -183,6 +183,25 @@ function notifyResize() {
   }
 }
 
+it("keeps a failed resume actionable and retries only on an explicit reconnect", async () => {
+  terminalApiMock.open.mockRejectedValueOnce(new Error("原对话被其他 Codex 客户端占用；诊断编号：test-resume"));
+  renderView();
+  await waitFor(() => expect(document.querySelector('.terminal-host')).toBeTruthy());
+  giveHostLayout();
+  act(notifyResize);
+  const alert=await screen.findByRole('alert');
+  expect(alert.textContent).toContain('其他 Codex 客户端占用');
+  expect(alert.textContent).toContain('test-resume');
+  act(notifyResize);
+  expect(terminalApiMock.open).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button',{name:'接回原对话'}));
+  await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(2));
+  expect(terminalApiMock.open).toHaveBeenNthCalledWith(2,'codex','task-1','conversation-1',80,24,expect.anything());
+  expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
+  expect(terminalApiMock.setArchived).not.toHaveBeenCalled();
+  await waitFor(()=>expect(screen.queryByRole('alert')).toBeNull());
+});
+
 describe("Codex conversation list", () => {
   it("copies persisted history while the terminal is stopped and shows success", async () => {
     terminalApiMock.open.mockResolvedValueOnce({

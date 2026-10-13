@@ -127,3 +127,20 @@ waitingForTerminal before running/queued; the UI directs users to the original t
 Only the existing native terminal handles the request; no approval is auto-answered.
 Contract verified with the locally installed app-server JSON schema. Persist only the
 boolean, not native approval request contents, commands or user input.
+
+## Resume conflict recovery (2026-10-13)
+Native RPC failures are classified before returning through AppError: active writer,
+timeout, missing history, archived history, transport and other native failures.
+Only fixed user guidance, method and numeric native code leave the RPC boundary;
+raw messages/data may contain credentials and must never be displayed or logged.
+Each fresh attachment has a diagnostic request ID, stage, duration, backend PID and
+exact task/conversation/native IDs in connection-events.jsonl. Failed attachment
+stops only the executor created by that attempt and revokes its scoped access;
+failure before replacement must preserve an existing active executor.
+notLoaded is server-local, never proof of globally unowned history. External writer
+conflicts require explicit release in the owning client and a manual same-ID retry.
+No automatic archive/unarchive, thread/start fallback, process-name kill or turn replay.
+A connected needsConnection queue projects awaitingContinue without mutating its
+request, receipt or approvals. Connection and execution remain separate DTO fields.
+Regression tests cover conflict-to-retry identity, sanitized RPC diagnostics, failed
+executor cleanup and connected pending continuation without new turn/start calls.

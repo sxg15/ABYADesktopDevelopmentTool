@@ -137,7 +137,11 @@ impl CodexTerminalService {
             .as_ref()
             .is_some_and(|q| q.status == "needsConnection")
         {
-            "disconnected"
+            if connected && runtime {
+                "awaitingContinue"
+            } else {
+                "disconnected"
+            }
         } else if let Some(wait) = continuation_queue::waiting(Some(&production)) {
             if wait == super::intake_receipt::IntakeContinueStatus::WaitingForAnswers {
                 "waitingForAnswers"

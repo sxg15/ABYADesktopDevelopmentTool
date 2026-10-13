@@ -14,3 +14,9 @@ it("closed tasks expose no primary action or pending badge",()=>{
   const result=taskGuidanceState('task',false,view,{state:'waitingForTerminal'} as TaskControlState,undefined,false);
   expect(result.action).toBe('none'); expect(result.pending.terminal).toBe(0);
 });
+it("directs a connected pending task to explicit continuation",()=>{
+  const result=taskGuidanceState('task',true,view,{taskId:'task',state:'awaitingContinue',connection:'connected'} as TaskControlState,undefined,false);
+  expect(result.title).toBe('终端已连接，任务等待继续');
+  expect(result.instruction).toContain('继续任务');
+  expect(result.tone).toBe('neutral');
+});

@@ -147,3 +147,9 @@ cannot steal focus from an active dialog. Review decisions are never preselected
 Question navigation, sticky action rows and responsive review columns remain usable
 in small windows and at increased display scaling. Document text is rendered through
 React text nodes, never executable HTML. State guidance uses text plus icons and color.
+
+## Resume error visibility (2026-10-13)
+Failed Codex attachment uses a red, wrapping, accessible recovery panel above the
+terminal. Keep its diagnostic number readable, cap its height with scrolling, and
+reserve the terminal's remaining grid row. Physical connection and task execution
+labels appear separately in the toolbar. The retry action reads 接回原对话.

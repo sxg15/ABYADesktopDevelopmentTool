@@ -34,7 +34,7 @@ import { installTerminalClipboard, terminalInputQueue } from "./terminalClipboar
 import { Modal } from "../../app/Modal";
 import type { TerminalConnectionRequest } from "./terminalConnection";
 import { productionApi, continuationMessages } from "../../shared/production";
-import { useTaskControl, controlText, controlLabel } from "./useTaskControl";
+import { useTaskControl, controlText, controlLabel, connectionLabel } from "./useTaskControl";
 import { ExecutionSettings } from "./ExecutionSettings";
 
 const MAX_HISTORY_CHARACTERS = 2 * 1024 * 1024;
@@ -706,6 +706,7 @@ function ConversationTerminal({
           for (const data of buffered) channel.onmessage({ type: "output", data });
           buffered.length = 0;
           setState(next);
+          window.dispatchEvent(new Event("abya:control-changed"));
           if (visibleRef.current && !document.querySelector('[aria-modal="true"]')) terminal.focus();
           const currentSize = measureSize();
           if (currentSize && (currentSize.columns !== size.columns || currentSize.rows !== size.rows)) {
@@ -725,6 +726,7 @@ function ConversationTerminal({
           pendingContinue.current=undefined;
           connectionRef.current?.finish(value);
           setError(errorMessage(value));
+          window.dispatchEvent(new Event("abya:control-changed"));
           setState((current) =>
             current
               ? { ...current, status: "failed", lastError: errorMessage(value) }
@@ -849,7 +851,7 @@ function ConversationTerminal({
   const terminalEnded =
     state?.status === "exited" || state?.status === "failed";
   const canStop =
-    provider==="codex" ? control?.connection!=="disconnected" || control?.queued : state?.status === "starting" || state?.status === "running";
+    provider==="codex" && control ? control.connection!=="disconnected" || control.queued : state?.status === "starting" || state?.status === "running";
   const showingHistory = viewMode === "history";
   const canScrollToLatest = showingHistory ? !historyAtBottom : !atBottom;
 
@@ -862,6 +864,7 @@ function ConversationTerminal({
             className={`terminal-state terminal-state-${state?.status ?? "starting"}`}
           />
           <strong>{conversation.title}</strong>
+          {provider==="codex"&&<span>{connectionLabel(control)}</span>}
           <span>{provider==="codex" ? controlLabel(control) : terminalStatus(t, provider, state?.status)}</span>
           {state?.pid && <code>PID {state.pid}</code>}
         </div>
@@ -930,14 +933,14 @@ function ConversationTerminal({
             </button>
           )}
           {provider==="codex" && <button className="primary-button" onClick={()=>void continueTask()}
-            disabled={actionBusy||!control?.nativeSessionId||["running","waitingForResponse","queued","pausing","closed"].includes(control?.state??"")}>{control?.state==="blocked"?"重新检查问题":"继续任务"}</button>}
+            disabled={actionBusy||terminalEnded||!control?.nativeSessionId||["running","waitingForResponse","queued","pausing","closed"].includes(control?.state??"")}>{control?.state==="blocked"?"重新检查问题":"继续任务"}</button>}
           {terminalEnded && (
             <button
               className="secondary-button"
               title={t(provider === "codex" ? "restartCodex" : "restartGrok")}
               onClick={() => startRef.current(true)}
             >
-              {t(provider === "codex" ? "restartCodex" : "restartGrok")}
+              {provider === "codex" ? "接回原对话" : t("restartGrok")}
               <RefreshCw size={16} />
             </button>
           )}
@@ -946,6 +949,11 @@ function ConversationTerminal({
       {provider==="codex" && <div className="terminal-task-notice" role="status">
         {controlText(control)}{actionNotice&&` · ${actionNotice}`}
           {control?.turnId && !["running","queued","waitingForResponse"].includes(control.state) && <strong> · 以下为上次执行记录，并非当前运行进度</strong>}
+      </div>}
+      {error && provider==="codex" && terminalEnded && <div className="terminal-recovery" role="alert">
+        <strong>原对话尚未接回</strong>
+        <p>{error}</p>
+        <span>处理完成后点击“接回原对话”。连接成功后，再点击“继续任务”恢复执行。</span>
       </div>}
       <div className="terminal-content">
         <div className="terminal-host" hidden={showingHistory} ref={hostRef} />
@@ -964,7 +972,7 @@ function ConversationTerminal({
           <pre ref={historyContentRef} />
         </div>
       </div>
-      {error && <div className="terminal-error">{error}</div>}
+      {error && !(provider==="codex"&&terminalEnded) && <div className="terminal-error">{error}</div>}
     </div>
   );
 }
