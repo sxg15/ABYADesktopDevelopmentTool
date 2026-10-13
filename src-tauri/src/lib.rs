@@ -313,6 +313,19 @@ fn flush_codex_continuation(
         .codex_terminal
         .flush_continuation(&task_id, &conversation_id, &request_id)
 }
+
+#[tauri::command(async)]
+fn repair_codex_issue(
+    task_id: String,
+    conversation_id: String,
+    issue_id: String,
+    expected_revision: u64,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::IntakeContinuation> {
+    state
+        .codex_terminal
+        .repair_issue(&task_id, &conversation_id, &issue_id, expected_revision)
+}
 #[tauri::command(async)]
 fn get_codex_task_control(
     task_id: String,
@@ -979,6 +992,7 @@ pub fn run() {
             continue_intake_questions,
             submit_intake_answers,
             continue_codex_task,
+            repair_codex_issue,
             flush_codex_continuation,
             get_codex_task_control,
             get_codex_execution_settings,

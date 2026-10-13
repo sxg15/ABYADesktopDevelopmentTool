@@ -3,6 +3,8 @@ pub use acceptance::AcceptanceSpec;
 mod catalog;
 mod files;
 mod interaction;
+mod issue_repair;
+pub use issue_repair::IssueRepairSpec;
 mod iteration;
 mod models;
 mod mutation;

@@ -5,6 +5,8 @@ use std::sync::atomic::Ordering;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct ContinueRequest {
+    #[serde(default)]
+    pub repair: Option<super::issue_repair::RepairIntent>,
     pub id: String,
     pub task_id: String,
     pub conversation_id: String,
@@ -23,7 +25,7 @@ pub(super) struct ContinueRequest {
 }
 
 impl ContinueRequest {
-    fn response(&self, status: IntakeContinueStatus) -> IntakeContinuation {
+    pub(super) fn response(&self, status: IntakeContinueStatus) -> IntakeContinuation {
         IntakeContinuation {
             status,
             conversation_id: self.conversation_id.clone(),
@@ -48,6 +50,14 @@ pub(super) fn save(directory: &Path, request: &mut ContinueRequest) -> AppResult
     let temp = directory.join(format!("continuation-{}.tmp", Uuid::new_v4()));
     intake_receipt::save(&temp, &serde_json::to_value(&request)?, true)?;
     std::fs::rename(temp, path)?;
+    if let Some(repair) = &request.repair {
+        let receipt = super::issue_repair::receipt_path(directory, &repair.fingerprint)?;
+        intake_receipt::save(
+            &receipt,
+            &serde_json::to_value(&request)?,
+            !receipt.exists(),
+        )?;
+    }
     let mut log = OpenOptions::new()
         .create(true)
         .append(true)
@@ -111,6 +121,25 @@ impl CodexTerminalService {
             .lock()
             .insert(conversation.into(), task.into());
         let previous = read(&directory)?;
+        if previous.as_ref().is_some_and(|q| {
+            q.task_id != task || q.conversation_id != conversation || q.native_id != native
+        }) {
+            return Err(AppError::validation(
+                "待处理请求与当前任务会话不匹配，请核对记录。",
+            ));
+        }
+        if previous.as_ref().is_some_and(|q| {
+            q.repair.is_some()
+                && matches!(
+                    q.status.as_str(),
+                    "queued" | "needsConnection" | "sending" | "needsReview"
+                )
+        }) && (group.is_some() || after_revision.is_some())
+        {
+            return Err(AppError::validation(
+                "已有问题修复请求等待处理，当前决定已保存；请先核对原会话中的修复请求。",
+            ));
+        }
         if let Some(old) = previous
             .as_ref()
             .filter(|q| q.status == "sending" || q.status == "needsReview")
@@ -128,6 +157,19 @@ impl CodexTerminalService {
             old.clone()
         } else {
             ContinueRequest {
+                repair: if group.is_none() && after_revision.is_none() {
+                    previous
+                        .as_ref()
+                        .filter(|q| {
+                            matches!(
+                                q.status.as_str(),
+                                "paused" | "queued" | "needsConnection" | "needsResume"
+                            )
+                        })
+                        .and_then(|q| q.repair.clone())
+                } else {
+                    None
+                },
                 id: Uuid::new_v4().to_string(),
                 task_id: task.into(),
                 conversation_id: conversation.into(),
@@ -179,13 +221,18 @@ impl CodexTerminalService {
         let directory = conversation_directory(Path::new(&t.workspace_path), conversation);
         let mut request =
             read(&directory)?.ok_or_else(|| AppError::validation("没有待续接请求。"))?;
+        if request.task_id != task || request.conversation_id != conversation {
+            return Err(AppError::validation(
+                "待处理请求与当前任务会话不匹配，请核对记录。",
+            ));
+        }
         if request.id != request_id {
             return Err(AppError::validation("继续请求已更新，请读取最新状态。"));
         }
         self.dispatch_or_record(&directory, &mut request)
     }
 
-    fn dispatch_or_record(
+    pub(super) fn dispatch_or_record(
         &self,
         directory: &Path,
         request: &mut ContinueRequest,
@@ -207,6 +254,8 @@ impl CodexTerminalService {
         request: &mut ContinueRequest,
     ) -> AppResult<IntakeContinuation> {
         use IntakeContinueStatus as S;
+        Uuid::parse_str(&request.id)
+            .map_err(|_| AppError::validation("继续请求标识无效，请核对记录。"))?;
         if self.shutting_down.load(Ordering::SeqCst)
             || self.cancelled.lock().contains(&request.conversation_id)
             || request.owner != self.process_epoch
@@ -252,7 +301,10 @@ impl CodexTerminalService {
             return Err(AppError::validation("流程记录版本尚未匹配，未自动继续。"));
         }
         if let Some(status) = waiting(Some(&production)) {
-            request.status = if status == S::WaitingForAnswers {
+            request.status = if request.repair.is_some() {
+                request.error = Some("修复已暂停，请完成人工待办后重新请求 AI 修复。".into());
+                "paused"
+            } else if status == S::WaitingForAnswers {
                 "waitingForAnswers"
             } else {
                 "waitingForApproval"
@@ -261,6 +313,21 @@ impl CodexTerminalService {
             save(directory, request)?;
             return Ok(request.response(status));
         }
+        let repair_spec = if let Some(repair) = &request.repair {
+            match self
+                .tasks
+                .prepare_issue_repair(&request.task_id, &repair.issue_id, None)
+            {
+                Ok(spec) if spec.fingerprint == repair.fingerprint => Some(spec),
+                _ => {
+                    request.status = "superseded".into();
+                    save(directory, request)?;
+                    return Ok(request.response(S::Superseded));
+                }
+            }
+        } else {
+            None
+        };
         if let Some(group) = request.group_id.as_ref() {
             let valid = production.record.as_ref().is_some_and(|r| {
                 r.question_groups.iter().any(|g| {
@@ -329,7 +396,10 @@ impl CodexTerminalService {
             .flatten()
             .find(|t| t["status"] == "inProgress")
         {
-            if request.group_id.is_none() && request.after_revision.is_none() {
+            if request.group_id.is_none()
+                && request.after_revision.is_none()
+                && request.repair.is_none()
+            {
                 request.status = "running".into();
                 save(directory, request)?;
                 return Ok(request.response(S::Running));
@@ -352,7 +422,7 @@ impl CodexTerminalService {
             let receipt = directory.join(format!("task-continue-{}.json", request.id));
             let mut attempt = intake_receipt::start_attempt(&receipt, None, &request.native_id)?;
             let result=server.request("turn/start",json!({"threadId":request.native_id,"clientUserMessageId":attempt["messageId"],
-                "input":[{"type":"text","text":"用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。"}]}));
+                "input":[{"type":"text","text":repair_spec.as_ref().map(|s|s.prompt.as_str()).unwrap_or("用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。") }]}));
             result.and_then(|v| {
                 let id = v["turn"]["id"]
                     .as_str()

@@ -159,3 +159,18 @@ workflow and correlated connection diagnostics; raw stdout/stderr remain private
 Deleting a conversation also clears queue task/cancellation/stopping indexes. Native
 history is still archived first. Test clean delete/recreate plus an injected failed
 workspace probe with a healthy service and a hard failure after the service stops.
+
+## Targeted issue repair queue (2026-10-13)
+repair_issue creates a typed RepairIntent (issueId, fingerprint) in the existing
+continuation queue. Validate the selected issue and native identity; recheck its
+fingerprint before turn/start. Changes/resolution/programmer classification cancel
+stale delivery. Busy turns defer it without interruption. Reconnection only flushes
+the saved request ID. Never overwrite another pending continuation. Plain Continue
+may resume a paused repair intent; no automatic replay on process restart.
+Per-fingerprint issue-repair receipts retain deduplication even after the active
+queue changes. Unknown sending outcomes require review. Receipt paths accept only
+64 hexadecimal characters. Human gates pause repair; answer/approval operations keep
+their existing workflows and the user can explicitly request repair again afterward.
+Only fixed backend prompts go to turn/start, not arbitrary UI-provided commands.
+Tests cover exact issue/native identity, duplicate clicks, busy dispatch, changed
+ownership, competing intents and no automatic issue-resolution mutations.

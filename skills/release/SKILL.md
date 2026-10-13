@@ -204,3 +204,9 @@ user task workspaces or replace the installed Publish package implicitly.
 Default/Validation packages use conversation-startup-fix-20261013, retaining recovery
 and IME fixes. Run clean native delete/recreate and failed-probe isolation in addition
 to regular checks. Preserve complete tracked Publish and validate a fresh checkout.
+
+## Issue repair release (2026-10-13)
+Default/Validation use issue-auto-repair-20261013. Verify issue/native binding,
+queued/deduplicated delivery, stale/programmer/resolved rejection and UI feedback.
+The button uses the selected Codex conversation and never auto-resolves a defect.
+Keep the complete portable distribution and earlier startup/IME/programmer alerts.

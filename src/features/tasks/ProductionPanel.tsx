@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, FileText, FolderOpen, TriangleAlert } from "lucide-react";
+import { Check, FileText, FolderOpen, TriangleAlert, Wrench } from "lucide-react";
 import {
   productionApi,
   type ProductionView,
@@ -67,12 +67,14 @@ export function ProductionPanel({
   onContinue,
   requestedReview,
   onReviewOpened,
+  onRepairIssue,
 }: {
   taskId: string;
   active: boolean;
   locale?: string;
   requestedReview?: ProductionDocument;
   onReviewOpened?: () => void;
+  onRepairIssue?: (issueId: string, revision: number) => Promise<string>;
   onContinue?: (
     message: string,
     group?: IntakeQuestionGroup,
@@ -85,6 +87,8 @@ export function ProductionPanel({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [repairingIssue, setRepairingIssue] = useState<string>();
+  const [repairFeedback, setRepairFeedback] = useState<Record<string,{snapshot:string;message:string}>>({});
   const [question, setQuestion] = useState("ask");
   const [playerMode, setPlayerMode] = useState("unspecified");
   const [editingPlayers, setEditingPlayers] = useState(false);
@@ -114,6 +118,7 @@ export function ProductionPanel({
     setReviewDocument(undefined);
     setError("");
     setNotice("");
+    setRepairFeedback({});
     void refresh();
     const timer = window.setInterval(() => void refresh(), 4000);
     return () => {
@@ -161,6 +166,13 @@ export function ProductionPanel({
         (r.stages[stage] !== "passed" || i.stage === stage),
     ) ?? [];
   const openIssues = issues.filter((i) => i.status !== "resolved").sort((a,b)=>Number(!!programmerIssue(b))-Number(!!programmerIssue(a)));
+  async function requestRepair(issue: ProductionIssue) {
+    if (!r || !active || mutating.current || !onRepairIssue || programmerIssue(issue) || issue.status === "resolved") return;
+    mutating.current=true; sequence.current++;setBusy(true);setRepairingIssue(issue.id);setError("");setNotice("");
+    try { const message=await onRepairIssue(issue.id,r.revision); if(alive.current)setRepairFeedback(current=>({...current,[issue.id]:{snapshot:JSON.stringify(issue),message}})); }
+    catch(e){if(alive.current)setError(errorMessage(e));}
+    finally {mutating.current=false;if(alive.current){setBusy(false);setRepairingIssue(undefined);void refresh();}}
+  }
   const programmerIssues = stage === "implementation" ? activeProgrammerIssues(openIssues) : [];
   const groups =
     r?.questionGroups?.filter((g) => (g.stage ?? "requirements") === stage) ??
@@ -249,6 +261,14 @@ export function ProductionPanel({
           </>
         )}
       </dl>
+      {i.status !== "resolved" && !programmerIssue(i) && <div className="issue-repair-action">
+        <button className="primary-button" disabled={busy || !active || !onRepairIssue} onClick={()=>void requestRepair(i)}
+          title={!active ? (en ? "Reactivate the task first" : "请先恢复任务") : !onRepairIssue ? (en ? "Open this task's Codex conversation first" : "请先选择并打开本任务的 Codex 原会话") : (en ? "Ask AI to investigate, fix and verify this issue" : "让 AI 检查并修复此问题，完成后记录验证结果")}>
+          <Wrench size={15} aria-hidden="true"/>{repairingIssue===i.id ? (en ? "Submitting…" : "正在提交…") : (en ? "Let AI fix this" : "让 AI 自动修复")}
+        </button>
+        <small>{!onRepairIssue ? (en ? "Requires an existing Codex conversation." : "请先选择并打开本任务的 Codex 原会话。") : (en ? "Human input or approvals may still be needed." : "需要人工信息或权限时，AI 会说明阻塞原因。")}</small>
+        {repairFeedback[i.id]?.snapshot===JSON.stringify(i) && <p className="issue-repair-feedback" role="status">{repairFeedback[i.id].message}</p>}
+      </div>}
       <details>
         <summary>{en ? "Technical details" : "查看详细记录"}</summary>
         <p>{i.id}</p>

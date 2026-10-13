@@ -15,6 +15,34 @@ const fixture = (): ProductionView => ({
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); sessionStorage.clear(); });
 describe("Production decisions", () => {
+  it("submits the selected ordinary issue once and does not pretend it is resolved",async()=>{
+    const value=fixture();value.record!.stages.requirements="in-progress";
+    value.record!.issues=[{id:"lua-bug",kind:"defect",status:"open",stage:"requirements",description:"Wrong Lua callback",repairTarget:"lua"},
+      {id:"engine",kind:"blocker",status:"open",stage:"requirements",description:"Engine defect",repairTarget:"abya-source"},
+      {id:"done",kind:"defect",status:"resolved",stage:"requirements",description:"Resolved issue"}];
+    vi.mocked(productionApi.get).mockResolvedValue(value);
+    let finish!:(message:string)=>void;
+    const repair=vi.fn(()=>new Promise<string>(resolve=>{finish=resolve;}));
+    render(<ProductionPanel taskId="a" active onRepairIssue={repair}/>);
+    const button=await screen.findByRole('button',{name:'让 AI 自动修复'});
+    expect(screen.getAllByRole('button',{name:'让 AI 自动修复'})).toHaveLength(1);
+    fireEvent.click(button);fireEvent.click(button);
+    expect(repair).toHaveBeenCalledExactlyOnceWith('lua-bug',7);
+    expect((screen.getByRole('button',{name:'正在提交…'}) as HTMLButtonElement).disabled).toBe(true);
+    finish('此问题已排队，当前回复结束后处理。');
+    await screen.findByText('此问题已排队，当前回复结束后处理。');
+    expect(value.record!.issues[0].status).toBe('open');
+    expect(productionApi.update).not.toHaveBeenCalled();expect(productionApi.decide).not.toHaveBeenCalled();
+  });
+  it("keeps an ordinary issue visible after a repair request fails",async()=>{
+    const value=fixture();value.record!.issues=[{id:'bug',stage:'requirements',kind:'blocker',status:'open',description:'Missing configuration'}];
+    vi.mocked(productionApi.get).mockResolvedValue(value);
+    const repair=vi.fn().mockRejectedValue(new Error('请先连接原会话'));
+    render(<ProductionPanel taskId="a" active onRepairIssue={repair}/>);
+    fireEvent.click(await screen.findByRole('button',{name:'让 AI 自动修复'}));
+    await screen.findByText('请先连接原会话');
+    expect((screen.getByRole('button',{name:'让 AI 自动修复'}) as HTMLButtonElement).disabled).toBe(false);
+  });
   it("highlights source/build problems while keeping resolved records out of the red alert",async()=>{
     const value=fixture();value.record!.currentStage="implementation";value.record!.stages.implementation="blocked";
     value.policy.stages.push({id:"implementation",name:"Lua",approval:null});

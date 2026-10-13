@@ -283,3 +283,14 @@ awaitingContinue is an idle terminal with saved pending work, presented as termi
 connected / task waiting to continue with an explicit terminal action. It is not a
 connection failure and does not authorize replay. Reconnection-needed guidance does
 not infer physical disconnection from the execution/queue state alone.
+
+## User-requested AI issue repair (2026-10-13)
+Ordinary unresolved issues expose Let AI fix this, scoped to the selected existing
+Codex conversation. Missing Codex context and inactive tasks disable it; programmer
+source/build (including suspected legacy handoffs) and resolved records omit it.
+TaskService.prepare_issue_repair validates task, optional production revision,
+issue existence/status/ownership and human gates; returns a SHA-256 issue fingerprint
+and a fixed scoped prompt. It does not mutate issue state, approvals or evidence.
+Record success only through the existing validated production operations. Frontend
+submission is serialized and shows queue/delivery feedback; a reply ending is not
+proof of repair. Grok does not support this queued endpoint; show the Codex prerequisite.

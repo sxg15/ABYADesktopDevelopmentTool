@@ -77,6 +77,7 @@ export const productionApi = {
   submitAnswers: (taskId:string,expectedRevision:number,id:string,answers:Record<string,string>) =>
     invoke<QuestionSubmission>("submit_intake_answers",{input:{taskId,expectedRevision,operation:"submit-answers",data:{id,answers}}}),
   continueTask: (taskId:string,conversationId:string,afterRevision?:number) => invoke<IntakeContinuation>("continue_codex_task",{taskId,conversationId,afterRevision}),
+  repairIssue: (taskId:string,conversationId:string,issueId:string,expectedRevision:number) => invoke<IntakeContinuation>("repair_codex_issue",{taskId,conversationId,issueId,expectedRevision}),
   flushContinuation: (taskId:string,conversationId:string,requestId:string) => invoke<IntakeContinuation>("flush_codex_continuation",{taskId,conversationId,requestId}),
   control: (taskId:string,conversationId:string) => invoke<TaskControlState>("get_codex_task_control",{taskId,conversationId}),
   revealReport: (taskId: string, phase: string) => invoke<void>("reveal_production_report", { taskId, phase }),

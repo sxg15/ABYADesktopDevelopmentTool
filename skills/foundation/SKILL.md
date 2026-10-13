@@ -122,3 +122,8 @@ stage or artifact ID/gameplay. Empty reason means preliminarily available; missi
 entries fail closed. Full file/version/gate checks still run at submission.
 Workflow snapshots add optional terminalInteraction; control state adds waitingForTerminal.
 Document artScope is additive, preserving old serialized records. No new secrets or tables.
+
+productionApi.repairIssue invokes repair_codex_issue with taskId, conversationId,
+issueId and expectedRevision. It returns the existing IntakeContinuation DTO; no
+arbitrary prompt/command input or new credential surface. Task/provider services own
+validation, prompt construction, queue and receipts; Tauri remains an adapter.
