@@ -83,7 +83,19 @@ New-Item -ItemType Directory -Path $runtime -Force | Out-Null
 $nodePath = (Get-Command node.exe -ErrorAction Stop).Source
 $nodeVersion = & $nodePath --version
 if ([int]($nodeVersion.TrimStart('v').Split('.')[0]) -lt 20) { throw "Node 20+ is required" }
+$nodeLicense = Join-Path (Split-Path $nodePath) 'LICENSE'
+if (-not (Test-Path -LiteralPath $nodeLicense)) {
+    $checkedInManifest = Join-Path $root 'Publish/build-manifest.json'
+    $nodeLicense = Join-Path $root 'Publish/runtime/LICENSE.txt'
+    if (-not (Test-Path -LiteralPath $nodeLicense) -or -not (Test-Path -LiteralPath $checkedInManifest) -or
+        (Get-Content -Raw -LiteralPath $checkedInManifest | ConvertFrom-Json).nodeVersion -ne $nodeVersion) {
+        throw "Supply the official Node $nodeVersion LICENSE beside node.exe before publishing."
+    }
+}
 Copy-Item -LiteralPath $nodePath -Destination (Join-Path $runtime "node.exe") -Force
+if ([IO.Path]::GetFullPath($nodeLicense) -ne [IO.Path]::GetFullPath((Join-Path $runtime 'LICENSE.txt'))) {
+    Copy-Item -LiteralPath $nodeLicense -Destination (Join-Path $runtime 'LICENSE.txt') -Force
+}
 $toolsPath = Join-Path $publish "tools"
 New-Item -ItemType Directory -Path $toolsPath -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $root "tools/abya") -Destination $toolsPath -Recurse -Force

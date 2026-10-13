@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "releaseLabel": "guidance-action-panel-20261012",
-  "totalBytes": 316910188,
+  "totalBytes": 317053498,
   "files": [
     {
       "path": ".codex/README.md",
@@ -772,6 +772,11 @@
       "path": "build-manifest.json",
       "bytes": 655,
       "sha256": "ee17311f80aa2f8ee52007aaf55ce4c43ec5c5c94a8259e75497c467b4bb8079"
+    },
+    {
+      "path": "runtime/LICENSE.txt",
+      "bytes": 143310,
+      "sha256": "537308465103a306d0e3eecf42632b4ff1b48aaaec044e9fc10a78c81fd00b34"
     },
     {
       "path": "runtime/node.exe",

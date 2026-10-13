@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 
 const inventoryName = 'package-files.json';
 const required = ['ABYA Desktop Development Tool.exe', 'abya-desktop.exe', 'build-manifest.json',
-  'runtime/node.exe', 'tools/abya/bin/abya.mjs', 'tools/ffmpeg/source.json',
+  'runtime/node.exe', 'runtime/LICENSE.txt', 'tools/abya/bin/abya.mjs', 'tools/ffmpeg/source.json',
   'tools/ffmpeg/runtime/bin/ffmpeg.exe', 'tools/ffmpeg/runtime/bin/ffprobe.exe', 'tools/ffmpeg/runtime/LICENSE.txt',
   '.codex/skills/abya-game-development-task/SKILL.md', '.grok/skills/abya-game-development-task/SKILL.md'];
 const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));

@@ -31,6 +31,10 @@ selection and the Windows WebView2 dependency remain machine prerequisites.
 Rebuilds regenerate the inventory. Staging packages, generated logs and superseded
 release directories remain disposable; recycle only inspected inactive paths. Retain
 database recovery snapshots and current user state outside Git.
+Distribute Node's matching upstream LICENSE with its executable. If the installed
+Node directory lacks LICENSE, the checked-in runtime license can be reused only
+when the package's nodeVersion exactly matches the selected Node executable version.
+The initial v24.11.1 license comes from nodejs/node tag v24.11.1, file LICENSE.
 
 publish.ps1 -Validation builds Publish-Staging-Validation without replacing an active package.
 Historical staging switches remain mutually exclusive development destinations. Every build embeds
