@@ -1,5 +1,15 @@
 # Development Terminal Skill
 
+## IME anchor stability (2026-10-13)
+terminalComposition pins the public xterm helper textarea and composition view to
+their compositionstart position while a native IME is choosing text. Streaming TUI
+cursor movement must not relocate the candidate window. Keep xterm's own input,
+composition value and commit pipeline intact; do not buffer output or synthesize
+Enter/committed characters. Release after xterm's deferred compositionend commit,
+on blur, or on disposal; a new composition cancels the preceding release timer.
+Both providers install the same guard once per terminal. Validate real xterm
+redraw/commit behavior plus rapid next-composition, blur and unmount cleanup.
+
 ## Purpose
 
 Provide the shared task-terminal experience and provider-neutral workflow

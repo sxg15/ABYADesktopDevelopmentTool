@@ -601,6 +601,17 @@ tbody tr:hover { background: #f7faf8; }
 }
 .terminal-history::-webkit-scrollbar-thumb:hover { background: #81908b; }
 .terminal-host .xterm { height: 100%; }
+/* Pin the native IME anchor through streaming PTY redraws, without buffering output. */
+.terminal-host.terminal-ime-composing .xterm-helper-textarea,
+.terminal-host.terminal-ime-composing .composition-view {
+  left: var(--terminal-ime-left) !important;
+  top: var(--terminal-ime-top) !important;
+  height: var(--terminal-ime-height) !important;
+  line-height: var(--terminal-ime-line-height) !important;
+}
+.terminal-host .xterm-helper-textarea:focus {
+  outline: none; border: 0; border-radius: 0; box-shadow: none;
+}
 .terminal-host .xterm-viewport {
   overflow-y: scroll !important; overscroll-behavior: contain; border-radius: 0;
   scrollbar-color: #65736f #1b2123; scrollbar-gutter: stable; scrollbar-width: auto;

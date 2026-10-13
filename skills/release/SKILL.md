@@ -1,5 +1,13 @@
 # Release Skill
 
+## Terminal IME release (2026-10-13)
+Default and Validation packages use terminal-ime-fix-20261013 and retain the
+session recovery fixes. scripts/ime-preview.html provides an isolated real xterm
+fixture comparing old/fixed composition anchors across fragmented cursor redraws,
+with one Chinese commit and uninterrupted output. These synthetic events do not
+replace manual validation of vendor-specific Windows candidate windows. Verify it,
+full checks and a relocated portable checkout before synchronizing distribution.
+
 ## Session recovery release (2026-10-13)
 Default and Validation builds use session-recovery-20261013. Ship the complete
 tracked Publish package after checks. test-codex-writer-recovery.mjs is an opt-in

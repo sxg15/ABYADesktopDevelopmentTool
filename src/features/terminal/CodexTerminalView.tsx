@@ -36,6 +36,7 @@ import type { TerminalConnectionRequest } from "./terminalConnection";
 import { productionApi, continuationMessages } from "../../shared/production";
 import { useTaskControl, controlText, controlLabel, connectionLabel } from "./useTaskControl";
 import { ExecutionSettings } from "./ExecutionSettings";
+import { installTerminalComposition } from "./terminalComposition";
 
 const MAX_HISTORY_CHARACTERS = 2 * 1024 * 1024;
 const HISTORY_TRUNCATED_MESSAGE =
@@ -638,6 +639,7 @@ function ConversationTerminal({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(hostRef.current);
+    const composition = installTerminalComposition(hostRef.current);
     terminalRef.current = terminal;
     fitRef.current = fit;
 
@@ -802,6 +804,7 @@ function ConversationTerminal({
       removeClipboard();
       terminalResize.dispose();
       terminalScroll.dispose();
+      composition.dispose();
       terminal.dispose();
       terminalRef.current = undefined;
       fitRef.current = undefined;

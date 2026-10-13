@@ -1,5 +1,12 @@
 # App Shell Skill
 
+## IME positioning (2026-10-13)
+Only .terminal-ime-composing overrides xterm helper left/top/height/line-height
+using compositionstart CSS variables. These temporary important rules withstand
+xterm's inline cursor updates; remove them at commit/blur/disposal. Do not apply
+form-field focus borders or shadows to the invisible terminal textarea. Output
+continues rendering and the normal cursor positioning resumes after composition.
+
 ## Purpose
 
 Own the desktop navigation, bilingual localization, layout, notifications, and
