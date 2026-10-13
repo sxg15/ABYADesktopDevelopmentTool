@@ -15,6 +15,23 @@ review the patch on dependency upgrades, and run the no-frontend-cursor-reply re
 
 ## Public Contracts
 
+### Repository distribution (2026-10-13)
+Track the complete official Publish package and the root ABYA 开发工具.cmd launcher.
+The launcher resolves paths relative to itself, uses bundled Node for a quick package
+check and starts the GUI through Explorer. --check verifies every inventory hash.
+Do not share developer-specific .lnk files, user databases, account state or credentials.
+Publish has a path allowlist in .gitignore; package-files.json lists all runtime files.
+portable-package.mjs rejects private/unexpected files, links, traversal, missing files,
+hash mismatches and oversized normal-Git payloads. --require-tracked catches ignored
+or forgotten release files. Publish bytes use -text attributes to survive clone intact.
+Both the CLI development branch and default main must carry the verified distribution.
+Validate a fresh checkout in a different path, including spaces/non-ASCII characters.
+The application is ready to open without build tools; per-user AI login, game Player
+selection and the Windows WebView2 dependency remain machine prerequisites.
+Rebuilds regenerate the inventory. Staging packages, generated logs and superseded
+release directories remain disposable; recycle only inspected inactive paths. Retain
+database recovery snapshots and current user state outside Git.
+
 publish.ps1 -Validation builds Publish-Staging-Validation without replacing an active package.
 Historical staging switches remain mutually exclusive development destinations. Every build embeds
 version from the package (currently 0.3.0), release stage-workspace-20261009 and UTC build time; manifest workflow version is

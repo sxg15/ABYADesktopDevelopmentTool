@@ -1,0 +1,15 @@
+﻿{
+    "product":  "ABYA Desktop Development Tool",
+    "version":  "0.4.0",
+    "workflowVersion":  "2.1.0",
+    "releaseLabel":  "guidance-action-panel-20261012",
+    "sourceBuiltAtUtc":  "2026-10-12T13:21:56.4107779Z",
+    "builtAtUtc":  "2026-10-12T13:25:21.3960270Z",
+    "executable":  "ABYA Desktop Development Tool.exe",
+    "sha256":  "081FCCF43C0CA698BFB2D4FB4753EFDBCC54A090F163F5187CAF80CFCED311E3",
+    "cliExecutable":  "abya-desktop.exe",
+    "cliSha256":  "941FE0E10C25FC6357391E0A5588253200E368773641D70F4D1B414F35651773",
+    "runtimeCliVersion":  "0.2.0",
+    "cliProtocolVersion":  1,
+    "nodeVersion":  "v24.11.1"
+}

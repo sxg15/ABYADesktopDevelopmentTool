@@ -1,0 +1,7 @@
+interface:
+  display_name: "ABYA 游戏开发任务"
+  short_description: "制作完整 ABYA 玩法或较大改动，按阶段确认、运行验证并交付"
+  default_prompt: "Use $abya-game-development-task to develop this complete ABYA gameplay task through requirements, plan, implementation, review, and delivery."
+
+policy:
+  allow_implicit_invocation: true

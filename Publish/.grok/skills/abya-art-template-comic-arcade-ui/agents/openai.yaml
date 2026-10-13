@@ -1,0 +1,4 @@
+interface:
+  display_name: "漫画街机美术制作"
+  short_description: "结合原始参考图片与通用边框按钮素材，制作清晰、可复用的漫画街机游戏界面"
+  default_prompt: "使用 $abya-art-template-comic-arcade-ui，先查看随包参考图片，再为当前游戏制作并验收漫画街机风格界面。"

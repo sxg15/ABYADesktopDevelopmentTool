@@ -4,6 +4,8 @@ $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $source = Join-Path $root 'Publish-Staging-Validation'
 $destination = Join-Path $root 'Publish'
 $manifest = Get-Content -LiteralPath (Join-Path $source 'build-manifest.json') -Raw | ConvertFrom-Json
+& (Join-Path $source 'runtime/node.exe') (Join-Path $root 'scripts/portable-package.mjs') --package $source
+if ($LASTEXITCODE -ne 0) { throw 'Candidate package inventory verification failed; Publish was not changed.' }
 foreach ($pair in @(@($manifest.executable,$manifest.sha256),@($manifest.cliExecutable,$manifest.cliSha256))) {
     if ((Get-FileHash -LiteralPath (Join-Path $source $pair[0]) -Algorithm SHA256).Hash -ne $pair[1]) { throw 'Package hash mismatch' }
 }
@@ -28,12 +30,6 @@ catch {
     if (-not (Test-Path -LiteralPath $destination) -and (Test-Path -LiteralPath $backup)) { Move-Item -LiteralPath $backup -Destination $destination }
     throw "Promotion failed; previous package preserved. $($_.Exception.Message)"
 }
-$shell = New-Object -ComObject WScript.Shell
-$shortcut = $shell.CreateShortcut((Join-Path $root 'ABYA 开发工具.lnk'))
-$shortcut.TargetPath = Join-Path $env:WINDIR 'explorer.exe'
-$shortcut.Arguments = '"' + (Join-Path $destination $manifest.executable) + '"'
-$shortcut.WorkingDirectory = $destination
-$shortcut.IconLocation = Join-Path $destination $manifest.executable
-$shortcut.Description = 'ABYA 正式入口；沿用当前 Windows 用户的正式任务数据'
-$shortcut.Save()
-[pscustomobject]@{ Release=$manifest.releaseLabel; Version=$manifest.version; Entry=(Join-Path $root 'ABYA 开发工具.lnk'); PreviousPackage=$backup } | ConvertTo-Json
+& (Join-Path $destination 'runtime/node.exe') (Join-Path $root 'scripts/portable-package.mjs') --package $destination
+if ($LASTEXITCODE -ne 0) { throw 'Promoted package inventory verification failed.' }
+[pscustomobject]@{ Release=$manifest.releaseLabel; Version=$manifest.version; Entry=(Join-Path $root 'ABYA 开发工具.cmd'); PreviousPackage=$backup } | ConvertTo-Json

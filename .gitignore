@@ -10,7 +10,28 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-Publish/
+# Distribute only the portable runtime; never user data or login state.
+/Publish/*
+!/Publish/ABYA Desktop Development Tool.exe
+!/Publish/abya-desktop.exe
+!/Publish/build-manifest.json
+!/Publish/package-files.json
+!/Publish/runtime/
+!/Publish/tools/
+!/Publish/.codex/
+!/Publish/.grok/
+/Publish/.codex/*
+!/Publish/.codex/README.md
+!/Publish/.codex/skills/
+/Publish/.grok/*
+!/Publish/.grok/README.md
+!/Publish/.grok/skills/
+/Publish/**/*.db
+/Publish/**/*.db-*
+/Publish/**/*.sqlite*
+/Publish/**/auth.json
+/Publish/**/cli-connection.json
+/Publish/**/.env*
 ReleaseBackups/
 Publish-Incoming-*/
 ABYA 开发工具.lnk
@@ -19,6 +40,7 @@ tools/ffmpeg/runtime/
 tools/ffmpeg/staging-*/
 marker.txt
 *.local
+/.codex-schema-review/
 
 # Editor directories and files
 .vscode/*

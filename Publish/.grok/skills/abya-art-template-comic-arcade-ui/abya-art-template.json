@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "kind": "abya-art-template",
+  "id": "abya-art-template-comic-arcade-ui",
+  "displayName": "漫画街机 UI",
+  "description": "浅灰与薄荷绿、黑白描边、硬投影的漫画街机风格，包含按钮、卡片、头像和图标素材",
+  "sourceSkillName": "comic-arcade-ui"
+}

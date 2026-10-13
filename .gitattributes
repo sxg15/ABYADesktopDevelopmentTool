@@ -1,0 +1,3 @@
+# The portable inventory hashes exact release bytes, including bundled text files.
+/Publish/** binary
+"/ABYA 开发工具.cmd" text eol=crlf

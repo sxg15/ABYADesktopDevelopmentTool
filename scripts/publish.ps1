@@ -143,4 +143,7 @@ $manifest = [ordered]@{
 }
 $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $publish "build-manifest.json") -Encoding utf8
 
+& (Join-Path $runtime 'node.exe') (Join-Path $root 'scripts/portable-package.mjs') --package $publish --write
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Get-ChildItem -LiteralPath $publish | Select-Object Name,Length,LastWriteTime
