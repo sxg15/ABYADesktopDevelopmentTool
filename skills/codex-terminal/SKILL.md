@@ -144,3 +144,18 @@ A connected needsConnection queue projects awaitingContinue without mutating its
 request, receipt or approvals. Connection and execution remain separate DTO fields.
 Regression tests cover conflict-to-retry identity, sanitized RPC diagnostics, failed
 executor cleanup and connected pending continuation without new turn/start calls.
+
+## Workspace startup recovery (2026-10-13)
+preflight first performs a bounded authenticated pipe doctor request using the new
+conversation's live capability. Missing/unhealthy service, CLI binary or workspace
+remain fatal. The separate codex sandbox doctor only probes workspace execution;
+its failure is a classified warning after Desktop health has passed, allowing native
+terminal/permission controls to open. This is not a sandbox bypass: runtime thread
+config receives the current scoped environment, native permissions remain unchanged,
+and each actual tool command still faces native sandbox/approval and CLI authorization.
+Never fall back to HTTP or standalone credentials. Never auto-start a model turn.
+Warnings expose only fixed classifications, exit/OS codes and safe guidance in the
+workflow and correlated connection diagnostics; raw stdout/stderr remain private.
+Deleting a conversation also clears queue task/cancellation/stopping indexes. Native
+history is still archived first. Test clean delete/recreate plus an injected failed
+workspace probe with a healthy service and a hard failure after the service stops.

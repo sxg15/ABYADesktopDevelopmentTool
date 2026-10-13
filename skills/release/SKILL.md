@@ -193,3 +193,8 @@ Sync/check bundles include art-requirements.template.md and four approval gates
 (requirements/resources/plan/delivery). Frontend, Rust and workflow tests cover art
 confirmation and legacy policy compatibility. Source changes do not upgrade running
 user task workspaces or replace the installed Publish package implicitly.
+
+## Conversation startup release (2026-10-13)
+Default/Validation packages use conversation-startup-fix-20261013, retaining recovery
+and IME fixes. Run clean native delete/recreate and failed-probe isolation in addition
+to regular checks. Preserve complete tracked Publish and validate a fresh checkout.

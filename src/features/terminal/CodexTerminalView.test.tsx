@@ -44,6 +44,7 @@ const terminalApiMock = vi.hoisted(() => ({
   write: vi.fn(async () => undefined),
   resize: vi.fn(async () => undefined),
   stop: vi.fn(async () => undefined),
+  executionSettings: vi.fn(async () => ({connected:true,running:false,models:[],settings:{model:'fixture'}})),
 }));
 
 const terminalGrid = vi.hoisted(() => ({ cols: 80, rows: 24 }));
@@ -203,6 +204,34 @@ it("keeps a failed resume actionable and retries only on an explicit reconnect",
 });
 
 describe("Codex conversation list", () => {
+  it("serializes deletion and creation, ignoring focus refresh and old list responses", async () => {
+    vi.spyOn(window,'confirm').mockReturnValue(true);
+    let finishDelete!:()=>void;
+    terminalApiMock.deleteConversation.mockImplementationOnce(()=>new Promise<void>(resolve=>{finishDelete=resolve;}));
+    const replacement={...conversation,id:'conversation-2',title:'New conversation'};
+    terminalApiMock.createConversation.mockResolvedValueOnce(replacement);
+    renderView();await screen.findAllByText('Original title');
+    fireEvent.click(screen.getByTitle('Delete conversation'));
+    fireEvent(window,new Event('focus'));
+    expect((screen.getByTitle('New conversation') as HTMLButtonElement).disabled).toBe(true);
+    expect(terminalApiMock.listConversations).toHaveBeenCalledTimes(1);
+    expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
+    await act(async()=>finishDelete());
+    fireEvent.click(screen.getByTitle('New conversation'));
+    await screen.findAllByText('New conversation');
+    expect(terminalApiMock.createConversation).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Original title')).toBeNull();
+    vi.mocked(window.confirm).mockRestore();
+  });
+  it("keeps native terminal controls available when workspace probe reports a warning",async()=>{
+    renderView();await screen.findAllByText('Original title');giveHostLayout();notifyResize();
+    await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+    await act(async()=>terminalChannels[terminalChannels.length-1].onmessage?.({type:'workflow',workflow:{taskId:'task-1',conversationId:'conversation-1',observability:'native',warning:'工作区沙箱启动检查失败；APP 服务正常，权限仍由原生沙箱控制',turns:[],updatedAt:'now'}}));
+    expect((await screen.findByText(/工作区沙箱启动检查失败；APP 服务正常/)).getAttribute('role')).toBe('alert');
+    expect(screen.getByTitle('Pause task')).toBeTruthy();
+    expect((screen.getByLabelText('权限') as HTMLSelectElement).disabled).toBe(false);
+    expect(screen.queryByText('原对话尚未接回')).toBeNull();
+  });
   it("copies persisted history while the terminal is stopped and shows success", async () => {
     terminalApiMock.open.mockResolvedValueOnce({
       taskId: "task-1", conversationId: "conversation-1", status: "exited",

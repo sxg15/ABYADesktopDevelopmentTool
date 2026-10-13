@@ -636,6 +636,7 @@ tbody tr:hover { background: #f7faf8; }
   max-height: 35vh; overflow: auto; overflow-wrap: anywhere; flex-shrink: 0;
 }
 .terminal-recovery strong { font-size: 18px; }
+.terminal-startup-warning { padding: 8px 10px; margin-bottom: 8px; color: #714a0c; background: #fff3d9; border-left: 4px solid #b67a16; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; max-height: 24vh; overflow: auto; }
 .terminal-recovery p { margin: 6px 0; white-space: pre-wrap; }
 .codex-terminal.with-task-control:has(> .terminal-recovery) { grid-template-rows: auto auto auto minmax(0,1fr); }
 .terminal-unavailable {

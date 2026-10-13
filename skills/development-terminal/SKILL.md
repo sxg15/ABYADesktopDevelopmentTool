@@ -146,3 +146,11 @@ an explicit Reconnect original conversation button. Resize/poll must not retry i
 A manual reconnect only attaches the exact ID; it neither creates nor flushes an
 intent. Continue task remains separate and unavailable while attachment has failed.
 Validate busy-error visibility, same-ID manual retry and no archive/new-chat calls.
+
+## Conversation recreation (2026-10-13)
+Serialize create/delete/archive UI actions with an immediate ref guard and invalidate
+pending list responses. Focus refresh cannot auto-create while deletion is pending.
+Unmount the deleted terminal view before awaiting backend shutdown. Task/provider
+changes clear the guard, and stale action completions cannot overwrite new selection.
+Native workflow startup warnings remain visible in the notice row while connected;
+they do not disable permission controls or claim that tools have executed successfully.

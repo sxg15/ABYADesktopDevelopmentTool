@@ -160,3 +160,8 @@ Failed Codex attachment uses a red, wrapping, accessible recovery panel above th
 terminal. Keep its diagnostic number readable, cap its height with scrolling, and
 reserve the terminal's remaining grid row. Physical connection and task execution
 labels appear separately in the toolbar. The retry action reads 接回原对话.
+
+## Workspace preflight warning (2026-10-13)
+Connected terminal startup warnings appear as a wrapping amber notice with bounded
+scrolling above the task-status text. Keep terminal input and native execution controls
+available. A warning describes an earlier probe, not approval or successful tool execution.

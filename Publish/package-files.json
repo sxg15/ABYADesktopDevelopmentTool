@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "terminal-ime-fix-20261013",
-  "totalBytes": 316081163,
+  "releaseLabel": "conversation-startup-fix-20261013",
+  "totalBytes": 316339731,
   "files": [
     {
       "path": ".codex/README.md",
@@ -760,18 +760,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 22248448,
-      "sha256": "31d9a527a52b329302c0511b62b07f26c65eba37cadea99f738be00c5d329954"
+      "bytes": 22507008,
+      "sha256": "c682515f3578d6f86bab079bf68619fec59d46a7ed4128d634287e4696c0e4f7"
     },
     {
       "path": "abya-desktop.exe",
       "bytes": 5982208,
-      "sha256": "2e6346971c79e632960774ffbd4cf2a0e379897e8e27f10312ac565a60c016bb"
+      "sha256": "2614999539f2625732b89af34ca512c6280551bea5bae563466adf69a6accd3b"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 608,
-      "sha256": "daf2a5e605931cc614fbcb6834a310564089b4be9a0b9073be28f39645c71408"
+      "bytes": 616,
+      "sha256": "c261f6ed5c3dfa74131e90790b7e5b12419981076df27ef43d8ee6a7e5c67b68"
     },
     {
       "path": "runtime/LICENSE.txt",

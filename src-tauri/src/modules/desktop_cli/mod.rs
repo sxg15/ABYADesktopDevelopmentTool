@@ -257,6 +257,7 @@ mod tests {
 
     struct Fixture {
         service: DesktopCliService,
+        codex: CodexTerminalService,
         settings: AppSettings,
         tasks: TaskService,
         root: PathBuf,
@@ -264,6 +265,7 @@ mod tests {
 
     impl Drop for Fixture {
         fn drop(&mut self) {
+            self.codex.stop_all();
             self.service.stop();
             let _ = std::fs::remove_dir_all(&self.root);
         }
@@ -305,7 +307,7 @@ mod tests {
         let service = DesktopCliService::new(DesktopCliDependencies::new(
             settings_service,
             tasks.clone(),
-            codex_terminal,
+            codex_terminal.clone(),
             grok_terminal,
             DesktopCliGameDependencies::new(
                 instances,
@@ -319,6 +321,7 @@ mod tests {
         let port = available_port();
         Fixture {
             service,
+            codex: codex_terminal,
             settings: AppSettings {
                 game_executable_path: String::new(),
                 workspace_root_path: root.join("workspaces").to_string_lossy().into_owned(),
@@ -338,6 +341,78 @@ mod tests {
     fn available_port() -> u16 {
         let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
         listener.local_addr().unwrap().port()
+    }
+
+    #[test]
+    #[ignore = "Requires installed Codex and built CLI; isolated workspace, no inference"]
+    fn delete_then_recreate_conversation_sandbox_smoke() {
+        let f = fixture();
+        let workspace = PathBuf::from(std::env::var("ABYA_TEST_WORKSPACE").unwrap())
+            .join(format!("recreate-{}", Uuid::new_v4()));
+        f.tasks.set_workspace_root(workspace.clone());
+        f.service.start(&f.settings).unwrap();
+        let task = f
+            .tasks
+            .create(crate::modules::tasks::TaskInput {
+                title: "删除后重建隔离验证".into(),
+                description: String::new(),
+            })
+            .unwrap();
+        let first = f.codex.create_conversation(&task.id, None).unwrap();
+        assert!(
+            f.codex
+                .preflight_for_test(&task.id, &first.id)
+                .unwrap()
+                .is_none()
+        );
+        println!("first sandbox preflight: passed");
+        f.codex
+            .open(
+                &task.id,
+                &first.id,
+                100,
+                30,
+                tauri::ipc::Channel::new(|_| Ok(())),
+            )
+            .unwrap();
+        f.codex.delete_conversation(&task.id, &first.id).unwrap();
+        let next = f.codex.create_conversation(&task.id, None).unwrap();
+        assert_ne!(first.id, next.id);
+        let fake = f.root.join("failing-probe.cmd");
+        std::fs::write(&fake, "@echo off\r\necho windows sandbox failed: CreateProcessAsUserW failed: 267 (invalid directory) 1>&2\r\nexit /b 1\r\n").unwrap();
+        let warning = f
+            .codex
+            .failed_workspace_probe_for_test(&task.id, &next.id, fake.clone())
+            .unwrap()
+            .unwrap();
+        assert_eq!(warning.code, "workspace_preflight_warning");
+        assert!(warning.detail.contains("267"));
+        assert!(
+            f.codex
+                .preflight_for_test(&task.id, &next.id)
+                .unwrap()
+                .is_none()
+        );
+        println!("replacement sandbox preflight: passed");
+        f.codex
+            .open(
+                &task.id,
+                &next.id,
+                100,
+                30,
+                tauri::ipc::Channel::new(|_| Ok(())),
+            )
+            .unwrap();
+        f.codex.delete_conversation(&task.id, &next.id).unwrap();
+        f.service.stop();
+        assert!(
+            f.codex
+                .failed_workspace_probe_for_test(&task.id, &next.id, fake)
+                .is_err(),
+            "No fallback when the actual Desktop service is stopped"
+        );
+        f.codex.stop_all();
+        println!("replacement terminal and cleanup: passed");
     }
 
     #[test]

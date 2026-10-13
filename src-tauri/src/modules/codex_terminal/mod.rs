@@ -1,5 +1,6 @@
 mod app_server;
 mod diagnostics;
+mod preflight;
 mod recovery;
 mod resume_failure;
 pub use recovery::RecoveryCandidate;
@@ -159,6 +160,38 @@ pub struct CodexTerminalService {
 }
 
 impl CodexTerminalService {
+    #[cfg(test)]
+    pub(crate) fn preflight_for_test(
+        &self,
+        task: &str,
+        conversation: &str,
+    ) -> AppResult<Option<AppError>> {
+        let (codex, record) = self.validate_open_request(task, conversation)?;
+        preflight::check(
+            &codex,
+            Path::new(&record.workspace_path),
+            task,
+            conversation,
+        )
+    }
+    #[cfg(test)]
+    pub(crate) fn failed_workspace_probe_for_test(
+        &self,
+        task: &str,
+        conversation: &str,
+        runner: PathBuf,
+    ) -> AppResult<Option<AppError>> {
+        let record = self.tasks.get(task)?;
+        preflight::check(
+            &ResolvedCodex {
+                path: runner,
+                kind: CodexLaunchKind::CommandScript,
+            },
+            Path::new(&record.workspace_path),
+            task,
+            conversation,
+        )
+    }
     pub fn new(tasks: TaskService) -> AppResult<Self> {
         Ok(Self {
             tasks,
@@ -424,6 +457,9 @@ impl CodexTerminalService {
         if directory.is_dir() {
             std::fs::remove_dir_all(directory)?;
         }
+        self.queue_tasks.lock().remove(conversation_id);
+        self.cancelled.lock().remove(conversation_id);
+        self.stopping.lock().remove(conversation_id);
         Ok(())
     }
 
@@ -521,11 +557,12 @@ impl CodexTerminalService {
             server.ensure_idle(&native)?;
         }
         #[cfg(not(test))]
-        if let Err(error) =
-            app_server::preflight_cli(&codex, &working_directory, task_id, conversation_id)
-        {
-            crate::foundation::cli_sessions::revoke("codex", conversation_id);
-            return Err(error);
+        match preflight::check(&codex, &working_directory, task_id, conversation_id) {
+            Ok(warning) => attempt.warning = warning,
+            Err(error) => {
+                crate::foundation::cli_sessions::revoke("codex", conversation_id);
+                return Err(error);
+            }
         }
         let mut conversation = self.conversation(task_id, conversation_id)?;
         let mut native_session_id = conversation.native_session_id.clone();
@@ -634,7 +671,14 @@ impl CodexTerminalService {
                         (task_id.to_string(), conversation_id.to_string()),
                     );
                     remote = Some(server);
-                    (CodexObservabilityStatus::Native, String::new())
+                    (
+                        CodexObservabilityStatus::Native,
+                        attempt
+                            .warning
+                            .as_ref()
+                            .map(|e| e.message.clone())
+                            .unwrap_or_default(),
+                    )
                 }
             }
         } else if cfg!(test) {

@@ -69,3 +69,11 @@ conversation report accepts optional plan objects with step and pending/inProgre
 production start-acceptance / acceptance-status expose development_production_start_acceptance / development_production_acceptance_status, with authenticated task binding and the same RuntimeBridge service used by APP.
 production update adds configure-acceptance, register-visual, save-self-test, reuse-evidence and update-feedback. Contracts are in production-records; old save-round/set-milestone remain for pinned 1.x tasks only.
 No Agent command can close human feedback, upload via the APP-only attachment action, or approve documents. User feedback operations are Tauri-only. Acceptance start changes process state but never accepts a game.
+
+## Recreation integration validation (2026-10-13)
+The opt-in delete_then_recreate_conversation_sandbox_smoke requires a built debug CLI,
+installed Codex and ABYA_TEST_WORKSPACE pointing to disposable local storage. It
+creates a task, checks sandbox doctor, opens/deletes/recreates native conversations,
+and verifies independent IDs. A failed workspace probe remains a warning only with
+authenticated healthy Desktop service; stopping the service must still block opening.
+No model inference or game actions. Run alone because managed leases are process-global.

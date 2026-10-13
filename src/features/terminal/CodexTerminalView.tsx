@@ -77,6 +77,7 @@ export function DevelopmentTerminalView({
   const [metrics, setMetrics] = useState<string>();
   useEffect(() => { setMetrics(undefined); setRecoveryId(""); setRecoveryCandidates([]); }, [taskId, selectedId]);
   const [conversationBusy, setConversationBusy] = useState(false);
+  const mutationPending = useRef(false);
   const refreshRevision = useRef(0);
   const onConversationChangeRef = useRef(onConversationChange);
   const onWorkflowChangeRef = useRef(onWorkflowChange);
@@ -90,6 +91,7 @@ export function DevelopmentTerminalView({
   }, [onWorkflowChange]);
 
   async function refreshConversations() {
+    if (mutationPending.current) return;
     const revision = ++refreshRevision.current;
     setLoading(true);
     try {
@@ -123,6 +125,10 @@ export function DevelopmentTerminalView({
   }
 
   useEffect(() => {
+    mutationPending.current = false; setConversationBusy(false);
+  }, [provider, taskId]);
+
+  useEffect(() => {
     setShowArchived(false);
     setProjectFolder(undefined);
     void refreshConversations();
@@ -145,16 +151,19 @@ export function DevelopmentTerminalView({
   }, [visible, provider, taskId, conversationBusy]);
 
   async function setArchived(conversation: CodexConversation) {
-    setConversationBusy(true); refreshRevision.current++;
+    if (mutationPending.current) return;
+    mutationPending.current = true;
+    setConversationBusy(true); const revision = ++refreshRevision.current;
     try {
       const updated = await terminalApi.setArchived(taskId, conversation.id, !conversation.archived);
+      if (revision !== refreshRevision.current) return;
       setConversations(current => current.map(item => item.id === updated.id ? updated : item));
       setOpenedIds(current => current.filter(id => id !== updated.id));
       if (selectedId === updated.id) setSelectedId("");
       if (!updated.archived) setShowArchived(false);
       setError("");
     } catch (value) { setError(errorMessage(value)); }
-    finally { setConversationBusy(false); setLoading(false); }
+    finally { if (revision === refreshRevision.current) { mutationPending.current = false; setConversationBusy(false); setLoading(false); } }
   }
 
   useEffect(() => {
@@ -176,8 +185,12 @@ export function DevelopmentTerminalView({
   }, [conversations, provider, selectedId, taskId]);
 
   async function createConversation() {
+    if (mutationPending.current || loading) return;
+    mutationPending.current = true; setConversationBusy(true);
+    const revision = ++refreshRevision.current;
     try {
       const conversation = await terminalApi.createConversation(provider, taskId);
+      if (revision !== refreshRevision.current) return;
       setConversations((current) => [conversation, ...current]);
       setShowArchived(false);
       setSelectedId(conversation.id);
@@ -185,6 +198,8 @@ export function DevelopmentTerminalView({
       setError("");
     } catch (value) {
       setError(errorMessage(value));
+    } finally {
+      if (revision === refreshRevision.current) { mutationPending.current = false; setConversationBusy(false); setLoading(false); }
     }
   }
 
@@ -210,9 +225,16 @@ export function DevelopmentTerminalView({
   }
 
   async function deleteConversation(conversation: CodexConversation) {
-    if (!window.confirm(t("deleteConversationConfirm"))) return;
+    if (mutationPending.current) return;
+    mutationPending.current = true; setConversationBusy(true);
+    const revision = ++refreshRevision.current;
     try {
+      if (!window.confirm(t("deleteConversationConfirm"))) return;
+      // Detach the UI before waiting for the old PTY to close; block focus refresh
+      // from recreating an empty list while deletion is still in flight.
+      setOpenedIds(current => current.filter(id => id !== conversation.id));
       await terminalApi.deleteConversation(provider, taskId, conversation.id);
+      if (revision !== refreshRevision.current) return;
       const allRemaining = conversations.filter((item) => item.id !== conversation.id);
       const remaining = allRemaining.filter(item => !item.archived);
       setConversations(allRemaining);
@@ -233,6 +255,8 @@ export function DevelopmentTerminalView({
       }
     } catch (value) {
       setError(errorMessage(value));
+    } finally {
+      if (revision === refreshRevision.current) { mutationPending.current = false; setConversationBusy(false); setLoading(false); }
     }
   }
 
@@ -273,7 +297,7 @@ export function DevelopmentTerminalView({
           <button
             className="icon-button"
             title={t("newConversation")}
-            disabled={conversationBusy}
+            disabled={conversationBusy || loading}
             onClick={createConversation}
           >
             <CirclePlus size={16} />
@@ -497,6 +521,7 @@ function ConversationTerminal({
   const onWorkflowChangeRef = useRef(onWorkflowChange);
   const [viewMode, setViewMode] = useState<"terminal" | "history">("terminal");
   const [state, setState] = useState<CodexTerminalState>();
+  const [startupWarning, setStartupWarning] = useState("");
   const [error, setError] = useState("");
   const [atBottom, setAtBottom] = useState(true);
   const [historyAtBottom, setHistoryAtBottom] = useState(true);
@@ -688,6 +713,7 @@ function ConversationTerminal({
           setState(event.state);
           if (event.state.lastError) setError(event.state.lastError);
         } else {
+          setStartupWarning(event.workflow.warning);
           onWorkflowChangeRef.current?.(event.workflow);
         }
       };
@@ -777,6 +803,7 @@ function ConversationTerminal({
       if (disposed) return;
       resetAfterAttach = reset;
       setError("");
+      setStartupWarning("");
       setState((current) => ({
         taskId,
         conversationId: conversation.id,
@@ -950,6 +977,7 @@ function ConversationTerminal({
         </div>
       </div>
       {provider==="codex" && <div className="terminal-task-notice" role="status">
+        {startupWarning && <p className="terminal-startup-warning" role="alert">{startupWarning}</p>}
         {controlText(control)}{actionNotice&&` · ${actionNotice}`}
           {control?.turnId && !["running","queued","waitingForResponse"].includes(control.state) && <strong> · 以下为上次执行记录，并非当前运行进度</strong>}
       </div>}

@@ -48,6 +48,7 @@ pub(super) struct OpenAttempt {
     started: Instant,
     pub stage: &'static str,
     pub server: Option<AppServerHandle>,
+    pub warning: Option<AppError>,
 }
 impl OpenAttempt {
     pub fn new() -> Self {
@@ -56,6 +57,7 @@ impl OpenAttempt {
             started: Instant::now(),
             stage: "preflight",
             server: None,
+            warning: None,
         }
     }
 
@@ -67,12 +69,14 @@ impl OpenAttempt {
         error: Option<&AppError>,
     ) -> Option<AppError> {
         let rpc = error
+            .or(self.warning.as_ref())
             .and_then(|e| serde_json::from_str::<serde_json::Value>(&e.detail).ok())
             .unwrap_or_default();
         let entry = json!({"at":Utc::now().to_rfc3339(),"event":if error.is_some(){"open-failed"}else{"open-succeeded"},
             "requestId":self.id,"taskId":task,"conversationId":conversation.id,"nativeSessionId":conversation.native_session_id,
             "stage":self.stage,"elapsedMs":self.started.elapsed().as_millis(),"backendPid":self.server.as_ref().and_then(AppServerHandle::pid),
             "errorCode":error.map(|e|e.code.as_str()),"method":rpc["method"].as_str(),"nativeCode":rpc["nativeCode"].as_i64(),
+            "warningCode":self.warning.as_ref().map(|e|e.code.as_str()),"probeCode":rpc["probeCode"].as_str(),"exitCode":rpc["exitCode"].as_i64(),"osCode":rpc["osCode"].as_i64(),
             "appVersion":env!("CARGO_PKG_VERSION")});
         let path =
             conversation_directory(workspace, &conversation.id).join("connection-events.jsonl");
