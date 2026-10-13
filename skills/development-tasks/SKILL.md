@@ -1,5 +1,18 @@
 # Development Tasks Skill
 
+## Programmer issue escalation (2026-10-13)
+Issues accept optional repairTarget: abya-source/abya-build/lua/other. Validate the
+enum; preserve the previous value when omitted on update. This identifies ownership,
+not a new gate or permission. Existing kind, affectedStages and evidence checks remain.
+During Lua implementation, unresolved source/build issues take priority in the task
+guide as red programmer attention, and have a stage banner and red issue cards.
+Resolved records leave active alerts and retain a neutral origin label. Explicit
+lua/other suppresses legacy inference. Old pinned records with explicit programmer
+handoff language plus engine/build context appear as suspected, never confirmed.
+Confirmed targets also receive red labels in exported issue reports. Bundled record
+instructions teach both providers to supply source evidence, build version and recheck
+conditions. Do not mutate pinned workspace Skills merely to add this presentation.
+
 ## Purpose
 
 Manage persistent development work items and their lifecycle.

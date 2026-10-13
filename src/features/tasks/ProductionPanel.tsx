@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, FileText, FolderOpen } from "lucide-react";
+import { Check, FileText, FolderOpen, TriangleAlert } from "lucide-react";
 import {
   productionApi,
   type ProductionView,
@@ -15,6 +15,7 @@ import { AcceptanceLauncher } from "./AcceptanceLauncher";
 import { VisualGallery } from "./VisualGallery";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { DocumentReview } from "./DocumentReview";
+import { programmerIssue, activeProgrammerIssues } from "./programmerIssue";
 
 const names: Record<string, string> = {
   requirements: "需求整理",
@@ -159,7 +160,8 @@ export function ProductionPanel({
         affected(i, stage) &&
         (r.stages[stage] !== "passed" || i.stage === stage),
     ) ?? [];
-  const openIssues = issues.filter((i) => i.status !== "resolved");
+  const openIssues = issues.filter((i) => i.status !== "resolved").sort((a,b)=>Number(!!programmerIssue(b))-Number(!!programmerIssue(a)));
+  const programmerIssues = stage === "implementation" ? activeProgrammerIssues(openIssues) : [];
   const groups =
     r?.questionGroups?.filter((g) => (g.stage ?? "requirements") === stage) ??
     [];
@@ -212,7 +214,10 @@ export function ProductionPanel({
     }
   }
   const issueCard = (i: ProductionIssue) => (
-    <article className={`production-issue-card issue-${i.status}`} key={i.id}>
+    <article className={`production-issue-card issue-${i.status}${programmerIssue(i) && i.status !== "resolved" ? " programmer-issue" : ""}`} key={i.id}>
+      {programmerIssue(i,en) && <div className="programmer-issue-label"><TriangleAlert size={18} aria-hidden="true"/>
+        {programmerIssue(i,en)!.label} · {i.status === "resolved" ? (en ? "Resolved" : "已修复") : programmerIssue(i)!.suspected ? (en ? "Programmer investigation required" : "需要程序排查") : (en ? "Programmer fix required" : "需要程序修复")}
+      </div>}
       <div className="production-card-heading">
         <strong>{i.title || i.description.split(/[。\n]/)[0]}</strong>
         <span className={`production-status status-${i.status}`}>
@@ -377,6 +382,12 @@ export function ProductionPanel({
         </section>
       ) : (
         <>
+          {programmerIssues.length > 0 && <section className="programmer-blocker-banner" role="alert">
+            <TriangleAlert size={26} aria-hidden="true"/>
+            <div><h3>{en ? "Programmer attention required" : "程序处理提醒：ABYA 源码／构建包问题"}</h3>
+              <p>{en ? `${programmerIssues.length} unresolved issues need programmer attention. Verify the corrected source/build before resuming affected steps.` : `有 ${programmerIssues.length} 项未解决问题需要程序处理。请排查或修复游戏源码／构建包，使用修复后的构建包复验，再继续受影响步骤。`}</p>
+            </div>
+          </section>}
           <section
             className={`production-overview ${openIssues.length ? "has-issues" : ""}`}
           >

@@ -28,6 +28,7 @@ export interface ProductionPolicy {
   questions: { id: string; text: string; family: string }[];
 }
 export interface ProductionIssue {
+  repairTarget?: "abya-source" | "abya-build" | "lua" | "other";
   title?: string; affectedStages?: string[]; blockedOperations?: string[];
   id: string; kind: string; status: string; stage: string; description: string;
   fix?: string; recheck?: string; resumeWhen?: string; evidenceIds?: string[];

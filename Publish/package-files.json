@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "conversation-startup-fix-20261013",
-  "totalBytes": 316339731,
+  "releaseLabel": "programmer-alert-20261013",
+  "totalBytes": 316543921,
   "files": [
     {
       "path": ".codex/README.md",
@@ -300,8 +300,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/production-records.md",
-      "bytes": 8474,
-      "sha256": "7e37ffdbd26f254ec70ff1dbad851c14caee7d0274c53da49e2c800fa00fb6b4"
+      "bytes": 9201,
+      "sha256": "d2cdb170b5db37c07538391594d3849572503c7c6a6b35ef08e1f83da857236a"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/production-stages.md",
@@ -675,8 +675,8 @@
     },
     {
       "path": ".grok/skills/abya-game-development-task/references/production-records.md",
-      "bytes": 8370,
-      "sha256": "c6fdf085869989d23b583660be2b704672cf25740c37bda0ea04394298df4640"
+      "bytes": 9089,
+      "sha256": "f0f1eeef98d4b6823254c2a2eb52572dd8fbf5983c9cb3fc68e464ba22fb13f1"
     },
     {
       "path": ".grok/skills/abya-game-development-task/references/production-stages.md",
@@ -760,18 +760,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 22507008,
-      "sha256": "c682515f3578d6f86bab079bf68619fec59d46a7ed4128d634287e4696c0e4f7"
+      "bytes": 22709760,
+      "sha256": "287ca1368f5b5da3f6ca22105612d7def89d1720fcc8820e33c0125a49243f49"
     },
     {
       "path": "abya-desktop.exe",
       "bytes": 5982208,
-      "sha256": "2614999539f2625732b89af34ca512c6280551bea5bae563466adf69a6accd3b"
+      "sha256": "dabe2911f95cb5e15657f81658b242cd54ca4967471c3025bb022358453158e0"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 616,
-      "sha256": "c261f6ed5c3dfa74131e90790b7e5b12419981076df27ef43d8ee6a7e5c67b68"
+      "bytes": 608,
+      "sha256": "9c6c640dd53bee68a8ee35c07ee58db76edbe1871bd8bbc386c9334cfa14d292"
     },
     {
       "path": "runtime/LICENSE.txt",

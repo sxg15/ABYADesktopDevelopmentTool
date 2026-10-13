@@ -1,8 +1,9 @@
 import type { ProductionView, TaskControlState } from "../../shared/production";
 import type { TerminalWorkflowSnapshot } from "../../shared/types";
 import { stageName } from "./productionText";
+import { activeProgrammerIssues, programmerIssue } from "./programmerIssue";
 
-export type GuidanceTone = "waiting" | "human" | "terminal" | "error" | "neutral";
+export type GuidanceTone = "waiting" | "human" | "terminal" | "error" | "neutral" | "programmer";
 export interface GuidancePending { taskId: string; questions: number; reviews: number; terminal: number }
 export interface GuidanceModel {
   key: string; tone: GuidanceTone; title: string; instruction: string; detail: string;
@@ -23,6 +24,7 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
   const currentControl = !control?.taskId || control.taskId === taskId ? control : undefined;
   const state = currentControl?.state ?? (observed && turn ? ({inProgress:"running",waitingForPlan:"waitingForResponse",completed:"ready",failed:"failed",interrupted:"paused"}[turn.status]) : "unknown");
   const stage = r?.currentStage ?? "requirements";
+  const programmerIssues = stage === "implementation" ? activeProgrammerIssues(r?.issues ?? []) : [];
   const stageLabel = r ? stageName(stage, view?.policy.stages.find(s => s.id === stage)?.name ?? stage, en ? "en-US" : undefined) : "";
   const pending = { taskId, questions: active ? groups.length : 0, reviews: active ? reviews.length : 0, terminal: active && state === "waitingForTerminal" ? 1 : 0 };
   const model: GuidanceModel = {
@@ -34,6 +36,11 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
   };
   const set = (value: Partial<GuidanceModel>) => Object.assign(model, value);
   if (!active) set({key:"closed",title:text("任务已结束", "Task ended"),instruction:text("可以查看已保存的成果与历史记录。", "Saved results and history remain available."),detail:text("恢复任务后才能继续操作。", "Reactivate the task to continue."),action:"none",destination:""});
+  else if (programmerIssues.length) set({key:`programmer:${programmerIssues.map(i=>i.id).join(",")}`,tone:"programmer",attention:true,action:"stage",
+    title:text(programmerIssues.every(i=>programmerIssue(i)?.suspected) ? "疑似 ABYA 程序问题 · 需要排查" : "ABYA 程序缺陷 · 需要程序修复", "ABYA source/build issue · programmer required"),
+    instruction:text(`Lua 执行阶段有 ${programmerIssues.length} 项源码／构建包问题需要程序处理。`, `${programmerIssues.length} source/build issues need programmer attention during Lua implementation.`),
+    destination:text("处理位置：Lua 阶段的问题与阻塞", "Review in: Lua issues and blockers"),button:text("查看程序待修复问题", "View programmer issues"),
+    detail:text("请程序排查或修复后提供更新的构建包，复验通过再继续受影响步骤。", "Investigate or fix, provide an updated build, and recheck before resuming affected steps.")});
   else if (state === "waitingForTerminal") set({
     key:"terminal",tone:"terminal",attention:true,title:text("终端需要你处理", "Your input is needed in the terminal"),
     instruction:text("一项输入或确认正在等待你的处理。", "An input or approval request needs your response."),

@@ -15,6 +15,18 @@ const fixture = (): ProductionView => ({
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); sessionStorage.clear(); });
 describe("Production decisions", () => {
+  it("highlights source/build problems while keeping resolved records out of the red alert",async()=>{
+    const value=fixture();value.record!.currentStage="implementation";value.record!.stages.implementation="blocked";
+    value.policy.stages.push({id:"implementation",name:"Lua",approval:null});
+    value.record!.issues=[{id:"engine",kind:"blocker",status:"open",stage:"implementation",description:"Input dispatch defect",repairTarget:"abya-source"},
+      {id:"old",kind:"defect",status:"resolved",stage:"implementation",description:"Old build issue",repairTarget:"abya-build"}];
+    vi.mocked(productionApi.get).mockResolvedValue(value);
+    render(<ProductionPanel taskId="a" active/>);
+    expect((await screen.findByRole("alert")).textContent).toContain("1 项未解决问题");
+    expect(screen.getAllByText("Input dispatch defect")[0].closest("article")?.classList.contains("programmer-issue")).toBe(true);
+    expect(screen.getByText(/ABYA 游戏源码缺陷 · 需要程序修复/)).toBeTruthy();
+    expect(screen.getAllByText("Old build issue")[0].closest("article")?.classList.contains("programmer-issue")).toBe(false);
+  });
   it("opens a requested review after loading the production tab and leaves the decision unselected", async () => {
     const view=fixture(), opened=vi.fn(); vi.mocked(productionApi.get).mockResolvedValue(view);
     render(<ProductionPanel taskId="a" active locale="en-US" requestedReview={view.record!.documents.requirements} onReviewOpened={opened} />);

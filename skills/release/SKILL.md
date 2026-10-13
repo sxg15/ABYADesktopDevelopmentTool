@@ -1,5 +1,11 @@
 # Release Skill
 
+## Programmer alert release (2026-10-13)
+Default/Validation builds use programmer-alert-20261013. Sync the updated canonical
+production-records reference to Grok and ship both bundles. Verify confirmed/legacy
+suspected classifications, ordinary Lua exclusions, resolved alerts and responsive
+red guidance. Keep existing task pins and previous terminal fixes intact.
+
 ## Terminal IME release (2026-10-13)
 Default and Validation packages use terminal-ime-fix-20261013 and retain the
 session recovery fixes. scripts/ime-preview.html provides an isolated real xterm

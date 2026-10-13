@@ -1,5 +1,9 @@
 # Foundation Skill
 
+ProductionIssue optionally carries repairTarget (abya-source, abya-build, lua, other)
+for programmer handoff display. Legacy records remain readable without it. Ownership
+classification and validation remain in development-tasks; no database migration.
+
 ## Purpose
 
 Provide shared errors, DTO conventions, SQLite access, paths, secret storage,

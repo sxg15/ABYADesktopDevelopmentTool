@@ -10,6 +10,31 @@ struct Fixture {
 }
 
 #[test]
+fn programmer_repair_target_is_validated_and_preserved_on_issue_updates() {
+    let f = Fixture::new();
+    let mut issue = json!({"id":"source-bug","stage":"implementation","kind":"blocker","status":"open","description":"Input event is missing","resumeWhen":"程序修复源码后提供新构建包复验","repairTarget":"abya-source"});
+    let view = f.apply("save-issue", issue.clone()).unwrap();
+    assert_eq!(
+        view.record.unwrap().issues[0]["repairTarget"],
+        "abya-source"
+    );
+    issue.as_object_mut().unwrap().remove("repairTarget");
+    issue["status"] = json!("in-progress");
+    let view = f.apply("save-issue", issue.clone()).unwrap();
+    assert_eq!(
+        view.record.unwrap().issues[0]["repairTarget"],
+        "abya-source"
+    );
+    issue["repairTarget"] = json!("anything");
+    assert!(f.apply("save-issue", issue.clone()).is_err());
+    issue["repairTarget"] = json!("lua");
+    assert_eq!(
+        f.apply("save-issue", issue).unwrap().record.unwrap().issues[0]["repairTarget"],
+        "lua"
+    );
+}
+
+#[test]
 fn drafts_remain_visible_while_scoped_blocker_prevents_stage_completion() {
     let f = Fixture::new();
     f.doc("requirements", "Confirmed rules");
