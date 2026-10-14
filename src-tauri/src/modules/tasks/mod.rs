@@ -199,6 +199,7 @@ impl TaskService {
             Ok(())
         })?;
         task.workspace_path = display;
+        crate::foundation::change_signal::notify();
         Ok(task)
     }
 
@@ -221,7 +222,15 @@ impl TaskService {
     }
 
     pub fn list(&self) -> AppResult<Vec<DevelopmentTask>> {
-        let tasks = self.database.with_connection(|connection| {
+        self.list_readonly()?
+            .into_iter()
+            .map(|task| self.ensure_workspace(task))
+            .collect()
+    }
+
+    /// Background readers must not allocate a workspace or deploy managed Skills.
+    pub fn list_readonly(&self) -> AppResult<Vec<DevelopmentTask>> {
+        self.database.with_connection(|connection| {
             let mut statement = connection.prepare(
                 "SELECT id,title,description,status,created_at,updated_at,completed_at,archived_at,workspace_path
                  FROM development_tasks
@@ -229,11 +238,12 @@ impl TaskService {
             )?;
             let rows = statement.query_map([], map_task)?;
             rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
-        })?;
-        tasks
-            .into_iter()
-            .map(|task| self.ensure_workspace(task))
-            .collect()
+        })
+    }
+
+    pub fn get_readonly(&self, id: &str) -> AppResult<DevelopmentTask> {
+        self.database
+            .with_connection(|connection| read_task(connection, id))
     }
 
     pub fn get(&self, id: &str) -> AppResult<DevelopmentTask> {
@@ -299,6 +309,7 @@ impl TaskService {
             if count == 0 {
                 return Err(AppError::not_found("Task"));
             }
+            crate::foundation::change_signal::notify();
             read_task(connection, id)
         })
     }
@@ -319,6 +330,7 @@ impl TaskService {
             if count == 0 {
                 return Err(AppError::not_found("Task"));
             }
+            crate::foundation::change_signal::notify();
             read_task(connection, id)
         })
     }
@@ -330,6 +342,7 @@ impl TaskService {
             if count == 0 {
                 return Err(AppError::not_found("Task"));
             }
+            crate::foundation::change_signal::notify();
             Ok(())
         })
     }

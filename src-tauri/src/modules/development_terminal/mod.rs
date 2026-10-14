@@ -1,4 +1,6 @@
+mod attention;
 pub mod timing;
+pub use attention::ConversationAttention;
 pub(crate) mod transcript;
 pub(crate) mod workflow;
 

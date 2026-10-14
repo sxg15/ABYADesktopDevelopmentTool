@@ -1366,7 +1366,7 @@ fn handle_app_server_notification(
 
     let event_type = match method {
         "thread/status/changed" => {
-            workflow.terminal_interaction = params["status"]["type"] == "active"
+            let waiting = params["status"]["type"] == "active"
                 && params["status"]["activeFlags"]
                     .as_array()
                     .is_some_and(|flags| {
@@ -1374,6 +1374,12 @@ fn handle_app_server_notification(
                             .iter()
                             .any(|flag| flag == "waitingOnApproval" || flag == "waitingOnUserInput")
                     });
+            if waiting && !workflow.terminal_interaction {
+                workflow.interaction_id = Some(Uuid::new_v4().to_string());
+            } else if !waiting {
+                workflow.interaction_id = None;
+            }
+            workflow.terminal_interaction = waiting;
             workflow.updated_at = Utc::now().to_rfc3339();
             "interactionChanged"
         }

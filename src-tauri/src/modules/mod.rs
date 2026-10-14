@@ -8,4 +8,5 @@ pub mod grok_terminal;
 pub mod instances;
 pub mod logs;
 pub mod runtime_bridge;
+pub mod task_notifications;
 pub mod tasks;

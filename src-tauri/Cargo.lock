@@ -31,6 +31,8 @@ dependencies = [
  "tokio-tungstenite",
  "tungstenite",
  "uuid",
+ "windows 0.62.2",
+ "windows-core 0.62.2",
  "windows-dpapi",
  "windows-sys 0.61.2",
  "winreg 0.55.0",

@@ -159,3 +159,8 @@ workflow and correlated connection diagnostics; raw stdout/stderr remain private
 Deleting a conversation also clears queue task/cancellation/stopping indexes. Native
 history is still archived first. Test clean delete/recreate plus an injected failed
 workspace probe with a healthy service and a hard failure after the service stops.
+
+## Background task notifications (2026-10-14)
+
+attention_states scans only task-local valid UUID metadata/workflow/continuation files, skips archived conversations and reuses project_control with queue tracking disabled. It performs no native sync, workspace/Skill writes, RPC or session startup. Native waitingOnApproval/waitingOnUserInput transitions generate a persisted interactionId and clear it on leaving the wait; repeated status events retain the same ID. Same-turn subsequent waits are distinct. The monitor observes all conversations without taking the lifecycle RPC lock.
+Readonly workflow reads use try_lock on the write lock, returning unavailable during replacement rather than interpreting a temporary missing snapshot as a resolved wait.

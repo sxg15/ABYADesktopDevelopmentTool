@@ -47,6 +47,14 @@ portable-pty = "0.9.0"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55"
+windows-core = "0.62.2"
+windows = { version = "0.62.2", features = [
+  "Data_Xml_Dom", "Foundation", "UI_Notifications",
+  "Win32_Foundation", "Win32_Globalization", "Win32_System_Com",
+  "Win32_System_Com_StructuredStorage", "Win32_System_Ole", "Win32_System_Variant",
+  "Win32_System_WinRT", "Win32_UI_Notifications", "Win32_UI_Shell",
+  "Win32_UI_Shell_PropertiesSystem", "Win32_UI_WindowsAndMessaging",
+] }
 windows-sys = { version = "0.61", features = [
   "Win32_Foundation",
   "Win32_Security",

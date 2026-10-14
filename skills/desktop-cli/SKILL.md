@@ -77,3 +77,7 @@ creates a task, checks sandbox doctor, opens/deletes/recreates native conversati
 and verifies independent IDs. A failed workspace probe remains a warning only with
 authenticated healthy Desktop service; stopping the service must still block opening.
 No model inference or game actions. Run alone because managed leases are process-global.
+
+## Background task notifications (2026-10-14)
+
+SettingsView composes the task-notifications settings panel (default-on background action reminders, availability reason, explicit test). These controls use typed Tauri adapters only; no desktop CLI/MCP commands, scopes, credentials or command-line inputs are introduced.

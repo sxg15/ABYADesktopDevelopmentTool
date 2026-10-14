@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { DocumentReview } from "./DocumentReview";
 import { VisualGallery } from "./VisualGallery";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { TaskGuidance } from "./TaskGuidance";
 import { productionApi, type ProductionView, type TaskControlState } from "../../shared/production";
+import { useTaskAttention } from "../../shared/useTaskAttention";
+import { attentionFixture } from "../../shared/notifications.test-fixtures";
+vi.mock("../../shared/useTaskAttention", () => ({useTaskAttention:vi.fn()}));
 vi.mock("../../shared/production", () => ({productionApi:{media:vi.fn(),get:vi.fn(),feedback:vi.fn()}}));
+beforeEach(() => vi.mocked(useTaskAttention).mockReturnValue(attentionFixture()));
 afterEach(() => {cleanup(); vi.resetAllMocks();});
 const fixture = (): ProductionView => ({
   policy:{workflowVersion:"2.1.0",stages:[{id:"resources",name:"美术需求",approval:"resources"}],dimensions:[],questions:[]},
@@ -56,6 +60,7 @@ it("does not expose a feedback editor without a submitted artifact or playable v
 });
 
 it("gives human questions priority over running AI and explains waiting when none exist", async () => {
+  vi.mocked(useTaskAttention).mockReturnValue({taskId:"task",items:[],unavailable:false});
   const view=fixture(); view.actions!.review={};
   vi.mocked(productionApi.get).mockResolvedValue(view);
   const props={taskId:"task",active:true,control:{state:"running"} as TaskControlState,onStage:vi.fn(),onTerminal:vi.fn()};
@@ -63,12 +68,14 @@ it("gives human questions priority over running AI and explains waiting when non
   await screen.findByRole("heading",{name:"AI 正在执行"});
   expect(screen.getByText("当前无需操作，请等待结果。")).toBeTruthy();
   view.record!.questionGroups=[{id:"q",title:"玩法",provider:"codex",conversationId:"c",status:"pending",publishedAt:"now",updatedAt:"now",draft:{},answers:[],questions:[{id:"a",text:"请选择",options:[],optional:false}]}];
+  vi.mocked(useTaskAttention).mockReturnValue(attentionFixture("question"));
   page.unmount(); render(<TaskGuidance {...props} />);
   await screen.findByText(/需要你回答 1 个问题/);
   expect(screen.getByText("开始回答")).toBeTruthy();
 });
 
 it("directs an observed native approval to the terminal", async () => {
+  vi.mocked(useTaskAttention).mockReturnValue(attentionFixture("terminal"));
   vi.mocked(productionApi.get).mockResolvedValue(fixture()); const terminal=vi.fn();
   render(<TaskGuidance taskId="task" active control={{state:"waitingForTerminal"} as TaskControlState} onStage={vi.fn()} onTerminal={terminal} />);
   fireEvent.click(await screen.findByText("前往终端处理")); await waitFor(() => expect(terminal).toHaveBeenCalledOnce());

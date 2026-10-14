@@ -139,6 +139,8 @@ pub struct CodexWorkflowTurn {
 pub struct CodexWorkflowSnapshot {
     #[serde(default)]
     pub terminal_interaction: bool,
+    #[serde(default)]
+    pub interaction_id: Option<String>,
     pub task_id: String,
     pub conversation_id: String,
     pub observability: CodexObservabilityStatus,
@@ -157,6 +159,7 @@ impl CodexWorkflowSnapshot {
     ) -> Self {
         Self {
             terminal_interaction: false,
+            interaction_id: None,
             task_id: task_id.to_string(),
             conversation_id: conversation_id.to_string(),
             observability,
@@ -172,6 +175,7 @@ impl CodexWorkflowSnapshot {
             return;
         }
         self.terminal_interaction = false;
+        self.interaction_id = None;
         self.turns.push(CodexWorkflowTurn {
             id: turn_id.to_string(),
             status: CodexWorkflowTurnStatus::WaitingForPlan,
@@ -323,6 +327,7 @@ impl CodexWorkflowSnapshot {
 
     pub(crate) fn complete_turn(&mut self, turn_id: &str, status: CodexWorkflowTurnStatus) {
         self.terminal_interaction = false;
+        self.interaction_id = None;
         self.begin_turn(turn_id);
         let turn = self.current_turn_mut(turn_id);
         turn.status = status;
@@ -424,6 +429,7 @@ pub(crate) fn save_workflow(
         .open(events_path)?;
     events.write_all(&encoded_event)?;
     events.flush()?;
+    crate::foundation::change_signal::notify();
     Ok(())
 }
 

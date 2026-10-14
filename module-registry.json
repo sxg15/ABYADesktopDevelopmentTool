@@ -80,6 +80,12 @@
       ]
     },
     {
+      "id": "task-notifications",
+      "paths": ["src-tauri/src/modules/task_notifications/", "src/features/task-notifications/"],
+      "skill": "skills/task-notifications/SKILL.md",
+      "dependsOn": ["foundation", "development-tasks", "development-terminal", "codex-terminal", "grok-terminal"]
+    },
+    {
       "id": "game-connections",
       "paths": [
         "src-tauri/src/modules/game_connections/"

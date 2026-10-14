@@ -18,6 +18,7 @@ import type {
   LanInterface,
 } from "../../shared/types";
 import type { Locale, MessageKey } from "../../i18n";
+import { NotificationSettingsPanel } from "../task-notifications/NotificationSettingsPanel";
 
 export function SettingsView({
   settings,
@@ -198,6 +199,7 @@ export function SettingsView({
           <Wrench size={16} /> {repairing ? t("repairingStorage") : t("repairStorage")}
         </button>
       </section>
+      <NotificationSettingsPanel t={t} notify={notify} />
 
       <section className="settings-section">
         <div className="settings-section-header">

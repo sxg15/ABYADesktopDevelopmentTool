@@ -29,13 +29,16 @@ use modules::instances::{
 };
 use modules::logs::{LogFilter, LogRepairReport, LogService, LogSession, RuntimeLogEvent};
 use modules::runtime_bridge::{RuntimeBridgeService, RuntimeBridgeState};
+use modules::task_notifications::{
+    NotificationActivation, NotificationSettings, TaskAttentionSnapshot, TaskNotificationService,
+};
 use modules::tasks::{
     DevelopmentTask, ProductionDecision, ProductionMutation, ProductionView, SkillEntry, TaskInput,
     TaskService, TaskStatus,
 };
 use serde::Deserialize;
 use std::path::PathBuf;
-use tauri::{Manager, State, ipc::Channel};
+use tauri::{Emitter, Manager, State, ipc::Channel};
 
 struct AppState {
     paths: AppPaths,
@@ -51,6 +54,7 @@ struct AppState {
     runtime_bridge: RuntimeBridgeService,
     logs: LogService,
     desktop_cli: DesktopCliService,
+    task_notifications: TaskNotificationService,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -130,6 +134,39 @@ fn get_build_info(state: State<'_, AppState>) -> AppResult<foundation::build_inf
 #[tauri::command]
 fn get_settings(state: State<'_, AppState>) -> AppResult<AppSettings> {
     state.settings.get()
+}
+
+#[tauri::command]
+fn get_task_attention(task_id: String, state: State<'_, AppState>) -> TaskAttentionSnapshot {
+    state.task_notifications.snapshot(&task_id)
+}
+
+#[tauri::command(async)]
+fn get_task_notification_settings(state: State<'_, AppState>) -> AppResult<NotificationSettings> {
+    state.task_notifications.notification_settings()
+}
+
+#[tauri::command(async)]
+fn set_task_notification_enabled(
+    enabled: bool,
+    state: State<'_, AppState>,
+) -> AppResult<NotificationSettings> {
+    state.task_notifications.set_enabled(enabled)
+}
+
+#[tauri::command(async)]
+fn test_task_notification(state: State<'_, AppState>) -> AppResult<()> {
+    state.task_notifications.test()
+}
+
+#[tauri::command]
+fn take_task_notification_activations(state: State<'_, AppState>) -> Vec<NotificationActivation> {
+    state.task_notifications.take_activations()
+}
+
+#[tauri::command]
+fn acknowledge_task_notification_activations(state: State<'_, AppState>, ids: Vec<String>) {
+    state.task_notifications.acknowledge_activations(&ids);
 }
 
 #[tauri::command]
@@ -892,6 +929,10 @@ fn query_log_events(
 }
 
 pub fn run() {
+    // COM cold activation of a stale isolated notification must not open real user data.
+    if std::env::args().any(|arg| arg == "--abya-toast-test-only") {
+        return;
+    }
     if foundation::single_instance::redirect_packaged_launch()
         .expect("Cannot establish normal Windows data context")
     {
@@ -951,6 +992,30 @@ pub fn run() {
             ));
             connections.start(&current_settings)?;
             desktop_cli.start(&current_settings)?;
+            let changed_handle = app.handle().clone();
+            let activated_handle = app.handle().clone();
+            let task_notifications = TaskNotificationService::new(
+                &paths,
+                database.clone(),
+                settings.clone(),
+                tasks.clone(),
+                codex_terminal.clone(),
+                grok_terminal.clone(),
+                std::sync::Arc::new(move |snapshot| {
+                    let _ = changed_handle.emit("task-attention-changed", snapshot);
+                }),
+                std::sync::Arc::new(move || {
+                    let handle = activated_handle.clone();
+                    let _ = activated_handle.run_on_main_thread(move || {
+                        if let Some(window) = handle.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.unminimize();
+                            let _ = window.set_focus();
+                        }
+                        let _ = handle.emit("task-notification-activated", ());
+                    });
+                }),
+            );
             app.manage(AppState {
                 paths,
                 database: database.clone(),
@@ -965,10 +1030,18 @@ pub fn run() {
                 runtime_bridge,
                 logs,
                 desktop_cli,
+                task_notifications: task_notifications.clone(),
             });
+            task_notifications.start();
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            get_task_attention,
+            get_task_notification_settings,
+            set_task_notification_enabled,
+            test_task_notification,
+            take_task_notification_activations,
+            acknowledge_task_notification_activations,
             get_task_production,
             start_task_acceptance,
             get_task_acceptance,
@@ -1081,6 +1154,7 @@ pub fn run() {
             // Cleanup must run once, off the UI thread, before releasing the instance guard.
             std::thread::spawn(move || {
                 let state = handle.state::<AppState>();
+                state.task_notifications.stop();
                 state.archive_transfers.stop_all();
                 state.codex_terminal.stop_all();
                 state.grok_terminal.stop_all();

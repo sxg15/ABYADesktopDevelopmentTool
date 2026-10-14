@@ -54,6 +54,21 @@ pub struct SettingsService {
 }
 
 impl SettingsService {
+    /// Reading display preferences must not decrypt/save credentials or allocate workspaces.
+    pub fn locale(&self) -> AppResult<String> {
+        use rusqlite::OptionalExtension;
+        self.database.with_connection(|connection| {
+            Ok(connection
+                .query_row(
+                    "SELECT COALESCE(json_extract(value_json,'$.locale'),'') FROM settings WHERE key=?1",
+                    [SETTINGS_KEY],
+                    |row| row.get(0),
+                )
+                .optional()?
+                .unwrap_or_default())
+        })
+    }
+
     pub fn new(database: Database, default_workspace_root: PathBuf) -> Self {
         Self {
             database,
@@ -162,7 +177,9 @@ impl SettingsService {
                 rusqlite::params![SETTINGS_KEY, json, Utc::now().to_rfc3339()],
             )?;
             Ok(())
-        })
+        })?;
+        super::change_signal::notify();
+        Ok(())
     }
 
     pub fn update_public(

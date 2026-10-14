@@ -90,3 +90,8 @@ On a new terminal open, prepare the legacy default workspace through TaskService
 ## Stage workspace update
 
 The shared CLI conversation report optionally publishes a structured per-turn plan through record_reported_plan, validated before activity logging. It uses the same workflow write lock and live notification path as ACP plans. Codex permission selectors are not exposed for Grok.
+
+## Background task notifications (2026-10-14)
+
+attention_states reads task-local metadata/workflow only and reports explicit recent native turn state. It never syncs/starts sessions or guesses approvals from output, tool names or inactivity. Grok question/document/playtest actions are projected from the shared production record. The current ACP stream exposes no native approval/user-input wait contract; unknown/compatibility state generates no terminal reminder.
+Readonly attention takes the workflow write lock non-blockingly to avoid transient replace gaps. Freshness gates only active execution; explicit failed/interrupted/completed turns remain durable until replaced, so inactivity alone cannot resolve an error notification.

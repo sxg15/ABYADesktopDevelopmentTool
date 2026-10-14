@@ -1,3 +1,4 @@
+mod attention;
 use crate::foundation::{AppError, AppResult};
 use crate::modules::development_terminal::transcript::read_transcript_replay;
 use crate::modules::development_terminal::workflow::{

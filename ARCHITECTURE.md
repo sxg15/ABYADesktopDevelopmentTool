@@ -13,7 +13,7 @@ private or `pub(crate)`. Cross-module behavior is expressed through small
 service interfaces and serializable DTOs.
 
 SQLite owns durable tasks, instance history, settings, log sessions, log
-events, and archive transfer records. Live process handles, Windows Job
+events, notification receipts, and archive transfer records. Live process handles, Windows Job
 Objects, WebSocket sessions, CLI operation cancellation state, active transfer
 cancellation channels, temporary ZIP packages, and open network connections
 remain in memory or disposable application data.
@@ -25,6 +25,14 @@ their continuation without approving documents. TaskControlState projects native
 and human-wait states for both UI surfaces. Application startup establishes normal Windows data
 context and per-data-directory instance ownership before opening SQLite. Release identity is embedded
 and verified against the installed manifest; validated packages are promoted to a stable Publish entry.
+
+`task-notifications` projects human actions from read-only task/provider interfaces for
+both guidance and Windows notifications. Content-free wakeups plus a 3-second native
+scan cover every active task independently of WebView selection/lifecycle. SQLite
+receipts prevent replay; activation revalidates and navigates without task mutations.
+Foundation owns unpackaged Windows ToastGeneric, per-user AUMID/shortcut and COM
+activation, with isolated test identities. App shell composes settings and exact-target
+navigation. No CLI/MCP commands, tray lifetime or connection secrets are introduced.
 
 `development-terminal` owns the provider-neutral conversation workflow model,
 sanitized timeline persistence, shared terminal UI, and explicit per-task

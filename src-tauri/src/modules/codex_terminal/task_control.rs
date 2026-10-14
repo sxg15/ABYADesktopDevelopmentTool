@@ -1,6 +1,7 @@
 use super::continuation_queue;
 use super::*;
-use crate::modules::tasks::{ProductionMutation, ProductionView};
+use crate::modules::development_terminal::{ConversationAttention, TerminalProvider};
+use crate::modules::tasks::{DevelopmentTask, ProductionMutation, ProductionView};
 use std::sync::atomic::Ordering;
 
 #[derive(Serialize)]
@@ -76,14 +77,80 @@ impl CodexTerminalService {
         let _guard = self.lifecycle_lock.lock();
         let task = self.tasks.get(task_id)?;
         let metadata = self.conversation(task_id, conversation_id)?;
+        let workflow = self.workflow(task_id, conversation_id)?;
+        let production = self.tasks.production_get(task_id)?;
+        self.project_control(&task, &metadata, &workflow, &production, true)
+    }
+
+    /// Uses only local metadata and the caller's read-only production snapshot.
+    /// In particular this does not call list_conversations/native synchronization.
+    pub fn attention_states(
+        &self,
+        task: &DevelopmentTask,
+        production: &ProductionView,
+    ) -> AppResult<Vec<ConversationAttention>> {
+        let root = conversations_root(Path::new(&task.workspace_path));
+        if task.workspace_path.is_empty() || !root.is_dir() {
+            return Ok(Vec::new());
+        }
+        let mut result = Vec::new();
+        for entry in std::fs::read_dir(root)? {
+            let entry = entry?;
+            if !entry.file_type()?.is_dir()
+                || Uuid::parse_str(&entry.file_name().to_string_lossy()).is_err()
+            {
+                continue;
+            }
+            let path = entry.path().join(CONVERSATION_METADATA_FILE);
+            if !path.is_file() {
+                continue;
+            }
+            let metadata: CodexConversation = serde_json::from_slice(&std::fs::read(path)?)?;
+            if metadata.task_id != task.id
+                || metadata.id != entry.file_name().to_string_lossy()
+                || metadata.archived
+            {
+                continue;
+            }
+            let workflow = {
+                let _read = self
+                    .workflow_write_lock
+                    .try_lock()
+                    .ok_or_else(|| AppError::validation("Conversation state is changing."))?;
+                load_workflow(&entry.path(), &task.id, &metadata.id)?
+            };
+            let control = self.project_control(task, &metadata, &workflow, production, false)?;
+            result.push(ConversationAttention {
+                provider: TerminalProvider::Codex,
+                task_id: task.id.clone(),
+                conversation_id: metadata.id,
+                state: control.state,
+                turn_id: control.turn_id,
+                request_id: control.request_id,
+                interaction_id: workflow.interaction_id,
+            });
+        }
+        result.sort_by(|a, b| a.conversation_id.cmp(&b.conversation_id));
+        Ok(result)
+    }
+
+    fn project_control(
+        &self,
+        task: &DevelopmentTask,
+        metadata: &CodexConversation,
+        workflow: &CodexWorkflowSnapshot,
+        production: &ProductionView,
+        track_queue: bool,
+    ) -> AppResult<TaskControlState> {
+        let task_id = task.id.as_str();
+        let conversation_id = metadata.id.as_str();
         let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);
         let queue = continuation_queue::read(&directory)?;
-        if queue.is_some() {
+        if track_queue && queue.is_some() {
             self.queue_tasks
                 .lock()
                 .insert(conversation_id.into(), task_id.into());
         }
-        let workflow = self.workflow(task_id, conversation_id)?;
         let turn = workflow
             .current_turn_id
             .as_ref()
@@ -100,7 +167,6 @@ impl CodexTerminalService {
             .get(conversation_id)
             .is_some_and(|s| s.is_alive());
         let connected = self.sessions.lock().contains_key(conversation_id);
-        let production = self.tasks.production_get(task_id)?;
         let queued = queue.as_ref().is_some_and(|q| {
             q.status == "queued"
                 && q.owner == self.process_epoch
@@ -142,7 +208,7 @@ impl CodexTerminalService {
             } else {
                 "disconnected"
             }
-        } else if let Some(wait) = continuation_queue::waiting(Some(&production)) {
+        } else if let Some(wait) = continuation_queue::waiting(Some(production)) {
             if wait == super::intake_receipt::IntakeContinueStatus::WaitingForAnswers {
                 "waitingForAnswers"
             } else {
@@ -171,7 +237,7 @@ impl CodexTerminalService {
         Ok(TaskControlState {
             task_id: task_id.into(),
             conversation_id: conversation_id.into(),
-            native_session_id: metadata.native_session_id,
+            native_session_id: metadata.native_session_id.clone(),
             state: state.into(),
             connection: if connected {
                 "connected"
@@ -188,8 +254,12 @@ impl CodexTerminalService {
             request_id: queue.as_ref().map(|q| q.id.clone()),
             last_error: queue.and_then(|q| q.error),
             updated_at: Utc::now().to_rfc3339(),
-            last_event_at: workflow.updated_at,
-            sequence: self.control_sequence.fetch_add(1, Ordering::SeqCst),
+            last_event_at: workflow.updated_at.clone(),
+            sequence: if track_queue {
+                self.control_sequence.fetch_add(1, Ordering::SeqCst)
+            } else {
+                0
+            },
         })
     }
 }

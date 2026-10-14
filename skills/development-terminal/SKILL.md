@@ -154,3 +154,7 @@ Unmount the deleted terminal view before awaiting backend shutdown. Task/provide
 changes clear the guard, and stale action completions cannot overwrite new selection.
 Native workflow startup warnings remain visible in the notice row while connected;
 they do not disable permission controls or claim that tools have executed successfully.
+
+## Background task notifications (2026-10-14)
+
+ConversationAttention is a public readonly provider-neutral DTO (task/provider/conversation/state/turn/request/interaction). Workflow interactionId is optional with serde defaults for old records; begin/end clear it and snapshot writes signal changes. Codex sets it only on entering a native wait. Grok does not infer confirmations from terminal text or silence. Original terminal connectionRequest remains attachment-only and never creates a replacement conversation.

@@ -270,3 +270,7 @@ awaitingContinue is an idle terminal with saved pending work, presented as termi
 connected / task waiting to continue with an explicit terminal action. It is not a
 connection failure and does not authorize replay. Reconnection-needed guidance does
 not infer physical disconnection from the execution/queue state alone.
+
+## Background task notifications (2026-10-14)
+
+list_readonly/get_readonly and production_attention never ensure/migrate workspaces, sync Skills, export files or create sessions. production_attention uses existing public action gates while omitting report/artifact scans. Mutations wake the native monitor through foundation change_signal. Human TaskGuidance branches now consume shared backend attention DTOs; local controls retain ordinary progress/paused/ready guidance. Notification navigation selects exact tasks, rechecks pending group or document revision/hash, requests the matching dialog or original conversation, and falls back to latest stage on stale state. It never answers, approves or continues. Late results are guarded against task switches.

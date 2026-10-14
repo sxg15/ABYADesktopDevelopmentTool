@@ -131,6 +131,7 @@ impl TaskService {
             Ok(())
         })?;
         self.production_export(&task.id)?;
+        crate::foundation::change_signal::notify();
         self.production_get(&task.id)
     }
 
@@ -231,10 +232,26 @@ impl TaskService {
 
     pub fn production_get(&self, id: &str) -> AppResult<ProductionView> {
         let root = self.production_workspace(id)?;
+        self.production_view(id, &root, false)
+    }
+
+    /// A bounded projection for all-task attention monitoring. No export, Skill sync,
+    /// workspace creation, report generation or full Player hashing is performed.
+    pub fn production_attention(&self, task: &super::DevelopmentTask) -> AppResult<ProductionView> {
+        self.production_view(&task.id, Path::new(&task.workspace_path), true)
+    }
+
+    fn production_view(
+        &self,
+        id: &str,
+        root: &Path,
+        attention_only: bool,
+    ) -> AppResult<ProductionView> {
         let record = self.database.with_connection(|c| load(c, id))?;
         let warnings = record
             .as_ref()
-            .map(|r| validation::warnings(r, &root))
+            .filter(|_| !attention_only)
+            .map(|r| validation::warnings(r, root))
             .unwrap_or_default();
         let available_update = record
             .as_ref()
@@ -260,14 +277,15 @@ impl TaskService {
             .unwrap_or_default();
         let artifacts = record
             .as_ref()
-            .map(|r| workspace::artifacts(r, &root))
+            .filter(|_| !attention_only)
+            .map(|r| workspace::artifacts(r, root))
             .unwrap_or_default();
         let active = self
             .database
             .with_connection(|c| Ok(read_task(c, id)?.status == TaskStatus::Active))?;
         let actions = record
             .as_ref()
-            .map(|r| interaction::actions(r, &root, active))
+            .map(|r| interaction::actions(r, root, active))
             .unwrap_or_else(|| json!({}));
         Ok(ProductionView {
             actions,
@@ -336,6 +354,8 @@ impl TaskService {
             )?;
             tx.commit()?;
             Ok(())
-        })
+        })?;
+        crate::foundation::change_signal::notify();
+        Ok(())
     }
 }

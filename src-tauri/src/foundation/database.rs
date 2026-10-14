@@ -84,6 +84,16 @@ impl Database {
                     body TEXT NOT NULL,
                     PRIMARY KEY(task_id, revision)
                 );
+                CREATE TABLE IF NOT EXISTS task_notification_receipts (
+                    event_key TEXT PRIMARY KEY,
+                    task_id TEXT NOT NULL REFERENCES development_tasks(id) ON DELETE CASCADE,
+                    target_json TEXT NOT NULL,
+                    disposition TEXT NOT NULL,
+                    observed_at TEXT NOT NULL,
+                    active INTEGER NOT NULL DEFAULT 0
+                );
+                CREATE INDEX IF NOT EXISTS task_notification_receipts_task
+                    ON task_notification_receipts(task_id);
                 "#,
             )?;
             if !table_has_column(connection, "development_tasks", "workspace_path")? {

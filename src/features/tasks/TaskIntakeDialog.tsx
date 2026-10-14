@@ -6,10 +6,11 @@ import { IntakeQuestions } from "./IntakeQuestions";
 import { useTaskControl, controlText } from "../terminal/useTaskControl";
 import "./production.css";
 
-export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnection }: {
+export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnection, requestedGroup }: {
   taskId: string; active: boolean;
   onContinue?: (message: string, group?: IntakeQuestionGroup) => Promise<void>;
   onEnsureConnection?: (group: IntakeQuestionGroup) => Promise<void>;
+  requestedGroup?: { requestId: string; groupId: string };
 }) {
   const [view, setView] = useState<ProductionView>();
   const [selected, setSelected] = useState("");
@@ -22,6 +23,12 @@ export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnectio
   const seen = useRef(new Set<string>());
   const autoOpened = useRef(false);
   const submitted = useRef(new Set<string>());
+  useEffect(() => {
+    if (!requestedGroup) return;
+    autoOpened.current = true;
+    setSelected(requestedGroup.groupId);
+    void refresh();
+  }, [requestedGroup?.requestId]);
   async function refresh() {
     const request = ++sequence.current;
     try {

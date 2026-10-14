@@ -4,13 +4,16 @@ import { productionApi, type ProductionDocument, type ProductionView, type TaskC
 import type { TerminalWorkflowSnapshot } from "../../shared/types";
 import { taskGuidanceState, type GuidancePending } from "./taskGuidanceState";
 import "./taskGuidance.css";
+import type { AttentionTarget } from "../../shared/notifications";
+import { useTaskAttention } from "../../shared/useTaskAttention";
 
 export function TaskGuidance({ taskId, active, control, workflow, en = false, onStage, onTerminal, onReview, onPendingChange }: {
   taskId: string; active: boolean; control?: TaskControlState; workflow?: TerminalWorkflowSnapshot; en?: boolean;
-  onStage: (stage: string) => void; onTerminal: () => void;
+  onStage: (stage: string) => void; onTerminal: (target?: AttentionTarget) => void;
   onReview?: (document: ProductionDocument) => void; onPendingChange?: (pending: GuidancePending) => void;
 }) {
   const [view, setView] = useState<ProductionView>();
+  const attention = useTaskAttention(taskId);
   useEffect(() => {
     let alive = true, sequence = 0;
     setView(undefined);
@@ -25,7 +28,7 @@ export function TaskGuidance({ taskId, active, control, workflow, en = false, on
     window.addEventListener("abya:control-changed", refresh);
     return () => { alive = false; window.clearInterval(timer); window.removeEventListener("abya:control-changed", refresh); };
   }, [taskId]);
-  const model = taskGuidanceState(taskId, active, view, control, workflow, en);
+  const model = taskGuidanceState(taskId, active, view, control, workflow, en, view ? attention : undefined);
   const { questions, reviews, terminal } = model.pending;
   useEffect(() => { onPendingChange?.({taskId, questions, reviews, terminal}); }, [taskId, questions, reviews, terminal, onPendingChange]);
   const previousKey = useRef<string | undefined>(undefined);
@@ -41,9 +44,11 @@ export function TaskGuidance({ taskId, active, control, workflow, en = false, on
     if (model.action === "question") window.dispatchEvent(new CustomEvent("abya:open-intake", {detail:{taskId,groupId:model.groupId}}));
     else if (model.action === "review") {
       const document = view?.record?.documents[model.reviewKind!];
-      if (document && onReview) onReview(document); else onStage(model.stage);
+      if (document && document.revision === model.target?.documentRevision
+        && document.sha256 === model.target.documentHash && onReview) onReview(document);
+      else onStage(model.stage);
     } else if (model.action === "stage") onStage(model.stage);
-    else if (model.action === "terminal") onTerminal();
+    else if (model.action === "terminal") onTerminal(model.target);
   }
   const Icon = model.tone === "waiting" ? LoaderCircle : model.tone === "terminal" ? Terminal
     : model.tone === "error" ? Unplug : model.action === "question" ? MessageCircleQuestion

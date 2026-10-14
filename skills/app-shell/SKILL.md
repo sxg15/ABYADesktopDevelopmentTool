@@ -165,3 +165,7 @@ labels appear separately in the toolbar. The retry action reads 接回原对话.
 Connected terminal startup warnings appear as a wrapping amber notice with bounded
 scrolling above the task-status text. Keep terminal input and native execution controls
 available. A warning describes an earlier probe, not approval or successful tool execution.
+
+## Background task notifications (2026-10-14)
+
+App subscribes before reading pending notification activations and acknowledges consumed IDs; StrictMode/late unmounts cannot lose activation. Test clicks open settings, missing tasks show feedback, other clicks pass an immutable target to TasksView. Only native click activation restores/focuses the app. Background delivery never steals focus. Bilingual settings/reasons are in i18n. Exit cleanup stops the monitor before providers, preserving normal close behavior.

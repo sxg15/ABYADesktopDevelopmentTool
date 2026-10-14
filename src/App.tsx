@@ -14,11 +14,14 @@ import {
 } from "./i18n";
 import "./App.css";
 import { IconButtonTooltips } from "./app/IconButtonTooltips";
+import { useNotificationActivations } from "./app/useNotificationActivations";
+import type { NotificationActivation } from "./shared/notifications";
 
 type ViewId = "tasks" | "archiveTransfer" | "logs" | "settings";
 
 function App() {
   const [view, setView] = useState<ViewId>("tasks");
+  const [notificationNavigation, setNotificationNavigation] = useState<NotificationActivation>();
   const [settings, setSettings] = useState<AppSettings>();
   const [buildInfo,setBuildInfo]=useState<Awaited<ReturnType<typeof api.buildInfo>>>();
   const [locale, setLocale] = useState<Locale>(
@@ -29,6 +32,18 @@ function App() {
     error: boolean;
   }>();
   const t = useMemo(() => translator(locale), [locale]);
+  useNotificationActivations(activation => {
+    if (activation.status === "test") {
+      setView("settings");
+      notify(t("notificationTestOpened"));
+    } else if (activation.status === "missing" || !activation.target) {
+      setView("tasks");
+      notify(t("notificationTaskMissing"));
+    } else {
+      setView("tasks");
+      setNotificationNavigation(activation);
+    }
+  });
 
   useEffect(() => {
     void api.buildInfo().then(setBuildInfo).catch(()=>undefined);
@@ -109,7 +124,9 @@ function App() {
           className={`app-view ${view === "tasks" ? "active" : ""}`}
           aria-hidden={view !== "tasks"}
         >
-          <TasksView settings={settings} t={t} notify={notify} />
+          <TasksView settings={settings} t={t} notify={notify}
+            notificationNavigation={notificationNavigation}
+            onNotificationHandled={id => setNotificationNavigation(current => current?.id === id ? undefined : current)} />
         </div>
         {view === "archiveTransfer" && (
           <ArchiveTransferView t={t} notify={notify} />

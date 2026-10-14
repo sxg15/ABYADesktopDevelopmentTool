@@ -9,8 +9,10 @@ pub use paths::AppPaths;
 pub use settings::{AppSettings, SettingsService};
 
 pub mod build_info;
+pub mod change_signal;
 pub mod cli_environment;
 pub mod cli_sessions;
 pub mod cli_transport;
 pub mod clipboard;
+pub mod notifications;
 pub mod single_instance;

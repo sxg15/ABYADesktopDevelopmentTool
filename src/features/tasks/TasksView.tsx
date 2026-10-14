@@ -42,19 +42,29 @@ import type {
   TerminalProvider,
 } from "../../shared/types";
 import type { MessageKey } from "../../i18n";
+import type { AttentionTarget, NotificationActivation } from "../../shared/notifications";
 
 export function TasksView({
   settings,
   t,
   notify,
+  notificationNavigation,
+  onNotificationHandled,
 }: {
   settings?: AppSettings;
   t: (key: MessageKey) => string;
   notify: (message: string, error?: boolean) => void;
+  notificationNavigation?: NotificationActivation;
+  onNotificationHandled?: (id: string) => void;
 }) {
   const [tasks, setTasks] = useState<DevelopmentTask[]>([]);
   const [instances, setInstances] = useState<GameInstance[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const selectedIdRef = useRef(selectedId); selectedIdRef.current = selectedId;
+  const [pendingNavigation, setPendingNavigation] = useState<NotificationActivation>();
+  const [requestedQuestion, setRequestedQuestion] = useState<{taskId: string; requestId: string; groupId: string}>();
+  const navigationRevision = useRef(0);
+  const onNotificationHandledRef = useRef(onNotificationHandled); onNotificationHandledRef.current = onNotificationHandled;
   const [guidancePending, setGuidancePending] = useState<GuidancePending>();
   const [requestedReview, setRequestedReview] = useState<{taskId:string;document:ProductionDocument}>();
   const currentPending = guidancePending?.taskId === selectedId ? guidancePending : undefined;
@@ -129,6 +139,77 @@ export function TasksView({
     ? terminalContexts[selectedContextKey]
     : undefined;
   const selectedControl=useTaskControl(selected?.id??"",selectedTerminalContext?.conversation?.id,selectedProvider);
+  useEffect(() => {
+    if (!notificationNavigation?.target) return;
+    const activation = notificationNavigation, target = activation.target!;
+    const revision = ++navigationRevision.current;
+    let alive = true;
+    void api.listTasks().then(next => {
+      if (!alive || revision !== navigationRevision.current) return;
+      setTasks(next);
+      if (!next.some(task => task.id === target.taskId)) {
+        notify(t("notificationTaskMissing"));
+        onNotificationHandledRef.current?.(activation.id);
+        return;
+      }
+      setShowCreate(false); setShowLaunch(false); setDetail(undefined);
+      setRequestedReview(undefined); setRequestedQuestion(undefined);
+      setSelectedId(target.taskId);
+      setPendingNavigation(activation);
+    }).catch(error => {
+      if (alive) { notify(errorMessage(error), true); onNotificationHandledRef.current?.(activation.id); }
+    });
+    return () => { alive = false; };
+  }, [notificationNavigation?.id]);
+
+  function showNotificationStage(taskId: string, stage: string) {
+    try { sessionStorage.setItem("abya:production-stage:" + taskId, stage); } catch { /* Optional navigation memory. */ }
+    setTaskTabs(tabs => ({ ...tabs, [taskId]: "production" }));
+    window.dispatchEvent(new CustomEvent("abya:show-stage", { detail: { taskId, stage } }));
+  }
+
+  async function openAttentionTerminal(target?: AttentionTarget) {
+    if (!target?.provider || !target.conversationId) { selectTab("terminal"); return; }
+    // Attach only the exact existing conversation; no answer/approval/Continue is sent.
+    selectedConversationIdsRef.current[terminalContextKey(target.taskId, target.provider)] = target.conversationId;
+    try { await ensureIntakeConnection({ provider: target.provider, conversationId: target.conversationId }); }
+    catch (error) { notify(errorMessage(error), true); }
+  }
+
+  useEffect(() => {
+    const activation = pendingNavigation, target = activation?.target;
+    if (!activation || !target || selected?.id !== target.taskId) return;
+    setPendingNavigation(undefined);
+    const revision = navigationRevision.current;
+    const current = () => revision === navigationRevision.current && selectedIdRef.current === target.taskId;
+    void (async () => {
+      if (activation.status === "current" && target.action === "terminal") {
+        await openAttentionTerminal(target);
+        return;
+      }
+      const view = await productionApi.get(target.taskId);
+      if (!current()) return;
+      if (view.record) showNotificationStage(target.taskId, view.record.currentStage);
+      else setTaskTabs(tabs => ({ ...tabs, [target.taskId]: "instances" }));
+      if (activation.status !== "current" || selected.status !== "active") {
+        notify(t(activation.status === "unavailable" ? "notificationStateUnavailable" : "notificationAlreadyHandled"));
+        return;
+      }
+      if (target.action === "question") {
+        const group = view.record?.questionGroups?.find(g => g.id === target.groupId && g.status === "pending");
+        if (!group) { notify(t("notificationAlreadyHandled")); return; }
+        showNotificationStage(target.taskId, group.stage ?? target.stage);
+        setRequestedQuestion({taskId:target.taskId,requestId:activation.id,groupId:group.id});
+      } else if (target.action === "review") {
+        const doc = view.record?.documents[target.stage];
+        if (!doc || doc.revision !== target.documentRevision || doc.sha256 !== target.documentHash
+          || view.actions?.review[target.stage] !== "") { notify(t("notificationAlreadyHandled")); return; }
+        showNotificationStage(target.taskId, target.stage);
+        setRequestedReview({taskId:target.taskId,document:doc});
+      } else showNotificationStage(target.taskId, target.stage);
+    })().catch(error => { if (current()) notify(errorMessage(error), true); })
+      .finally(() => onNotificationHandledRef.current?.(activation.id));
+  }, [pendingNavigation, selected?.id]);
   const taskInstances = useMemo(
     () => instances.filter((instance) => instance.taskId === selectedId),
     [instances, selectedId],
@@ -563,7 +644,7 @@ export function TasksView({
 
             <TaskGuidance key={`guidance:${selected.id}`} taskId={selected.id} active={selected.status === "active"}
               control={selectedControl} workflow={selectedTerminalContext?.workflow} en={settings?.locale === "en-US"}
-              onPendingChange={setGuidancePending} onTerminal={() => selectTab("terminal")}
+              onPendingChange={setGuidancePending} onTerminal={target => void openAttentionTerminal(target)}
               onReview={document => { setRequestedReview({taskId:selected.id,document}); selectTab("production"); }}
               onStage={stage => {
                 try { sessionStorage.setItem(`abya:production-stage:${selected.id}`, stage); } catch { /* Navigation remains available. */ }
@@ -611,6 +692,7 @@ export function TasksView({
               <div className="task-inline-notices">
               <TaskIntakeDialog key={`intake:${selected.id}`} taskId={selected.id} active={selected.status === "active"}
                 onEnsureConnection={ensureIntakeConnection}
+                requestedGroup={requestedQuestion?.taskId === selected.id ? requestedQuestion : undefined}
                 onContinue={async (message, group) => {
                   const conversation = selectedTerminalContext?.conversation;
                   if (!conversation || group?.provider !== selectedProvider || group.conversationId !== conversation.id) {
