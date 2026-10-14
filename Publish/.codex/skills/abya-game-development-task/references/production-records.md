@@ -30,6 +30,14 @@ questions 项为 id/text/options/optional。绑定由桌面注入，不填写原
 
 ## Agent 操作表
 
+Lua 执行阶段若确认缺陷来自 ABYA 游戏源码或构建包，save-issue 明确填写
+repairTarget: abya-source 或 abya-build；任务 Lua 自身的问题填 lua，其余填 other。
+description 写清现象、复现步骤、来源依据及受影响构建版本，fix/resumeWhen 注明
+“需要程序修复”与复验条件，已有证据附 evidenceIds。疑似来源先在描述注明“疑似”，
+仅确认来源后填写 abya-source/abya-build。APP 用红色突出提醒程序；此字段不替代
+kind、affectedStages、blockedOperations 的阻塞范围，也不自动批准、关闭问题或改动源码。
+更新问题时遗漏 repairTarget 会保留原值；纠正归属时明确填写新值。
+
 | operation | data 与条件 |
 |---|---|
 | initialize | questionMode: ask/no-followup，可含 playerMode；仅尚未启用时 |

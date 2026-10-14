@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { AcceptanceLauncher } from "./AcceptanceLauncher";
 import { VisualGallery } from "./VisualGallery";
@@ -8,7 +8,7 @@ import { productionApi, type ProductionRecord } from "../../shared/production";
 vi.mock("../../shared/production", () => ({ productionApi: {
   acceptanceStatus: vi.fn(), startAcceptance: vi.fn(), media: vi.fn(), feedback: vi.fn(),
 } }));
-afterEach(() => { cleanup(); vi.resetAllMocks(); });
+afterEach(() => { cleanup(); vi.resetAllMocks(); vi.useRealTimers(); });
 const record = (): ProductionRecord => ({
   taskId:"task",revision:3,workflowVersion:"2.0.0",questionMode:"ask",currentStage:"review",currentRound:0,
   cycle:1,stages:{review:"awaiting-feedback"},documents:{},approvals:[],currentVersion:"v2",versionDetails:{},
@@ -26,6 +26,38 @@ it("opens only on an explicit click and prevents duplicate launch while pending"
   finish({status:"ready",message:"Ready for human play"});
   await screen.findByText("Ready for human play");
   expect(productionApi.startAcceptance).toHaveBeenCalledTimes(1);
+});
+
+it("does not overlap slow status reads and stops polling hidden or unmounted panels",async()=>{
+  vi.useFakeTimers();
+  const readers:Array<(s:{status:string})=>void>=[];
+  vi.mocked(productionApi.acceptanceStatus).mockImplementation(()=>new Promise(resolve=>readers.push(resolve)));
+  const page=render(<AcceptanceLauncher taskId="task" active en/>);
+  await act(async()=>vi.advanceTimersByTimeAsync(12000));
+  expect(productionApi.acceptanceStatus).toHaveBeenCalledTimes(1);
+  await act(async()=>readers[0]({status:'not-started'}));
+  await act(async()=>vi.advanceTimersByTimeAsync(2000));
+  expect(productionApi.acceptanceStatus).toHaveBeenCalledTimes(2);
+  page.rerender(<AcceptanceLauncher taskId="task" active en visible={false}/>);
+  await act(async()=>readers[1]({status:'ready'}));
+  await act(async()=>vi.advanceTimersByTimeAsync(12000));
+  expect(productionApi.acceptanceStatus).toHaveBeenCalledTimes(2);
+  page.unmount();await act(async()=>vi.advanceTimersByTimeAsync(12000));
+  expect(productionApi.acceptanceStatus).toHaveBeenCalledTimes(2);
+  expect(productionApi.startAcceptance).not.toHaveBeenCalled();
+});
+
+it("keeps launch completion ahead of an older status read and guards rapid double clicks",async()=>{
+  let finishRead!:(s:{status:string;message:string})=>void;
+  vi.mocked(productionApi.acceptanceStatus).mockImplementation(()=>new Promise(resolve=>{finishRead=resolve;}));
+  vi.mocked(productionApi.startAcceptance).mockResolvedValue({status:'ready',message:'Ready now'});
+  render(<AcceptanceLauncher taskId="task" active en/>);
+  const button=screen.getByRole('button',{name:'Start acceptance'});
+  await act(async()=>{fireEvent.click(button);fireEvent.click(button);});
+  expect(productionApi.startAcceptance).toHaveBeenCalledTimes(1);
+  await act(async()=>finishRead({status:'starting-host',message:'Old progress'}));
+  expect(screen.getByText('Ready now')).toBeTruthy();
+  expect(screen.queryByText('Old progress')).toBeNull();
 });
 
 it("does not display a prior task's late readiness result", async () => {

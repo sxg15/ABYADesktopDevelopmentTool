@@ -10,6 +10,64 @@ struct Fixture {
 }
 
 #[test]
+fn programmer_repair_target_is_validated_and_preserved_on_issue_updates() {
+    let f = Fixture::new();
+    let mut issue = json!({"id":"source-bug","stage":"implementation","kind":"blocker","status":"open","description":"Input event is missing","resumeWhen":"程序修复源码后提供新构建包复验","repairTarget":"abya-source"});
+    let view = f.apply("save-issue", issue.clone()).unwrap();
+    assert_eq!(
+        view.record.unwrap().issues[0]["repairTarget"],
+        "abya-source"
+    );
+    issue.as_object_mut().unwrap().remove("repairTarget");
+    issue["status"] = json!("in-progress");
+    let view = f.apply("save-issue", issue.clone()).unwrap();
+    assert_eq!(
+        view.record.unwrap().issues[0]["repairTarget"],
+        "abya-source"
+    );
+    issue["repairTarget"] = json!("anything");
+    assert!(f.apply("save-issue", issue.clone()).is_err());
+    issue["repairTarget"] = json!("lua");
+    assert_eq!(
+        f.apply("save-issue", issue).unwrap().record.unwrap().issues[0]["repairTarget"],
+        "lua"
+    );
+}
+
+#[test]
+fn ai_issue_repair_rejects_programmer_work_stale_snapshots_and_inactive_tasks() {
+    let f = Fixture::new();
+    let mut issue = json!({"id":"bug","stage":"implementation","kind":"blocker","status":"open","description":"ABYA 底层错误，需要程序修复","resumeWhen":"程序修复后再试"});
+    f.apply("save-issue", issue.clone()).unwrap();
+    assert!(f.service.prepare_issue_repair(&f.id, "bug", None).is_err());
+    issue["repairTarget"] = json!("abya-source");
+    f.apply("save-issue", issue.clone()).unwrap();
+    assert!(f.service.prepare_issue_repair(&f.id, "bug", None).is_err());
+    issue["repairTarget"] = json!("lua");
+    let view = f.apply("save-issue", issue).unwrap();
+    let revision = view.record.unwrap().revision;
+    assert!(
+        f.service
+            .prepare_issue_repair(&f.id, "bug", Some(revision - 1))
+            .is_err()
+    );
+    let spec = f
+        .service
+        .prepare_issue_repair(&f.id, "bug", Some(revision))
+        .unwrap();
+    assert_eq!(spec.issue_id, "bug");
+    assert_eq!(spec.fingerprint.len(), 64);
+    assert!(spec.prompt.contains("不得伪造成功"));
+    assert!(
+        f.service
+            .prepare_issue_repair(&f.id, "missing", None)
+            .is_err()
+    );
+    f.service.set_status(&f.id, TaskStatus::Archived).unwrap();
+    assert!(f.service.prepare_issue_repair(&f.id, "bug", None).is_err());
+}
+
+#[test]
 fn drafts_remain_visible_while_scoped_blocker_prevents_stage_completion() {
     let f = Fixture::new();
     f.doc("requirements", "Confirmed rules");

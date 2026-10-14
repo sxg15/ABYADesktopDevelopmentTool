@@ -1,5 +1,28 @@
 # Development Tasks Skill
 
+## Acceptance UI lifetime (2026-10-14)
+Sibling AcceptanceLauncher and FeedbackPanel use distinct type-prefixed task keys.
+Never reuse taskId alone for both: React can orphan DOM/effects when stages change.
+Acceptance polling permits one pending read, schedules the next after completion,
+and stops for hidden/unmounted panels. Generation/sequence guards reject late status
+reads and older results after an explicit launch. An immediate ref prevents duplicate
+start clicks before React renders. Rendering/remounting never starts acceptance.
+Regress stage switches, refreshes, full remount, slow reads, hidden polling and late
+status completion. Keep notification navigation, programmer alerts and AI repair.
+
+## Programmer issue escalation (2026-10-13)
+Issues accept optional repairTarget: abya-source/abya-build/lua/other. Validate the
+enum; preserve the previous value when omitted on update. This identifies ownership,
+not a new gate or permission. Existing kind, affectedStages and evidence checks remain.
+During Lua implementation, unresolved source/build issues take priority in the task
+guide as red programmer attention, and have a stage banner and red issue cards.
+Resolved records leave active alerts and retain a neutral origin label. Explicit
+lua/other suppresses legacy inference. Old pinned records with explicit programmer
+handoff language plus engine/build context appear as suspected, never confirmed.
+Confirmed targets also receive red labels in exported issue reports. Bundled record
+instructions teach both providers to supply source evidence, build version and recheck
+conditions. Do not mutate pinned workspace Skills merely to add this presentation.
+
 ## Purpose
 
 Manage persistent development work items and their lifecycle.
@@ -274,3 +297,14 @@ not infer physical disconnection from the execution/queue state alone.
 ## Background task notifications (2026-10-14)
 
 list_readonly/get_readonly and production_attention never ensure/migrate workspaces, sync Skills, export files or create sessions. production_attention uses existing public action gates while omitting report/artifact scans. Mutations wake the native monitor through foundation change_signal. Human TaskGuidance branches now consume shared backend attention DTOs; local controls retain ordinary progress/paused/ready guidance. Notification navigation selects exact tasks, rechecks pending group or document revision/hash, requests the matching dialog or original conversation, and falls back to latest stage on stale state. It never answers, approves or continues. Late results are guarded against task switches.
+
+## User-requested AI issue repair (2026-10-13)
+Ordinary unresolved issues expose Let AI fix this, scoped to the selected existing
+Codex conversation. Missing Codex context and inactive tasks disable it; programmer
+source/build (including suspected legacy handoffs) and resolved records omit it.
+TaskService.prepare_issue_repair validates task, optional production revision,
+issue existence/status/ownership and human gates; returns a SHA-256 issue fingerprint
+and a fixed scoped prompt. It does not mutate issue state, approvals or evidence.
+Record success only through the existing validated production operations. Frontend
+submission is serialized and shows queue/delivery feedback; a reply ending is not
+proof of repair. Grok does not support this queued endpoint; show the Codex prerequisite.

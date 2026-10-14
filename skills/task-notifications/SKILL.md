@@ -1,5 +1,9 @@
 # Task Notifications Skill
 
+Frontend programmer-source/build escalation remains a distinct red guide above
+ordinary attention items; it does not consume a native attention item. Native human
+items, badges, remaining-item counts and notification activation remain available.
+
 ## Purpose
 
 Project all active tasks' human actions into one ordered source for guidance and Windows background notifications.

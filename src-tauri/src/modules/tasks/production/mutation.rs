@@ -418,6 +418,15 @@ fn evidence(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
 }
 
 fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
+    if let Some(target) = data.get("repairTarget")
+        && !["abya-source", "abya-build", "lua", "other"]
+            .iter()
+            .any(|allowed| target == allowed)
+    {
+        return Err(AppError::validation(
+            "repairTarget 必须为 abya-source、abya-build、lua 或 other。",
+        ));
+    }
     for key in ["fix", "recheck", "resumeWhen"] {
         if !data[key].is_null() && !data[key].is_string() {
             return Err(AppError::validation(format!("{key} 必须为文字。")));
@@ -484,6 +493,9 @@ fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
     let mut value = data.clone();
     value["updatedAt"] = json!(now());
     if let Some(i) = r.issues.iter().position(|i| i["id"] == id) {
+        if data.get("repairTarget").is_none() && !r.issues[i]["repairTarget"].is_null() {
+            value["repairTarget"] = r.issues[i]["repairTarget"].clone();
+        }
         r.issues[i] = value;
     } else {
         r.issues.push(value);

@@ -127,6 +127,22 @@ export function TasksView({
     notify(continuationMessages[result.status]);
   }
 
+  async function repairSelectedIssue(issueId: string, revision: number) {
+    const conversation = selectedTerminalContext?.conversation;
+    const taskId = selected?.id;
+    if (!taskId || !conversation || selectedProvider !== "codex") throw new Error("请先打开本任务的 Codex 原会话，再请求 AI 修复。");
+    if (!conversation.nativeSessionId) await ensureIntakeConnection({provider:"codex",conversationId:conversation.id});
+    let result = await productionApi.repairIssue(taskId,conversation.id,issueId,revision);
+    if (result.status === "needsConnection" && result.requestId) {
+      await ensureIntakeConnection({provider:"codex",conversationId:conversation.id});
+      result = await productionApi.flushContinuation(taskId,conversation.id,result.requestId);
+    }
+    const messages:Record<string,string>={started:"AI 已收到此问题的修复请求，将检查原因并验证修复结果。",resumed:"已恢复此问题的修复。",queued:"此问题已排队，当前回复结束后由 AI 处理，无需重复点击。",running:"此问题已有处理请求，未重复发送。",completed:"本次 AI 处理已结束，请查看问题记录与复验结果；不代表问题自动解决。",superseded:"问题记录已变化或已解决，未发送过期修复请求，请刷新后核对。",needsReview:"上次请求结果需要核对，请查看原会话，未自动重发。",paused:"修复请求已暂停；请在原会话核对后继续。"};
+    const message=messages[result.status]??continuationMessages[result.status];
+    window.dispatchEvent(new Event("abya:control-changed"));notify(message);
+    return message;
+  }
+
   const selected = tasks.find((task) => task.id === selectedId);
   const selectedTab = selected ? (taskTabs[selected.id] ?? "instances") : "instances";
   const selectedProvider = selected
@@ -702,6 +718,7 @@ export function TasksView({
                 }} />
               </div>
               {selectedTab === "production" && <ProductionPanel key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
+                onRepairIssue={selectedProvider === "codex" && selectedTerminalContext?.conversation ? repairSelectedIssue : undefined}
                 requestedReview={requestedReview?.taskId === selected.id ? requestedReview.document : undefined} onReviewOpened={() => setRequestedReview(undefined)}
                 onContinue={async (message, _group, afterRevision) => continueSelectedTask(message, afterRevision)} />}
               {selectedTab === "skills" && <SkillLibrary key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
@@ -725,7 +742,7 @@ export function TasksView({
                   </button>
                 </div>
 
-                <AcceptanceLauncher key={selected.id} taskId={selected.id} active={selected.status === "active"} en={settings?.locale === "en-US"} />
+                <AcceptanceLauncher key={selected.id} taskId={selected.id} visible={selectedTab === "instances"} active={selected.status === "active"} en={settings?.locale === "en-US"} />
                 <div className="table-wrap instances-table">
                   <table>
                     <thead>

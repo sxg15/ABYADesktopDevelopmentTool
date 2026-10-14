@@ -1,5 +1,10 @@
 # Game Runtime CLI Bridge
 
+Acceptance IPC adapters run startup/version hashing/readiness waits and status reads
+through spawn_blocking, keeping the async runtime available. Status uses get_readonly
+and avoids loading persisted production history when in-memory progress is present.
+No status query creates a workspace, syncs Skills or starts Player processes.
+
 ## Purpose
 
 Invoke the bundled Abya CLI for desktop-owned game instances.

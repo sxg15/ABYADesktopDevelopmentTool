@@ -232,6 +232,238 @@ fn document_decision_queues_while_plain_continue_does_not_interrupt() {
 }
 
 #[test]
+fn issue_repair_targets_one_issue_and_deduplicates_without_marking_it_resolved() {
+    let f = Fixture::new();
+    f.mutate("save-issue",json!({"id":"lua-error","stage":"implementation","kind":"defect","status":"open","description":"Wrong Lua callback","repairTarget":"lua"}));
+    let revision = f.revision();
+    let sent = f
+        .service
+        .repair_issue(&f.task, &f.conversation, "lua-error", revision)
+        .unwrap();
+    assert_eq!(sent.status, S::Started);
+    assert_eq!(f.calls.lock().len(), 1);
+    assert!(
+        f.calls.lock()[0]["input"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("lua-error")
+    );
+    assert_eq!(f.calls.lock()[0]["threadId"], f.native);
+    let again = f
+        .service
+        .repair_issue(&f.task, &f.conversation, "lua-error", revision)
+        .unwrap();
+    assert_eq!(again.request_id, sent.request_id);
+    assert_eq!(f.calls.lock().len(), 1);
+    assert_eq!(f.revision(), revision);
+    assert_eq!(
+        f.service
+            .tasks
+            .production_get(&f.task)
+            .unwrap()
+            .record
+            .unwrap()
+            .issues[0]["status"],
+        "open"
+    );
+    f.mutate("save-issue",json!({"id":"lua-error","stage":"implementation","kind":"defect","status":"in-progress","description":"Wrong Lua callback","repairTarget":"lua"}));
+    assert_eq!(
+        f.service
+            .repair_issue(&f.task, &f.conversation, "lua-error", f.revision())
+            .unwrap()
+            .status,
+        S::Running
+    );
+    assert_eq!(f.calls.lock().len(), 1);
+}
+
+#[test]
+fn issue_repair_reconnect_flushes_only_the_original_request() {
+    let f = Fixture::new();
+    f.mutate("save-issue",json!({"id":"bug","stage":"implementation","kind":"defect","status":"open","description":"Lua bug"}));
+    let session = f.service.sessions.lock().remove(&f.conversation).unwrap();
+    let request = f
+        .service
+        .repair_issue(&f.task, &f.conversation, "bug", f.revision())
+        .unwrap();
+    assert_eq!(request.status, S::NeedsConnection);
+    assert_eq!(
+        request.request_id,
+        f.service
+            .repair_issue(&f.task, &f.conversation, "bug", f.revision())
+            .unwrap()
+            .request_id
+    );
+    assert!(f.calls.lock().is_empty());
+    f.service
+        .sessions
+        .lock()
+        .insert(f.conversation.clone(), session);
+    assert_eq!(
+        f.service
+            .flush_continuation(
+                &f.task,
+                &f.conversation,
+                request.request_id.as_ref().unwrap()
+            )
+            .unwrap()
+            .status,
+        S::Started
+    );
+    f.service
+        .flush_continuation(
+            &f.task,
+            &f.conversation,
+            request.request_id.as_ref().unwrap(),
+        )
+        .unwrap();
+    assert_eq!(f.calls.lock().len(), 1);
+}
+
+#[test]
+fn issue_repair_never_dispatches_a_foreign_request_from_the_selected_directory() {
+    let f = Fixture::new();
+    f.mutate("save-issue",json!({"id":"bug","stage":"implementation","kind":"defect","status":"open","description":"Lua bug"}));
+    f.busy("busy");
+    let result = f
+        .service
+        .repair_issue(&f.task, &f.conversation, "bug", f.revision())
+        .unwrap();
+    let task = f.service.tasks.get(&f.task).unwrap();
+    let directory = conversation_directory(Path::new(&task.workspace_path), &f.conversation);
+    let mut saved = continuation_queue::read(&directory).unwrap().unwrap();
+    saved.task_id = Uuid::new_v4().to_string();
+    continuation_queue::save(&directory, &mut saved).unwrap();
+    f.complete();
+    assert!(
+        f.service
+            .flush_continuation(
+                &f.task,
+                &f.conversation,
+                result.request_id.as_ref().unwrap()
+            )
+            .is_err()
+    );
+    assert!(
+        f.service
+            .repair_issue(&f.task, &f.conversation, "bug", f.revision())
+            .is_err()
+    );
+    assert!(f.calls.lock().is_empty());
+}
+
+#[test]
+fn unknown_issue_repair_delivery_is_never_blindly_retried() {
+    let f = Fixture::new();
+    f.mutate("save-issue",json!({"id":"bug","stage":"implementation","kind":"defect","status":"open","description":"Lua bug"}));
+    let attempts = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let count = attempts.clone();
+    let native = f.native.clone();
+    let server = AppServerHandle::for_rpc_test(move |method, _| match method {
+        "thread/read" => Ok(json!({"thread":{"id":native,"turns":[]}})),
+        "turn/start" => {
+            count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Err("connection closed".into())
+        }
+        _ => Ok(json!({})),
+    });
+    f.service
+        .runtime_servers
+        .lock()
+        .insert(f.conversation.clone(), server);
+    assert!(
+        f.service
+            .repair_issue(&f.task, &f.conversation, "bug", f.revision())
+            .is_err()
+    );
+    assert_eq!(
+        f.service
+            .repair_issue(&f.task, &f.conversation, "bug", f.revision())
+            .unwrap()
+            .status,
+        S::NeedsReview
+    );
+    assert_eq!(attempts.load(std::sync::atomic::Ordering::SeqCst), 1);
+}
+
+#[test]
+fn busy_issue_repair_waits_and_rechecks_the_exact_issue_before_dispatch() {
+    let f = Fixture::new();
+    let mut issue = json!({"id":"lua-error","stage":"implementation","kind":"blocker","status":"open","description":"Wrong Lua callback","resumeWhen":"Fix callback","repairTarget":"lua"});
+    f.mutate("save-issue", issue.clone());
+    f.busy("previous-turn");
+    let request = f
+        .service
+        .repair_issue(&f.task, &f.conversation, "lua-error", f.revision())
+        .unwrap();
+    assert_eq!(request.status, S::Queued);
+    assert_eq!(
+        f.service
+            .repair_issue(&f.task, &f.conversation, "lua-error", f.revision())
+            .unwrap()
+            .request_id,
+        request.request_id
+    );
+    assert!(f.calls.lock().is_empty());
+    issue["repairTarget"] = json!("abya-build");
+    f.mutate("save-issue", issue);
+    f.complete();
+    assert_eq!(
+        f.service
+            .flush_continuation(
+                &f.task,
+                &f.conversation,
+                request.request_id.as_ref().unwrap()
+            )
+            .unwrap()
+            .status,
+        S::Superseded
+    );
+    assert!(f.calls.lock().is_empty());
+}
+
+#[test]
+fn queued_issue_repair_dispatches_after_busy_turn_and_does_not_replace_another_intent() {
+    let f = Fixture::new();
+    f.mutate("save-issue",json!({"id":"one","stage":"implementation","kind":"defect","status":"open","description":"One bug"}));
+    f.mutate("save-issue",json!({"id":"two","stage":"implementation","kind":"defect","status":"open","description":"Another bug"}));
+    f.busy("busy");
+    let request = f
+        .service
+        .repair_issue(&f.task, &f.conversation, "one", f.revision())
+        .unwrap();
+    assert!(
+        f.service
+            .repair_issue(&f.task, &f.conversation, "two", f.revision())
+            .is_err()
+    );
+    assert!(
+        f.service
+            .continue_after_revision(&f.task, &f.conversation, Some(f.revision()))
+            .is_err()
+    );
+    f.complete();
+    assert_eq!(
+        f.service
+            .flush_continuation(
+                &f.task,
+                &f.conversation,
+                request.request_id.as_ref().unwrap()
+            )
+            .unwrap()
+            .status,
+        S::Started
+    );
+    assert_eq!(f.calls.lock().len(), 1);
+    assert!(
+        f.calls.lock()[0]["input"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("\"issueId\":\"one\"")
+    );
+}
+
+#[test]
 fn ten_fast_answers_wait_for_native_completion_and_dispatch_once() {
     let f = Fixture::new();
     for i in 0..10 {

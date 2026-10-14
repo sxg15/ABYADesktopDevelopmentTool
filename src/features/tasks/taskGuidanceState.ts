@@ -2,8 +2,9 @@ import type { ProductionView, TaskControlState } from "../../shared/production";
 import type { TerminalWorkflowSnapshot } from "../../shared/types";
 import type { AttentionTarget, TaskAttentionSnapshot } from "../../shared/notifications";
 import { stageName } from "./productionText";
+import { activeProgrammerIssues, programmerIssue } from "./programmerIssue";
 
-export type GuidanceTone = "waiting" | "human" | "terminal" | "error" | "neutral";
+export type GuidanceTone = "waiting" | "human" | "terminal" | "error" | "neutral" | "programmer";
 export interface GuidancePending { taskId: string; questions: number; reviews: number; terminal: number }
 export interface GuidanceModel {
   key: string; tone: GuidanceTone; title: string; instruction: string; detail: string;
@@ -24,6 +25,7 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
   const currentControl = !control?.taskId || control.taskId === taskId ? control : undefined;
   const state = currentControl?.state ?? (observed && turn ? ({inProgress:"running",waitingForPlan:"waitingForResponse",completed:"ready",failed:"failed",interrupted:"paused"}[turn.status]) : "unknown");
   const stage = r?.currentStage ?? "requirements";
+  const programmerIssues = stage === "implementation" ? activeProgrammerIssues(r?.issues ?? []) : [];
   const stageLabel = r ? stageName(stage, view?.policy.stages.find(s => s.id === stage)?.name ?? stage, en ? "en-US" : undefined) : "";
   // Human decisions come exclusively from the native projection used by Windows.
   const all = active && attention?.taskId === taskId && !attention.unavailable ? attention.items : [];
@@ -45,6 +47,11 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
   const set = (value: Partial<GuidanceModel>) => Object.assign(model, value);
   const primary = items[0];
   if (!active) set({key:"closed",title:text("任务已结束", "Task ended"),instruction:text("可以查看已保存的成果与历史记录。", "Saved results and history remain available."),detail:text("恢复任务后才能继续操作。", "Reactivate the task to continue."),action:"none",destination:""});
+  else if (programmerIssues.length) set({key:`programmer:${programmerIssues.map(i=>i.id).join(",")}`,tone:"programmer",attention:true,action:"stage",
+    title:text(programmerIssues.every(i=>programmerIssue(i)?.suspected) ? "疑似 ABYA 程序问题 · 需要排查" : "ABYA 程序缺陷 · 需要程序修复", "ABYA source/build issue · programmer required"),
+    instruction:text(`Lua 执行阶段有 ${programmerIssues.length} 项源码／构建包问题需要程序处理。`, `${programmerIssues.length} source/build issues need programmer attention during Lua implementation.`),
+    destination:text("处理位置：Lua 阶段的问题与阻塞", "Review in: Lua issues and blockers"),button:text("查看程序待修复问题", "View programmer issues"),
+    detail:text("请程序排查或修复后提供更新的构建包，复验通过再继续受影响步骤。", "Investigate or fix, provide an updated build, and recheck before resuming affected steps.")});
   else if (primary) set({
     ...primary[en ? "en" : "zh"], key: primary.key, tone: primary.tone, attention: true,
     action: primary.target.action, target: primary.target, stage: primary.target.stage,
@@ -61,6 +68,6 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
   else if (state === "awaitingContinue") set({key:state,title:text("终端已连接，任务等待继续", "Terminal connected · ready to continue"),instruction:text("请前往原会话终端，确认后点击“继续任务”。", "Open the original terminal and choose Continue task when ready."),detail:text("重新连接不会自动重发任务，已有答案与审查记录保留。", "Reconnecting does not resend work. Answers and reviews are retained."),button:text("前往终端继续", "Continue in terminal")});
   else if (["paused", "pausing"].includes(state)) set({key:state,title:text(state === "pausing" ? "正在暂停任务" : "任务已暂停", state === "pausing" ? "Pausing task" : "Task paused"),instruction:text("需要继续时，请前往原会话终端。", "Open the original terminal when ready to continue."),detail:text("答案与历史记录已保留，不会自动重新提交。", "Answers and history are retained and will not be resubmitted."),button:text("前往终端", "Open terminal")});
   else if (view && ["ready", "notStarted"].includes(state)) set({key:state,title:text(state === "notStarted" ? "任务尚未开始执行" : "本轮回复已结束", state === "notStarted" ? "Task not started" : "This response has ended"),instruction:text("AI 当前未在执行，请前往终端继续或输入需求。", "AI is idle. Open the terminal to continue or provide a request."),detail:text("如果出现新的阶段待办，这里会显示明确入口。", "New stage actions will appear here."),button:text("前往终端继续", "Continue in terminal")});
-  model.additional = Math.max(0, items.length - (primary ? 1 : 0));
+  model.additional = Math.max(0, items.length - (primary && model.tone !== "programmer" ? 1 : 0));
   return model;
 }

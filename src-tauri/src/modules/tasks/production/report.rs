@@ -253,6 +253,18 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
         .iter()
         .filter(|i| phase_for(i["stage"].as_str().unwrap_or("closeout")) == phase)
     {
+        if i["status"] != "resolved" {
+            let target = match i["repairTarget"].as_str() {
+                Some("abya-source") => Some("ABYA 游戏源码缺陷"),
+                Some("abya-build") => Some("ABYA 构建包缺陷"),
+                _ => None,
+            };
+            if let Some(target) = target {
+                body += &format!(
+                    "<p style=\"padding:12px;border-left:6px solid #bf202e;background:#fff0ef;color:#841724;font-weight:800\">需要程序修复 · {target}；使用修复后的构建包复验。</p>"
+                );
+            }
+        }
         body += &format!(
             "<details {}><summary>{} · {}</summary><p>{}</p><p>处理方案：{}</p><p>复验结果：{}</p><small>{}</small></details>",
             if i["status"] == "resolved" {

@@ -43,11 +43,15 @@ fn validate_lua(value: &Value) -> AppResult<()> {
 
 impl RuntimeBridgeService {
     pub fn acceptance_status(&self, task: &str) -> AppResult<Value> {
-        self.tasks.get(task)?;
+        self.tasks.get_readonly(task)?;
         let current = self.acceptance_progress.lock().get(task).cloned();
-        let mut last = current
-            .or(self.tasks.acceptance_last(task)?)
-            .unwrap_or(json!({"status":"not-started"}));
+        let mut last = match current {
+            Some(current) => current,
+            None => self
+                .tasks
+                .acceptance_last(task)?
+                .unwrap_or(json!({"status":"not-started"})),
+        };
         if last["status"] == "ready" && !self.session_alive(task, &last) {
             last["status"] = json!("stopped");
             last["message"] = json!("验收实例已退出，可重新打开当前版本。");

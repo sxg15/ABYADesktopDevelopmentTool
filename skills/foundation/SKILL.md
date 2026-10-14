@@ -1,5 +1,9 @@
 # Foundation Skill
 
+ProductionIssue optionally carries repairTarget (abya-source, abya-build, lua, other)
+for programmer handoff display. Legacy records remain readable without it. Ownership
+classification and validation remain in development-tasks; no database migration.
+
 ## Purpose
 
 Provide shared errors, DTO conventions, SQLite access, paths, secret storage,
@@ -124,3 +128,8 @@ Document artScope is additive, preserving old serialized records. No new secrets
 Foundation exposes content-free change_signal revisions and typed TaskAttention DTO/React subscriptions. The additive task_notification_receipts table stores key/target/disposition/active state with task FK cascade; no task content or credentials. SettingsService::locale reads locale alone without secret decoding. notifications::NotificationBackend encapsulates native ToastGeneric, user-scoped AUMID/CLSID registration, Start Menu shortcut with AUMID/ToastActivatorCLSID, foreground PID check and COM activation on one MTA worker. windows/windows-core 0.62.2 provide WinRT/COM; winreg owns HKCU. Payload is bounded escaped text plus opaque SHA key only; system audio/duration/DND apply. Debug or ABYA_TEST_MODE identities include a data-directory hash; test COM cold activation exits before real data is opened. Normal shutdown revokes COM, clears history and removes test registration. No installer, tray or shell command is used.
 A registration guard also cleans partially initialized test AUMID/CLSID/shortcut resources on native initialization failure.
 Fresh unpackaged AUMIDs return ERROR_NOT_FOUND from ToastNotifier.Setting until first registration. Preregister only for 0x80070490 using a suppressed, silent, 15-second-expiry toast and immediately remove it, following the Windows Community Toolkit behavior. Actual task notifications keep default system audio/duration. Other HRESULTs are reported without masking them. The opt-in isolated_windows_toast_registration_history_and_com test validates actual WinRT history and COM activation; ABYA_TEST_WINDOWS_TOAST=1 is required. Release COM references before RoUninitialize.
+
+productionApi.repairIssue invokes repair_codex_issue with taskId, conversationId,
+issueId and expectedRevision. It returns the existing IntakeContinuation DTO; no
+arbitrary prompt/command input or new credential surface. Task/provider services own
+validation, prompt construction, queue and receipts; Tauri remains an adapter.

@@ -1,5 +1,9 @@
 # LLM Maintenance Contract
 
+Release branch policy (2026-10-14): all subsequent source and portable package
+changes are committed/pushed to dev only. Do not update main or CLI without a new
+explicit user instruction. Preserve existing dev features when integrating work.
+
 Before changing production code:
 
 1. Read `ARCHITECTURE.md` and `module-registry.json`.

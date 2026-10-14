@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, CircleHelp, ClipboardCheck, Info, LoaderCircle, MapPin, MessageCircleQuestion, Terminal, Unplug } from "lucide-react";
+import { ArrowRight, CircleHelp, ClipboardCheck, Info, LoaderCircle, MapPin, MessageCircleQuestion, Terminal, Unplug, TriangleAlert } from "lucide-react";
 import { productionApi, type ProductionDocument, type ProductionView, type TaskControlState } from "../../shared/production";
 import type { TerminalWorkflowSnapshot } from "../../shared/types";
 import { taskGuidanceState, type GuidancePending } from "./taskGuidanceState";
@@ -50,14 +50,14 @@ export function TaskGuidance({ taskId, active, control, workflow, en = false, on
     } else if (model.action === "stage") onStage(model.stage);
     else if (model.action === "terminal") onTerminal(model.target);
   }
-  const Icon = model.tone === "waiting" ? LoaderCircle : model.tone === "terminal" ? Terminal
+  const Icon = model.tone === "programmer" ? TriangleAlert : model.tone === "waiting" ? LoaderCircle : model.tone === "terminal" ? Terminal
     : model.tone === "error" ? Unplug : model.action === "question" ? MessageCircleQuestion
       : model.tone === "human" ? ClipboardCheck : CircleHelp;
   return <div className="task-guidance-shell"><section className={`task-guidance tone-${model.tone}${emphasize ? " guidance-emphasis" : ""}`} aria-label={en ? "What to do next" : "当前操作指引"}>
     <div className="guidance-main" role="status" aria-live="polite" aria-atomic="true">
       <span className="guidance-icon"><Icon aria-hidden="true" size={26} /></span>
       <div className="guidance-copy"><div className="guidance-eyebrow">
-        <strong>{model.attention ? (en ? "Your action is needed" : "需要你的操作") : model.tone === "waiting" ? (en ? "No action needed" : "当前无需操作") : (en ? "Task status" : "任务状态")}</strong>
+        <strong>{model.tone === "programmer" ? (en ? "Programmer action required" : "需要程序处理") : model.attention ? (en ? "Your action is needed" : "需要你的操作") : model.tone === "waiting" ? (en ? "No action needed" : "当前无需操作") : (en ? "Task status" : "任务状态")}</strong>
         {model.stageLabel && <span>{model.stageLabel}</span>}
       </div><h2>{model.title}</h2><p>{model.instruction}</p></div>
     </div>

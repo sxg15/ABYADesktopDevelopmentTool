@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProductionPanel } from "./ProductionPanel";
 import { SkillLibrary } from "./SkillLibrary";
 import { productionApi, type ProductionView } from "../../shared/production";
-vi.mock("../../shared/production", () => ({ productionApi: { get: vi.fn(), update: vi.fn(), decide: vi.fn(), upgrade: vi.fn(), skills: vi.fn(), readSkill: vi.fn(), open: vi.fn(), revealDocument: vi.fn(), revealReport: vi.fn(), answer: vi.fn() } }));
+vi.mock("../../shared/production", () => ({ productionApi: { get: vi.fn(), update: vi.fn(), decide: vi.fn(), upgrade: vi.fn(), skills: vi.fn(), readSkill: vi.fn(), open: vi.fn(), revealDocument: vi.fn(), revealReport: vi.fn(), answer: vi.fn(), acceptanceStatus:vi.fn(async()=>({status:"not-started"})),startAcceptance:vi.fn() } }));
 const fixture = (): ProductionView => ({
   actions: { review: { requirements: "" }, approve: { requirements: "" }, feedback: { gameplay: "尚无作品" } },
   policy: { workflowVersion: "1.1.0", stages: [{ id: "requirements", name: "需求", approval: "requirements" }], dimensions: [], questions: [] },
@@ -15,6 +15,67 @@ const fixture = (): ProductionView => ({
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); sessionStorage.clear(); });
 describe("Production decisions", () => {
+  it("keeps exactly one acceptance card through stage switches, refreshes and remounts",async()=>{
+    const value=fixture();value.policy.iterationMode="human-feedback";
+    value.policy.stages=[{id:'resources',name:'Resources',approval:'resources'},{id:'review',name:'Review',approval:null},{id:'delivery',name:'Delivery',approval:'delivery'}];
+    value.record!.currentStage='review';value.record!.documents={};value.record!.stages={resources:'passed',review:'awaiting-feedback',delivery:'not-started'};
+    vi.mocked(productionApi.get).mockResolvedValue(value);
+    const page=render(<ProductionPanel taskId="a" active locale="en-US"/>);
+    await screen.findByRole('button',{name:'Start acceptance'});
+    for(const stage of ['resources','review','delivery','resources','review','delivery']){
+      value.record={...value.record!,currentStage:stage,revision:value.record!.revision+1};
+      vi.mocked(productionApi.get).mockResolvedValue({...value});
+      const calls=vi.mocked(productionApi.get).mock.calls.length;
+      fireEvent.click(screen.getByRole('button',{name:'Refresh'}));
+      await waitFor(()=>expect(productionApi.get).toHaveBeenCalledTimes(calls+1));
+      await waitFor(()=>expect(screen.queryAllByRole('button',{name:'Start acceptance'})).toHaveLength(stage==='resources'?0:1));
+    }
+    expect(productionApi.startAcceptance).not.toHaveBeenCalled();
+    page.unmount();expect(document.querySelectorAll('.acceptance-launcher')).toHaveLength(0);
+    render(<ProductionPanel taskId="a" active locale="en-US"/>);
+    await screen.findByRole('button',{name:'Start acceptance'});
+    expect(document.querySelectorAll('.acceptance-launcher')).toHaveLength(1);
+  });
+  it("submits the selected ordinary issue once and does not pretend it is resolved",async()=>{
+    const value=fixture();value.record!.stages.requirements="in-progress";
+    value.record!.issues=[{id:"lua-bug",kind:"defect",status:"open",stage:"requirements",description:"Wrong Lua callback",repairTarget:"lua"},
+      {id:"engine",kind:"blocker",status:"open",stage:"requirements",description:"Engine defect",repairTarget:"abya-source"},
+      {id:"done",kind:"defect",status:"resolved",stage:"requirements",description:"Resolved issue"}];
+    vi.mocked(productionApi.get).mockResolvedValue(value);
+    let finish!:(message:string)=>void;
+    const repair=vi.fn(()=>new Promise<string>(resolve=>{finish=resolve;}));
+    render(<ProductionPanel taskId="a" active onRepairIssue={repair}/>);
+    const button=await screen.findByRole('button',{name:'让 AI 自动修复'});
+    expect(screen.getAllByRole('button',{name:'让 AI 自动修复'})).toHaveLength(1);
+    fireEvent.click(button);fireEvent.click(button);
+    expect(repair).toHaveBeenCalledExactlyOnceWith('lua-bug',7);
+    expect((screen.getByRole('button',{name:'正在提交…'}) as HTMLButtonElement).disabled).toBe(true);
+    finish('此问题已排队，当前回复结束后处理。');
+    await screen.findByText('此问题已排队，当前回复结束后处理。');
+    expect(value.record!.issues[0].status).toBe('open');
+    expect(productionApi.update).not.toHaveBeenCalled();expect(productionApi.decide).not.toHaveBeenCalled();
+  });
+  it("keeps an ordinary issue visible after a repair request fails",async()=>{
+    const value=fixture();value.record!.issues=[{id:'bug',stage:'requirements',kind:'blocker',status:'open',description:'Missing configuration'}];
+    vi.mocked(productionApi.get).mockResolvedValue(value);
+    const repair=vi.fn().mockRejectedValue(new Error('请先连接原会话'));
+    render(<ProductionPanel taskId="a" active onRepairIssue={repair}/>);
+    fireEvent.click(await screen.findByRole('button',{name:'让 AI 自动修复'}));
+    await screen.findByText('请先连接原会话');
+    expect((screen.getByRole('button',{name:'让 AI 自动修复'}) as HTMLButtonElement).disabled).toBe(false);
+  });
+  it("highlights source/build problems while keeping resolved records out of the red alert",async()=>{
+    const value=fixture();value.record!.currentStage="implementation";value.record!.stages.implementation="blocked";
+    value.policy.stages.push({id:"implementation",name:"Lua",approval:null});
+    value.record!.issues=[{id:"engine",kind:"blocker",status:"open",stage:"implementation",description:"Input dispatch defect",repairTarget:"abya-source"},
+      {id:"old",kind:"defect",status:"resolved",stage:"implementation",description:"Old build issue",repairTarget:"abya-build"}];
+    vi.mocked(productionApi.get).mockResolvedValue(value);
+    render(<ProductionPanel taskId="a" active/>);
+    expect((await screen.findByRole("alert")).textContent).toContain("1 项未解决问题");
+    expect(screen.getAllByText("Input dispatch defect")[0].closest("article")?.classList.contains("programmer-issue")).toBe(true);
+    expect(screen.getByText(/ABYA 游戏源码缺陷 · 需要程序修复/)).toBeTruthy();
+    expect(screen.getAllByText("Old build issue")[0].closest("article")?.classList.contains("programmer-issue")).toBe(false);
+  });
   it("opens a requested review after loading the production tab and leaves the decision unselected", async () => {
     const view=fixture(), opened=vi.fn(); vi.mocked(productionApi.get).mockResolvedValue(view);
     render(<ProductionPanel taskId="a" active locale="en-US" requestedReview={view.record!.documents.requirements} onReviewOpened={opened} />);

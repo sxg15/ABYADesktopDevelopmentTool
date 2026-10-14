@@ -260,20 +260,26 @@ fn get_task_production(task_id: String, state: State<'_, AppState>) -> AppResult
     state.tasks.production_get(&task_id)
 }
 
-#[tauri::command(async)]
-fn start_task_acceptance(
+#[tauri::command]
+async fn start_task_acceptance(
     task_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<serde_json::Value> {
-    state.runtime_bridge.start_acceptance(&task_id)
+    let bridge = state.runtime_bridge.clone();
+    tauri::async_runtime::spawn_blocking(move || bridge.start_acceptance(&task_id))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn get_task_acceptance(
+#[tauri::command]
+async fn get_task_acceptance(
     task_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<serde_json::Value> {
-    state.runtime_bridge.acceptance_status(&task_id)
+    let bridge = state.runtime_bridge.clone();
+    tauri::async_runtime::spawn_blocking(move || bridge.acceptance_status(&task_id))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command(async)]
@@ -349,6 +355,19 @@ fn flush_codex_continuation(
     state
         .codex_terminal
         .flush_continuation(&task_id, &conversation_id, &request_id)
+}
+
+#[tauri::command(async)]
+fn repair_codex_issue(
+    task_id: String,
+    conversation_id: String,
+    issue_id: String,
+    expected_revision: u64,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::IntakeContinuation> {
+    state
+        .codex_terminal
+        .repair_issue(&task_id, &conversation_id, &issue_id, expected_revision)
 }
 #[tauri::command(async)]
 fn get_codex_task_control(
@@ -1052,6 +1071,7 @@ pub fn run() {
             continue_intake_questions,
             submit_intake_answers,
             continue_codex_task,
+            repair_codex_issue,
             flush_codex_continuation,
             get_codex_task_control,
             get_codex_execution_settings,

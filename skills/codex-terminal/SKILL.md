@@ -164,3 +164,18 @@ workspace probe with a healthy service and a hard failure after the service stop
 
 attention_states scans only task-local valid UUID metadata/workflow/continuation files, skips archived conversations and reuses project_control with queue tracking disabled. It performs no native sync, workspace/Skill writes, RPC or session startup. Native waitingOnApproval/waitingOnUserInput transitions generate a persisted interactionId and clear it on leaving the wait; repeated status events retain the same ID. Same-turn subsequent waits are distinct. The monitor observes all conversations without taking the lifecycle RPC lock.
 Readonly workflow reads use try_lock on the write lock, returning unavailable during replacement rather than interpreting a temporary missing snapshot as a resolved wait.
+
+## Targeted issue repair queue (2026-10-13)
+repair_issue creates a typed RepairIntent (issueId, fingerprint) in the existing
+continuation queue. Validate the selected issue and native identity; recheck its
+fingerprint before turn/start. Changes/resolution/programmer classification cancel
+stale delivery. Busy turns defer it without interruption. Reconnection only flushes
+the saved request ID. Never overwrite another pending continuation. Plain Continue
+may resume a paused repair intent; no automatic replay on process restart.
+Per-fingerprint issue-repair receipts retain deduplication even after the active
+queue changes. Unknown sending outcomes require review. Receipt paths accept only
+64 hexadecimal characters. Human gates pause repair; answer/approval operations keep
+their existing workflows and the user can explicitly request repair again afterward.
+Only fixed backend prompts go to turn/start, not arbitrary UI-provided commands.
+Tests cover exact issue/native identity, duplicate clicks, busy dispatch, changed
+ownership, competing intents and no automatic issue-resolution mutations.

@@ -1,5 +1,18 @@
 # Release Skill
 
+## Dev acceptance UI fix (2026-10-14)
+Default/Validation builds use acceptance-ui-fix-20261014. Integrate dev notifications
+with the prior programmer alerts and AI repair without reverting either. All source
+and complete Publish changes go to dev only; main and CLI are not pushed. Validate
+stage-switch/remount single-card behavior and slow/hidden polling, all normal checks,
+the isolated portable package and a fresh dev checkout in a relocated path.
+
+## Programmer alert release (2026-10-13)
+Default/Validation builds use programmer-alert-20261013. Sync the updated canonical
+production-records reference to Grok and ship both bundles. Verify confirmed/legacy
+suspected classifications, ordinary Lua exclusions, resolved alerts and responsive
+red guidance. Keep existing task pins and previous terminal fixes intact.
+
 ## Terminal IME release (2026-10-13)
 Default and Validation packages use terminal-ime-fix-20261013 and retain the
 session recovery fixes. scripts/ime-preview.html provides an isolated real xterm
@@ -40,7 +53,8 @@ Publish has a path allowlist in .gitignore; package-files.json lists all runtime
 portable-package.mjs rejects private/unexpected files, links, traversal, missing files,
 hash mismatches and oversized normal-Git payloads. --require-tracked catches ignored
 or forgotten release files. Publish bytes use -text attributes to survive clone intact.
-Both the CLI development branch and default main must carry the verified distribution.
+All subsequent source and verified distribution changes go to dev only. Do not push
+main or CLI unless the user explicitly changes this branch policy (2026-10-14).
 Validate a fresh checkout in a different path, including spaces/non-ASCII characters.
 The application is ready to open without build tools; per-user AI login, game Player
 selection and the Windows WebView2 dependency remain machine prerequisites.
@@ -205,3 +219,9 @@ Default/Validation builds use background-notifications-20261014. Validate with A
 scripts/test-task-notifications.mjs creates only a fresh marker-owned isolated SQLite fixture and supports versioned question/review, resolution/archive/deletion, toggle/corruption and sanitized receipt reports. It never accesses real data or provider accounts. Use a disposable logs directory, Node 24, and ports 43781/43782 after checking they are free.
 Windows native opt-in acceptance: ABYA_TEST_WINDOWS_TOAST=1 cargo test isolated_windows_toast_registration_history_and_com --lib -- --ignored --nocapture. This displays one separate-identity test toast and verifies COM/history/removal/registration cleanup; it is not a substitute for actual shell-click UI acceptance.
 isolated_portable_notification_activation is an ignored native client test restricted to the marker-owned ABYA_TEST_NOTIFICATION_FIXTURE. It reads that test identity history and optionally invokes its COM callback with ABYA_TEST_NOTIFICATION_KEY (test or an opaque key), allowing end-to-end portable navigation verification without posting task actions. Distinguish this from physical shell clicks.
+
+## Issue repair release (2026-10-13)
+Default/Validation use issue-auto-repair-20261013. Verify issue/native binding,
+queued/deduplicated delivery, stale/programmer/resolved rejection and UI feedback.
+The button uses the selected Codex conversation and never auto-resolves a defect.
+Keep the complete portable distribution and earlier startup/IME/programmer alerts.

@@ -5,6 +5,7 @@ mod recovery;
 mod resume_failure;
 pub use recovery::RecoveryCandidate;
 mod continuation_queue;
+mod issue_repair;
 #[cfg(test)]
 mod queue_tests;
 mod task_control;

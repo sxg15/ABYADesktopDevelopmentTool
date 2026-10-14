@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, FileText, FolderOpen } from "lucide-react";
+import { Check, FileText, FolderOpen, TriangleAlert, Wrench } from "lucide-react";
 import {
   productionApi,
   type ProductionView,
@@ -15,6 +15,7 @@ import { AcceptanceLauncher } from "./AcceptanceLauncher";
 import { VisualGallery } from "./VisualGallery";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { DocumentReview } from "./DocumentReview";
+import { programmerIssue, activeProgrammerIssues } from "./programmerIssue";
 
 const names: Record<string, string> = {
   requirements: "需求整理",
@@ -66,12 +67,14 @@ export function ProductionPanel({
   onContinue,
   requestedReview,
   onReviewOpened,
+  onRepairIssue,
 }: {
   taskId: string;
   active: boolean;
   locale?: string;
   requestedReview?: ProductionDocument;
   onReviewOpened?: () => void;
+  onRepairIssue?: (issueId: string, revision: number) => Promise<string>;
   onContinue?: (
     message: string,
     group?: IntakeQuestionGroup,
@@ -84,6 +87,8 @@ export function ProductionPanel({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [repairingIssue, setRepairingIssue] = useState<string>();
+  const [repairFeedback, setRepairFeedback] = useState<Record<string,{snapshot:string;message:string}>>({});
   const [question, setQuestion] = useState("ask");
   const [playerMode, setPlayerMode] = useState("unspecified");
   const [editingPlayers, setEditingPlayers] = useState(false);
@@ -113,6 +118,7 @@ export function ProductionPanel({
     setReviewDocument(undefined);
     setError("");
     setNotice("");
+    setRepairFeedback({});
     void refresh();
     const timer = window.setInterval(() => void refresh(), 4000);
     return () => {
@@ -159,7 +165,15 @@ export function ProductionPanel({
         affected(i, stage) &&
         (r.stages[stage] !== "passed" || i.stage === stage),
     ) ?? [];
-  const openIssues = issues.filter((i) => i.status !== "resolved");
+  const openIssues = issues.filter((i) => i.status !== "resolved").sort((a,b)=>Number(!!programmerIssue(b))-Number(!!programmerIssue(a)));
+  async function requestRepair(issue: ProductionIssue) {
+    if (!r || !active || mutating.current || !onRepairIssue || programmerIssue(issue) || issue.status === "resolved") return;
+    mutating.current=true; sequence.current++;setBusy(true);setRepairingIssue(issue.id);setError("");setNotice("");
+    try { const message=await onRepairIssue(issue.id,r.revision); if(alive.current)setRepairFeedback(current=>({...current,[issue.id]:{snapshot:JSON.stringify(issue),message}})); }
+    catch(e){if(alive.current)setError(errorMessage(e));}
+    finally {mutating.current=false;if(alive.current){setBusy(false);setRepairingIssue(undefined);void refresh();}}
+  }
+  const programmerIssues = stage === "implementation" ? activeProgrammerIssues(openIssues) : [];
   const groups =
     r?.questionGroups?.filter((g) => (g.stage ?? "requirements") === stage) ??
     [];
@@ -212,7 +226,10 @@ export function ProductionPanel({
     }
   }
   const issueCard = (i: ProductionIssue) => (
-    <article className={`production-issue-card issue-${i.status}`} key={i.id}>
+    <article className={`production-issue-card issue-${i.status}${programmerIssue(i) && i.status !== "resolved" ? " programmer-issue" : ""}`} key={i.id}>
+      {programmerIssue(i,en) && <div className="programmer-issue-label"><TriangleAlert size={18} aria-hidden="true"/>
+        {programmerIssue(i,en)!.label} · {i.status === "resolved" ? (en ? "Resolved" : "已修复") : programmerIssue(i)!.suspected ? (en ? "Programmer investigation required" : "需要程序排查") : (en ? "Programmer fix required" : "需要程序修复")}
+      </div>}
       <div className="production-card-heading">
         <strong>{i.title || i.description.split(/[。\n]/)[0]}</strong>
         <span className={`production-status status-${i.status}`}>
@@ -244,6 +261,14 @@ export function ProductionPanel({
           </>
         )}
       </dl>
+      {i.status !== "resolved" && !programmerIssue(i) && <div className="issue-repair-action">
+        <button className="primary-button" disabled={busy || !active || !onRepairIssue} onClick={()=>void requestRepair(i)}
+          title={!active ? (en ? "Reactivate the task first" : "请先恢复任务") : !onRepairIssue ? (en ? "Open this task's Codex conversation first" : "请先选择并打开本任务的 Codex 原会话") : (en ? "Ask AI to investigate, fix and verify this issue" : "让 AI 检查并修复此问题，完成后记录验证结果")}>
+          <Wrench size={15} aria-hidden="true"/>{repairingIssue===i.id ? (en ? "Submitting…" : "正在提交…") : (en ? "Let AI fix this" : "让 AI 自动修复")}
+        </button>
+        <small>{!onRepairIssue ? (en ? "Requires an existing Codex conversation." : "请先选择并打开本任务的 Codex 原会话。") : (en ? "Human input or approvals may still be needed." : "需要人工信息或权限时，AI 会说明阻塞原因。")}</small>
+        {repairFeedback[i.id]?.snapshot===JSON.stringify(i) && <p className="issue-repair-feedback" role="status">{repairFeedback[i.id].message}</p>}
+      </div>}
       <details>
         <summary>{en ? "Technical details" : "查看详细记录"}</summary>
         <p>{i.id}</p>
@@ -377,6 +402,12 @@ export function ProductionPanel({
         </section>
       ) : (
         <>
+          {programmerIssues.length > 0 && <section className="programmer-blocker-banner" role="alert">
+            <TriangleAlert size={26} aria-hidden="true"/>
+            <div><h3>{en ? "Programmer attention required" : "程序处理提醒：ABYA 源码／构建包问题"}</h3>
+              <p>{en ? `${programmerIssues.length} unresolved issues need programmer attention. Verify the corrected source/build before resuming affected steps.` : `有 ${programmerIssues.length} 项未解决问题需要程序处理。请排查或修复游戏源码／构建包，使用修复后的构建包复验，再继续受影响步骤。`}</p>
+            </div>
+          </section>}
           <section
             className={`production-overview ${openIssues.length ? "has-issues" : ""}`}
           >
@@ -678,11 +709,11 @@ export function ProductionPanel({
               </p>
             </section>
           )}
-          {["review", "delivery"].includes(stage) && <AcceptanceLauncher key={taskId} taskId={taskId} active={active} en={en} />}
+          {["review", "delivery"].includes(stage) && <AcceptanceLauncher key={`acceptance:${taskId}`} taskId={taskId} active={active} en={en} />}
           {["resources", "plan", "review", "delivery"].includes(stage) && <VisualGallery taskId={taskId}
             artifacts={(view.artifacts ?? r.artifacts ?? []).filter(a => a.stage === "resources" || a.sourceType === "gameplay" || a.sourceType === "feedback")}
             bindings={r.documents.resources?.artifactBindings ?? r.documents.plan?.artifactBindings} en={en} onFeedback={active ? setVisualFeedback : undefined} feedbackActions={view.actions?.feedback} />}
-          {["resources", "plan", "review", "delivery"].includes(stage) && <FeedbackPanel key={taskId} taskId={taskId} record={{...r,artifacts:view.artifacts ?? r.artifacts}} active={active} en={en}
+          {["resources", "plan", "review", "delivery"].includes(stage) && <FeedbackPanel key={`feedback:${taskId}`} taskId={taskId} record={{...r,artifacts:view.artifacts ?? r.artifacts}} active={active} en={en}
             actions={view.actions?.feedback} onDismiss={() => setVisualFeedback(undefined)} selectedArtifact={visualFeedback} onUpdated={setView} onContinue={async (message, revision) => onContinue?.(message, undefined, revision)} />}
           {stage === "review" && modern && <section className="production-card"><h4>{en ? "Required checks" : "当前版本必要自测"}</h4>
             {(r.selfTests ?? []).filter(c => c.version === r.currentVersion).map((c, i) => <p key={i}>{c.id} · {statusName(c.status, locale)} · {c.observations}</p>)}
