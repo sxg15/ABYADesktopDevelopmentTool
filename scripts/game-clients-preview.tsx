@@ -19,11 +19,14 @@ let releases: ClientRelease[] = [
 const installation = { id: "fixture", releaseId: 1, tagName: "Development-0.8.44", prerelease: false, publishedAt: "2026-10-12", assetId: 10, assetName: "ABYA_PB_Windows_x64.zip", assetUpdatedAt: "2026-10-12", sha256: "fixture", digestVerified: true,
   directory: "D:\\游戏客户端\\PlatverseOutput\\1-10-fixture", executableCandidates: ["Windows/ABYA_PB.exe"], installedAt: "2026-10-12T08:00:00Z" };
 const state: GameClientState = { repository: "sxg15/PlatverseOutput", account: { login: "preview-account", canManage: true, remembered: true }, defaultStorageRoot: "D:\\游戏客户端", installations: [installation], operation: { active: false, kind: "", stage: "", completedBytes: 0, totalBytes: 0, errorCode: null } };
-clientApi.state = async () => ({ ...state, account: fixture === "login" ? null : { ...state.account!, canManage: fixture !== "readonly" } });
+const authorization = () => ({ id: "preview-attempt", userCode: "DEMO-CODE", verificationUri: "https://github.com/login/device", expiresAt: new Date(Date.now() + 900_000).toISOString(), pollAfterSeconds: 5 });
+clientApi.state = async () => ({ ...state, authorization: fixture === "authorizing" ? authorization() : null, account: ["login", "authorizing", "expired"].includes(fixture) ? null : { ...state.account!, canManage: fixture !== "readonly" } });
 clientApi.operation = async () => fixture === "progress" ? { active: true, kind: "install", stage: "downloading", completedBytes: 632_000_000, totalBytes: 1_264_000_000, errorCode: null } : state.operation;
 clientApi.releases = async () => fixture === "empty" ? [] : releases;
 clientApi.release = async id => releases.find(item => item.id === id)!;
-clientApi.login = async () => { fixture = "populated"; return state; };
+clientApi.startLogin = async () => { throw { code: fixture === "expired" ? "clientOAuthExpired" : "clientOAuthUnavailable" }; };
+clientApi.pollLogin = async () => ({ status: "pending", authorization: authorization() });
+clientApi.cancelLogin = async () => { fixture = "login"; };
 clientApi.logout = async () => { fixture = "login"; return { ...state, account: null }; };
 clientApi.checkUpdate = async () => ({ releaseId: 2, tagName: releases[0].tagName, currentTag: installation.tagName });
 clientApi.saveRelease = async input => { const release = { ...releases[0], ...input, id: input.id ?? 3 }; releases = [release, ...releases.filter(item => item.id !== release.id)]; return release; };
@@ -44,7 +47,7 @@ function Preview() {
   return <><div style={{ height: 40, padding: "6px 12px", display: "flex", alignItems: "center", gap: 12, background: "#fff6d9", fontSize: 12 }}>
     <strong>隔离界面预览 · 无真实 GitHub 操作</strong>
     <select aria-label="Fixture" value={mode} onChange={event => { fixture = event.target.value; setMode(fixture); }}>
-      {["populated", "empty", "login", "readonly", "progress"].map(item => <option key={item}>{item}</option>)}
+      {["populated", "empty", "login", "authorizing", "expired", "readonly", "progress"].map(item => <option key={item}>{item}</option>)}
     </select><button onClick={() => setLanguage(language === "zh-CN" ? "en-US" : "zh-CN")}>中文 / English</button><span>{message}</span>
   </div><div className="app-shell" style={{ height: "calc(100% - 40px)" }}>
     <aside className="app-sidebar"><div className="brand"><div className="brand-mark">A</div><div><strong>ABYA</strong><span>Development Tool</span></div></div>

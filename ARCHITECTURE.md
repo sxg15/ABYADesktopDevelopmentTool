@@ -149,6 +149,9 @@ matching Skill update is incomplete.
 `game-clients` owns the fixed sxg15/PlatverseOutput GitHub integration, current-user
 encrypted account storage, Release/asset management and bounded Windows Unity ZIP
 installations. Its credentials are independent of game connections and desktop CLI.
+Browser OAuth uses a registered public client ID with Device Flow. Settings owns login UI;
+the manager routes unsigned users there. Native-only device/access/refresh secrets, serialized
+refresh and generation-checked commits prevent late authorization from undoing logout.
 Tauri adapters delegate blocking network/archive work to workers; React never sends
 GitHub requests. New installations are versioned side by side and never replace a
 running or task-pinned Player. Foundation settings retain local/remote source metadata

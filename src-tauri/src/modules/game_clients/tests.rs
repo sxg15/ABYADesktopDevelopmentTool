@@ -1,4 +1,6 @@
+use super::auth::{AUTH_KEY, SECRET_PURPOSE, StoredAccount};
 use super::*;
+use crate::foundation::secrets;
 use crate::foundation::{AppPaths, GameClientSelection};
 use sha2::{Digest, Sha256};
 use std::{
@@ -8,9 +10,9 @@ use std::{
     thread,
 };
 
-struct Temp(PathBuf);
+pub(super) struct Temp(pub PathBuf);
 impl Temp {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let path = std::env::temp_dir().join(format!("abya-clients-test-{}", uuid::Uuid::new_v4()));
         fs::create_dir(&path).unwrap();
         Self(path)
@@ -22,7 +24,7 @@ impl Drop for Temp {
     }
 }
 
-fn service(root: &Temp) -> GameClientService {
+pub(super) fn service(root: &Temp) -> GameClientService {
     let paths = AppPaths {
         data_dir: root.0.clone(),
         database_path: root.0.join("test.db"),
@@ -333,7 +335,9 @@ fn updates_are_advisory_respect_stable_channel_and_detect_replaced_assets() {
     );
 }
 
-fn mock(responses: Vec<(u16, String, String)>) -> (String, thread::JoinHandle<Vec<String>>) {
+pub(super) fn mock(
+    responses: Vec<(u16, String, String)>,
+) -> (String, thread::JoinHandle<Vec<String>>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let address = format!("http://{}", listener.local_addr().unwrap());
     let handle = thread::spawn(move || {
@@ -518,7 +522,8 @@ fn remembered_account_is_encrypted_and_logout_preserves_installations() {
                     can_manage: true,
                     remembered: true,
                 },
-                encrypted_token: secrets::protect(token, SECRET_PURPOSE).unwrap(),
+                encrypted_token: Some(secrets::protect(token, SECRET_PURPOSE).unwrap()),
+                encrypted_credentials: None,
             },
         )
         .unwrap();
@@ -551,7 +556,7 @@ fn live_github_account_and_release_reads() {
     );
     let token = String::from_utf8(output.stdout).expect("Token encoding");
     let state = service
-        .login(token, false)
+        .login_for_read_test(token.trim().into())
         .expect("Read-only login validation");
     assert!(state.account.is_some());
     assert!(service.read::<StoredAccount>(AUTH_KEY).unwrap().is_none());

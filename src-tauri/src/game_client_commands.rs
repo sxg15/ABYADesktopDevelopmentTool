@@ -27,13 +27,24 @@ pub fn game_client_cancel(state: State<'_, AppState>) {
     state.game_clients.cancel();
 }
 #[tauri::command]
-pub async fn game_client_login(
-    token: String,
+pub async fn game_client_start_login(
     remember: bool,
     state: State<'_, AppState>,
-) -> AppResult<GameClientState> {
+) -> AppResult<LoginAuthorization> {
     let service = state.game_clients.clone();
-    blocking(move || service.login(token, remember)).await
+    blocking(move || service.start_login(remember)).await
+}
+#[tauri::command]
+pub async fn game_client_poll_login(
+    id: String,
+    state: State<'_, AppState>,
+) -> AppResult<LoginPoll> {
+    let service = state.game_clients.clone();
+    blocking(move || service.poll_login(&id)).await
+}
+#[tauri::command]
+pub fn game_client_cancel_login(id: String, state: State<'_, AppState>) {
+    state.game_clients.cancel_login(&id);
 }
 #[tauri::command]
 pub fn game_client_logout(state: State<'_, AppState>) -> AppResult<GameClientState> {

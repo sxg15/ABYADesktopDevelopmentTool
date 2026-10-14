@@ -13,17 +13,28 @@ archive and credential work stays in Rust. No desktop CLI/MCP access is added.
 ## Public Contracts
 
 Typed Tauri commands expose account metadata, releases/assets, installation records,
-operation progress/cancellation, and optional update candidates. Login accepts a user's
-Token in a password field; never expose it again, log it, or put it in a URL. Read-only
-Tokens need Contents read for the fixed private repository; management needs Contents
-write and repository write access. Classic Tokens with the repo scope are also accepted;
-offer this fallback for collaborators who cannot select the repository in a fine-grained
-Token, explain its broader scope and recommend expiration. Repository permissions describe
-the account; GitHub still authoritatively checks the Token on every operation.
-Validate /user and repository access before login.
-Remembered tokens use current-user Windows DPAPI with a distinct purpose; session-only
-tokens stay in native memory. Logout removes ABYA credentials only. Browser OAuth remains
-future work until a dedicated registered OAuth application is supplied.
+operation progress/cancellation, and optional update candidates. GitHub login/logout lives
+in Settings. An unsigned manager shows the missing-login state and a button that navigates
+to and focuses the GitHub settings section; the manager contains no credential form.
+Settings refreshes remote choices after login/logout without saving or changing the Player.
+
+Use GitHub OAuth Device Flow with public client ID Ov23li0rDQSvLA8yT7sj and repo scope for
+the private repository. No client secret is used or distributed. The UI explains repo's
+broader account scope, opens only https://github.com/login/device, and receives only an
+opaque attempt ID, user code, verification URI, expiration and minimum polling delay.
+Device/access/refresh secrets never cross Tauri, appear in URLs/logs or frontend storage.
+Native start/poll/cancel commands enforce polling intervals, slow_down, expiration, denial,
+one in-flight exchange and generation checks. Cancel/logout/replaced attempts cannot be
+restored by a late exchange. Reopening settings resumes the current in-memory attempt.
+Validate /user and repository access before accepting each new authorization.
+
+Before access-token expiry, serialize refreshes and rotate access/refresh credentials in
+one encrypted record. Device-flow refresh needs no client secret. Invalid/expired refresh
+credentials clear login and request reauthorization; transient errors preserve credentials
+and offline installations. Remembered credentials use current-user Windows DPAPI with a
+distinct purpose; session-only credentials stay in native memory. Read old encrypted_token
+records for compatibility, but expose no manual-token login command or field. Logout removes
+ABYA credentials only. GitHub authoritatively checks repository authorization per operation.
 
 Release writes are explicit user actions; immutable releases cannot change. Uploads never
 silently replace an asset. Deletion confirms the exact release/asset in the UI and does not
@@ -69,8 +80,13 @@ never create or delete real repository Releases just for testing. Check actual G
 separately, and label a fixture UI preview distinctly from native end-to-end validation.
 The ignored live_github_account_and_release_reads test requires ABYA_TEST_GITHUB_READS=1
 and an already authenticated gh CLI. It borrows the credential in native test memory,
-uses session-only login against an isolated database, performs /user/repository/release
+uses a test-only session initializer against an isolated database, performs /user/repository/release
 reads, signs out and prints counts only. It does not upload/delete Releases or create keys.
+OAuth fixtures cover interval/slow_down, expiry/denial, missing repo permissions, secret
+non-disclosure, DPAPI restart, concurrent refresh and cancellation/logout races. The ignored
+live_oauth_device_flow_configuration test requires ABYA_TEST_GITHUB_OAUTH=1; it verifies the
+public app configuration, then cancels without exposing codes or authorizing a user. Browser
+authorization by the account owner is a separate acceptance step; do not automate consent.
 
 ## LLM Maintenance Rule
 

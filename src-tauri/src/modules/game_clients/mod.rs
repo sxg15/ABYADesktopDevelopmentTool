@@ -1,17 +1,21 @@
+mod auth;
 mod github;
 mod install;
 mod models;
+mod oauth;
+#[cfg(test)]
+mod oauth_tests;
 #[cfg(test)]
 mod tests;
 
 use crate::foundation::{
-    AppError, AppResult, Database, GameClientSource, PublicSettingsUpdate, SettingsService, secrets,
+    AppError, AppResult, Database, GameClientSource, PublicSettingsUpdate, SettingsService,
 };
 use github::{GitHub, error};
 pub use models::*;
 use parking_lot::Mutex;
 use rusqlite::OptionalExtension;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{Serialize, de::DeserializeOwned};
 use std::{
     fs::File,
     io::Read,
@@ -22,26 +26,19 @@ use std::{
     },
 };
 
-const AUTH_KEY: &str = "game-clients/github-account";
 const INSTALL_PREFIX: &str = "game-clients/installation/";
-const SECRET_PURPOSE: &[u8] = b"ABYA GitHub Game Client Releases v1";
-
-#[derive(Serialize, Deserialize)]
-struct StoredAccount {
-    account: GitHubAccount,
-    encrypted_token: String,
-}
-struct SessionAccount {
-    account: GitHubAccount,
-    token: String,
-}
 
 #[derive(Clone)]
 pub struct GameClientService {
     database: Database,
     settings: SettingsService,
     default_storage: PathBuf,
-    session: Arc<Mutex<Option<SessionAccount>>>,
+    auth: Arc<Mutex<auth::AuthState>>,
+    refresh_gate: Arc<Mutex<()>>,
+    #[cfg(test)]
+    oauth_base: Option<String>,
+    #[cfg(test)]
+    github_base: Option<String>,
     progress: Progress,
     busy: Arc<AtomicBool>,
 }
@@ -88,7 +85,12 @@ impl GameClientService {
             database,
             settings,
             default_storage: data_dir.join("GameClients"),
-            session: Arc::new(Mutex::new(None)),
+            auth: Arc::new(Mutex::new(auth::AuthState::default())),
+            refresh_gate: Arc::new(Mutex::new(())),
+            #[cfg(test)]
+            oauth_base: None,
+            #[cfg(test)]
+            github_base: None,
             progress: Progress::default(),
             busy: Arc::new(AtomicBool::new(false)),
         }
@@ -158,22 +160,6 @@ impl GameClientService {
         })
     }
 
-    fn clear_auth(&self) -> AppResult<()> {
-        self.database.with_connection(|db| {
-            db.execute("DELETE FROM settings WHERE key=?1", [AUTH_KEY])?;
-            Ok(())
-        })
-    }
-
-    fn token(&self) -> AppResult<Option<String>> {
-        if let Some(session) = self.session.lock().as_ref() {
-            return Ok(Some(session.token.clone()));
-        }
-        self.read::<StoredAccount>(AUTH_KEY)?
-            .map(|stored| secrets::unprotect(&stored.encrypted_token, SECRET_PURPOSE))
-            .transpose()
-    }
-
     fn github(&self, required: bool) -> AppResult<GitHub> {
         let token = self.token()?;
         if required && token.is_none() {
@@ -183,52 +169,13 @@ impl GameClientService {
     }
 
     pub fn state(&self) -> AppResult<GameClientState> {
-        let account = self.session.lock().as_ref().map(|s| s.account.clone());
-        let account = match account {
-            Some(account) => Some(account),
-            None => self.read::<StoredAccount>(AUTH_KEY)?.map(|s| s.account),
-        };
         Ok(GameClientState {
             repository: REPOSITORY.into(),
-            account,
+            account: self.account()?,
             installations: self.installations()?,
             default_storage_root: self.default_storage.to_string_lossy().into_owned(),
             operation: self.operation(),
-        })
-    }
-
-    pub fn login(&self, token: String, remember: bool) -> AppResult<GameClientState> {
-        self.run("login", || {
-            let token = token.trim().to_string();
-            if token.is_empty()
-                || token.len() > 1024
-                || !token.is_ascii()
-                || token.chars().any(char::is_whitespace)
-            {
-                return Err(error("clientInvalidToken"));
-            }
-            let account = GitHub::new(Some(token.clone()))?.account(remember)?;
-            if remember {
-                self.write(
-                    AUTH_KEY,
-                    &StoredAccount {
-                        account: account.clone(),
-                        encrypted_token: secrets::protect(&token, SECRET_PURPOSE)?,
-                    },
-                )?;
-            } else {
-                self.clear_auth()?;
-            }
-            *self.session.lock() = Some(SessionAccount { account, token });
-            self.state()
-        })
-    }
-
-    pub fn logout(&self) -> AppResult<GameClientState> {
-        self.run("logout", || {
-            self.clear_auth()?;
-            *self.session.lock() = None;
-            self.state()
+            authorization: self.authorization(),
         })
     }
 

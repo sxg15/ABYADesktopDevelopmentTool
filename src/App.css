@@ -708,6 +708,12 @@ tbody tr:hover { background: #f7faf8; }
 .client-login .client-row { align-items: flex-end; }
 .client-login .client-grow { min-width: min(320px,100%); }
 .client-login > button { justify-self: start; }
+.client-account-settings { scroll-margin-top: 20px; }
+.client-account-settings:focus { outline: 2px solid var(--accent, #2563eb); outline-offset: 2px; }
+.client-account-settings h2 { display: flex; gap: 8px; align-items: center; }
+.client-device-login { display: grid; gap: 12px; }
+.client-device-login .field { max-width: 300px; }
+.client-device-code { font-family: Consolas, monospace; font-size: 25px; letter-spacing: 4px; font-weight: 700; }
 .client-catalog { display: grid; grid-template-columns: minmax(220px, .7fr) minmax(0, 2fr); gap: 18px; align-items: start; }
 .client-release-list { display: grid; gap: 8px; padding: 14px; max-height: 680px; overflow: auto; }
 .client-release-item { width: 100%; display: grid; gap: 5px; text-align: left; padding: 13px; background: #fff; border: 1px solid transparent; border-radius: 5px; color: var(--text); overflow-wrap: anywhere; }

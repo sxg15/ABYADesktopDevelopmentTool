@@ -27,6 +27,7 @@ function App() {
   const [settings, setSettings] = useState<AppSettings>();
   const [clientUpdate, setClientUpdate] = useState<ClientUpdate | null>(null);
   const [preferredInstallationId, setPreferredInstallationId] = useState<string>();
+  const [focusGitHub, setFocusGitHub] = useState(false);
   const [preferredReleaseId, setPreferredReleaseId] = useState<number>();
   const [buildInfo,setBuildInfo]=useState<Awaited<ReturnType<typeof api.buildInfo>>>();
   const [locale, setLocale] = useState<Locale>(
@@ -125,7 +126,7 @@ function App() {
                 aria-label={t(item.label)}
                 title={t(item.label)}
                 className={view === item.id ? "active" : ""}
-                onClick={() => { setPreferredInstallationId(undefined); setPreferredReleaseId(undefined); setView(item.id); }}
+                onClick={() => { setPreferredInstallationId(undefined); setPreferredReleaseId(undefined); setFocusGitHub(false); setView(item.id); }}
               >
                 <Icon size={19} />
                 <span>{t(item.label)}</span>
@@ -159,7 +160,7 @@ function App() {
         )}
         {view === "logs" && <LogsView t={t} notify={notify} />}
         {view === "gameClients" && <GameClientsView settings={settings} t={t} notify={notify} preferredReleaseId={preferredReleaseId}
-          onOpenSettings={id => { setPreferredInstallationId(id); setView("settings"); }} />}
+          onOpenSettings={(id, login) => { setPreferredInstallationId(id); setFocusGitHub(!!login); setView("settings"); }} />}
         {view === "settings" && (
           <SettingsView
             settings={settings}
@@ -169,6 +170,7 @@ function App() {
             notify={notify}
             onManageClients={() => setView("gameClients")}
             preferredInstallationId={preferredInstallationId}
+            focusGitHub={focusGitHub}
           />
         )}
       </main>

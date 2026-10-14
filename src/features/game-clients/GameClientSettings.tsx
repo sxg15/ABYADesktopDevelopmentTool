@@ -5,9 +5,10 @@ import type { MessageKey } from "../../i18n";
 import { bytes, clientApi, clientError, installable, type ClientInstallation, type ClientRelease, type ClientUpdate, type GameClientSelection, type GameClientState } from "../../shared/gameClients";
 import { ClientProgress, useClientOperation } from "./ClientProgress";
 
-export function GameClientSettings({ value, onChange, t, onManage, preferredInstallationId, onBusyChange }: {
+export function GameClientSettings({ value, onChange, t, onManage, preferredInstallationId, onBusyChange, accountRevision = 0 }: {
   value: GameClientSelection; onChange: (value: GameClientSelection) => void; t: (key: MessageKey) => string;
   onManage: () => void; preferredInstallationId?: string; onBusyChange: (busy: boolean) => void;
+  accountRevision?: number;
 }) {
   const [state, setState] = useState<GameClientState>();
   const [releases, setReleases] = useState<ClientRelease[]>([]);
@@ -36,7 +37,7 @@ export function GameClientSettings({ value, onChange, t, onManage, preferredInst
       setRevision(current => current + 1);
     } finally { setLoading(false); }
   }
-  useEffect(() => { void refresh().catch(error => setError(clientError(error, t))); }, []);
+  useEffect(() => { setError(""); void refresh().catch(error => setError(clientError(error, t))); }, [accountRevision]);
   useEffect(() => { onBusyChange(busy); }, [busy, onBusyChange]);
   useEffect(() => {
     let alive = true; setDetail(undefined); setAssetId(0);

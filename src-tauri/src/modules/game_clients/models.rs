@@ -93,6 +93,24 @@ pub struct GameClientState {
     pub installations: Vec<ClientInstallation>,
     pub default_storage_root: String,
     pub operation: ClientOperation,
+    pub authorization: Option<LoginAuthorization>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoginAuthorization {
+    pub id: String,
+    pub user_code: String,
+    pub verification_uri: String,
+    pub expires_at: String,
+    pub poll_after_seconds: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoginPoll {
+    pub status: String,
+    pub authorization: Option<LoginAuthorization>,
 }
 
 #[derive(Debug, Deserialize)]

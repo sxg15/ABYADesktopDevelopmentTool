@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { CloudDownload, Download, ExternalLink, FolderOpen, Github, LogOut, Pencil, Plus, RefreshCw, Trash2, Upload } from "lucide-react";
+import { CloudDownload, Download, ExternalLink, FolderOpen, Github, Pencil, Plus, RefreshCw, Settings, Trash2, Upload } from "lucide-react";
 import { Modal } from "../../app/Modal";
 import type { MessageKey } from "../../i18n";
 import type { AppSettings } from "../../shared/types";
@@ -12,7 +12,7 @@ type DeleteTarget = { release: ClientRelease; asset?: ReleaseAsset };
 
 export function GameClientsView({ settings, t, notify, onOpenSettings, preferredReleaseId }: {
   settings?: AppSettings; t: (key: MessageKey) => string; notify: (message: string, error?: boolean) => void;
-  onOpenSettings: (installationId?: string) => void; preferredReleaseId?: number;
+  onOpenSettings: (installationId?: string, focusGitHub?: boolean) => void; preferredReleaseId?: number;
 }) {
   const [state, setState] = useState<GameClientState>();
   const [releases, setReleases] = useState<ClientRelease[]>([]);
@@ -21,8 +21,6 @@ export function GameClientsView({ settings, t, notify, onOpenSettings, preferred
   const [detailLoading, setDetailLoading] = useState(false);
   const [revision, setRevision] = useState(0);
   const [search, setSearch] = useState("");
-  const [token, setToken] = useState("");
-  const [remember, setRemember] = useState(true);
   const [storage, setStorage] = useState(settings?.gameClient?.storageRoot ?? "");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -90,24 +88,12 @@ export function GameClientsView({ settings, t, notify, onOpenSettings, preferred
           <Github size={23} /><div className="client-grow"><strong>{state?.account ? state.account.login : t("gcAccount")}</strong>
             <p>{t("gcRepository")}: sxg15/PlatverseOutput</p></div>
           <button className="secondary-button" onClick={() => void run(() => openUrl("https://github.com/sxg15/PlatverseOutput/releases"))}><ExternalLink size={15} />GitHub</button>
-          {state?.account && <button className="secondary-button" disabled={busy} onClick={() => void run(async () => { await clientApi.logout(); setDetail(undefined); }, true)}><LogOut size={15} />{t("gcLogout")}</button>}
+          {state?.account && <button className="secondary-button" onClick={() => onOpenSettings(undefined, true)}><Settings size={15} />{t("gcAccountSettings")}</button>}
         </div>
-        {state?.account ? <div className="client-badges"><span className="client-badge">{t(canManage ? "gcCanManage" : "gcReadOnly")}</span>{!state.account.remembered && <span className="client-badge">{t("gcSessionOnly")}</span>}</div> : <form className="client-login" onSubmit={event => {
-          event.preventDefault(); const submitted = token; setToken("");
-          void run(async () => { await clientApi.login(submitted, remember); }, true);
-        }}>
-          <p>{t("gcLoginFirst")}</p>
-          <div className="client-row">
-            <label className="field client-grow"><span>{t("gcToken")}</span><input type="password" autoComplete="off" spellCheck={false} value={token} disabled={busy} onChange={event => setToken(event.target.value)} /></label>
-            <button type="submit" className="primary-button" disabled={busy || !token.trim()}>{t("gcLogin")}</button>
-          </div>
-          <label className="toggle-row"><input type="checkbox" checked={remember} disabled={busy} onChange={event => setRemember(event.target.checked)} />{t("gcRemember")}</label>
-          <p>{t("gcTokenHelp")}</p><p>{t("gcClassicHelp")}</p><p>{t("gcTokenSafety")}</p>
-          <div className="client-actions">
-            <button type="button" className="secondary-button" onClick={() => void run(() => openUrl("https://github.com/settings/personal-access-tokens/new"))}><ExternalLink size={14} />{t("gcCreateToken")}</button>
-            <button type="button" className="secondary-button" onClick={() => void run(() => openUrl("https://github.com/settings/tokens/new"))}><ExternalLink size={14} />{t("gcCreateClassicToken")}</button>
-          </div>
-        </form>}
+        {state?.account ? <div className="client-badges"><span className="client-badge">{t(canManage ? "gcCanManage" : "gcReadOnly")}</span>{!state.account.remembered && <span className="client-badge">{t("gcSessionOnly")}</span>}</div> : !loading && <div className="client-login">
+          <strong>{t("gcNotLoggedIn")}</strong><p>{t("gcLoginFirst")}</p>
+          <button className="primary-button" onClick={() => onOpenSettings(undefined, true)}><Github size={17} />{t("gcGoToLogin")}</button>
+        </div>}
       </section>
       {error && <div className="inline-error" role="alert">{error}</div>}
       <ClientProgress operation={operation} t={t} onError={setError} />

@@ -3,8 +3,12 @@
 ## Remote game clients (2026-10-14)
 
 Navigation adds gameClients between archive transfer and logs. The public feature view
-owns Token login, Release editing, exact-target delete confirmation, asset upload and
-installation. Settings offers local/remote source, installed version/EXE selection, remote
+owns Release editing, exact-target delete confirmation, asset upload and
+installation. GitHub browser login, one-time code, remember-login, retry/cancel and logout
+live only in Settings. Unsigned client management shows its missing-login message and
+Go to settings to sign in action, which focuses the GitHub account section. The manager's
+signed-in account links to the same section. Preserve draft Player selection on auth changes.
+Settings offers local/remote source, installed version/EXE selection, remote
 version download and storage-folder choice. Keep both locales complete, including errors,
 busy/cancellation, empty repository and missing installation states. An optional update
 badge appears after startup checks and every 30 minutes for the active remote selection;

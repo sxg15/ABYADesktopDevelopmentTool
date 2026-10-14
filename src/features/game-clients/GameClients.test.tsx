@@ -4,8 +4,10 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { GameClientsView } from "./GameClientsView";
 import { GameClientSettings } from "./GameClientSettings";
+import { GitHubAccountSettings } from "./GitHubAccountSettings";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { SettingsView } from "../settings/SettingsView";
-import { clientApi, emptyClientSelection, type GameClientState, type ClientRelease, type ClientInstallation, type GameClientSelection } from "../../shared/gameClients";
+import { clientApi, emptyClientSelection, type GameClientState, type ClientRelease, type ClientInstallation, type GameClientSelection, type LoginAuthorization } from "../../shared/gameClients";
 import { api } from "../../shared/api";
 import { translator } from "../../i18n";
 import type { AppSettings } from "../../shared/types";
@@ -20,6 +22,7 @@ const release: ClientRelease = { id: 1, tagName: "v1.0", name: "Windows v1.0", b
 const record: ClientInstallation = { id: "installed-1", releaseId: 1, tagName: "v1.0", prerelease: false, publishedAt: "2026-10-14", assetId: 10,
   assetName: "Windows.zip", assetUpdatedAt: "2026-10-14", sha256: "abc", digestVerified: true, directory: "D:\\Clients\\one", executableCandidates: ["Game.exe"], installedAt: "2026-10-14T00:00:00Z" };
 let state: GameClientState;
+const authorization = (): LoginAuthorization => ({ id: "attempt", userCode: "ABCD-EFGH", verificationUri: "https://github.com/login/device", expiresAt: new Date(Date.now() + 900_000).toISOString(), pollAfterSeconds: 1 });
 const view = (onOpenSettings = vi.fn()) => render(<GameClientsView t={t} notify={vi.fn()} onOpenSettings={onOpenSettings} />);
 
 beforeEach(() => {
@@ -28,7 +31,10 @@ beforeEach(() => {
   vi.spyOn(clientApi, "operation").mockResolvedValue(operation);
   vi.spyOn(clientApi, "releases").mockResolvedValue([release]);
   vi.spyOn(clientApi, "release").mockResolvedValue(release);
-  vi.spyOn(clientApi, "login").mockImplementation(async () => state);
+  vi.spyOn(clientApi, "startLogin").mockImplementation(async () => authorization());
+  vi.spyOn(clientApi, "pollLogin").mockImplementation(async () => ({ status: "pending", authorization: authorization() }));
+  vi.spyOn(clientApi, "cancelLogin").mockResolvedValue();
+  vi.mocked(openUrl).mockResolvedValue();
   vi.spyOn(clientApi, "logout").mockImplementation(async () => { state.account = null; return state; });
   vi.spyOn(clientApi, "deleteRelease").mockResolvedValue();
   vi.spyOn(clientApi, "deleteAsset").mockResolvedValue();
@@ -47,17 +53,94 @@ it("shows the empty private repository with a create action after login", async 
   expect((screen.getByLabelText(t("gcDraft")) as HTMLInputElement).checked).toBe(true);
 });
 
-it("clears the password field on submission and never reads private releases before login", async () => {
-  state.account = null; view();
-  await waitFor(() => expect((screen.getByLabelText(t("gcToken")) as HTMLInputElement).disabled).toBe(false));
+it("routes unsigned users to settings and exposes no login form in client management", async () => {
+  state.account = null; const navigate = vi.fn(); view(navigate);
+  await screen.findByText(t("gcNotLoggedIn"));
   expect(clientApi.releases).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByLabelText(t("gcToken")), { target: { value: "test-token" } });
+  expect(screen.queryByRole("button", { name: t("gcLogin") })).toBeNull();
+  expect(document.querySelector("input[type=password]")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: t("gcGoToLogin") }));
+  expect(navigate).toHaveBeenCalledWith(undefined, true);
+  expect(clientApi.startLogin).not.toHaveBeenCalled();
+});
+
+it("settings starts browser authorization with the selected persistence option and can cancel it", async () => {
+  state.account = null; render(<GitHubAccountSettings t={t} onChanged={vi.fn()} />);
+  await waitFor(() => expect((screen.getByRole("button", { name: t("gcLogin") }) as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(screen.getByLabelText(t("gcRemember")));
-  vi.mocked(clientApi.login).mockRejectedValue({ code: "clientUnauthorized" });
   fireEvent.click(screen.getByRole("button", { name: t("gcLogin") }));
-  await screen.findByText(t("gcErrorAuth"));
-  expect(clientApi.login).toHaveBeenCalledWith("test-token", false);
-  expect((screen.getByLabelText(t("gcToken")) as HTMLInputElement).value).toBe("");
+  const code = await screen.findByLabelText(t("gcDeviceCode"));
+  expect((code as HTMLInputElement).value).toBe("ABCD-EFGH");
+  expect(clientApi.startLogin).toHaveBeenCalledWith(false);
+  expect(openUrl).toHaveBeenCalledWith("https://github.com/login/device");
+  fireEvent.click(screen.getByRole("button", { name: t("gcCancelLogin") }));
+  await screen.findByText(t("gcOAuthCancelled"));
+  expect(clientApi.cancelLogin).toHaveBeenCalledWith("attempt");
+  expect(screen.queryByLabelText(t("gcDeviceCode"))).toBeNull();
+});
+
+it("settings completes authorization automatically and refreshes dependent client controls", async () => {
+  state.account = null; state.authorization = authorization(); const changed = vi.fn();
+  vi.mocked(clientApi.pollLogin).mockImplementation(async () => {
+    state.account = { login: "browser-user", canManage: true, remembered: true }; state.authorization = null;
+    return { status: "authenticated", authorization: null };
+  });
+  render(<GitHubAccountSettings t={t} onChanged={changed} />);
+  await screen.findByLabelText(t("gcDeviceCode"));
+  await screen.findByText(`${t("gcSignedInAs")}: browser-user`, {}, { timeout: 3000 });
+  expect(changed).toHaveBeenCalledOnce();
+  expect(screen.queryByLabelText(t("gcDeviceCode"))).toBeNull();
+  expect(api.updateSettings).not.toHaveBeenCalled();
+});
+
+it("settings displays denied authorization and allows a fresh sign-in", async () => {
+  state.account = null; state.authorization = authorization();
+  vi.mocked(clientApi.pollLogin).mockRejectedValue({ code: "clientOAuthDenied" });
+  render(<GitHubAccountSettings t={t} onChanged={vi.fn()} />);
+  await screen.findByText(t("gcOAuthDenied"), {}, { timeout: 3000 });
+  expect(screen.queryByLabelText(t("gcDeviceCode"))).toBeNull();
+  expect((screen.getByRole("button", { name: t("gcLogin") }) as HTMLButtonElement).disabled).toBe(false);
+});
+
+it("settings expires an old code locally without exchanging it", async () => {
+  state.account = null; state.authorization = { ...authorization(), expiresAt: new Date(Date.now() - 1000).toISOString() };
+  render(<GitHubAccountSettings t={t} onChanged={vi.fn()} />);
+  await screen.findByText(t("gcOAuthExpired"), {}, { timeout: 3000 });
+  expect(clientApi.pollLogin).not.toHaveBeenCalled();
+  expect(clientApi.cancelLogin).toHaveBeenCalledWith("attempt");
+});
+
+it("settings ignores a late poll response after cancellation", async () => {
+  state.account = null; state.authorization = authorization(); const changed = vi.fn();
+  let finish!: (value: { status: "authenticated"; authorization: null }) => void;
+  vi.mocked(clientApi.pollLogin).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  render(<GitHubAccountSettings t={t} onChanged={changed} />);
+  await waitFor(() => expect(clientApi.pollLogin).toHaveBeenCalledOnce(), { timeout: 3000 });
+  fireEvent.click(screen.getByRole("button", { name: t("gcCancelLogin") }));
+  await screen.findByText(t("gcOAuthCancelled"));
+  finish({ status: "authenticated", authorization: null });
+  await waitFor(() => expect(screen.queryByLabelText(t("gcDeviceCode"))).toBeNull());
+  expect(changed).not.toHaveBeenCalled();
+});
+
+it("settings preserves the authorization code and recovery link when the browser cannot open", async () => {
+  state.account = null; vi.mocked(openUrl).mockRejectedValue(new Error("unavailable"));
+  render(<GitHubAccountSettings t={t} onChanged={vi.fn()} />);
+  await waitFor(() => expect((screen.getByRole("button", { name: t("gcLogin") }) as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(screen.getByRole("button", { name: t("gcLogin") }));
+  await screen.findByText(t("gcBrowserFailed"));
+  expect((screen.getByLabelText(t("gcDeviceCode")) as HTMLInputElement).value).toBe("ABCD-EFGH");
+  expect(screen.getByRole("button", { name: t("gcOpenBrowser") })).toBeTruthy();
+});
+
+it("settings drops the pending authorization and refreshes consumers on logout", async () => {
+  state.authorization = authorization(); const changed = vi.fn();
+  render(<GitHubAccountSettings t={t} onChanged={changed} />);
+  await screen.findByLabelText(t("gcDeviceCode"));
+  fireEvent.click(screen.getByRole("button", { name: t("gcLogout") }));
+  await screen.findByText(t("gcNotLoggedIn"));
+  expect(clientApi.logout).toHaveBeenCalledOnce(); expect(changed).toHaveBeenCalledOnce();
+  expect(screen.queryByLabelText(t("gcDeviceCode"))).toBeNull();
 });
 
 it("requires exact-target confirmation and cancel performs no delete", async () => {

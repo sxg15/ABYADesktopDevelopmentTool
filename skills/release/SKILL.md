@@ -2,7 +2,11 @@
 
 ## Game client manager (2026-10-14)
 
-The game-client-management-20261014 build adds APP-only GitHub Release management and
+The game-client-oauth-20261014 build adds settings-based browser OAuth with public client ID
+Ov23li0rDQSvLA8yT7sj, automatic credential refresh, cancellation and no client secret.
+Validate native manager-to-settings navigation and the one-time-code/browser handoff;
+only the user completes GitHub consent. OAuth configuration and race fixtures are documented
+in game-clients. The previous game-client-management-20261014 build introduced APP-only GitHub Release management and
 local version installation. Build the Validation package first, run the fixture UI and
 isolated installation regressions, then distribute the complete verified Publish package.
 scripts/game-clients-preview.html mounts the actual client manager/settings components

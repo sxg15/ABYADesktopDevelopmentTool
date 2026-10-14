@@ -2,7 +2,10 @@
 
 ## Game client settings composition (2026-10-14)
 
-SettingsView composes game-clients' source/installation picker. It saves the source metadata
+SettingsView composes game-clients' GitHubAccountSettings and source/installation picker.
+Browser OAuth belongs to the settings account section; auth changes refresh remote choices
+without saving the Player draft. Manager login navigation focuses that section.
+SettingsView saves the source metadata
 and resolved launch path together through the existing settings adapter. Download, login,
 Release management and update checks remain APP-only; no CLI command accepts GitHub tokens.
 Existing CLI launch defaults continue using gameExecutablePath and preserve task-pinned

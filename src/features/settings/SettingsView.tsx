@@ -19,6 +19,7 @@ import type {
 import type { Locale, MessageKey } from "../../i18n";
 import { NotificationSettingsPanel } from "../task-notifications/NotificationSettingsPanel";
 import { GameClientSettings } from "../game-clients/GameClientSettings";
+import { GitHubAccountSettings } from "../game-clients/GitHubAccountSettings";
 import { clientError, emptyClientSelection } from "../../shared/gameClients";
 
 export function SettingsView({
@@ -29,6 +30,7 @@ export function SettingsView({
   notify,
   onManageClients,
   preferredInstallationId,
+  focusGitHub,
 }: {
   settings?: AppSettings;
   locale: Locale;
@@ -37,9 +39,11 @@ export function SettingsView({
   notify: (message: string, error?: boolean) => void;
   onManageClients: () => void;
   preferredInstallationId?: string;
+  focusGitHub?: boolean;
 }) {
   const [gameClient, setGameClient] = useState(emptyClientSelection);
   const [clientBusy, setClientBusy] = useState(false);
+  const [accountRevision, setAccountRevision] = useState(0);
   const [saving, setSaving] = useState(false);
   const [workspaceRoot, setWorkspaceRoot] = useState("");
   const [selectedLocale, setSelectedLocale] = useState<Locale>(locale);
@@ -150,7 +154,8 @@ export function SettingsView({
         </button>
       </header>
 
-      <GameClientSettings value={gameClient} onChange={setGameClient} t={t} onManage={onManageClients}
+      <GitHubAccountSettings t={t} focus={focusGitHub} onChanged={() => setAccountRevision(value => value + 1)} />
+      <GameClientSettings value={gameClient} onChange={setGameClient} t={t} onManage={onManageClients} accountRevision={accountRevision}
         preferredInstallationId={preferredInstallationId} onBusyChange={setClientBusy} />
 
       <section className="settings-section">

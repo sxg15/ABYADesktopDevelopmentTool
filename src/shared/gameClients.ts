@@ -26,7 +26,10 @@ export interface ClientOperation {
 export interface GameClientState {
   repository: string; account: GitHubAccount | null; installations: ClientInstallation[];
   defaultStorageRoot: string; operation: ClientOperation;
+  authorization?: LoginAuthorization | null;
 }
+export interface LoginAuthorization { id: string; userCode: string; verificationUri: string; expiresAt: string; pollAfterSeconds: number }
+export interface LoginPoll { status: "pending" | "authenticated"; authorization: LoginAuthorization | null }
 export interface ClientUpdate { releaseId: number; tagName: string; currentTag: string }
 export interface ReleaseInput { id: number | null; tagName: string; name: string; body: string; draft: boolean; prerelease: boolean }
 
@@ -37,7 +40,9 @@ export const clientApi = {
   state: () => invoke<GameClientState>("game_client_state"),
   operation: () => invoke<ClientOperation>("game_client_operation"),
   cancel: () => invoke<void>("game_client_cancel"),
-  login: (token: string, remember: boolean) => invoke<GameClientState>("game_client_login", { token, remember }),
+  startLogin: (remember: boolean) => invoke<LoginAuthorization>("game_client_start_login", { remember }),
+  pollLogin: (id: string) => invoke<LoginPoll>("game_client_poll_login", { id }),
+  cancelLogin: (id: string) => invoke<void>("game_client_cancel_login", { id }),
   logout: () => invoke<GameClientState>("game_client_logout"),
   releases: () => invoke<ClientRelease[]>("game_client_releases"),
   release: (id: number) => invoke<ClientRelease>("game_client_release", { id }),
@@ -52,7 +57,9 @@ export const clientApi = {
 export function clientError(error: unknown, t: (key: MessageKey) => string): string {
   const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
   const keys: Record<string, MessageKey> = {
-    clientUnauthorized: "gcErrorAuth", clientInvalidToken: "gcErrorAuth", clientLoginRequired: "gcErrorAuth", secretStorage: "gcErrorAuth",
+    clientUnauthorized: "gcErrorAuth", clientReauthRequired: "gcErrorAuth", clientLoginRequired: "gcErrorAuth", secretStorage: "gcErrorAuth",
+    clientOAuthDenied: "gcOAuthDenied", clientOAuthExpired: "gcOAuthExpired", clientOAuthCancelled: "gcOAuthCancelled",
+    clientOAuthUnavailable: "gcOAuthUnavailable", clientOAuthScope: "gcOAuthScope",
     clientForbidden: "gcErrorPermission", clientNotFound: "gcErrorNotFound", clientRateLimit: "gcErrorRate",
     clientNetwork: "gcErrorNetwork", clientServer: "gcErrorNetwork", clientResponse: "gcErrorNetwork",
     clientBusy: "gcErrorBusy", clientCancelled: "gcCancelled", clientImmutable: "gcErrorImmutable",

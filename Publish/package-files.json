@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "game-client-management-20261014",
-  "totalBytes": 317583258,
+  "releaseLabel": "game-client-oauth-20261014",
+  "totalBytes": 317678485,
   "files": [
     {
       "path": ".codex/README.md",
@@ -760,18 +760,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 23763968,
-      "sha256": "15b5e643c4ece2c2384157df66d999dd4c5516046118b7b5495bd7f29123f481"
+      "bytes": 23858688,
+      "sha256": "3d745615082664260b0e549a7c106c5d08ce1fd1f9ca718dacd936300a326fb5"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 5965824,
-      "sha256": "8ef97fdc5f5aa43ca4f8101f4bdce5aa33cac87b7ca6d2b88261d63bad5fcb05"
+      "bytes": 5966336,
+      "sha256": "40afa6b6684604b2f74a22b8d323bfc9b4aa1add50c0788725245e266e1ca9ad"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 656,
-      "sha256": "fa639d6bbbcb07aae698dab8b4756b3ee6b817845877f5b362282e9c9366f19d"
+      "bytes": 651,
+      "sha256": "51270e388227e875e04572e6e457be42d7b83cd0c743eab6dbb98368b4eb4793"
     },
     {
       "path": "runtime/LICENSE.txt",
