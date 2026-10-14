@@ -1,8 +1,10 @@
 pub mod foundation;
+mod game_client_commands;
 mod modules;
 
 use foundation::{
-    AppPaths, AppResult, AppSettings, Database, DatabaseRepairReport, SettingsService,
+    AppPaths, AppResult, AppSettings, Database, DatabaseRepairReport, PublicSettingsUpdate,
+    SettingsService,
 };
 use modules::archive_transfer::{
     ArchiveTransferRecord, ArchiveTransferService, ArchiveTransferTarget, StartArchiveTransferInput,
@@ -15,6 +17,7 @@ use modules::desktop_cli::{
     DesktopCliDependencies, DesktopCliGameDependencies, DesktopCliService, DesktopCliState,
 };
 use modules::game_archives::{ArchiveCatalogService, ArchiveOption, TransferableArchive};
+use modules::game_clients::GameClientService;
 use modules::game_connections::{
     ConnectionRegistration, GameConnectionHandler, GameConnectionService, GameConnectionState,
     GameHello, LanInterface, LogBatch, LogBatchAck,
@@ -44,6 +47,7 @@ struct AppState {
     paths: AppPaths,
     database: Database,
     settings: SettingsService,
+    game_clients: GameClientService,
     tasks: TaskService,
     codex_terminal: CodexTerminalService,
     grok_terminal: GrokTerminalService,
@@ -63,17 +67,6 @@ struct StorageRepairReport {
     database: DatabaseRepairReport,
     logs: LogRepairReport,
     instance_logs: InstanceLogRepairReport,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct UpdateSettingsInput {
-    game_executable_path: String,
-    workspace_root_path: String,
-    locale: String,
-    game_gateway_port: u16,
-    preferred_adapter_id: String,
-    lan_broadcast_enabled: bool,
 }
 
 struct GameConnectionCoordinator {
@@ -171,17 +164,11 @@ fn acknowledge_task_notification_activations(state: State<'_, AppState>, ids: Ve
 
 #[tauri::command]
 fn update_settings(
-    input: UpdateSettingsInput,
+    mut input: PublicSettingsUpdate,
     state: State<'_, AppState>,
 ) -> AppResult<AppSettings> {
-    let settings = state.settings.update_public(
-        input.game_executable_path,
-        input.workspace_root_path,
-        input.locale,
-        input.game_gateway_port,
-        input.preferred_adapter_id,
-        input.lan_broadcast_enabled,
-    )?;
+    state.game_clients.resolve_settings(&mut input)?;
+    let settings = state.settings.update_public(input)?;
     state
         .tasks
         .set_workspace_root(PathBuf::from(&settings.workspace_root_path));
@@ -953,6 +940,8 @@ pub fn run() {
             let settings =
                 SettingsService::new(database.clone(), paths.default_workspace_root.clone());
             let current_settings = settings.get()?;
+            let game_clients =
+                GameClientService::new(database.clone(), settings.clone(), paths.data_dir.clone());
             let tasks = TaskService::new(
                 database.clone(),
                 PathBuf::from(&current_settings.workspace_root_path),
@@ -1020,6 +1009,7 @@ pub fn run() {
                 paths,
                 database: database.clone(),
                 settings,
+                game_clients,
                 tasks,
                 codex_terminal,
                 grok_terminal,
@@ -1036,6 +1026,19 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            game_client_commands::game_client_state,
+            game_client_commands::game_client_operation,
+            game_client_commands::game_client_cancel,
+            game_client_commands::game_client_login,
+            game_client_commands::game_client_logout,
+            game_client_commands::game_client_releases,
+            game_client_commands::game_client_release,
+            game_client_commands::game_client_save_release,
+            game_client_commands::game_client_delete_release,
+            game_client_commands::game_client_delete_asset,
+            game_client_commands::game_client_upload,
+            game_client_commands::game_client_install,
+            game_client_commands::game_client_check_update,
             get_task_attention,
             get_task_notification_settings,
             set_task_notification_enabled,

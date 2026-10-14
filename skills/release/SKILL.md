@@ -1,5 +1,20 @@
 # Release Skill
 
+## Game client manager (2026-10-14)
+
+The game-client-management-20261014 build adds APP-only GitHub Release management and
+local version installation. Build the Validation package first, run the fixture UI and
+isolated installation regressions, then distribute the complete verified Publish package.
+scripts/game-clients-preview.html mounts the actual client manager/settings components
+against explicitly marked in-memory fixtures; it never uses account credentials or makes
+GitHub writes. The optional native GitHub read smoke is documented in game-clients.
+scripts/test-game-clients-native.mjs init/report uses a fresh marker-owned directory for
+native settings migration, offline installed-client selection and restart checks. Its EXEs
+are non-runnable sentinels and must never be launched. Use ABYA_TEST_MODE=1, the returned
+isolated LOCALAPPDATA/WebView directories, and free ports 43921/43922. Keep USERPROFILE
+normal. The report excludes desktop credentials and verifies no GitHub credential row.
+Keep Tokens, installed game packages, account databases and signed URLs outside distribution.
+
 ## Terminal IME release (2026-10-13)
 Default and Validation packages use terminal-ime-fix-20261013 and retain the
 session recovery fixes. scripts/ime-preview.html provides an isolated real xterm

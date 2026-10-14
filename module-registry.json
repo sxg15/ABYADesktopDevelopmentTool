@@ -23,6 +23,12 @@
       ]
     },
     {
+      "id": "game-clients",
+      "paths": ["src-tauri/src/modules/game_clients/", "src/features/game-clients/"],
+      "skill": "skills/game-clients/SKILL.md",
+      "dependsOn": ["foundation"]
+    },
+    {
       "id": "game-archives",
       "paths": [
         "src-tauri/src/modules/game_archives/"

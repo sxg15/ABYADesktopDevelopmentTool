@@ -9,10 +9,43 @@ use windows_dpapi::{Scope, decrypt_data, encrypt_data};
 const SETTINGS_KEY: &str = "application";
 const TOKEN_ENTROPY: &[u8] = b"ABYA Desktop Development Tool CLI";
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum GameClientSource {
+    #[default]
+    Local,
+    Remote,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct GameClientSelection {
+    pub source: GameClientSource,
+    pub local_executable_path: String,
+    pub installation_id: String,
+    pub executable_relative_path: String,
+    pub storage_root: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicSettingsUpdate {
+    pub game_executable_path: String,
+    pub workspace_root_path: String,
+    pub locale: String,
+    pub game_gateway_port: u16,
+    pub preferred_adapter_id: String,
+    pub lan_broadcast_enabled: bool,
+    #[serde(default)]
+    pub game_client: GameClientSelection,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     pub game_executable_path: String,
+    #[serde(default)]
+    pub game_client: GameClientSelection,
     pub workspace_root_path: String,
     pub locale: String,
     pub desktop_cli_port: u16,
@@ -29,6 +62,8 @@ pub struct AppSettings {
 struct StoredSettings {
     #[serde(default)]
     game_executable_path: String,
+    #[serde(default)]
+    game_client: GameClientSelection,
     #[serde(default)]
     workspace_root_path: String,
     #[serde(default)]
@@ -94,6 +129,15 @@ impl SettingsService {
                 decrypt_token(&stored.encrypted_desktop_cli_token)?
             };
             let settings = AppSettings {
+                game_client: {
+                    let mut selection = stored.game_client;
+                    if selection.source == GameClientSource::Local
+                        && selection.local_executable_path.is_empty()
+                    {
+                        selection.local_executable_path = stored.game_executable_path.clone();
+                    }
+                    selection
+                },
                 game_executable_path: stored.game_executable_path,
                 workspace_root_path: if stored.workspace_root_path.trim().is_empty()
                     || super::AppPaths::legacy_workspace_root()
@@ -120,6 +164,7 @@ impl SettingsService {
         }
         let defaults = AppSettings {
             game_executable_path: String::new(),
+            game_client: GameClientSelection::default(),
             workspace_root_path: self.default_workspace_root.to_string_lossy().into_owned(),
             locale: String::new(),
             desktop_cli_port: default_desktop_cli_port(),
@@ -160,6 +205,7 @@ impl SettingsService {
         }
         let stored = StoredSettings {
             game_executable_path: settings.game_executable_path.trim().to_string(),
+            game_client: settings.game_client.clone(),
             workspace_root_path: workspace_root.to_string_lossy().into_owned(),
             locale: settings.locale.trim().to_string(),
             desktop_cli_port: settings.desktop_cli_port,
@@ -182,22 +228,15 @@ impl SettingsService {
         Ok(())
     }
 
-    pub fn update_public(
-        &self,
-        game_executable_path: String,
-        workspace_root_path: String,
-        locale: String,
-        game_gateway_port: u16,
-        preferred_adapter_id: String,
-        lan_broadcast_enabled: bool,
-    ) -> AppResult<AppSettings> {
+    pub fn update_public(&self, input: PublicSettingsUpdate) -> AppResult<AppSettings> {
         let mut settings = self.get()?;
-        settings.game_executable_path = game_executable_path;
-        settings.workspace_root_path = workspace_root_path;
-        settings.locale = locale;
-        settings.game_gateway_port = game_gateway_port;
-        settings.preferred_adapter_id = preferred_adapter_id;
-        settings.lan_broadcast_enabled = lan_broadcast_enabled;
+        settings.game_executable_path = input.game_executable_path;
+        settings.game_client = input.game_client;
+        settings.workspace_root_path = input.workspace_root_path;
+        settings.locale = input.locale;
+        settings.game_gateway_port = input.game_gateway_port;
+        settings.preferred_adapter_id = input.preferred_adapter_id;
+        settings.lan_broadcast_enabled = input.lan_broadcast_enabled;
         settings.workspace_root_path = if settings.workspace_root_path.trim().is_empty() {
             self.default_workspace_root.to_string_lossy().into_owned()
         } else {

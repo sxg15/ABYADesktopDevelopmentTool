@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  FileSearch,
   FolderOpen,
   KeyRound,
   Network,
@@ -19,6 +18,8 @@ import type {
 } from "../../shared/types";
 import type { Locale, MessageKey } from "../../i18n";
 import { NotificationSettingsPanel } from "../task-notifications/NotificationSettingsPanel";
+import { GameClientSettings } from "../game-clients/GameClientSettings";
+import { clientError, emptyClientSelection } from "../../shared/gameClients";
 
 export function SettingsView({
   settings,
@@ -26,14 +27,20 @@ export function SettingsView({
   t,
   onSaved,
   notify,
+  onManageClients,
+  preferredInstallationId,
 }: {
   settings?: AppSettings;
   locale: Locale;
   t: (key: MessageKey) => string;
   onSaved: (settings: AppSettings) => void;
   notify: (message: string, error?: boolean) => void;
+  onManageClients: () => void;
+  preferredInstallationId?: string;
 }) {
-  const [executable, setExecutable] = useState("");
+  const [gameClient, setGameClient] = useState(emptyClientSelection);
+  const [clientBusy, setClientBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [workspaceRoot, setWorkspaceRoot] = useState("");
   const [selectedLocale, setSelectedLocale] = useState<Locale>(locale);
   const [paths, setPaths] = useState<AppPaths>();
@@ -46,7 +53,7 @@ export function SettingsView({
   const [repairing, setRepairing] = useState(false);
 
   useEffect(() => {
-    setExecutable(settings?.gameExecutablePath ?? "");
+    setGameClient(settings?.gameClient ?? { ...emptyClientSelection(), localExecutablePath: settings?.gameExecutablePath ?? "" });
     setWorkspaceRoot(settings?.workspaceRootPath ?? "");
     setSelectedLocale((settings?.locale as Locale) || locale);
     setGatewayPort(settings?.gameGatewayPort ?? 47610);
@@ -69,15 +76,6 @@ export function SettingsView({
     }
   }
 
-  async function browse() {
-    const result = await open({
-      multiple: false,
-      directory: false,
-      filters: [{ name: "Windows executable", extensions: ["exe"] }],
-    });
-    if (typeof result === "string") setExecutable(result);
-  }
-
   async function browseWorkspaceRoot() {
     const result = await open({
       multiple: false,
@@ -87,9 +85,11 @@ export function SettingsView({
   }
 
   async function save() {
+    setSaving(true);
     try {
       const result = await api.updateSettings({
-        gameExecutablePath: executable,
+        gameExecutablePath: gameClient.localExecutablePath,
+        gameClient,
         workspaceRootPath: workspaceRoot,
         locale: selectedLocale,
         gameGatewayPort: gatewayPort,
@@ -99,8 +99,8 @@ export function SettingsView({
       onSaved(result);
       await refreshState();
     } catch (error) {
-      notify(errorMessage(error), true);
-    }
+      notify(clientError(error, t), true);
+    } finally { setSaving(false); }
   }
 
   async function regenerate() {
@@ -144,22 +144,14 @@ export function SettingsView({
         <div>
           <h1>{t("settings")}</h1>
         </div>
-        <button className="primary-button" onClick={save}>
+        <button className="primary-button" onClick={save} disabled={saving || clientBusy || !settings || (gameClient.source === "remote" && (!gameClient.installationId || !gameClient.executableRelativePath))}>
           <Save size={16} />
           {t("save")}
         </button>
       </header>
 
-      <section className="settings-section">
-        <h2>{t("gameExecutable")}</h2>
-        <div className="path-control">
-          <input value={executable} readOnly />
-          <button className="secondary-button" onClick={browse}>
-            <FileSearch size={16} />
-            {t("browse")}
-          </button>
-        </div>
-      </section>
+      <GameClientSettings value={gameClient} onChange={setGameClient} t={t} onManage={onManageClients}
+        preferredInstallationId={preferredInstallationId} onBusyChange={setClientBusy} />
 
       <section className="settings-section">
         <h2>{t("workspaceRoot")}</h2>

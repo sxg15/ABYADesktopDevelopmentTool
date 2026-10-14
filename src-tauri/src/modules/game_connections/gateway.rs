@@ -594,6 +594,7 @@ mod tests {
             service.set_handler(handler.clone());
             service
                 .start(&AppSettings {
+                    game_client: Default::default(),
                     game_executable_path: String::new(),
                     workspace_root_path: String::new(),
                     locale: "en-US".into(),

@@ -1,5 +1,16 @@
 # Foundation Skill
 
+## Game client selection (2026-10-14)
+
+AppSettings/StoredSettings add defaulted gameClient source (local/remote), local path,
+installation ID, relative EXE and storage root. Legacy settings retain their local EXE.
+PublicSettingsUpdate groups the public settings input; the game-clients service validates
+and resolves remote installations before the adapter calls SettingsService::update_public.
+gameExecutablePath remains the effective launch path for existing consumers. Typed
+gameClients adapters expose only sanitized account metadata and installation/operation DTOs.
+secrets::protect/unprotect provides purpose-separated current-user DPAPI; GitHub tokens
+are never included in AppSettings, exports, native command results or frontend storage.
+
 ## Purpose
 
 Provide shared errors, DTO conventions, SQLite access, paths, secret storage,

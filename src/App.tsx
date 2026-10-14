@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, ScrollText, Send, Settings, X } from "lucide-react";
+import { ClipboardList, CloudDownload, ScrollText, Send, Settings, X } from "lucide-react";
 import { ArchiveTransferView } from "./features/archive-transfer/ArchiveTransferView";
 import { TasksView } from "./features/tasks/TasksView";
 import { LogsView } from "./features/logs/LogsView";
 import { SettingsView } from "./features/settings/SettingsView";
+import { GameClientsView } from "./features/game-clients/GameClientsView";
+import { clientApi, type ClientUpdate } from "./shared/gameClients";
 import { api, errorMessage } from "./shared/api";
 import type { AppSettings } from "./shared/types";
 import {
@@ -17,12 +19,15 @@ import { IconButtonTooltips } from "./app/IconButtonTooltips";
 import { useNotificationActivations } from "./app/useNotificationActivations";
 import type { NotificationActivation } from "./shared/notifications";
 
-type ViewId = "tasks" | "archiveTransfer" | "logs" | "settings";
+type ViewId = "tasks" | "archiveTransfer" | "logs" | "settings" | "gameClients";
 
 function App() {
   const [view, setView] = useState<ViewId>("tasks");
   const [notificationNavigation, setNotificationNavigation] = useState<NotificationActivation>();
   const [settings, setSettings] = useState<AppSettings>();
+  const [clientUpdate, setClientUpdate] = useState<ClientUpdate | null>(null);
+  const [preferredInstallationId, setPreferredInstallationId] = useState<string>();
+  const [preferredReleaseId, setPreferredReleaseId] = useState<number>();
   const [buildInfo,setBuildInfo]=useState<Awaited<ReturnType<typeof api.buildInfo>>>();
   const [locale, setLocale] = useState<Locale>(
     normalizeLocale(navigator.language),
@@ -62,6 +67,23 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [notification]);
 
+  useEffect(() => {
+    setClientUpdate(null);
+    if (settings?.gameClient?.source !== "remote") return;
+    let alive = true;
+    let checking = false;
+    const check = async () => {
+      if (checking) return;
+      checking = true;
+      try { const update = await clientApi.checkUpdate(); if (alive) setClientUpdate(update); }
+      catch { /* Offline clients remain usable. The manager offers an explicit retry. */ }
+      finally { checking = false; }
+    };
+    void check();
+    const timer = window.setInterval(() => void check(), 30 * 60 * 1000);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [settings?.gameClient?.source, settings?.gameClient?.installationId]);
+
   function notify(message: string, error = false) {
     setNotification({ message, error });
   }
@@ -78,6 +100,7 @@ function App() {
   }> = [
     { id: "tasks", label: "tasks", icon: ClipboardList },
     { id: "archiveTransfer", label: "archiveTransfer", icon: Send },
+    { id: "gameClients", label: "gameClients", icon: CloudDownload },
     { id: "logs", label: "logs", icon: ScrollText },
     { id: "settings", label: "settings", icon: Settings },
   ];
@@ -102,7 +125,7 @@ function App() {
                 aria-label={t(item.label)}
                 title={t(item.label)}
                 className={view === item.id ? "active" : ""}
-                onClick={() => setView(item.id)}
+                onClick={() => { setPreferredInstallationId(undefined); setPreferredReleaseId(undefined); setView(item.id); }}
               >
                 <Icon size={19} />
                 <span>{t(item.label)}</span>
@@ -110,6 +133,9 @@ function App() {
             );
           })}
         </nav>
+        {clientUpdate && <button className="client-sidebar-update" onClick={() => { setPreferredReleaseId(clientUpdate.releaseId); setView("gameClients"); }}>
+          <CloudDownload size={17} /><span><strong>{t("gcUpdate")}</strong><span>{clientUpdate.tagName}</span></span>
+        </button>}
         <div className="sidebar-footer">
           <span className="connection-light" />
           <strong>APP {buildInfo?.version??"版本核对中"}{buildInfo?.testEnvironment?" · 测试环境":""}</strong>
@@ -132,6 +158,8 @@ function App() {
           <ArchiveTransferView t={t} notify={notify} />
         )}
         {view === "logs" && <LogsView t={t} notify={notify} />}
+        {view === "gameClients" && <GameClientsView settings={settings} t={t} notify={notify} preferredReleaseId={preferredReleaseId}
+          onOpenSettings={id => { setPreferredInstallationId(id); setView("settings"); }} />}
         {view === "settings" && (
           <SettingsView
             settings={settings}
@@ -139,6 +167,8 @@ function App() {
             t={t}
             onSaved={handleSaved}
             notify={notify}
+            onManageClients={() => setView("gameClients")}
+            preferredInstallationId={preferredInstallationId}
           />
         )}
       </main>

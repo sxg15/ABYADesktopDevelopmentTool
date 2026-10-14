@@ -1,15 +1,15 @@
-{
-  "product": "ABYA Desktop Development Tool",
-  "version": "0.4.0",
-  "workflowVersion": "2.1.0",
-  "releaseLabel": "conversation-startup-fix-20261013",
-  "sourceBuiltAtUtc": "2026-10-13T09:21:01.4118740Z",
-  "builtAtUtc": "2026-10-13T09:24:08.9379955Z",
-  "executable": "ABYA Desktop Development Tool.exe",
-  "sha256": "C682515F3578D6F86BAB079BF68619FEC59D46A7ED4128D634287E4696C0E4F7",
-  "cliExecutable": "abya-desktop.exe",
-  "cliSha256": "2614999539F2625732B89AF34CA512C6280551BEA5BAE563466ADF69A6ACCD3B",
-  "runtimeCliVersion": "0.2.0",
-  "cliProtocolVersion": 1,
-  "nodeVersion": "v24.11.1"
+﻿{
+    "product":  "ABYA Desktop Development Tool",
+    "version":  "0.4.0",
+    "workflowVersion":  "2.1.0",
+    "releaseLabel":  "game-client-management-20261014",
+    "sourceBuiltAtUtc":  "2026-10-14T09:35:48.9754985Z",
+    "builtAtUtc":  "2026-10-14T09:38:33.9689300Z",
+    "executable":  "ABYA Desktop Development Tool.exe",
+    "sha256":  "15B5E643C4ECE2C2384157DF66D999DD4C5516046118B7B5495BD7F29123F481",
+    "cliExecutable":  "abya-desktop.exe",
+    "cliSha256":  "8EF97FDC5F5AA43CA4F8101F4BDCE5AA33CAC87B7CA6D2B88261D63BAD5FCB05",
+    "runtimeCliVersion":  "0.2.0",
+    "cliProtocolVersion":  1,
+    "nodeVersion":  "v24.11.1"
 }

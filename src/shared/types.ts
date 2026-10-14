@@ -26,6 +26,7 @@ export interface AppError {
 
 export interface AppSettings {
   gameExecutablePath: string;
+  gameClient?: import("./gameClients").GameClientSelection;
   workspaceRootPath: string;
   locale: string;
   desktopCliPort: number;

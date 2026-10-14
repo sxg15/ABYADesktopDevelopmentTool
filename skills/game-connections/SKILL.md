@@ -1,5 +1,11 @@
 # Game Connections Skill
 
+## Settings fixture compatibility (2026-10-14)
+
+Gateway tests construct AppSettings with the default local game-client selection. The
+new GitHub account and Release APIs belong to game-clients, never this LAN gateway;
+discovery and connection messages continue to carry no GitHub credentials.
+
 ## Purpose
 
 Let ABYA game instances discover the desktop tool and initiate one shared LAN

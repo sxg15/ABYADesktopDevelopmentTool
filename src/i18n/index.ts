@@ -1,7 +1,9 @@
+import { gameClientMessages } from "./gameClients";
 export type Locale = "zh-CN" | "en-US";
 
 const messages = {
   "zh-CN": {
+    ...gameClientMessages["zh-CN"],
     product: "ABYA 桌面开发工具",
     tasks: "开发任务",
     archiveTransfer: "传输存档",
@@ -285,6 +287,7 @@ const messages = {
     noTransferHistory: "暂无存档传输记录",
   },
   "en-US": {
+    ...gameClientMessages["en-US"],
     product: "ABYA Desktop Development Tool",
     tasks: "Development Tasks",
     archiveTransfer: "Transfer Archive",
