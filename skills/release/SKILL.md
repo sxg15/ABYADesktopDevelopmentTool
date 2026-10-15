@@ -1,10 +1,21 @@
 # Release Skill
 
+## Required development branch order (2026-10-15 clarification)
+Develop on CLI for every task. Before editing, inspect local changes, fetch both
+origin/CLI and origin/dev, switch to CLI and integrate both latest remote branches.
+Preserve both sides when merging. After checks and complete package validation,
+commit/push CLI first, integrate that commit into dev, then push dev. Recheck remote
+state for concurrent updates; rerun affected validation and rebuild when merging
+changes the combined code. Verify remote dev contains the completed CLI commit and
+leave the checkout on CLI. Do not develop directly on dev, force-push or update main.
+This order supersedes the historical branch directions below.
+
 ## Art reference upload (2026-10-15)
 Default/Validation builds use art-reference-upload-20261015. Validate the real
 resources-node upload/paste/preview controls, task/revision isolation and persistent
 reference files without approval bypass, then build and verify the complete package.
-This task is developed directly on dev and synchronized to dev per its user request.
+The initial dev commit is also integrated into CLI; subsequent work follows the
+required CLI development and dev synchronization order above.
 Preserve remote game client management and all existing terminal/acceptance fixes.
 
 ## Game client integration into dev (2026-10-15)

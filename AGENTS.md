@@ -1,16 +1,20 @@
 # LLM Maintenance Contract
 
-Release branch policy (2026-10-15): work completed on CLI must automatically be
-integrated into dev, including source, module Skills, project constraints and the
-verified complete portable package. This supersedes the 2026-10-14 dev-only rule.
-After required checks and package validation, commit CLI, fetch origin, integrate
-any newer remote CLI/dev commits without losing either branch's features, and
-update dev with the validated CLI changes. Prefer fast-forward; if branches have
-diverged, merge and rerun affected checks before publishing. Push CLI and dev
-(atomically when supported), then verify origin/dev contains the completed CLI
-commit. Do not report completion while synchronization is outstanding; report
-any actual conflict or remote failure. Never force-push, reset unrelated work or
-update main. No additional confirmation is needed for this routine sync.
+Release branch policy (user clarification, 2026-10-15): all development happens
+on CLI. Before editing, inspect the working tree, fetch origin/CLI and origin/dev,
+switch to CLI, and integrate both latest remote branches into CLI. Preserve local
+changes and all features; do not develop directly on dev. Prefer fast-forward;
+when histories diverge, merge and resolve conflicts without dropping either side.
+After implementation and required checks/package validation, commit and push CLI,
+then integrate that completed CLI commit into dev and push dev. Include source,
+module Skills, project constraints and the verified complete portable package.
+Fetch again before publishing to account for concurrent changes; merge any new
+changes into CLI and rerun affected checks/rebuild if the combined code changes.
+Verify origin/dev contains the completed CLI commit and return the working branch
+to CLI. Do not report completion while synchronization is outstanding; report any
+actual conflict or remote failure. Never force-push, reset unrelated work or update
+main. This supersedes historical dev-only rules. No additional confirmation is
+needed for this routine sync.
 
 Before changing production code:
 

@@ -2,7 +2,7 @@
 
 ## 策划直接使用（Windows x64）
 
-1. 切换并拉取仓库的 **dev** 分支。后续源码与完整运行包只同步 dev，不再同步 main 或 CLI。
+1. 切换并拉取仓库的 **dev** 分支，获取已同步的源码与完整运行包。
 2. 双击仓库根目录的 **ABYA 开发工具.cmd**。
 3. 首次使用在 APP 设置中选择自己电脑上的 ABYA Player 路径；AI 会话使用自己电脑的 Codex/Grok 安装和登录。
 
@@ -17,6 +17,7 @@ Windows 需要可用的 WebView2 Runtime；Windows 11 通常已提供，缺少�
 
 ## 发布与维护
 
+- 开发统一在 **CLI** 分支进行。动手前先 fetch，将远端 CLI 和最新 dev 合入 CLI；完成修改与验证后提交、推送 CLI，再将此次 CLI 提交合入并推送 dev，核对远端包含关系，最后保留工作分支为 CLI。不更新 main、不强推，合并时保留双方功能；合并改变源码时重新执行相关检查并构建运行包。
 - 正式 `Publish/` 和相对路径启动入口纳入 Git；测试包、旧发布备份、日志、缓存和数据库仍忽略。
 - `npm run build:portable` 构建正式包并生成 `Publish/package-files.json`，记录每个运行文件的大小和 SHA-256。
 - 更新发布包后将其完整暂存，再运行 `npm run check:portable`，确认文件完整且没有被忽略规则漏掉。
