@@ -6,7 +6,7 @@ export function VisualGallery({ taskId, artifacts, bindings = {}, en = false, on
   taskId: string; artifacts: ProductionArtifact[]; bindings?: Record<string, string>; en?: boolean;
   onFeedback?: (id: string) => void; feedbackActions?: Record<string,string>;
 }) {
-  const items = artifacts.filter(a => a.mediaType && a.sourceType !== "feedback");
+  const items = artifacts.filter(a => a.mediaType && a.sourceType !== "feedback" && !a.plannerReference);
   const [selected, setSelected] = useState<string[]>([]);
   const [preview, setPreview] = useState<string>();
   useEffect(() => { setSelected([]); setPreview(undefined); }, [taskId]);

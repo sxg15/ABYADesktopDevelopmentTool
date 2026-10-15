@@ -1,4 +1,5 @@
 mod acceptance;
+mod art_references;
 pub use acceptance::AcceptanceSpec;
 mod catalog;
 mod files;

@@ -158,6 +158,8 @@ impl TaskService {
         self.production_commit(&input.task_id,input.expected_revision,|r| {
             let data = &input.data;
             match input.operation.as_str() {
+                "attach-art-reference" => super::art_references::attach(r, &root, data)?,
+                "remove-art-reference" => super::art_references::withdraw(r, data)?,
                 "attach" => {
                     super::interaction::feedback(r, &root, data["artifactId"].as_str())?;
                     super::visuals::attach_feedback(r, &root, data)?;

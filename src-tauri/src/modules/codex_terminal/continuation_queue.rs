@@ -422,7 +422,7 @@ impl CodexTerminalService {
             let receipt = directory.join(format!("task-continue-{}.json", request.id));
             let mut attempt = intake_receipt::start_attempt(&receipt, None, &request.native_id)?;
             let result=server.request("turn/start",json!({"threadId":request.native_id,"clientUserMessageId":attempt["messageId"],
-                "input":[{"type":"text","text":repair_spec.as_ref().map(|s|s.prompt.as_str()).unwrap_or("用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。") }]}));
+                "input":[{"type":"text","text":repair_spec.as_ref().map(|s|s.prompt.as_str()).unwrap_or("用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。若 artifacts 中存在 plannerReference=true 且 status 不是 withdrawn 的策划参考图片，读取其路径、说明并查看图片后用于美术需求；它们不是验收成果，变更方案仍需修订文档并请求人工确认。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。") }]}));
             result.and_then(|v| {
                 let id = v["turn"]["id"]
                     .as_str()

@@ -1,5 +1,12 @@
 # Release Skill
 
+## Art reference upload (2026-10-15)
+Default/Validation builds use art-reference-upload-20261015. Validate the real
+resources-node upload/paste/preview controls, task/revision isolation and persistent
+reference files without approval bypass, then build and verify the complete package.
+This task is developed directly on dev and synchronized to dev per its user request.
+Preserve remote game client management and all existing terminal/acceptance fixes.
+
 ## Game client integration into dev (2026-10-15)
 
 Default/Validation builds now use game-client-dev-20261015. Retain remote client

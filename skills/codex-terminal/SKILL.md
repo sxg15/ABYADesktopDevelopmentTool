@@ -1,5 +1,11 @@
 # Codex Terminal Skill
 
+The fixed generic continuation prompt instructs AI to read active plannerReference
+artifact paths and notes, view the images and use them as art inputs. Withdrawn
+references are excluded; inputs never imply acceptance. This also supports pinned
+legacy workspaces without rewriting their Skills. Existing native binding, queued
+delivery, human gates and targeted repair prompts remain unchanged.
+
 ## Purpose
 Provide task-owned Codex conversations with recoverable native identity and an embedded TUI.
 

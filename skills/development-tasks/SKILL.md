@@ -1,5 +1,23 @@
 # Development Tasks Skill
 
+## Planner art references (2026-10-15)
+ArtReferences appears before results in the resources node. Explicit file selection
+or paste into its focused area uploads PNG/JPEG/WebP/GIF (16 MiB each, eight per
+batch, 32 active per task), with optional 2000-character notes. Text paste remains
+normal; no global clipboard listener. Uploads serialize revisions and guard late
+task-switch results. Show partial success without retrying completed uploads.
+APP-only feedback operations attach-art-reference/remove-art-reference work before
+deliverables exist. Validate byte signatures, limits, task activity and revision;
+use generated task-owned paths. Store plannerReference=true on registered reference
+artifacts; withdrawal preserves bytes/history but marks status withdrawn. Agent
+mutation dispatch cannot impersonate this upload. Exclude these inputs from visual
+bindings, review-feedback targets and deliverable galleries; they never fulfill
+preview gates, approve documents or mutate stages. Reports label reference/history.
+Explicit Continue uses the existing task conversation and gates; missing connection
+does not lose saved images. Read-only previews remain available after task closure.
+Tests cover early upload, persistence/export, stale/archived/invalid requests,
+no approval bypass, file selection, clipboard batches, withdrawal and task switching.
+
 ## Acceptance UI lifetime (2026-10-14)
 Sibling AcceptanceLauncher and FeedbackPanel use distinct type-prefixed task keys.
 Never reuse taskId alone for both: React can orphan DOM/effects when stages change.

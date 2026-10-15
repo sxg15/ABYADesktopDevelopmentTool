@@ -65,6 +65,7 @@ kind、affectedStages、blockedOperations 的阻塞范围，也不自动批准�
 ## 视觉产物
 
 sourceType 为 reference/mockup/render/gameplay/feedback；roles 为 asset-board/layout/states/effect/feedback 数组。
+策划可在 APP 美术节点直接上传参考图片。读取制作记录 artifacts 中 plannerReference=true 且 status 不是 withdrawn 的条目，按 path 查看图片并阅读 summary；这是策划提供的输入，不是 AI 成果、预览覆盖或验收证据。不要用 register-artifact 覆盖这些记录。需要改变已确认方案时，修订相关文档并重新请求人工确认。上传/移除由 APP 用户操作，CLI 不得代替策划上传。
 资源阶段必须有素材板、整体布局和关键状态，一张组合图可以有多个roles。
 groupId 表示同一设计项，visualVersion 表示其方案版本；新版本使用新文件，旧路径不能覆盖。
 PNG/JPEG/WebP/GIF图片上限16 MiB；MP4/WebM视频上限64 MiB。文件保存在本任务artifacts内。

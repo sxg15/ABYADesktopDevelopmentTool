@@ -1,4 +1,5 @@
 use super::*;
+mod art_references_tests;
 use crate::foundation::{AppPaths, Database};
 use crate::modules::tasks::TaskInput;
 

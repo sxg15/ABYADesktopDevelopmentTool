@@ -86,7 +86,7 @@ export function FeedbackPanel({ taskId, record, active, en = false, selectedArti
     <label className="field">{en ? "Related visual (optional)" : "关联视觉产物（可选）"}
       <select disabled={busy} value={artifact} onChange={e => { setArtifact(e.target.value); setTargetVersion(e.target.value ? record.artifacts?.find(a => a.id === e.target.value)?.sha256 ?? "" : record.currentVersion ?? ""); }}>
         <option value="">{en ? "Gameplay / general" : "玩法或整体意见"}</option>
-        {(record.artifacts ?? []).filter(a => a.mediaType && a.sourceType !== "feedback").map(a => <option disabled={actions[a.id] !== ""} key={a.id} value={a.id}>{a.title} · {a.visualVersion}</option>)}
+        {(record.artifacts ?? []).filter(a => a.mediaType && a.sourceType !== "feedback" && !a.plannerReference).map(a => <option disabled={actions[a.id] !== ""} key={a.id} value={a.id}>{a.title} · {a.visualVersion}</option>)}
       </select></label>
     <label className="field">{en ? "What happened? What should change?" : "遇到了什么问题，希望怎样修改？"}
       <textarea disabled={busy || !!reason} value={draft} maxLength={8000} onChange={e => setDraft(e.target.value)} rows={5} /></label>

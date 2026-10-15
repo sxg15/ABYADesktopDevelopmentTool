@@ -1,5 +1,9 @@
 # Foundation Skill
 
+ProductionArtifact adds optional plannerReference. APP-only productionApi.feedback
+accepts attach-art-reference (name/base64/summary) and remove-art-reference (id).
+The task module validates and persists inputs; old records need no migration.
+
 ProductionIssue optionally carries repairTarget (abya-source, abya-build, lua, other)
 for programmer handoff display. Legacy records remain readable without it. Ownership
 classification and validation remain in development-tasks; no database migration.

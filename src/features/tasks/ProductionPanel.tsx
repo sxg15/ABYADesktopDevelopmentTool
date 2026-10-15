@@ -14,6 +14,7 @@ import { ProductionTiming } from "./ProductionTiming";
 import { AcceptanceLauncher } from "./AcceptanceLauncher";
 import { VisualGallery } from "./VisualGallery";
 import { FeedbackPanel } from "./FeedbackPanel";
+import { ArtReferences } from "./ArtReferences";
 import { DocumentReview } from "./DocumentReview";
 import { programmerIssue, activeProgrammerIssues } from "./programmerIssue";
 
@@ -445,6 +446,11 @@ export function ProductionPanel({
                 {w}
               </div>
             ))}
+          {stage === "resources" && (
+            <ArtReferences key={`art-references:${taskId}`} taskId={taskId} record={r} active={active} en={en}
+              onUpdated={next => { ++sequence.current; setView(old => !old?.record || !next.record || next.record.revision >= old.record.revision ? next : old); }}
+              onContinue={onContinue ? (message, revision) => onContinue(message, undefined, revision) : undefined} />
+          )}
           <section className="production-card">
             <h4>
               <FileText size={17} />

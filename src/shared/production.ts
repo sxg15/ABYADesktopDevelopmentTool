@@ -127,6 +127,7 @@ export interface IntakeQuestionGroup {
 }
 
 export interface ProductionArtifact {
+  plannerReference?: boolean;
   mediaType?: string; sourceType?: string; roles?: string[]; visualVersion?: string; groupId?: string;
   sha256?: string; temporary?: boolean; source?: string;
   id: string; path: string; stage: string; title: string; summary?: string;

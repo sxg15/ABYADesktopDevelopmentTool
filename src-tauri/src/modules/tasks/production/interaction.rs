@@ -100,7 +100,12 @@ fn feedback_check(
         let a = r
             .artifacts
             .iter()
-            .find(|a| a["id"] == id && a["sourceType"] != "feedback" && a["cycle"] == r.cycle)
+            .find(|a| {
+                a["id"] == id
+                    && a["sourceType"] != "feedback"
+                    && a["plannerReference"] != true
+                    && a["cycle"] == r.cycle
+            })
             .ok_or_else(|| AppError::validation("没有当前周期可反馈的成果。"))?;
         let path = mutation::text(a, "path")?;
         if a["sha256"] != files::hash_file(&files::safe_path(root, path)?)?.0 {

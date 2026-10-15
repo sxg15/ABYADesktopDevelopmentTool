@@ -108,7 +108,15 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
             body += &format!(
                 "<figure><figcaption>{} · {} · {}</figcaption>",
                 cell(&a["title"]),
-                cell(&a["sourceType"]),
+                if a["plannerReference"] == true {
+                    if a["status"] == "withdrawn" {
+                        "策划参考（已移除，不再使用）".into()
+                    } else {
+                        "策划参考（非验收成果）".into()
+                    }
+                } else {
+                    cell(&a["sourceType"])
+                },
                 cell(&a["visualVersion"])
             );
             if a["mediaType"]

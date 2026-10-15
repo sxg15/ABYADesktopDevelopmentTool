@@ -146,6 +146,7 @@ pub(super) fn bindings_for(
     let mut groups = BTreeMap::new();
     for a in &r.artifacts {
         if a["stage"] == "resources"
+            && a["plannerReference"] != true
             && a["mediaType"].is_string()
             && a["sourceType"] != "gameplay"
             && a["sourceType"] != "feedback"

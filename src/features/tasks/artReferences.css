@@ -1,0 +1,12 @@
+.art-references { border:2px solid #8bbab1; background:linear-gradient(135deg,#f0faf7,#fff 65%); }
+.art-references h4 { display:flex; align-items:center; gap:10px; color:#126456; font-size:20px; }
+.art-references>p { line-height:1.7; }
+.art-references textarea { width:100%; min-height:72px; resize:vertical; }
+.art-reference-paste { display:flex; flex-direction:column; align-items:center; gap:10px; padding:24px 16px; margin:14px 0; border:2px dashed #78a99d; border-radius:10px; background:#eaf6f1; color:#175b50; text-align:center; cursor:pointer; }
+.art-reference-paste strong { font-size:17px; line-height:1.5; }
+.art-reference-paste:focus-visible,.art-reference-paste:focus { outline:3px solid #087f69; outline-offset:3px; background:#dff3e9; }
+.art-reference-paste[aria-disabled="true"] { opacity:.6; cursor:default; }
+.art-reference-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:16px 0; }
+.art-reference-actions button { display:inline-flex; align-items:center; gap:8px; }
+.art-references .visual-card-grid { grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr)); }
+.art-references .visual-card strong,.art-reference-actions small { overflow-wrap:anywhere; }
