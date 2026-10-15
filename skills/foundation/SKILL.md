@@ -8,6 +8,8 @@ PublicSettingsUpdate groups the public settings input; the game-clients service 
 and resolves remote installations before the adapter calls SettingsService::update_public.
 gameExecutablePath remains the effective launch path for existing consumers. Typed
 gameClients adapters expose only sanitized account metadata and installation/operation DTOs.
+Map clientDownloadResponse to a dedicated localized non-file response error, distinct from
+clientIntegrity. Neither error exposes response bodies, credentials or signed download URLs.
 OAuth start/poll/cancel adapters accept no credentials; login DTOs contain only the opaque
 attempt ID, one-time user code, fixed verification URL, expiry and polling interval.
 secrets::protect/unprotect provides purpose-separated current-user DPAPI; GitHub access/refresh tokens

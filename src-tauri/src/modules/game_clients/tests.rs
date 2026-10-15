@@ -349,7 +349,12 @@ pub(super) fn mock(
         let header = String::from_utf8(bytes.clone()).unwrap();
         let length = header.lines().find_map(|line| line.to_ascii_lowercase().strip_prefix("content-length:").map(|value| value.trim().parse::<usize>().unwrap())).unwrap_or(0);
         let mut body_bytes = vec![0; length]; stream.read_exact(&mut body_bytes).unwrap(); bytes.extend_from_slice(&body_bytes);
-        write!(stream, "HTTP/1.1 {status} Test\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n{headers}\r\n{body}", body.len()).unwrap();
+        let content_type = if headers.lines().any(|line| line.to_ascii_lowercase().starts_with("content-type:")) {
+            ""
+        } else {
+            "Content-Type: application/json\r\n"
+        };
+        write!(stream, "HTTP/1.1 {status} Test\r\n{content_type}Content-Length: {}\r\nConnection: close\r\n{headers}\r\n{body}", body.len()).unwrap();
         String::from_utf8(bytes).unwrap()
     }).collect()
     });
@@ -471,7 +476,11 @@ fn github_upload_stream_and_binary_download_preserve_bytes() {
         (200, String::new(), wire),
         (200, String::new(), "[]".into()),
         (201, String::new(), uploaded),
-        (200, String::new(), "download-fixture".into()),
+        (
+            200,
+            "Content-Type: application/octet-stream\r\n".into(),
+            "download-fixture".into(),
+        ),
     ]);
     let github = GitHub::with_test_api(Some("test-token".into()), api).unwrap();
     let payload = b"zip-fixture";
@@ -500,11 +509,50 @@ fn github_upload_stream_and_binary_download_preserve_bytes() {
             .contains("content-type: application/zip")
     );
     assert!(requests[2].ends_with("zip-fixture"));
-    assert!(
-        requests[3]
-            .to_lowercase()
-            .contains("accept: application/octet-stream")
-    );
+    for (index, request) in requests.iter().enumerate() {
+        let accept: Vec<_> = request
+            .lines()
+            .filter_map(|line| line.split_once(':'))
+            .filter(|(name, _)| name.eq_ignore_ascii_case("accept"))
+            .map(|(_, value)| value.trim())
+            .collect();
+        assert_eq!(
+            accept,
+            [if index == 3 {
+                "application/octet-stream"
+            } else {
+                "application/vnd.github+json"
+            }],
+            "Each request must negotiate exactly one response type"
+        );
+    }
+}
+
+#[test]
+fn github_rejects_metadata_and_web_pages_before_installing() {
+    for content_type in [
+        "application/json; charset=utf-8",
+        "Application/Problem+JSON",
+        "text/html; charset=utf-8",
+        "text/plain",
+        "application/xml",
+        "application/problem+xml",
+    ] {
+        let (api, handle) = mock(vec![(
+            200,
+            format!("Content-Type: {content_type}\r\n"),
+            "private-response-body".into(),
+        )]);
+        let err = GitHub::with_test_api(Some("test-only-credential".into()), api)
+            .unwrap()
+            .download(10)
+            .unwrap_err();
+        assert_eq!(err.code, "clientDownloadResponse");
+        let displayed = format!("{err:?}");
+        assert!(!displayed.contains("private-response-body"));
+        assert!(!displayed.contains("test-only-credential"));
+        handle.join().unwrap();
+    }
 }
 
 #[test]
@@ -568,5 +616,93 @@ fn live_github_account_and_release_reads() {
     println!(
         "Live account and release reads passed; {} releases; no remote writes or saved credentials.",
         releases.len()
+    );
+}
+
+#[test]
+#[ignore = "Downloads and installs a selected real GitHub ZIP in an isolated temporary fixture; opt-in only"]
+fn live_github_download_and_install() {
+    assert_eq!(
+        std::env::var("ABYA_TEST_GITHUB_INSTALL").as_deref(),
+        Ok("1")
+    );
+    let release_id = std::env::var("ABYA_TEST_GITHUB_RELEASE_ID")
+        .expect("Select the release explicitly")
+        .parse::<u64>()
+        .expect("Release ID must be numeric");
+    let asset_id = std::env::var("ABYA_TEST_GITHUB_ASSET_ID")
+        .expect("Select the asset explicitly")
+        .parse::<u64>()
+        .expect("Asset ID must be numeric");
+    let root = Temp::new();
+    let service = service(&root);
+    let output = std::process::Command::new("gh")
+        .args(["auth", "token", "--hostname", "github.com"])
+        .output()
+        .expect("gh is required");
+    assert!(output.status.success(), "GitHub CLI must be authenticated");
+    let token = String::from_utf8(output.stdout).expect("Token encoding");
+    service
+        .login_for_read_test(token.trim().into())
+        .expect("Read-only login validation");
+    let original_settings = serde_json::to_value(service.settings.get().unwrap()).unwrap();
+    let release = service.release(release_id).expect("Read selected release");
+    let asset = release
+        .assets
+        .iter()
+        .find(|asset| asset.id == asset_id)
+        .expect("Asset must belong to the release");
+    assert!(asset.installable());
+    let expected_digest = asset.digest.as_ref().expect("Live smoke requires a digest");
+    let storage = root.0.join("中文 安装目录");
+    let installer = service.clone();
+    let worker = thread::spawn(move || {
+        installer.install(InstallInput {
+            release_id,
+            asset_id,
+            storage_root: storage.to_string_lossy().into_owned(),
+        })
+    });
+    while !worker.is_finished() {
+        let progress = service.operation();
+        println!(
+            "Live install: {} {}/{} bytes",
+            progress.stage, progress.completed_bytes, progress.total_bytes
+        );
+        thread::sleep(std::time::Duration::from_secs(15));
+    }
+    let record = worker
+        .join()
+        .expect("Installer worker")
+        .expect("Live download, integrity verification and extraction");
+    assert!(record.digest_verified);
+    assert_eq!(format!("sha256:{}", record.sha256), *expected_digest);
+    assert!(!record.executable_candidates.is_empty());
+    let selection = GameClientSelection {
+        source: GameClientSource::Remote,
+        installation_id: record.id.clone(),
+        executable_relative_path: record.executable_candidates[0].clone(),
+        ..Default::default()
+    };
+    let executable = install::resolve(&record, &selection).expect("Installed Unity executable");
+    assert!(PathBuf::from(&executable).is_file());
+    assert_eq!(
+        serde_json::to_value(service.settings.get().unwrap()).unwrap(),
+        original_settings
+    );
+    assert_eq!(service.state().unwrap().installations.len(), 1);
+    service.logout().unwrap();
+    assert!(service.read::<StoredAccount>(AUTH_KEY).unwrap().is_none());
+    drop(service);
+    let restored = self::service(&root);
+    let state = restored.state().unwrap();
+    assert!(state.account.is_none());
+    assert_eq!(state.installations.len(), 1);
+    assert_eq!(state.installations[0].sha256, record.sha256);
+    println!(
+        "Live install passed: {} bytes, SHA-256 {}, {} Unity EXE(s); persisted offline, unchanged settings, no remote writes or saved credentials.",
+        asset.size,
+        record.sha256,
+        record.executable_candidates.len()
     );
 }

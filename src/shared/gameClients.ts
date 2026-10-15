@@ -67,7 +67,7 @@ export function clientError(error: unknown, t: (key: MessageKey) => string): str
     clientAssetMissing: "gcErrorMissing", clientInstallationMissing: "gcErrorInstallation", clientChooseExecutable: "gcChooseExe",
     clientPackageFormat: "gcErrorPackage", clientNoExecutable: "gcErrorNoExe", clientIntegrity: "gcErrorIntegrity",
     clientUnsafePath: "gcErrorPath", clientUnsafeArchive: "gcErrorArchive", clientArchiveLimit: "gcErrorArchive",
-    clientDownloadHost: "gcErrorHost", clientUploadSize: "gcErrorSize", clientTooManyResults: "gcErrorMany",
+    clientDownloadHost: "gcErrorHost", clientDownloadResponse: "gcErrorDownloadResponse", clientUploadSize: "gcErrorSize", clientTooManyResults: "gcErrorMany",
   };
   return keys[code] ? t(keys[code]) : errorMessage(error);
 }

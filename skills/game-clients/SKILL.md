@@ -44,6 +44,13 @@ HTTPS GitHub CDN with no Authorization header. Errors contain codes, never respo
 credentials, signed URLs or request debug output. Cancellation of uploads may leave a remote
 asset; refresh the release before retrying or deleting an incomplete asset.
 
+Each API request has exactly one Accept value: application/vnd.github+json for metadata
+and application/octet-stream for asset bytes. Never append binary Accept to a JSON request;
+reqwest appends header values and GitHub can return metadata instead of the archive.
+Handle direct 200 streams and allowlisted redirects. Reject JSON, XML and text responses
+with clientDownloadResponse before passing bytes to the installer; integrity checks remain
+mandatory for accepted binary responses.
+
 Installation accepts complete Windows Unity ZIP packages up to 2 GiB, at most 100,000
 entries and 16 GiB expanded. Reject traversal, drive/UNC/ADS paths, Windows device names,
 case-insensitive collisions, links and reparse-point destinations. Stream bytes, verify
@@ -82,6 +89,14 @@ The ignored live_github_account_and_release_reads test requires ABYA_TEST_GITHUB
 and an already authenticated gh CLI. It borrows the credential in native test memory,
 uses a test-only session initializer against an isolated database, performs /user/repository/release
 reads, signs out and prints counts only. It does not upload/delete Releases or create keys.
+HTTP regression fixtures must assert the complete Accept header list, not substring presence,
+and reject non-file response types without exposing bodies. The ignored
+live_github_download_and_install test requires ABYA_TEST_GITHUB_INSTALL=1 plus explicit
+ABYA_TEST_GITHUB_RELEASE_ID/ABYA_TEST_GITHUB_ASSET_ID. It uses the existing gh credential
+only in memory, downloads the real selected ZIP through the production service, checks the
+GitHub digest and Unity executable discovery in an isolated temporary database/directory,
+verifies installation persistence without changing Player settings, then removes its own
+fixture. It performs no remote writes, saves no credentials and never launches the game.
 OAuth fixtures cover interval/slow_down, expiry/denial, missing repo permissions, secret
 non-disclosure, DPAPI restart, concurrent refresh and cancellation/logout races. The ignored
 live_oauth_device_flow_configuration test requires ABYA_TEST_GITHUB_OAUTH=1; it verifies the

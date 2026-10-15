@@ -60,10 +60,20 @@ impl GitHub {
     }
 
     fn request(&self, method: Method, url: String) -> reqwest::blocking::RequestBuilder {
+        self.request_with_accept(method, url, "application/vnd.github+json")
+    }
+
+    fn request_with_accept(
+        &self,
+        method: Method,
+        url: String,
+        accept: &str,
+    ) -> reqwest::blocking::RequestBuilder {
         let request = self
             .client
             .request(method, url)
-            .header(header::ACCEPT, "application/vnd.github+json")
+            // RequestBuilder::header appends, so choose the response type once.
+            .header(header::ACCEPT, accept)
             .header("X-GitHub-Api-Version", "2022-11-28");
         match &self.token {
             Some(token) => request.bearer_auth(token),
@@ -227,17 +237,17 @@ impl GitHub {
 
     pub fn download(&self, asset_id: u64) -> AppResult<Response> {
         let mut response = self
-            .request(
+            .request_with_accept(
                 Method::GET,
                 self.repo_url(&format!("releases/assets/{asset_id}")),
+                "application/octet-stream",
             )
-            .header(header::ACCEPT, "application/octet-stream")
             .timeout(Duration::from_secs(7200))
             .send()
             .map_err(network_error)?;
         for _ in 0..3 {
             if !response.status().is_redirection() {
-                return checked(response);
+                return download_response(response);
             }
             let location = response
                 .headers()
@@ -258,6 +268,28 @@ impl GitHub {
         }
         Err(error("clientDownloadHost"))
     }
+}
+
+fn download_response(response: Response) -> AppResult<Response> {
+    let response = checked(response)?;
+    for value in response.headers().get_all(header::CONTENT_TYPE).iter() {
+        let media_type = value
+            .to_str()
+            .unwrap_or_default()
+            .split(';')
+            .next()
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase();
+        if media_type.starts_with("text/")
+            || matches!(media_type.as_str(), "application/json" | "application/xml")
+            || media_type.ends_with("+json")
+            || media_type.ends_with("+xml")
+        {
+            return Err(error("clientDownloadResponse"));
+        }
+    }
+    Ok(response)
 }
 
 pub(super) fn safe_download_url(url: &reqwest::Url) -> bool {

@@ -10,7 +10,9 @@ Go to settings to sign in action, which focuses the GitHub account section. The 
 signed-in account links to the same section. Preserve draft Player selection on auth changes.
 Settings offers local/remote source, installed version/EXE selection, remote
 version download and storage-folder choice. Keep both locales complete, including errors,
-busy/cancellation, empty repository and missing installation states. An optional update
+busy/cancellation, empty repository and missing installation states. Distinguish a
+metadata/web-page download response from a size/SHA-256 mismatch. Failed installation
+preserves the selected game and never saves settings. An optional update
 badge appears after startup checks and every 30 minutes for the active remote selection;
 clicking navigates to the suggested Release without changing settings. Downloads do not
 switch versions. Preserve mounted task terminals. Layout reflows at narrow widths and

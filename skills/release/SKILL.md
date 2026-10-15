@@ -1,5 +1,13 @@
 # Release Skill
 
+## Game client download fix (2026-10-15)
+
+Default/Validation packages use game-client-download-fix-20261015. Fix binary download
+content negotiation and distinguish non-file responses from integrity failures. Run the
+strict Accept-header regression and the opt-in real ZIP installation smoke documented in
+game-clients, in addition to the required checks. Verify the complete candidate inventory
+before promoting; preserve all user settings, credentials and existing game installations.
+
 ## Game client manager (2026-10-14)
 
 The game-client-oauth-20261014 build adds settings-based browser OAuth with public client ID

@@ -203,6 +203,22 @@ it("shows a newer version as optional and retains the selected installation", as
   expect(clientApi.install).not.toHaveBeenCalled();
 });
 
+it("shows a non-file download response separately and preserves the selected game", async () => {
+  state.installations = [record];
+  vi.mocked(clientApi.install).mockRejectedValue({ code: "clientDownloadResponse" });
+  render(<SelectionHarness initial={{ ...emptyClientSelection(), source: "remote", installationId: record.id,
+    executableRelativePath: "Game.exe", storageRoot: "D:\\Clients" }} />);
+  await screen.findByRole("option", { name: /v1.0 · Windows.zip/ });
+  await waitFor(() => expect((screen.getByRole("button", { name: t("gcInstall") }) as HTMLButtonElement).disabled).toBe(false));
+  const original = screen.getByTestId("selection").textContent;
+  fireEvent.click(screen.getByRole("button", { name: t("gcInstall") }));
+  await screen.findByText(t("gcErrorDownloadResponse"));
+  expect(screen.queryByText(t("gcErrorIntegrity"))).toBeNull();
+  expect(screen.getByTestId("selection").textContent).toBe(original);
+  expect(state.installations).toEqual([record]);
+  expect(api.updateSettings).not.toHaveBeenCalled();
+});
+
 it("saves the source, local fallback and remote selection together only on Save", async () => {
   state.installations = [record];
   const settings: AppSettings = { gameExecutablePath: "C:\\Old.exe", workspaceRootPath: "D:\\Work", locale: "zh-CN", desktopCliPort: 47600,
