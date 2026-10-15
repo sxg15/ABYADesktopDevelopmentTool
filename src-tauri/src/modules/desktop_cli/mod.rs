@@ -323,6 +323,7 @@ mod tests {
             service,
             codex: codex_terminal,
             settings: AppSettings {
+                game_client: Default::default(),
                 game_executable_path: String::new(),
                 workspace_root_path: root.join("workspaces").to_string_lossy().into_owned(),
                 locale: "en".to_string(),

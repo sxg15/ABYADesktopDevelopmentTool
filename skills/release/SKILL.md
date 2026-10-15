@@ -1,5 +1,15 @@
 # Release Skill
 
+## Game client integration into dev (2026-10-15)
+
+Default/Validation builds now use game-client-dev-20261015. Retain remote client
+management, settings OAuth and binary asset downloads together with dev's bounded
+Codex history transport, acceptance UI lifetime, issue repair and notifications.
+Resolve distribution conflicts by rebuilding from the combined source, never by
+selecting one branch's executable. Run all required checks, verify the full candidate
+inventory and a relocated package, then promote and verify remote dev contains the
+completed game-client branch. The CLI-to-dev policy below remains applicable to CLI work.
+
 ## Long conversation transport release (2026-10-15)
 Default/Validation builds use codex-large-history-fix-20261015. Validate the bounded
 128 MiB Codex WebSocket transport with large single-frame and fragmented responses,
@@ -23,6 +33,33 @@ Default/Validation builds use programmer-alert-20261013. Sync the updated canoni
 production-records reference to Grok and ship both bundles. Verify confirmed/legacy
 suspected classifications, ordinary Lua exclusions, resolved alerts and responsive
 red guidance. Keep existing task pins and previous terminal fixes intact.
+
+## Game client download fix (2026-10-15)
+
+Default/Validation packages use game-client-download-fix-20261015. Fix binary download
+content negotiation and distinguish non-file responses from integrity failures. Run the
+strict Accept-header regression and the opt-in real ZIP installation smoke documented in
+game-clients, in addition to the required checks. Verify the complete candidate inventory
+before promoting; preserve all user settings, credentials and existing game installations.
+
+## Game client manager (2026-10-14)
+
+The game-client-oauth-20261014 build adds settings-based browser OAuth with public client ID
+Ov23li0rDQSvLA8yT7sj, automatic credential refresh, cancellation and no client secret.
+Validate native manager-to-settings navigation and the one-time-code/browser handoff;
+only the user completes GitHub consent. OAuth configuration and race fixtures are documented
+in game-clients. The previous game-client-management-20261014 build introduced APP-only GitHub Release management and
+local version installation. Build the Validation package first, run the fixture UI and
+isolated installation regressions, then distribute the complete verified Publish package.
+scripts/game-clients-preview.html mounts the actual client manager/settings components
+against explicitly marked in-memory fixtures; it never uses account credentials or makes
+GitHub writes. The optional native GitHub read smoke is documented in game-clients.
+scripts/test-game-clients-native.mjs init/report uses a fresh marker-owned directory for
+native settings migration, offline installed-client selection and restart checks. Its EXEs
+are non-runnable sentinels and must never be launched. Use ABYA_TEST_MODE=1, the returned
+isolated LOCALAPPDATA/WebView directories, and free ports 43921/43922. Keep USERPROFILE
+normal. The report excludes desktop credentials and verifies no GitHub credential row.
+Keep Tokens, installed game packages, account databases and signed URLs outside distribution.
 
 ## Terminal IME release (2026-10-13)
 Default and Validation packages use terminal-ime-fix-20261013 and retain the

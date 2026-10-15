@@ -1,5 +1,23 @@
 # App Shell Skill
 
+## Remote game clients (2026-10-14)
+
+Navigation adds gameClients between archive transfer and logs. The public feature view
+owns Release editing, exact-target delete confirmation, asset upload and
+installation. GitHub browser login, one-time code, remember-login, retry/cancel and logout
+live only in Settings. Unsigned client management shows its missing-login message and
+Go to settings to sign in action, which focuses the GitHub account section. The manager's
+signed-in account links to the same section. Preserve draft Player selection on auth changes.
+Settings offers local/remote source, installed version/EXE selection, remote
+version download and storage-folder choice. Keep both locales complete, including errors,
+busy/cancellation, empty repository and missing installation states. Distinguish a
+metadata/web-page download response from a size/SHA-256 mismatch. Failed installation
+preserves the selected game and never saves settings. An optional update
+badge appears after startup checks and every 30 minutes for the active remote selection;
+clicking navigates to the suggested Release without changing settings. Downloads do not
+switch versions. Preserve mounted task terminals. Layout reflows at narrow widths and
+long asset names/paths wrap. Validate fixture screenshots separately from real GitHub writes.
+
 ## IME positioning (2026-10-13)
 Only .terminal-ime-composing overrides xterm helper left/top/height/line-height
 using compositionstart CSS variables. These temporary important rules withstand
@@ -33,7 +51,7 @@ Navigation view IDs, locale keys, shared UI primitives, and application-level
 refresh events.
 
 The first screen is the operational development-task workspace. Navigation has
-`tasks`, `archiveTransfer`, `logs`, and `settings` views. Chinese and English
+`tasks`, `archiveTransfer`, `gameClients`, `logs`, and `settings` views. Chinese and English
 dictionaries must remain key-complete, and the persisted locale falls back to
 the OS locale.
 Feature views call typed command adapters and must not construct launch

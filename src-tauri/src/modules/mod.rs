@@ -3,6 +3,7 @@ pub mod codex_terminal;
 pub mod desktop_cli;
 pub mod development_terminal;
 pub mod game_archives;
+pub mod game_clients;
 pub mod game_connections;
 pub mod grok_terminal;
 pub mod instances;

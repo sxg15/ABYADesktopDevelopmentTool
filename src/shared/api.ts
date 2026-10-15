@@ -36,6 +36,7 @@ export const api = {
   settings: () => invoke<AppSettings>("get_settings"),
   updateSettings: (input: {
     gameExecutablePath: string;
+    gameClient?: import("./gameClients").GameClientSelection;
     workspaceRootPath: string;
     locale: string;
     gameGatewayPort: number;

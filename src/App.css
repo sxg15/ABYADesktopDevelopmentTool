@@ -692,6 +692,71 @@ tbody tr:hover { background: #f7faf8; }
 }
 
 .settings-workspace { overflow: auto; background: #fff; }
+
+.client-workspace { overflow: auto; background: #f6f8f8; }
+.client-workspace .page-toolbar { background: #fff; flex-wrap: wrap; gap: 16px; }
+.client-subtitle { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.client-content { padding: 22px 28px 32px; display: grid; gap: 18px; max-width: 1450px; }
+.client-card { min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 20px; }
+.client-card h2 { font-size: 16px; margin: 0 0 8px; overflow-wrap: anywhere; }
+.client-card h3 { font-size: 13px; }
+.client-card p, .client-settings p { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 6px 0; overflow-wrap: anywhere; }
+.client-row, .client-actions, .client-section-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.client-row .field { margin: 0; }
+.client-grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.client-login { margin-top: 14px; display: grid; gap: 10px; max-width: 850px; }
+.client-login .client-row { align-items: flex-end; }
+.client-login .client-grow { min-width: min(320px,100%); }
+.client-login > button { justify-self: start; }
+.client-account-settings { scroll-margin-top: 20px; }
+.client-account-settings:focus { outline: 2px solid var(--accent, #2563eb); outline-offset: 2px; }
+.client-account-settings h2 { display: flex; gap: 8px; align-items: center; }
+.client-device-login { display: grid; gap: 12px; }
+.client-device-login .field { max-width: 300px; }
+.client-device-code { font-family: Consolas, monospace; font-size: 25px; letter-spacing: 4px; font-weight: 700; }
+.client-catalog { display: grid; grid-template-columns: minmax(220px, .7fr) minmax(0, 2fr); gap: 18px; align-items: start; }
+.client-release-list { display: grid; gap: 8px; padding: 14px; max-height: 680px; overflow: auto; }
+.client-release-item { width: 100%; display: grid; gap: 5px; text-align: left; padding: 13px; background: #fff; border: 1px solid transparent; border-radius: 5px; color: var(--text); overflow-wrap: anywhere; }
+.client-release-item:hover { background: #f1f7f5; }
+.client-release-item.selected { border-color: #91c8bc; background: #eaf6f2; }
+.client-release-item > span { font-size: 11px; color: var(--muted); }
+.client-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.client-badge { display: inline-block; padding: 3px 7px; border-radius: 4px; background: #eef2f3; font-size: 11px; color: #52676a; margin-left: 0; }
+.client-badge.current { background: #d8efe6; color: #087861; margin-left: 6px; }
+.client-release-notes { white-space: pre-wrap; max-height: 250px; overflow: auto; padding: 14px; background: #f7f9f9; border-radius: 5px; }
+.client-section-heading { justify-content: space-between; margin-top: 22px; }
+.client-storage { margin-top: 16px; }
+.client-assets { margin-top: 16px; }
+.client-asset, .client-installed { display: flex; align-items: center; gap: 10px; padding: 14px 0; border-top: 1px solid var(--line); }
+.client-asset strong, .client-installed strong { font-size: 13px; overflow-wrap: anywhere; }
+.client-path { display: block; font-size: 11px; white-space: normal; overflow-wrap: anywhere; user-select: text; }
+.client-editor { display: grid; gap: 14px; }
+.client-delete-target { padding: 16px; border: 1px solid #efc6c4; background: #fff6f5; margin-top: 18px; overflow-wrap: anywhere; }
+.client-progress { padding: 14px; background: #eaf6f2; border: 1px solid #badccd; border-radius: 6px; }
+.client-progress .client-row { font-size: 12px; justify-content: space-between; }
+.client-progress progress { display: block; width: 100%; height: 9px; margin-top: 12px; accent-color: #058571; }
+.client-source { max-width: 420px; margin-bottom: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.client-source button { min-height: 38px; }
+.client-settings-remote { display: grid; gap: 16px; }
+.client-download-form { display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 6px; background: #f7faf9; padding: 18px; }
+.client-download-form > button { justify-self: start; }
+.client-download-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.client-download-selects > .field { min-width: 0; }
+.client-update { padding: 12px; border: 1px solid #b6d9cc; border-radius: 5px; background: #eaf6f2; }
+.client-sidebar-update { display: flex; gap: 10px; align-items: center; margin: 12px 10px; padding: 12px 8px; border: 1px solid #3a7065; border-radius: 5px; background: #203d38; color: #b5ead9; text-align: left; }
+.client-sidebar-update span { min-width: 0; display: grid; gap: 4px; overflow-wrap: anywhere; font-size: 11px; }
+@media (max-width: 1000px) {
+  .client-content { padding: 18px; }
+  .client-catalog { grid-template-columns: minmax(190px, .7fr) minmax(0, 1.7fr); }
+  .client-asset, .client-installed { flex-wrap: wrap; }
+  .client-asset .client-grow, .client-installed .client-grow { flex-basis: 100%; }
+}
+@media (max-width: 760px) {
+  .client-catalog, .client-download-selects { grid-template-columns: 1fr; }
+  .client-release-list { max-height: 260px; }
+  .client-card { padding: 15px; }
+  .client-content { padding: 14px; }
+}
 .archive-transfer-workspace { overflow: auto; }
 .transfer-content { max-width: 1120px; margin: 0 auto; padding: 0 28px 28px; }
 .transfer-step {
