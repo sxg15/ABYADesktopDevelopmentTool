@@ -53,6 +53,15 @@ its sanitized detail whitelist; never persist raw commands, patches, results or 
 Bridge responses must have no method: server requests with colliding numeric IDs are not
 responses. Native terminal approval UI remains responsible for sensitive confirmations.
 
+Both metadata and runtime app-server bridges explicitly bound incoming WebSocket
+frames and complete (including fragmented) messages at 128 MiB. Native thread/read
+and thread/resume history can exceed the library's default 16 MiB frame limit.
+Keep limits finite; do not truncate histories or create replacement conversations.
+Capacity failures return codex_response_too_large with fixed safe guidance rather
+than a generic disconnection. Never expose raw payloads or credentials in errors.
+Loopback transport tests cover an 11-turn response over 16 MiB, a fragmented response
+over 64 MiB, continued RPC use, and rejection above the configured bound.
+
 Question submission saves answers and registers a continuation intent in the same service call.
 continuation.json and continuation-events.jsonl persist intent/dispatch transitions; process epoch
 prevents automatic execution after restart. Busy native turns queue answer/document-revision

@@ -1,15 +1,15 @@
-{
-  "product": "ABYA Desktop Development Tool",
-  "version": "0.4.0",
-  "workflowVersion": "2.1.0",
-  "releaseLabel": "acceptance-ui-fix-20261014",
-  "sourceBuiltAtUtc": "2026-10-14T08:52:32.4836004Z",
-  "builtAtUtc": "2026-10-14T08:57:00.9604165Z",
-  "executable": "ABYA Desktop Development Tool.exe",
-  "sha256": "C80D60A927930283CE004B385B2426FAA2E748C8725FF9C4454D227A426F2583",
-  "cliExecutable": "abya-desktop.exe",
-  "cliSha256": "5A5066599385923067AD26D8F54998D9BEBD07EC530C1D5A528D854C2EAA5E80",
-  "runtimeCliVersion": "0.2.0",
-  "cliProtocolVersion": 1,
-  "nodeVersion": "v24.11.1"
+﻿{
+    "product":  "ABYA Desktop Development Tool",
+    "version":  "0.4.0",
+    "workflowVersion":  "2.1.0",
+    "releaseLabel":  "codex-large-history-fix-20261015",
+    "sourceBuiltAtUtc":  "2026-10-15T03:53:41.8064507Z",
+    "builtAtUtc":  "2026-10-15T03:56:55.9842465Z",
+    "executable":  "ABYA Desktop Development Tool.exe",
+    "sha256":  "C31D022684E93B17E6D67F9747D910572FFDEEFEF0B47653572B13815D54DF0E",
+    "cliExecutable":  "abya-desktop.exe",
+    "cliSha256":  "4A1FCD80C02F996A824DC740E61824A5F6A29ADBCF2795AE804E1D282FB606D3",
+    "runtimeCliVersion":  "0.2.0",
+    "cliProtocolVersion":  1,
+    "nodeVersion":  "v24.11.1"
 }

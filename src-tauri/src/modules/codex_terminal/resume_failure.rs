@@ -5,7 +5,12 @@ use super::*;
 pub(super) fn rpc_error(method: &str, raw: &str) -> AppError {
     let value = serde_json::from_str::<serde_json::Value>(raw).unwrap_or_default();
     let message = value["message"].as_str().unwrap_or(raw).to_lowercase();
-    let (code, hint) = if message.contains("active writer") {
+    let (code, hint) = if message.contains("response exceeds the 128 mib limit") {
+        (
+            "codex_response_too_large",
+            "Codex 会话响应超过 APP 的 128 MiB 接收上限。请在原生 Codex 客户端查看原会话，并联系开发者处理长会话兼容问题。",
+        )
+    } else if message.contains("active writer") {
         (
             "codex_session_in_use",
             "原对话正被另一个 Codex 客户端占用。请先在该客户端停止当前回复并释放会话连接；若关闭面板后仍占用，请退出占用它的客户端，再点击“接回原对话”。",
@@ -115,6 +120,7 @@ mod tests {
         for (raw, code) in [
             (json!({"code":-32600,"message":"thread abc already has an active writer","data":{"token":"secret-canary"}}).to_string(), "codex_session_in_use"),
             ("Timed out waiting for Codex app-server.".into(), "codex_request_timeout"),
+            ("Codex app-server response exceeds the 128 MiB limit. secret-canary".into(), "codex_response_too_large"),
             (json!({"code":-32600,"message":"thread not found at C:/private/secret-canary"}).to_string(), "codex_session_missing"),
             (json!({"code":-32600,"message":"unknown failure secret-canary"}).to_string(), "codex_native_request_failed"),
         ] {

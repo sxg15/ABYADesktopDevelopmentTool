@@ -9,14 +9,18 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
-use tungstenite::client::IntoClientRequest;
+use tungstenite::Message;
+use tungstenite::client::{IntoClientRequest, connect_with_config};
+use tungstenite::error::CapacityError;
 use tungstenite::http::HeaderValue;
+use tungstenite::protocol::WebSocketConfig;
 use tungstenite::stream::MaybeTlsStream;
-use tungstenite::{Message, connect};
 use uuid::Uuid;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
 const START_TIMEOUT: Duration = Duration::from_secs(10);
+const MAX_NATIVE_RESPONSE_BYTES: usize = 128 * 1024 * 1024;
+const RESPONSE_TOO_LARGE: &str = "Codex app-server response exceeds the 128 MiB limit.";
 
 type NotificationHandler = Arc<dyn Fn(Value) + Send + Sync>;
 
@@ -525,7 +529,11 @@ fn run_bridge(
         return;
     };
     request.headers_mut().insert("Authorization", header);
-    let Ok((mut socket, _)) = connect(request) else {
+    // Native history may arrive in one frame; bound both frames and reassembled messages.
+    let config = WebSocketConfig::default()
+        .max_frame_size(Some(MAX_NATIVE_RESPONSE_BYTES))
+        .max_message_size(Some(MAX_NATIVE_RESPONSE_BYTES));
+    let Ok((mut socket, _)) = connect_with_config(request, Some(config), 0) else {
         fail_pending(receiver, "Could not connect to Codex app-server.");
         return;
     };
@@ -535,6 +543,7 @@ fn run_bridge(
 
     let mut next_id = 1_u64;
     let mut pending = HashMap::<u64, Sender<Result<Value, String>>>::new();
+    let mut failure = "Codex app-server connection was closed.";
     loop {
         while let Ok(command) = receiver.try_recv() {
             match command {
@@ -602,14 +611,18 @@ fn run_bridge(
                     std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
                 ) => {}
             Err(tungstenite::Error::ConnectionClosed) => break,
+            Err(tungstenite::Error::Capacity(CapacityError::MessageTooLong { .. })) => {
+                failure = RESPONSE_TOO_LARGE;
+                break;
+            }
             Err(_) => break,
         }
     }
 
     for (_, response) in pending {
-        let _ = response.send(Err("Codex app-server connection was closed.".into()));
+        let _ = response.send(Err(failure.into()));
     }
-    fail_pending(receiver, "Codex app-server connection was closed.");
+    fail_pending(receiver, failure);
 }
 
 fn fail_pending(receiver: Receiver<BridgeCommand>, message: &str) {
@@ -619,6 +632,10 @@ fn fail_pending(receiver: Receiver<BridgeCommand>, message: &str) {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "app_server_transport_tests.rs"]
+mod transport_tests;
 
 #[cfg(test)]
 mod tests {

@@ -1,8 +1,16 @@
 # LLM Maintenance Contract
 
-Release branch policy (2026-10-14): all subsequent source and portable package
-changes are committed/pushed to dev only. Do not update main or CLI without a new
-explicit user instruction. Preserve existing dev features when integrating work.
+Release branch policy (2026-10-15): work completed on CLI must automatically be
+integrated into dev, including source, module Skills, project constraints and the
+verified complete portable package. This supersedes the 2026-10-14 dev-only rule.
+After required checks and package validation, commit CLI, fetch origin, integrate
+any newer remote CLI/dev commits without losing either branch's features, and
+update dev with the validated CLI changes. Prefer fast-forward; if branches have
+diverged, merge and rerun affected checks before publishing. Push CLI and dev
+(atomically when supported), then verify origin/dev contains the completed CLI
+commit. Do not report completion while synchronization is outstanding; report
+any actual conflict or remote failure. Never force-push, reset unrelated work or
+update main. No additional confirmation is needed for this routine sync.
 
 Before changing production code:
 

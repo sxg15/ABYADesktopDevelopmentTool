@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "acceptance-ui-fix-20261014",
-  "totalBytes": 317691426,
+  "releaseLabel": "codex-large-history-fix-20261015",
+  "totalBytes": 317688914,
   "files": [
     {
       "path": ".codex/README.md",
@@ -760,18 +760,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 23856640,
-      "sha256": "c80d60a927930283ce004b385b2426faa2e748c8725ff9c4454d227a426f2583"
+      "bytes": 23854080,
+      "sha256": "c31d022684e93b17e6d67f9747d910572ffdeefef0b47653572b13815d54df0e"
     },
     {
       "path": "abya-desktop.exe",
       "bytes": 5982720,
-      "sha256": "5a5066599385923067ad26d8f54998d9bebd07ec530c1d5a528d854c2eaa5e80"
+      "sha256": "4a1fcd80c02f996a824dc740e61824a5f6a29adbcf2795ae804e1d282fb606d3"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 609,
-      "sha256": "28e028f37dbf1f750cf6a6927483b0b7d26eed41e12e282d3ce9abbd30f3f541"
+      "bytes": 657,
+      "sha256": "dad7bea9ed949bd3e9e4cf11bf72ea9efebc6683f3d24e7810d7306c8a5fb37c"
     },
     {
       "path": "runtime/LICENSE.txt",

@@ -1,9 +1,20 @@
 # Release Skill
 
+## Long conversation transport release (2026-10-15)
+Default/Validation builds use codex-large-history-fix-20261015. Validate the bounded
+128 MiB Codex WebSocket transport with large single-frame and fragmented responses,
+explicit oversize diagnostics, normal checks and the complete portable inventory.
+CLI completion automatically includes integration into dev: fetch remote state,
+preserve both branches' features, prefer fast-forward, merge divergent work and
+rerun affected checks, then push CLI/dev and verify origin/dev contains the completed
+CLI commit. Include source, Skills, constraints and verified Publish files. No
+additional confirmation is required. Never force-push or update main; report real
+conflicts or remote failures. This supersedes all historical dev-only rules below.
+
 ## Dev acceptance UI fix (2026-10-14)
 Default/Validation builds use acceptance-ui-fix-20261014. Integrate dev notifications
 with the prior programmer alerts and AI repair without reverting either. All source
-and complete Publish changes go to dev only; main and CLI are not pushed. Validate
+and complete Publish changes now follow the CLI-to-dev policy above. Validate
 stage-switch/remount single-card behavior and slow/hidden polling, all normal checks,
 the isolated portable package and a fresh dev checkout in a relocated path.
 
@@ -53,8 +64,8 @@ Publish has a path allowlist in .gitignore; package-files.json lists all runtime
 portable-package.mjs rejects private/unexpected files, links, traversal, missing files,
 hash mismatches and oversized normal-Git payloads. --require-tracked catches ignored
 or forgotten release files. Publish bytes use -text attributes to survive clone intact.
-All subsequent source and verified distribution changes go to dev only. Do not push
-main or CLI unless the user explicitly changes this branch policy (2026-10-14).
+All completed CLI source and verified distribution changes must also reach dev,
+under the CLI-to-dev policy above (2026-10-15). Do not update main.
 Validate a fresh checkout in a different path, including spaces/non-ASCII characters.
 The application is ready to open without build tools; per-user AI login, game Player
 selection and the Windows WebView2 dependency remain machine prerequisites.
