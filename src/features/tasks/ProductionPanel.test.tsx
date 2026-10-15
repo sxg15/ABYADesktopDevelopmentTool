@@ -75,6 +75,8 @@ describe("Production decisions", () => {
     expect(screen.getAllByText("Input dispatch defect")[0].closest("article")?.classList.contains("programmer-issue")).toBe(true);
     expect(screen.getByText(/ABYA 游戏源码缺陷 · 需要程序修复/)).toBeTruthy();
     expect(screen.getAllByText("Old build issue")[0].closest("article")?.classList.contains("programmer-issue")).toBe(false);
+    expect(screen.getAllByRole("button",{name:"导出此问题（MD）"})).toHaveLength(2);
+    expect(screen.getByRole("button",{name:"导出程序问题汇总（MD）"})).toBeTruthy();
   });
   it("opens a requested review after loading the production tab and leaves the decision unselected", async () => {
     const view=fixture(), opened=vi.fn(); vi.mocked(productionApi.get).mockResolvedValue(view);

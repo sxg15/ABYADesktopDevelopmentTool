@@ -17,6 +17,7 @@ import { FeedbackPanel } from "./FeedbackPanel";
 import { ArtReferences } from "./ArtReferences";
 import { DocumentReview } from "./DocumentReview";
 import { programmerIssue, activeProgrammerIssues } from "./programmerIssue";
+import { ProgrammerIssueExport } from "./ProgrammerIssueExport";
 
 const names: Record<string, string> = {
   requirements: "需求整理",
@@ -262,6 +263,7 @@ export function ProductionPanel({
           </>
         )}
       </dl>
+      {programmerIssue(i) && r && <ProgrammerIssueExport taskId={taskId} revision={r.revision} issueIds={[i.id]} en={en} single/>}
       {i.status !== "resolved" && !programmerIssue(i) && <div className="issue-repair-action">
         <button className="primary-button" disabled={busy || !active || !onRepairIssue} onClick={()=>void requestRepair(i)}
           title={!active ? (en ? "Reactivate the task first" : "请先恢复任务") : !onRepairIssue ? (en ? "Open this task's Codex conversation first" : "请先选择并打开本任务的 Codex 原会话") : (en ? "Ask AI to investigate, fix and verify this issue" : "让 AI 检查并修复此问题，完成后记录验证结果")}>
@@ -407,6 +409,7 @@ export function ProductionPanel({
             <TriangleAlert size={26} aria-hidden="true"/>
             <div><h3>{en ? "Programmer attention required" : "程序处理提醒：ABYA 源码／构建包问题"}</h3>
               <p>{en ? `${programmerIssues.length} unresolved issues need programmer attention. Verify the corrected source/build before resuming affected steps.` : `有 ${programmerIssues.length} 项未解决问题需要程序处理。请排查或修复游戏源码／构建包，使用修复后的构建包复验，再继续受影响步骤。`}</p>
+              <ProgrammerIssueExport taskId={taskId} revision={r.revision} issueIds={r.issues.filter(i => i.status !== "resolved" && programmerIssue(i)).map(i => i.id)} en={en}/>
             </div>
           </section>}
           <section

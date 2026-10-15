@@ -1,5 +1,12 @@
 # Release Skill
 
+## Programmer issue Markdown export (2026-10-15)
+Default/Validation builds use programmer-issue-export-20261015. Validate single and
+aggregate exports, missing evidence and literal Markdown content, saved-path/reveal
+failure feedback, task isolation and immutable records. Use the isolated real UI
+fixture scripts/programmer-issues-preview.html and standard checks; package, verify
+relocation and promote the complete distribution before CLI-to-dev synchronization.
+
 ## Required development branch order (2026-10-15 clarification)
 Develop on CLI for every task. Before editing, inspect local changes, fetch both
 origin/CLI and origin/dev, switch to CLI and integrate both latest remote branches.

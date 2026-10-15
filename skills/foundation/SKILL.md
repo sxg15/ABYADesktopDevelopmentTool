@@ -1,5 +1,11 @@
 # Foundation Skill
 
+productionApi.exportProgrammerIssues(taskId, expectedRevision, issueIds) invokes
+the APP-only export_programmer_issues adapter and returns the saved relative .md
+path. TaskService owns snapshot selection/validation/rendering/file writes; the
+adapter delegates blocking work. Existing revealDocument selects the saved file.
+No database schema, desktop CLI/MCP command or provider session changes are added.
+
 ProductionArtifact adds optional plannerReference. APP-only productionApi.feedback
 accepts attach-art-reference (name/base64/summary) and remove-art-reference (id).
 The task module validates and persists inputs; old records need no migration.

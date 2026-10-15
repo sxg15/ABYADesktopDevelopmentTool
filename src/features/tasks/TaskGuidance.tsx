@@ -6,6 +6,8 @@ import { taskGuidanceState, type GuidancePending } from "./taskGuidanceState";
 import "./taskGuidance.css";
 import type { AttentionTarget } from "../../shared/notifications";
 import { useTaskAttention } from "../../shared/useTaskAttention";
+import { ProgrammerIssueExport } from "./ProgrammerIssueExport";
+import { programmerIssue } from "./programmerIssue";
 
 export function TaskGuidance({ taskId, active, control, workflow, en = false, onStage, onTerminal, onReview, onPendingChange }: {
   taskId: string; active: boolean; control?: TaskControlState; workflow?: TerminalWorkflowSnapshot; en?: boolean;
@@ -64,6 +66,7 @@ export function TaskGuidance({ taskId, active, control, workflow, en = false, on
     <div className="guidance-action">
       {model.destination && <span className="guidance-destination"><MapPin size={15} aria-hidden="true" />{model.destination}</span>}
       {model.action !== "none" && <button className={model.attention ? "guidance-primary" : "guidance-secondary"} onClick={act}>{model.button}<ArrowRight size={17} aria-hidden="true" /></button>}
+      {model.tone === "programmer" && view?.record?.taskId === taskId && <ProgrammerIssueExport taskId={taskId} revision={view.record.revision} issueIds={view.record.issues.filter(i => i.status !== "resolved" && programmerIssue(i)).map(i => i.id)} en={en}/>}
     </div>
     <div className="guidance-detail"><Info size={15} aria-hidden="true" /><span>{model.detail}</span>
       {model.additional > 0 && <button className="text-button" onClick={() => onStage(model.stage)}>{en ? `${model.additional} more pending` : `另有 ${model.additional} 项待办`}</button>}

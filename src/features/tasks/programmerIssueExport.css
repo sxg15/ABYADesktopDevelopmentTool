@@ -1,0 +1,5 @@
+.programmer-issue-export { display: grid; gap: 8px; min-width: 0; margin-top: 10px; }
+.programmer-issue-export > button { justify-self: start; display: inline-flex; align-items: center; gap: 7px; white-space: normal; text-align: left; }
+.programmer-issue-export [role="status"] { display: grid; gap: 4px; font-size: 12px; overflow-wrap: anywhere; }
+.programmer-issue-export .text-button { justify-self: start; display: inline-flex; align-items: center; gap: 5px; }
+.programmer-issue-export [role="alert"] { margin: 0; color: #a11d29; font-size: 13px; overflow-wrap: anywhere; }

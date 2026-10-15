@@ -7,7 +7,7 @@ pub struct IssueRepairSpec {
     pub prompt: String,
 }
 
-fn needs_programmer(issue: &Value) -> bool {
+pub(super) fn needs_programmer(issue: &Value) -> bool {
     match issue["repairTarget"].as_str() {
         Some("abya-source" | "abya-build") => return true,
         Some("lua" | "other") => return false,

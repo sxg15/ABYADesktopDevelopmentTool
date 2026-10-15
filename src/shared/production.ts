@@ -81,6 +81,8 @@ export const productionApi = {
   flushContinuation: (taskId:string,conversationId:string,requestId:string) => invoke<IntakeContinuation>("flush_codex_continuation",{taskId,conversationId,requestId}),
   control: (taskId:string,conversationId:string) => invoke<TaskControlState>("get_codex_task_control",{taskId,conversationId}),
   revealReport: (taskId: string, phase: string) => invoke<void>("reveal_production_report", { taskId, phase }),
+  exportProgrammerIssues: (taskId: string, expectedRevision: number, issueIds: string[]) =>
+    invoke<string>("export_programmer_issues", { taskId, expectedRevision, issueIds }),
   continueQuestions: (taskId: string, groupId: string, revision: number) =>
     invoke<IntakeContinuation>("continue_intake_questions", { taskId, groupId, revision }),
   answer: (taskId: string, expectedRevision: number, operation: string, data: unknown) =>

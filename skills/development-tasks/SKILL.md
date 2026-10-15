@@ -1,5 +1,27 @@
 # Development Tasks Skill
 
+## Programmer Markdown export (2026-10-15)
+The red task guide and Lua-stage banner export all unresolved programmer issues;
+individual source/build issue cards also export a single issue, including resolved
+history and archived tasks. Export is explicit and available without a live terminal.
+TaskService.export_programmer_issues accepts task ID, displayed production revision
+and exact issue IDs; validates every selection, deduplicates IDs and rejects stale,
+empty, foreign or ordinary Lua selections. It reads persisted data without syncing
+Skills or modifying issues, approvals, stage, task status or native conversations.
+Write a uniquely named UTF-8 .md under artifacts/game-development/reports using the
+existing safe atomic file writer. Return a relative artifact path; the UI reveals
+it through the existing artifact adapter and retains the path if Explorer fails.
+Include task/version/build context, issue ownership/status/impact, description,
+fix/resume/recheck fields and associated evidence metadata/path availability. Mark
+legacy inferred ownership as suspected, absent fields/evidence as missing, and do
+not claim fresh verification or include evidence file contents/credentials/sessions.
+Dynamic Markdown fences preserve literal multiline Markdown/HTML. Exports are
+snapshots; repeated exports never overwrite previous documents. Reject duplicate
+clicks and ignore late task-switch/unmount results. Native export runs off-thread.
+Tests cover contents, Unicode/fences, exact selection, archived/resolved records,
+revision checks, no mutations, missing evidence, duplicate clicks and reveal failure.
+scripts/programmer-issues-preview.html previews real controls with isolated fixtures.
+
 ## Planner art references (2026-10-15)
 ArtReferences appears before results in the resources node. Explicit file selection
 or paste into its focused area uploads PNG/JPEG/WebP/GIF (16 MiB each, eight per

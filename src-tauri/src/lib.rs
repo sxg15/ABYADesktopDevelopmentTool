@@ -467,6 +467,21 @@ fn reveal_production_report(
 }
 
 #[tauri::command]
+async fn export_programmer_issues(
+    task_id: String,
+    expected_revision: u64,
+    issue_ids: Vec<String>,
+    state: State<'_, AppState>,
+) -> AppResult<String> {
+    let tasks = state.tasks.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        tasks.export_programmer_issues(&task_id, expected_revision, &issue_ids)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
+}
+
+#[tauri::command]
 fn update_task(
     id: String,
     input: TaskInput,
@@ -1088,6 +1103,7 @@ pub fn run() {
             read_task_skill,
             open_production_artifact,
             reveal_production_report,
+            export_programmer_issues,
             get_app_paths,
             get_build_info,
             get_settings,
