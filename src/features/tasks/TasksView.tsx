@@ -23,6 +23,7 @@ import { CodexWorkflowBar } from "./CodexWorkflowBar";
 import { ProductionPanel } from "./ProductionPanel";
 import { TaskIntakeDialog } from "./TaskIntakeDialog";
 import { TaskGuidance } from "./TaskGuidance";
+import { TaskDescription } from "./TaskDescription";
 import type { GuidancePending } from "./taskGuidanceState";
 import { SkillLibrary } from "./SkillLibrary";
 import { productionText } from "./productionText";
@@ -625,14 +626,10 @@ export function TasksView({
           <div className="empty-state large">{t("selectTask")}</div>
         ) : (
           <>
-            <header className="content-header">
-              <div>
+            <header className="content-header task-content-header">
+              <div className="task-heading-title">
                 <div className="eyebrow">{t(selected.status)}</div>
                 <h2>{selected.title}</h2>
-                {selected.description && <p>{selected.description}</p>}
-                <code className="task-workspace-path" title={selected.workspacePath}>
-                  {t("taskWorkspace")}: {selected.workspacePath}
-                </code>
               </div>
               <div className="header-actions">
                 {selected.status === "active" && (
@@ -656,6 +653,8 @@ export function TasksView({
                   <Trash2 size={17} />
                 </button>
               </div>
+              <TaskDescription key={`description:${selected.id}`} taskId={selected.id} description={selected.description}
+                workspacePath={selected.workspacePath} en={settings?.locale === "en-US"} />
             </header>
 
             <TaskGuidance key={`guidance:${selected.id}`} taskId={selected.id} active={selected.status === "active"}
