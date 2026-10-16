@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Modal } from "../../app/Modal";
 import type { ProductionDocument, ProductionView } from "../../shared/production";
 import { VisualGallery } from "./VisualGallery";
+import { ReadableText } from "./ReadableText";
 
 export function DocumentReview({ taskId, document: initial, view, active, busy, error, en = false, onClose, onDecide }: {
   taskId: string; document: ProductionDocument; view: ProductionView; active: boolean; busy: boolean; error: string; en?: boolean;
@@ -22,7 +23,7 @@ export function DocumentReview({ taskId, document: initial, view, active, busy, 
     <div className="review-layout">
       <div className="review-content">
         <article className="document-preview" aria-label={en ? "Document contents" : "文档内容"}>
-          {snapshot.content.split(/\r?\n/).map((line, i) => line.startsWith("# ") ? <h2 key={i}>{line.slice(2)}</h2> : line.startsWith("## ") ? <h3 key={i}>{line.slice(3)}</h3> : <p key={i}>{line || "\u00a0"}</p>)}
+          <ReadableText text={snapshot.content} />
         </article>
         <VisualGallery taskId={taskId} artifacts={artifacts} bindings={snapshot.artifactBindings} en={en} />
       </div>

@@ -1,5 +1,13 @@
 # Release Skill
 
+## Desktop workspace styling (2026-10-16)
+Default/Validation use workspace-visual-hierarchy-20261016. Validate the real task
+workspace, description typography and review dialog at normal/narrow/short sizes.
+The isolated guidance-preview fixture now supplies attention snapshots for review,
+waiting AI and terminal states without native sessions or user data. Verify red
+programmer priority and explicit review decisions in existing regressions. Preserve
+the complete package and CLI-before-dev publication order.
+
 ## Task header description (2026-10-16)
 Default/Validation use task-description-collapse-20261016. Check the real TasksView
 with long descriptions at wide, narrow and short sizes; collapse/expand must preserve

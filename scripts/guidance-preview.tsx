@@ -6,12 +6,23 @@ import {api, terminalApi} from "../src/shared/api";
 import {productionApi, type ProductionView, type TaskControlState} from "../src/shared/production";
 import {translator} from "../src/i18n";
 import type {AppSettings} from "../src/shared/types";
+import {attentionApi} from "../src/shared/notifications";
+import {attentionFixture} from "../src/shared/notifications.test-fixtures";
 import "../src/App.css";
 const doc={kind:"resources",revision:2,path:"artifacts/art-requirements.md",sha256:"fixture-hash",submittedAt:"2026-10-12T10:00:00Z",content:"# 美术需求确认单\n## 整体风格\n清晰、轻量的桌游界面。\n## 资源范围\n复用棋盘，新增玩家标记与结算面板。\n## 验收标准\n当前玩家、操作入口和得分变化均可直接识别。"};
 const view:ProductionView={policy:{workflowVersion:"2.1.0",iterationMode:"human-feedback",stages:[{id:"requirements",name:"需求整理",approval:"requirements"},{id:"resources",name:"美术需求与资源确认",approval:"resources"},{id:"plan",name:"方案预检",approval:"plan"},{id:"implementation",name:"Lua 实现",approval:null},{id:"review",name:"试玩修改",approval:null},{id:"delivery",name:"交付验收",approval:"delivery"},{id:"closeout",name:"收尾复盘",approval:null}],dimensions:[],questions:[]},
   actions:{review:{resources:""},approve:{resources:""},feedback:{gameplay:"尚无可验收作品"}},artifacts:[],warnings:[],reportPaths:[],availableUpdate:false,
   record:{taskId:"fixture",revision:2,workflowVersion:"2.1.0",questionMode:"ask",currentStage:"resources",currentRound:0,cycle:1,stages:{requirements:"passed",resources:"awaiting-confirmation",plan:"not-started",implementation:"not-started",review:"not-started",delivery:"not-started",closeout:"not-started"},documents:{resources:doc},approvals:[],versionDetails:{},issues:[],evidence:[],rounds:[],milestones:{},knowledge:[],skillPins:[],updatedAt:"now"}};
 let state="review";
+attentionApi.get=async(taskId)=>{
+  if(state==="review"){
+    const result=attentionFixture("review",taskId);
+    result.items[0].target.documentRevision=doc.revision;result.items[0].target.documentHash=doc.sha256;
+    result.items[0].zh={title:"需要你审查阶段成果",instruction:"第 2 版美术需求已提交，请阅读后给出结论。",button:"查看并审查",destination:"处理位置：制作流程",detail:"AI 正在等待你的审查结果；无需到终端重复回复。"};return result;
+  }
+  if(state==="waitingForTerminal"||state==="disconnected")return attentionFixture(state==="waitingForTerminal"?"terminal":"disconnected",taskId);
+  return {taskId,items:[],unavailable:false};
+};
 const snapshot=()=>{const next=structuredClone(view);if(state!=="review"){next.actions!.review.resources="尚未提交审查";next.record!.stages.resources="in-progress";}return next;};
 const longDescription = new URLSearchParams(location.search).has("long-description");
 const description = longDescription ? ["一句话概述：30 秒内在旋转的毛线团上插针，插得越多分越高，总分最高者获胜。",

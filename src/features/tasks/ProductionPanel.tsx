@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, FileText, FolderOpen, TriangleAlert, Wrench } from "lucide-react";
+import { BookOpen, Check, ClipboardList, Code2, FileText, FolderOpen, Gamepad2, Layers, MessageCircleQuestion, PackageCheck, Palette, Route, TriangleAlert, Wrench } from "lucide-react";
 import {
   productionApi,
   type ProductionView,
@@ -28,6 +28,14 @@ const names: Record<string, string> = {
   delivery: "交付与策划验收",
   closeout: "收尾与知识分析",
 };
+const stageIcons: Record<string, typeof FileText> = {
+  requirements: ClipboardList, resources: Palette, plan: Route, implementation: Code2,
+  review: Gamepad2, delivery: PackageCheck, closeout: BookOpen,
+};
+function StageGlyph({stage}: {stage:string}) {
+  const Icon = stageIcons[stage] ?? FileText;
+  return <Icon size={20} aria-hidden="true" />;
+}
 const hints: Record<string, string> = {
   requirements: "敲定玩法、人数和规则，整理需求文档。",
   resources: "检查现有素材与模板，列出需要补齐的资源。",
@@ -312,15 +320,18 @@ export function ProductionPanel({
                 aria-pressed={stage === item.id}
                 aria-label={`${index + 1} ${label(item.id)} ${statusName(states[item.id], locale)}`}
                 title={label(item.id)}
-                className={`production-stage-button ${stage === item.id ? "selected" : ""}`}
+                className={`production-stage-button ${stage === item.id ? "selected" : ""} stage-${states[item.id]}`}
                 onClick={() => select(item.id)}
               >
+                <span className="production-stage-symbols">
+                <span className="production-stage-glyph"><StageGlyph stage={item.id} /></span>
                 <span className="production-stage-number">
                   {states[item.id] === "passed" ? (
                     <Check size={14} />
                   ) : (
                     index + 1
                   )}
+                </span>
                 </span>
                 <span>
                   <strong>
@@ -330,7 +341,7 @@ export function ProductionPanel({
                   </strong>
                   <small>
                     {statusName(states[item.id], locale)}
-                    {count > 0 && ` · ${count}${en ? " pending" : "项待处理"}`}
+                    {count > 0 && ` · ${count}${en ? " pending" : " 待办"}`}
                   </small>
                   {r.currentStage === item.id && (
                     <em>{en ? "Current stage" : "当前执行阶段"}</em>
@@ -342,7 +353,7 @@ export function ProductionPanel({
         </nav>
       )}
       <header className="production-heading">
-        <h3>{r ? label(stage) : s.title}</h3>
+        <h3><span className="production-heading-icon"><StageGlyph stage={stage} /></span>{r ? label(stage) : s.title}</h3>
         <button
           className="secondary-button"
           onClick={() => void refresh()}
@@ -555,8 +566,10 @@ export function ProductionPanel({
               {en ? "Open combined stage report" : "打开相关阶段汇总报告"}
             </button>
           </section>
+          <div className="production-support-grid">
           <section className="production-card">
             <h4>
+              <TriangleAlert size={18} aria-hidden="true" />
               {s.issues}
               <span className="production-count">{openIssues.length}</span>
             </h4>
@@ -584,7 +597,7 @@ export function ProductionPanel({
             )}
           </section>
           <section className="production-card">
-            <h4>{en ? "Stage questions" : "阶段问答"}</h4>
+            <h4><MessageCircleQuestion size={18} aria-hidden="true" />{en ? "Stage questions" : "阶段问答"}</h4>
             {!groups.length && (
               <p className="production-empty">
                 {en
@@ -637,9 +650,10 @@ export function ProductionPanel({
               </article>
             ))}
           </section>
+          </div>
           {stage === "requirements" && (
             <section className="production-card">
-              <h4>{en ? "Gameplay settings" : "玩法设置"}</h4>
+              <h4><Gamepad2 size={18} aria-hidden="true" />{en ? "Gameplay settings" : "玩法设置"}</h4>
               <div className="production-card-heading">
                 <p>
                   {en ? "Players" : "玩法人数"}：
@@ -703,7 +717,7 @@ export function ProductionPanel({
           )}
           {stage === "resources" && (
             <section className="production-card">
-              <h4>{en ? "Selected templates" : "已选模板"}</h4>
+              <h4><Layers size={18} aria-hidden="true" />{en ? "Selected templates" : "已选模板"}</h4>
               <p>
                 {en ? "Workflow" : "制作模板"}：
                 {r.skillPins.find((p) => p.id === r.taskTemplate)?.name ??

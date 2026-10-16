@@ -1,5 +1,16 @@
 # App Shell Skill
 
+## Task workspace visual hierarchy (2026-10-16)
+Use the Chinese UI font stack with weight synthesis for fonts without a matching
+bold face. Task title, primary action and section headings have distinct sizes and
+weights; metadata stays secondary. Sidebar, header and selected controls use subtle
+teal gradients and bounded shadows. Task guidance retains its semantic blue waiting,
+amber human, purple terminal and red programmer/error colors, now with contrasting
+icon tiles and action surfaces; state logic and attention routing are unchanged.
+Task tabs use icons and selected inset surfaces. Scope task skin rules to the
+workspace so terminal IME/helper styles, other page forms and modals stay functional.
+Keep keyboard outlines, disabled states, reduced-motion support and short-window space.
+
 ## Collapsible task description (2026-10-16)
 Task headers use a title/actions grid with a full-width description row beneath.
 Do not apply the generic 720px paragraph limit to task descriptions. The disclosure

@@ -1,5 +1,18 @@
 # Development Tasks Skill
 
+## Readable workspace presentation (2026-10-16)
+ReadableText renders only authored text: Markdown headings/bold, numbered/bulleted
+lines and short leading colon labels. Other HTML/links/media remain literal text;
+fenced code is never interpreted. No source mutation, AI summarization or inferred
+requirements. Use it for task descriptions and document review. Preserve stored
+description disclosure state, exact review snapshot and explicit user decisions.
+Stage nodes add domain icons, step/check markers and semantic status badges. Keep a
+single horizontal row with overflow at narrow widths; selecting a node is separate
+from its execution status. Issue/question cards share a responsive supporting grid.
+Do not override programmer red alerts or change gate/queue/approval behavior.
+Test literal hostile markup, headings/emphasis/code, source retention and existing
+question/review flows; inspect state tones, narrow/short layouts and keyboard focus.
+
 ## Task description disclosure (2026-10-16)
 TasksView keys TaskDescription by task identity. Default collapsed, remember explicit
 expand/collapse per task in sessionStorage; polling and tab switches must not reset

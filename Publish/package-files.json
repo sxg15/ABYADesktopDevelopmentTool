@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "task-description-collapse-20261016",
-  "totalBytes": 319665844,
+  "releaseLabel": "workspace-visual-hierarchy-20261016",
+  "totalBytes": 319887029,
   "files": [
     {
       "path": ".codex/README.md",
@@ -760,18 +760,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 25820672,
-      "sha256": "5b24f7d30e87342b2940d3cb290fcdd67828c3a46ebbece359d084e92e9d1d80"
+      "bytes": 26041856,
+      "sha256": "aaa0bbd0232c7bc86bdc8d28f3ae9e700533ba25063e6c67fa664e270124e593"
     },
     {
       "path": "abya-desktop.exe",
       "bytes": 5982720,
-      "sha256": "cafe891b4dd40445a16e8827bda4ac2633eb8ac7cd015f2f22dbeb0883e4b5d0"
+      "sha256": "8d56d8bfe52fb93c07fdb55a404e3a3df607359f93ca847332ce75f46ad288c8"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 659,
-      "sha256": "05cc5e417cb470f607aa66abcc75e1ebbe953a74ad5fa467069cab3b4dfaa496"
+      "bytes": 660,
+      "sha256": "4dd9d6223bc586e7d8ee2ccc5b920fddb4fa47b988201fd28c391b0744d8029b"
     },
     {
       "path": "runtime/LICENSE.txt",

@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { ReadableText } from "./ReadableText";
 
 function remembered(taskId: string) {
   try { return sessionStorage.getItem(`abya:task-description:${taskId}`) === "expanded"; }
@@ -30,7 +31,7 @@ export function TaskDescription({ taskId, description = "", workspacePath, en = 
     </button>
     <div id={contentId} className="task-description-body" hidden={!expanded} tabIndex={expanded ? 0 : -1}
       role="region" aria-label={en ? "Full task description and workspace" : "完整任务说明与工作区"}>
-      <div className="task-description-copy">{description || (en ? "No task description." : "暂未填写任务说明。")}</div>
+      <div className="task-description-copy"><ReadableText text={description || (en ? "No task description." : "暂未填写任务说明。")} /></div>
       <code className="task-workspace-path">{en ? "Task workspace" : "任务工作区"}: {workspacePath}</code>
     </div>
   </section>;

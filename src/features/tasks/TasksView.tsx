@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
   Archive,
+  BookOpen,
   Check,
   ChevronRight,
   CirclePlus,
@@ -13,6 +14,7 @@ import {
   RotateCcw,
   SquareTerminal,
   Trash2,
+  Workflow,
 } from "lucide-react";
 import { Modal } from "../../app/Modal";
 import { LaunchInstanceModal } from "../instances/LaunchInstanceModal";
@@ -628,8 +630,11 @@ export function TasksView({
           <>
             <header className="content-header task-content-header">
               <div className="task-heading-title">
+                <span className="task-title-icon"><Gamepad2 size={24} aria-hidden="true" /></span>
+                <div>
                 <div className="eyebrow">{t(selected.status)}</div>
                 <h2>{selected.title}</h2>
+                </div>
               </div>
               <div className="header-actions">
                 {selected.status === "active" && (
@@ -677,11 +682,12 @@ export function TasksView({
 
             <div className="task-tabs" role="tablist">
               <button role="tab" className={selectedTab === "production" ? "selected" : ""} aria-selected={selectedTab === "production"} onClick={() => selectTab("production")}>
+                <Workflow size={16} aria-hidden="true" />
                 {productionText(settings?.locale).title}
                 {!!currentPending?.questions && <span className="task-tab-badge">{settings?.locale === "en-US" ? "Questions" : "待回答"} {currentPending.questions}</span>}
                 {!!currentPending?.reviews && <span className="task-tab-badge">{settings?.locale === "en-US" ? "Review" : "待审查"} {currentPending.reviews}</span>}
               </button>
-              <button role="tab" className={selectedTab === "skills" ? "selected" : ""} aria-selected={selectedTab === "skills"} onClick={() => selectTab("skills")}>{productionText(settings?.locale).skills}</button>
+              <button role="tab" className={selectedTab === "skills" ? "selected" : ""} aria-selected={selectedTab === "skills"} onClick={() => selectTab("skills")}><BookOpen size={16} aria-hidden="true" />{productionText(settings?.locale).skills}</button>
               <button
                 className={selectedTab === "instances" ? "selected" : ""}
                 role="tab"

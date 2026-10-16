@@ -1,0 +1,15 @@
+.readable-text { font-size:14px; line-height:1.85; color:#354b48; overflow-wrap:anywhere; }
+.readable-line { margin:6px 0; white-space:pre-wrap; }
+.readable-lead { color:#1c4640; font-size:14px; }
+.readable-text strong { font-weight:750; color:#173e37; }
+.readable-field { padding-right:4px; }
+.readable-blank { height:8px; white-space:pre-wrap; line-height:0; }
+.readable-section { display:flex; align-items:center; gap:9px; margin:20px 0 10px; font-size:16px; font-weight:750; color:#184e47; }
+.readable-section::before { content:""; width:4px; height:17px; flex-shrink:0; border-radius:4px; background:linear-gradient(#32b198,#167d78); }
+.readable-section:first-child { margin-top:0; font-size:20px; }
+.readable-item { display:flex; align-items:baseline; gap:10px; }
+.readable-item>span:last-child { min-width:0; flex:1; }
+.readable-number { flex-shrink:0; min-width:26px; padding:0 6px; text-align:center; border-radius:6px; background:#e4f1ed; color:#246e61; font-size:12px; font-weight:750; }
+.readable-bullet { color:#218d7d; font-weight:800; }
+.readable-code-line { padding:0 12px; background:#eef2f5; color:#334555; font:12px/1.65 "Cascadia Code",Consolas,monospace; white-space:pre-wrap; }
+@media(max-height:650px) { .task-description .readable-text { font-size:13px; line-height:1.7; }.task-description .readable-line { margin:4px 0; } }
