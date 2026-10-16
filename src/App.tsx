@@ -5,7 +5,7 @@ import { TasksView } from "./features/tasks/TasksView";
 import { LogsView } from "./features/logs/LogsView";
 import { SettingsView } from "./features/settings/SettingsView";
 import { GameClientsView } from "./features/game-clients/GameClientsView";
-import { clientApi, type ClientUpdate } from "./shared/gameClients";
+import { ClientWorkflowProvider } from "./features/game-clients/ClientWorkflow";
 import { api, errorMessage } from "./shared/api";
 import type { AppSettings } from "./shared/types";
 import {
@@ -25,7 +25,6 @@ function App() {
   const [view, setView] = useState<ViewId>("tasks");
   const [notificationNavigation, setNotificationNavigation] = useState<NotificationActivation>();
   const [settings, setSettings] = useState<AppSettings>();
-  const [clientUpdate, setClientUpdate] = useState<ClientUpdate | null>(null);
   const [preferredInstallationId, setPreferredInstallationId] = useState<string>();
   const [focusGitHub, setFocusGitHub] = useState(false);
   const [preferredReleaseId, setPreferredReleaseId] = useState<number>();
@@ -68,23 +67,6 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [notification]);
 
-  useEffect(() => {
-    setClientUpdate(null);
-    if (settings?.gameClient?.source !== "remote") return;
-    let alive = true;
-    let checking = false;
-    const check = async () => {
-      if (checking) return;
-      checking = true;
-      try { const update = await clientApi.checkUpdate(); if (alive) setClientUpdate(update); }
-      catch { /* Offline clients remain usable. The manager offers an explicit retry. */ }
-      finally { checking = false; }
-    };
-    void check();
-    const timer = window.setInterval(() => void check(), 30 * 60 * 1000);
-    return () => { alive = false; window.clearInterval(timer); };
-  }, [settings?.gameClient?.source, settings?.gameClient?.installationId]);
-
   function notify(message: string, error = false) {
     setNotification({ message, error });
   }
@@ -107,6 +89,7 @@ function App() {
   ];
 
   return (
+    <ClientWorkflowProvider settings={settings} t={t} onSaved={handleSaved} notify={notify}>
     <div className="app-shell">
       <IconButtonTooltips closeLabel={t("close")} />
       <aside className="app-sidebar">
@@ -134,9 +117,6 @@ function App() {
             );
           })}
         </nav>
-        {clientUpdate && <button className="client-sidebar-update" onClick={() => { setPreferredReleaseId(clientUpdate.releaseId); setView("gameClients"); }}>
-          <CloudDownload size={17} /><span><strong>{t("gcUpdate")}</strong><span>{clientUpdate.tagName}</span></span>
-        </button>}
         <div className="sidebar-footer">
           <span className="connection-light" />
           <strong>APP {buildInfo?.version??"版本核对中"}{buildInfo?.testEnvironment?" · 测试环境":""}</strong>
@@ -191,6 +171,7 @@ function App() {
         </div>
       )}
     </div>
+    </ClientWorkflowProvider>
   );
 }
 

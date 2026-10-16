@@ -106,3 +106,41 @@ pub async fn game_client_check_update(
     let service = state.game_clients.clone();
     blocking(move || service.check_update()).await
 }
+
+#[tauri::command]
+pub async fn game_client_activate(
+    installation_id: String,
+    executable_relative_path: String,
+    state: State<'_, AppState>,
+) -> AppResult<crate::foundation::AppSettings> {
+    let service = state.game_clients.clone();
+    blocking(move || {
+        let _files = crate::foundation::EXECUTABLE_FILES.write();
+        service.activate(&installation_id, &executable_relative_path)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn game_client_discard_pending(
+    installation_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    let service = state.game_clients.clone();
+    blocking(move || service.discard_pending(&installation_id)).await
+}
+
+#[tauri::command]
+pub async fn game_client_maintain(state: State<'_, AppState>) -> AppResult<ClientRetention> {
+    let service = state.game_clients.clone();
+    let tasks = state.tasks.clone();
+    let instances = state.instances.clone();
+    blocking(move || {
+        let _files = crate::foundation::EXECUTABLE_FILES.write();
+        service.maintain(
+            &tasks.pinned_player_paths()?,
+            &instances.running_executable_paths()?,
+        )
+    })
+    .await
+}

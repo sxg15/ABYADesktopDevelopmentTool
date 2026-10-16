@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { GameClientsView } from "../src/features/game-clients/GameClientsView";
 import { SettingsView } from "../src/features/settings/SettingsView";
+import { ClientWorkflowProvider } from "../src/features/game-clients/ClientWorkflow";
 import { clientApi, emptyClientSelection, type ClientRelease, type GameClientState } from "../src/shared/gameClients";
 import { api } from "../src/shared/api";
 import { attentionApi } from "../src/shared/notifications";
@@ -28,7 +29,11 @@ clientApi.startLogin = async () => { throw { code: fixture === "expired" ? "clie
 clientApi.pollLogin = async () => ({ status: "pending", authorization: authorization() });
 clientApi.cancelLogin = async () => { fixture = "login"; };
 clientApi.logout = async () => { fixture = "login"; return { ...state, account: null }; };
-clientApi.checkUpdate = async () => ({ releaseId: 2, tagName: releases[0].tagName, currentTag: installation.tagName });
+clientApi.checkUpdate = async () => fixture === "update" ? ({ releaseId: 2, tagName: releases[0].tagName, currentTag: installation.tagName,
+  key: "fixture-2-20", assets: [releases[0].assets[0]], preferredAssetId: 20 }) : null;
+clientApi.maintain = async () => ({ removed: 0, deferred: fixture === "retained" ? [{ installationId: "older", tagName: "Development-0.8.43", reason: "task" }] : [] });
+clientApi.discardPending = async () => {};
+clientApi.activate = async (installationId, executableRelativePath) => ({ ...initialSettings, gameClient: { ...initialSettings.gameClient!, installationId, executableRelativePath } });
 clientApi.saveRelease = async input => { const release = { ...releases[0], ...input, id: input.id ?? 3 }; releases = [release, ...releases.filter(item => item.id !== release.id)]; return release; };
 clientApi.deleteRelease = async id => { releases = releases.filter(item => item.id !== id); };
 clientApi.deleteAsset = async (id, assetId) => { releases = releases.map(item => item.id === id ? { ...item, assets: item.assets.filter(asset => asset.id !== assetId) } : item); };
@@ -47,15 +52,14 @@ function Preview() {
   return <><div style={{ height: 40, padding: "6px 12px", display: "flex", alignItems: "center", gap: 12, background: "#fff6d9", fontSize: 12 }}>
     <strong>隔离界面预览 · 无真实 GitHub 操作</strong>
     <select aria-label="Fixture" value={mode} onChange={event => { fixture = event.target.value; setMode(fixture); }}>
-      {["populated", "empty", "login", "authorizing", "expired", "readonly", "progress"].map(item => <option key={item}>{item}</option>)}
+      {["populated", "update", "retained", "empty", "login", "authorizing", "expired", "readonly", "progress"].map(item => <option key={item}>{item}</option>)}
     </select><button onClick={() => setLanguage(language === "zh-CN" ? "en-US" : "zh-CN")}>中文 / English</button><span>{message}</span>
-  </div><div className="app-shell" style={{ height: "calc(100% - 40px)" }}>
+  </div><ClientWorkflowProvider key={`${mode}-${language}`} settings={settings} t={t} onSaved={setSettings} notify={setMessage}><div className="app-shell" style={{ height: "calc(100% - 40px)" }}>
     <aside className="app-sidebar"><div className="brand"><div className="brand-mark">A</div><div><strong>ABYA</strong><span>Development Tool</span></div></div>
       <nav><button>{t("tasks")}</button><button>{t("archiveTransfer")}</button><button className={page === "clients" ? "active" : ""} onClick={() => setPage("clients")}>{t("gameClients")}</button><button>{t("logs")}</button><button className={page === "settings" ? "active" : ""} onClick={() => setPage("settings")}>{t("settings")}</button></nav>
-      <button className="client-sidebar-update" onClick={() => setPage("clients")}><span><strong>{t("gcUpdate")}</strong><span>Development-0.8.45</span></span></button>
     </aside><main className="app-main" key={`${mode}-${language}`}>
       {page === "clients" ? <GameClientsView settings={settings} t={t} notify={setMessage} onOpenSettings={() => setPage("settings")} />
         : <SettingsView settings={settings} locale={language} t={t} notify={setMessage} onSaved={setSettings} onManageClients={() => setPage("clients")} />}
-    </main></div></>;
+    </main></div></ClientWorkflowProvider></>;
 }
 createRoot(document.getElementById("root")!).render(<Preview />);

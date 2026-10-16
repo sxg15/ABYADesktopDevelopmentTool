@@ -5,6 +5,9 @@ mod models;
 mod oauth;
 #[cfg(test)]
 mod oauth_tests;
+mod retention;
+#[cfg(test)]
+mod retention_tests;
 #[cfg(test)]
 mod tests;
 
@@ -41,6 +44,8 @@ pub struct GameClientService {
     github_base: Option<String>,
     progress: Progress,
     busy: Arc<AtomicBool>,
+    pending_installation: Arc<Mutex<Option<String>>>,
+    retention: Arc<Mutex<ClientRetention>>,
 }
 
 #[derive(Clone, Default)]
@@ -93,6 +98,8 @@ impl GameClientService {
             github_base: None,
             progress: Progress::default(),
             busy: Arc::new(AtomicBool::new(false)),
+            pending_installation: Default::default(),
+            retention: Default::default(),
         }
     }
 
@@ -165,6 +172,10 @@ impl GameClientService {
         if required && token.is_none() {
             return Err(error("clientLoginRequired"));
         }
+        #[cfg(test)]
+        if let Some(api) = &self.github_base {
+            return GitHub::with_test_api(token, api.clone());
+        }
         GitHub::new(token)
     }
 
@@ -176,6 +187,7 @@ impl GameClientService {
             default_storage_root: self.default_storage.to_string_lossy().into_owned(),
             operation: self.operation(),
             authorization: self.authorization(),
+            retention: self.retention.lock().clone(),
         })
     }
 
@@ -225,6 +237,9 @@ impl GameClientService {
 
     pub fn install(&self, input: InstallInput) -> AppResult<ClientInstallation> {
         self.run("install", || {
+            if self.pending_installation.lock().is_some() {
+                return Err(error("clientPendingSelection"));
+            }
             let github = self.github(false)?;
             let release = github.release(input.release_id)?;
             let asset = release
@@ -235,15 +250,41 @@ impl GameClientService {
             if !asset.installable() || asset.size > MAX_ASSET_BYTES {
                 return Err(error("clientPackageFormat"));
             }
+            // Reuse the exact verified package; switching back must not create duplicates.
+            for record in self.installations()? {
+                if record.release_id == release.id
+                    && record.asset_id == asset.id
+                    && record.asset_updated_at == asset.updated_at
+                    && let Some(executable) = record.executable_candidates.first()
+                    && install::resolve(
+                        &record,
+                        &crate::foundation::GameClientSelection {
+                            executable_relative_path: executable.clone(),
+                            ..Default::default()
+                        },
+                    )
+                    .is_ok()
+                {
+                    *self.pending_installation.lock() = Some(record.id.clone());
+                    return Ok(record);
+                }
+            }
             let response = github.download(asset.id)?;
-            install::install(
+            let storage = if input.storage_root.trim().is_empty() {
+                self.default_storage.to_string_lossy().into_owned()
+            } else {
+                input.storage_root
+            };
+            let installed = install::install(
                 response,
                 &release,
                 asset,
-                &input.storage_root,
+                &storage,
                 &self.progress,
                 |record| self.write(&format!("{INSTALL_PREFIX}{}", record.id), record),
-            )
+            )?;
+            *self.pending_installation.lock() = Some(installed.id.clone());
+            Ok(installed)
         })
     }
 
@@ -298,6 +339,38 @@ impl GameClientService {
             release_id: candidate.id,
             tag_name: candidate.tag_name.clone(),
             current_tag: current.tag_name,
+            key: format!(
+                "{}:{}",
+                candidate.id,
+                candidate
+                    .assets
+                    .iter()
+                    .filter(|a| a.installable())
+                    .map(|a| format!(
+                        "{}:{}:{}",
+                        a.id,
+                        a.updated_at,
+                        a.digest.as_deref().unwrap_or("")
+                    ))
+                    .collect::<Vec<_>>()
+                    .join("|")
+            ),
+            preferred_asset_id: candidate
+                .assets
+                .iter()
+                .find(|a| a.installable() && a.name == current.asset_name)
+                .or_else(|| {
+                    let mut assets = candidate.assets.iter().filter(|a| a.installable());
+                    let first = assets.next();
+                    if assets.next().is_none() { first } else { None }
+                })
+                .map(|a| a.id),
+            assets: candidate
+                .assets
+                .iter()
+                .filter(|a| a.installable())
+                .cloned()
+                .collect(),
         }))
     }
 }

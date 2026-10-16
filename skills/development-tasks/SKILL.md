@@ -95,6 +95,15 @@ task-to-instance history relationships.
 
 ## Public Contracts
 
+Client retention (2026-10-16): pinned_player_paths reads current versionDetails.playerSource
+from all persisted task production records, including completed/archived tasks. It performs
+no workspace synchronization, exports, hash scans, pin rewrites or acceptance. Fail closed
+on unreadable records. Current task pins protect older managed downloads until the task
+captures another version or is deleted; prior revision history is not an active pin.
+production_capture_version holds foundation EXECUTABLE_FILES shared through hashing and
+pin persistence so exclusive package cleanup cannot race a newly captured pin. Verify
+read-only behavior, archived pins and release after task deletion.
+
 Production v1.2 adds playerMode (unspecified/single/multiplayer) and durable questionGroups.
 Legacy records default to unspecified and no questions. Publishing questions is agent-accessible
 in the current stage when questions are enabled, with a validated Desktop-owned conversation binding. User-only

@@ -934,6 +934,19 @@ tbody tr:hover { background: #f7faf8; }
 @media(max-width:1000px){.app-shell{grid-template-columns:68px minmax(0,1fr)}.app-sidebar nav button{justify-content:center;padding:0}.app-sidebar nav button span,.brand>div:not(.brand-mark),.sidebar-footer>span,.sidebar-footer>strong{display:none}.brand{padding:0;justify-content:center}.tasks-workspace{grid-template-columns:180px minmax(0,1fr)}.content-header{padding:16px;gap:12px;flex-wrap:wrap;min-height:110px}.content-header>div:first-child{min-width:220px}.content-header h2{font-size:19px}.content-header .header-actions{margin-left:auto}.task-tabs{padding-left:0;flex-wrap:wrap}}
 .sidebar-footer { flex-direction: column; align-items: flex-start; overflow-wrap: anywhere; }
 
+.client-download-hero { display: grid; gap: 12px; margin: 16px 0; padding: 20px; border: 2px solid #278b6c; border-radius: 10px; background: #edf9f3; }
+.client-download-hero > div > strong, .client-download-hero > strong { font-size: 18px; color: #15553f; }
+.client-download-hero p { margin: 6px 0 0; color: #436252; line-height: 1.6; }
+.client-download-primary { min-height: 50px; justify-content: center; padding: 12px 22px; font-size: 17px; font-weight: 700; white-space: normal; }
+.client-download-form > .client-download-primary { justify-self: stretch; }
+.client-download-hero select { width: 100%; min-width: 0; }
+.client-retention { margin-top: 16px; padding: 14px; background: #fff7e5; border: 1px solid #e8ce96; border-radius: 8px; overflow-wrap: anywhere; }
+.client-retention p { margin: 8px 0 0; }
+.client-update-dialog, .client-install-dialog { display: grid; gap: 14px; min-width: 0; }
+.client-update-dialog > svg { color: #237f5e; }
+.client-version-change { display: flex; gap: 14px; flex-wrap: wrap; padding: 15px; background: #edf9f3; border-radius: 8px; font-size: 19px; overflow-wrap: anywhere; }
+.client-update-reminder { position: fixed; right: 24px; bottom: 24px; z-index: 110; max-width: calc(100vw - 100px); box-shadow: 0 4px 18px #163a3333; white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 680px) { .client-download-hero { padding: 14px; } .client-update-dialog .modal-actions { flex-wrap: wrap; } .client-update-dialog .modal-actions > button { flex: 1 1 160px; } }
 /* Task descriptions span both header columns; other page headers keep their text measure. */
 .content-pane > .content-header.task-content-header { display:grid; grid-template-columns:minmax(0,1fr) auto; min-height:0; column-gap:16px; row-gap:10px; }
 .task-content-header > .task-heading-title { min-width:0; }

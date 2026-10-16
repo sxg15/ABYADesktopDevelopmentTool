@@ -24,7 +24,7 @@ export function ClientProgress({ operation, t, onError }: {
 }) {
   const [cancelling, setCancelling] = useState(false);
   useEffect(() => { if (!operation?.active) setCancelling(false); }, [operation?.active]);
-  if (!operation?.active) return null;
+  if (!operation?.active || ["cleanup", "select"].includes(operation.kind)) return null;
   const keys: Record<string, MessageKey> = { connecting: "gcConnecting", downloading: "gcDownloading", uploading: "gcUploading", extracting: "gcExtracting", complete: "gcComplete" };
   const percent = operation.totalBytes ? Math.min(100, Math.floor(operation.completedBytes / operation.totalBytes * 100)) : 0;
   return <div className="client-progress" role="status">

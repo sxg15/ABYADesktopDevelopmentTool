@@ -73,6 +73,36 @@ impl InstanceService {
         })
     }
 
+    /// Include user-started processes as well as managed launching/running instances.
+    pub fn running_executable_paths(&self) -> AppResult<Vec<String>> {
+        use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
+        let mut paths: Vec<String> = self
+            .list(None)?
+            .into_iter()
+            .filter(|instance| {
+                matches!(
+                    instance.process_state,
+                    ProcessState::Launching | ProcessState::Running | ProcessState::Stopping
+                )
+            })
+            .filter_map(|instance| instance.executable_path)
+            .collect();
+        let mut system = System::new();
+        system.refresh_processes_specifics(
+            ProcessesToUpdate::All,
+            true,
+            ProcessRefreshKind::nothing().with_exe(UpdateKind::Always),
+        );
+        paths.extend(
+            system
+                .processes()
+                .values()
+                .filter_map(|process| process.exe())
+                .map(|path| path.to_string_lossy().into_owned()),
+        );
+        Ok(paths)
+    }
+
     pub fn get(&self, id: &str) -> AppResult<InstanceRuntimeInfo> {
         let instance = self.read(id)?;
         let report_path = (instance.origin == InstanceOrigin::Managed)
@@ -86,6 +116,7 @@ impl InstanceService {
     }
 
     pub fn launch(&self, mut input: LaunchInstanceInput) -> AppResult<GameInstance> {
+        let _files = crate::foundation::EXECUTABLE_FILES.read();
         let task_id = input.task_id.trim();
         if task_id.is_empty() {
             return Err(AppError::validation("Select a development task."));

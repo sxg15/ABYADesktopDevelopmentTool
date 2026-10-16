@@ -8,6 +8,11 @@ without saving the Player draft. Manager login navigation focuses that section.
 SettingsView saves the source metadata
 and resolved launch path together through the existing settings adapter. Download, login,
 Release management and update checks remain APP-only; no CLI command accepts GitHub tokens.
+Download and use now activates/saves a verified remote client directly through the
+game-clients workflow provider. Manual source/local-path changes still use Save. Split
+the client draft synchronization from other fields so activation cannot reset unsaved
+workspace, language or gateway edits. The selected package replaces the historical picker;
+show deferred-cleanup reasons. No new CLI commands or task-version migration are added.
 Existing CLI launch defaults continue using gameExecutablePath and preserve task-pinned
 Player precedence. The gateway/CLI fixtures explicitly use the default local selection.
 

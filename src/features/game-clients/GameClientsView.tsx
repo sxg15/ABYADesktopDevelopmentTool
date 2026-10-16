@@ -5,12 +5,13 @@ import { CloudDownload, Download, ExternalLink, FolderOpen, Github, Pencil, Plus
 import { Modal } from "../../app/Modal";
 import type { MessageKey } from "../../i18n";
 import type { AppSettings } from "../../shared/types";
-import { bytes, clientApi, clientError, installable, type ClientInstallation, type ClientRelease, type GameClientState, type ReleaseAsset, type ReleaseInput } from "../../shared/gameClients";
+import { bytes, clientApi, clientError, installable, type ClientRelease, type GameClientState, type ReleaseAsset, type ReleaseInput } from "../../shared/gameClients";
 import { ClientProgress, useClientOperation } from "./ClientProgress";
+import { ClientRetentionNotice, useClientWorkflow } from "./ClientWorkflow";
 
 type DeleteTarget = { release: ClientRelease; asset?: ReleaseAsset };
 
-export function GameClientsView({ settings, t, notify, onOpenSettings, preferredReleaseId }: {
+export function GameClientsView({ settings, t, onOpenSettings, preferredReleaseId }: {
   settings?: AppSettings; t: (key: MessageKey) => string; notify: (message: string, error?: boolean) => void;
   onOpenSettings: (installationId?: string, focusGitHub?: boolean) => void; preferredReleaseId?: number;
 }) {
@@ -27,8 +28,10 @@ export function GameClientsView({ settings, t, notify, onOpenSettings, preferred
   const [error, setError] = useState("");
   const [editor, setEditor] = useState<ReleaseInput>();
   const [deleting, setDeleting] = useState<DeleteTarget>();
+  const [assetId, setAssetId] = useState(0);
+  const workflow = useClientWorkflow();
   const operation = useClientOperation();
-  const busy = working || loading || !!operation?.active;
+  const busy = working || loading || workflow.busy;
 
   async function refresh(prefer?: number) {
     setLoading(true);
@@ -45,13 +48,13 @@ export function GameClientsView({ settings, t, notify, onOpenSettings, preferred
   useEffect(() => { void refresh(preferredReleaseId).catch(error => setError(clientError(error, t))); }, []);
   useEffect(() => { if (preferredReleaseId) setSelectedId(preferredReleaseId); }, [preferredReleaseId]);
   useEffect(() => {
-    if (operation?.kind === "install" && !operation.active) void clientApi.state().then(setState).catch(() => undefined);
+    if (!operation?.active) void clientApi.state().then(setState).catch(() => undefined);
   }, [operation?.active, operation?.kind]);
   useEffect(() => {
-    let alive = true; setDetail(undefined);
+    let alive = true; setDetail(undefined); setAssetId(0);
     if (!selectedId) { setDetailLoading(false); return; }
     setDetailLoading(true);
-    void clientApi.release(selectedId).then(value => { if (alive) setDetail(value); })
+    void clientApi.release(selectedId).then(value => { if (alive) { setDetail(value); setAssetId(value.assets.find(installable)?.id ?? 0); } })
       .catch(error => { if (alive) setError(clientError(error, t)); }).finally(() => { if (alive) setDetailLoading(false); });
     return () => { alive = false; };
   }, [selectedId, revision]);
@@ -66,20 +69,18 @@ export function GameClientsView({ settings, t, notify, onOpenSettings, preferred
     const path = await open({ directory: true, multiple: false });
     if (typeof path === "string") setStorage(path);
   }
-  async function download(release: ClientRelease, asset: ReleaseAsset) {
-    await clientApi.install(release.id, asset.id, storage);
-    notify(t("gcInstallDone"));
-  }
-  function chooseInstalled(record: ClientInstallation) { onOpenSettings(record.id); }
   const filtered = releases.filter(item => `${item.tagName} ${item.name ?? ""}`.toLowerCase().includes(search.toLowerCase()));
   const canManage = !!state?.account?.canManage;
+  const current = state?.installations.find(record => record.id === settings?.gameClient?.installationId);
+  const isCurrent = settings?.gameClient?.source === "remote" && current?.releaseId === detail?.id
+    && current?.assetId === assetId && current?.assetUpdatedAt === detail?.assets.find(asset => asset.id === assetId)?.updatedAt;
 
   return <div className="workspace client-workspace">
     <header className="page-toolbar">
       <div><h1>{t("gcTitle")}</h1><p className="client-subtitle">{t("gcSubtitle")}</p></div>
       <div className="client-actions">
         <button className="secondary-button" disabled={busy} onClick={() => void run(() => refresh())}><RefreshCw size={16} />{t("refresh")}</button>
-        <button className="primary-button" disabled={busy || !canManage} onClick={() => setEditor({ id: null, tagName: "", name: "", body: "", draft: true, prerelease: false })}><Plus size={16} />{t("gcNewRelease")}</button>
+        <button className="secondary-button" disabled={busy || !canManage} onClick={() => setEditor({ id: null, tagName: "", name: "", body: "", draft: true, prerelease: false })}><Plus size={16} />{t("gcNewRelease")}</button>
       </div>
     </header>
     <div className="client-content">
@@ -117,6 +118,15 @@ export function GameClientsView({ settings, t, notify, onOpenSettings, preferred
               <button className="icon-button" title={t("gcEditRelease")} disabled={busy || !canManage || detail.immutable} onClick={() => setEditor({ id: detail.id, tagName: detail.tagName, name: detail.name ?? "", body: detail.body ?? "", draft: detail.draft, prerelease: detail.prerelease })}><Pencil size={16} /></button>
               <button className="icon-button danger" title={t("gcDeleteRelease")} disabled={busy || !canManage || detail.immutable} onClick={() => setDeleting({ release: detail })}><Trash2 size={16} /></button>
             </div>
+            <div className="client-download-hero">
+              <div><strong>{t("gcDownloadHeading")}</strong><p>{t("gcReplaceHint")}</p></div>
+              <label className="field"><span>{t("gcSelectAsset")}</span><select value={assetId} disabled={busy} onChange={event => setAssetId(Number(event.target.value))}>
+                {!assetId && <option value={0}>{t("gcSelectAsset")}</option>}
+                {detail.assets.filter(installable).map(asset => <option key={asset.id} value={asset.id}>{asset.name} · {bytes(asset.size)}</option>)}
+              </select></label>
+              <button className="primary-button client-download-primary" disabled={busy || !assetId || !storage || isCurrent} onClick={() => workflow.download(detail.id, assetId, storage)}>
+                <Download size={22} />{t(isCurrent ? "gcUsingCurrent" : "gcInstall")}</button>
+            </div>
             {detail.immutable && <span className="client-badge">{t("gcImmutable")}</span>}
             {detail.body && <p className="client-release-notes">{detail.body}</p>}
             <div className="client-section-heading"><h3>{t("gcAssets")}</h3>
@@ -130,7 +140,6 @@ export function GameClientsView({ settings, t, notify, onOpenSettings, preferred
             {detail.assets.length === 0 && <p className="empty-state">{t("gcNoAssets")}</p>}
             <div className="client-assets">{detail.assets.map(asset => <div key={asset.id} className="client-asset">
               <div className="client-grow"><strong>{asset.name}</strong><p>{bytes(asset.size)}{asset.state !== "uploaded" ? ` · ${asset.state}` : ""}</p></div>
-              <button className="secondary-button" disabled={busy || !installable(asset) || !storage} onClick={() => void run(() => download(detail, asset), true)}><Download size={15} />{t("gcInstall")}</button>
               <button className="icon-button danger" title={`${t("gcDeleteAsset")}: ${asset.name}`} disabled={busy || !canManage || detail.immutable} onClick={() => setDeleting({ release: detail, asset })}><Trash2 size={16} /></button>
             </div>)}</div>
           </> : <p className="empty-state">{t("gcSelectPrompt")}</p>}
@@ -138,13 +147,12 @@ export function GameClientsView({ settings, t, notify, onOpenSettings, preferred
       </div>}
       <section className="client-card">
         <h2>{t("gcInstalled")}</h2>
-        {!state?.installations.length && <p className="empty-state">{t("gcNoInstalled")}</p>}
-        {state?.installations.map(record => <div className="client-installed" key={record.id}>
-          <div className="client-grow"><strong>{record.tagName} · {record.assetName}</strong>
-            {settings?.gameClient?.source === "remote" && settings.gameClient.installationId === record.id && <span className="client-badge current">{t("gcCurrent")}</span>}
-            <p className="client-path">{record.directory}</p><p>{t(record.digestVerified ? "gcVerified" : "gcLocalHash")}</p>
-          </div><button className="secondary-button" onClick={() => chooseInstalled(record)}>{t("gcUseInstalled")}</button>
-        </div>)}
+        {!current && <p className="empty-state">{t("gcNoInstalled")}</p>}
+        {current && <div className="client-installed"><div className="client-grow"><strong>{current.tagName} · {current.assetName}</strong>
+          <p className="client-path">{current.directory}</p><p>{t(current.digestVerified ? "gcVerified" : "gcLocalHash")}</p></div>
+          {settings?.gameClient?.source !== "remote" && <button className="primary-button" disabled={busy} onClick={() => workflow.useInstalled(current)}>{t("gcUseNow")}</button>}
+        </div>}
+        <ClientRetentionNotice t={t} />
       </section>
     </div>
     {editor && <Modal title={t(editor.id ? "gcEditRelease" : "gcNewRelease")} onClose={() => { if (!working) setEditor(undefined); }}>

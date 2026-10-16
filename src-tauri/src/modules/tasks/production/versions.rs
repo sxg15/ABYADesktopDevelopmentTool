@@ -120,6 +120,24 @@ pub(super) fn verify(details: &Value) -> AppResult<()> {
 }
 
 impl TaskService {
+    /// Read current task pins without touching workspaces, Skills or version history.
+    pub fn pinned_player_paths(&self) -> AppResult<Vec<String>> {
+        self.database.with_connection(|db| {
+            let mut statement = db.prepare("SELECT body FROM task_production")?;
+            let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
+            let mut paths = Vec::new();
+            for row in rows {
+                let record: super::ProductionRecord = serde_json::from_str(&row?)?;
+                if let Some(path) = record.version_details["playerSource"].as_str()
+                    && !path.is_empty()
+                {
+                    paths.push(path.to_owned());
+                }
+            }
+            Ok(paths)
+        })
+    }
+
     pub fn production_capture_version(
         &self,
         task_id: &str,
@@ -127,6 +145,7 @@ impl TaskService {
         id: &str,
         sources: VersionSources,
     ) -> AppResult<ProductionView> {
+        let _files = crate::foundation::EXECUTABLE_FILES.read();
         let root = self.production_workspace(task_id)?;
         let archive = archive_root(&sources.archive_path)?;
         let player = sources.player_path.canonicalize()?;
