@@ -1,5 +1,12 @@
 # Release Skill
 
+## Unified art workflow (2026-10-16)
+Default/Validation use art-collaboration-flow-20261016. Test the real unified resource
+hub with old/current images, references, unfinished/stale/ready feedback and approval.
+Verify the explicit fix-review-close-document-approve sequence, disabled explanations,
+small windows and existing art-less/pinned workflows. Preserve client update/retention
+and previous workspace design; publish the verified complete CLI package then sync dev.
+
 ## Desktop workspace styling (2026-10-16)
 Default/Validation use workspace-visual-hierarchy-20261016. Validate the real task
 workspace, description typography and review dialog at normal/narrow/short sizes.

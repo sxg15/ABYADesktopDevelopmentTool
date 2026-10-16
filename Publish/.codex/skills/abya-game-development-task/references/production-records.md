@@ -65,6 +65,8 @@ kind、affectedStages、blockedOperations 的阻塞范围，也不自动批准�
 ## 视觉产物
 
 sourceType 为 reference/mockup/render/gameplay/feedback；roles 为 asset-board/layout/states/effect/feedback 数组。
+美术修订交回策划前，逐条核对未关闭反馈：已修复项用 update-feedback 标为 awaiting-recheck，填写 fix/recheck 并绑定同组最新 candidateArtifactId；不要只提交新图或新确认单而遗漏反馈状态。尚未修复时说明阻塞与下一步，不得声称可直接批准。策划在 APP“修改与复验”明确关闭反馈后，再审查确认本版方案；AI 不得代为关闭或批准。
+反馈重新打开时读取 reopenReason 及历史追加要求；若要求补齐复验材料，应核对并关联同组最新视觉修订，补全说明后再次交回策划，不要误当作新的设计需求，也不要自动关闭反馈。
 策划可在 APP 美术节点直接上传参考图片。读取制作记录 artifacts 中 plannerReference=true 且 status 不是 withdrawn 的条目，按 path 查看图片并阅读 summary；这是策划提供的输入，不是 AI 成果、预览覆盖或验收证据。不要用 register-artifact 覆盖这些记录。需要改变已确认方案时，修订相关文档并重新请求人工确认。上传/移除由 APP 用户操作，CLI 不得代替策划上传。
 资源阶段必须有素材板、整体布局和关键状态，一张组合图可以有多个roles。
 groupId 表示同一设计项，visualVersion 表示其方案版本；新版本使用新文件，旧路径不能覆盖。

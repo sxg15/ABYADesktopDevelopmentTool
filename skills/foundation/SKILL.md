@@ -1,5 +1,12 @@
 # Foundation Skill
 
+ProductionView.actions adds optional recheck reasons keyed by visual feedback ID.
+Empty reason means the current candidate is eligible for user recheck; submission
+still revalidates task revision and candidate/files in TaskService. No new command,
+table, credential or approval authority is added.
+ProductionFeedback optionally carries reopenReason. APP feedback reopen accepts an
+optional reason up to 2000 characters; task ownership and revision checks still apply.
+
 productionApi.exportProgrammerIssues(taskId, expectedRevision, issueIds) invokes
 the APP-only export_programmer_issues adapter and returns the saved relative .md
 path. TaskService owns snapshot selection/validation/rendering/file writes; the

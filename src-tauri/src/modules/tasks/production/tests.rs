@@ -832,13 +832,57 @@ fn feedback_rejects_empty_stage_drafts_missing_files_and_replaced_visual_version
     assert_ne!(record.stages["resources"], "awaiting-confirmation");
     assert!(record.current_version.is_none());
     assert!(human(&f, "resolve", json!({"id":feedback_id})).is_err());
+    assert!(
+        f.service.production_get(&f.id).unwrap().actions["recheck"][feedback_id]
+            .as_str()
+            .unwrap()
+            .contains("AI 尚未提交")
+    );
     f.apply("update-feedback", json!({"id":feedback_id,"status":"awaiting-recheck","fix":"Improved contrast","recheck":"Inspected revised concept","candidateArtifactId":candidate})).unwrap();
     f.apply("submit-document",json!({"kind":"resources","path":doc,"artScope":"new-art","artScopeReason":"Create new art"})).unwrap();
     assert_ne!(
         f.service.production_get(&f.id).unwrap().actions["approve"]["resources"],
         ""
     );
+    let actions = f.service.production_get(&f.id).unwrap().actions;
+    assert_eq!(actions["recheck"][feedback_id], "");
+    assert!(
+        actions["approve"]["resources"]
+            .as_str()
+            .unwrap()
+            .contains("修改与复验")
+    );
+    files::write_file(&f.workspace, "artifacts/art-v3.png", b"latest image").unwrap();
+    f.apply("register-visual",json!({"stage":"resources","path":"artifacts/art-v3.png","title":"Layout","sourceType":"mockup","roles":["asset-board","layout","states"],"groupId":"layout","visualVersion":"3"})).unwrap();
+    assert!(
+        f.service.production_get(&f.id).unwrap().actions["recheck"][feedback_id]
+            .as_str()
+            .unwrap()
+            .contains("尚未关联最新")
+    );
+    assert!(human(&f, "resolve", json!({"id":feedback_id})).is_err());
+    human(
+        &f,
+        "reopen",
+        json!({"id":feedback_id,"reason":"Update the candidate to the current proposal"}),
+    )
+    .unwrap();
+    assert_eq!(f.record().feedback[0]["status"], "open");
+    assert_eq!(
+        f.record().feedback[0]["reopenReason"],
+        "Update the candidate to the current proposal"
+    );
+    assert_eq!(f.record().stages["resources"], "in-progress");
+    let latest = f.record().artifacts.last().unwrap()["id"].clone();
+    f.apply("update-feedback", json!({"id":feedback_id,"status":"awaiting-recheck","fix":"Latest revision","recheck":"Compare latest image","candidateArtifactId":latest})).unwrap();
+    f.apply("submit-document",json!({"kind":"resources","path":doc,"artScope":"new-art","artScopeReason":"Create new art"})).unwrap();
+    assert!(f.record().approvals.iter().all(|a| a.kind != "resources"));
     human(&f, "resolve", json!({"id":feedback_id})).unwrap();
+    assert_eq!(
+        f.service.production_get(&f.id).unwrap().actions["approve"]["resources"],
+        ""
+    );
+    assert_eq!(f.record().current_stage, "resources");
     f.accept("resources");
     assert_eq!(f.record().current_stage, "plan");
     files::write_file(&f.workspace, path, b"changed").unwrap();

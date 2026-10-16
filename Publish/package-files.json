@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "workspace-visual-hierarchy-20261016",
-  "totalBytes": 320354997,
+  "releaseLabel": "art-collaboration-flow-20261016",
+  "totalBytes": 320756622,
   "files": [
     {
       "path": ".codex/README.md",
@@ -300,8 +300,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/production-records.md",
-      "bytes": 9671,
-      "sha256": "d07be650d2d55b7c6d342997aede23b9bc661114630c13be1966e79fbd1f0c25"
+      "bytes": 10351,
+      "sha256": "0950cfd12d809f61275be6ef311076c0d717ccf5f47f0137ab5d94809deb10ae"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/production-stages.md",
@@ -675,8 +675,8 @@
     },
     {
       "path": ".grok/skills/abya-game-development-task/references/production-records.md",
-      "bytes": 9671,
-      "sha256": "d07be650d2d55b7c6d342997aede23b9bc661114630c13be1966e79fbd1f0c25"
+      "bytes": 10236,
+      "sha256": "f9e4378dfc7e6e76926903100c642edfcb68d5d294b571c0a29aaf8bdf9bdb8a"
     },
     {
       "path": ".grok/skills/abya-game-development-task/references/production-stages.md",
@@ -760,18 +760,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 26507776,
-      "sha256": "7a9077a3b38aab0121820e9055183c5c149ddb1bcc22a281118b4998dff3860f"
+      "bytes": 26906624,
+      "sha256": "c19df4d077c7f3467f149c7f612933ef7af1cafa8c3ad33ba864b55c5c40951f"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 5984768,
-      "sha256": "81782169e893ad45f10cb7531e0325747a3620ece27eaa7ff1186c6b1a592d52"
+      "bytes": 5986304,
+      "sha256": "c6eafe9252471fea31c7889a7e8a3a3382c365b1501a2ccee18af226cbecd898"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 660,
-      "sha256": "2e0910a4e938734e6c2820153f552f985f04c2c657ea99bb5f8b2693e56bdf47"
+      "bytes": 656,
+      "sha256": "d23e26c5cadaf37bbf135459c1bcbf5e1adff777042a0cd6510934fa4f1bb4c5"
     },
     {
       "path": "runtime/LICENSE.txt",

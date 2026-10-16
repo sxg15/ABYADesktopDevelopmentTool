@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Modal } from "../../app/Modal";
 import type { ProductionDocument, ProductionView } from "../../shared/production";
 import { VisualGallery } from "./VisualGallery";
 import { ReadableText } from "./ReadableText";
+import { isArtFeedback } from "./artWorkflow";
 
-export function DocumentReview({ taskId, document: initial, view, active, busy, error, en = false, onClose, onDecide }: {
+export function DocumentReview({ taskId, document: initial, view, active, busy, error, en = false, onClose, onDecide, onArtFeedback }: {
   taskId: string; document: ProductionDocument; view: ProductionView; active: boolean; busy: boolean; error: string; en?: boolean;
   onClose: () => void; onDecide: (document: ProductionDocument, accepted: boolean, feedback: string) => Promise<void>;
+  onArtFeedback?: () => void;
 }) {
   const [snapshot, setSnapshot] = useState(initial);
   const [decision, setDecision] = useState("");
@@ -15,8 +17,13 @@ export function DocumentReview({ taskId, document: initial, view, active, busy, 
   const stale = !current || current.sha256 !== snapshot.sha256 || current.revision !== snapshot.revision;
   const reason = stale ? (en ? "A new version is available. Read it before submitting." : "成果已更新，请阅读新版本后再提交。")
     : !active ? (en ? "Task is inactive." : "任务当前不可操作。") : view.actions?.review[snapshot.kind] ?? (en ? "Review availability is being checked." : "正在核对审查条件。");
-  const approveReason = view.actions?.approve[snapshot.kind] ?? reason;
-  const artifacts = (view.artifacts ?? []).filter(a => snapshot.artifactBindings?.[a.path] === a.sha256);
+  const pendingArt = snapshot.kind === "resources" ? (view.record?.feedback ?? []).filter(f => isArtFeedback(f) && f.status !== "resolved") : [];
+  const approveReason = (view.actions?.approve[snapshot.kind] ?? (en ? "Approval checks are unavailable. Refresh before approving." : "批准条件尚未核对，请刷新后再确认。"))
+    || (pendingArt.length ? (en ? "Close the art feedback after rechecking before approving." : "请先逐项复验并关闭美术反馈，再确认方案。") : "");
+  const submitReason = busy ? (en ? "Saving your decision…" : "正在保存决定，请稍候…") : reason || (!decision ? (en ? "Read the proposal, then choose Approve or Request changes." : "请先阅读方案，再选择“通过此版本”或“需要修改”。")
+    : decision === "accept" ? approveReason : !feedback.trim() ? (en ? "Describe the required changes before submitting." : "请填写希望修改的内容，再提交修改意见。") : "");
+  const reasonId = useId();
+  const artifacts = (view.artifacts ?? view.record?.artifacts ?? []).filter(a => snapshot.artifactBindings?.[a.path] === a.sha256);
   const approval = view.policy.stages.some(s => s.id === snapshot.kind && s.approval);
   return <Modal wide title={`${en ? "Review document" : "成果审查"} · ${en ? "Version" : "第"} ${snapshot.revision}${en ? "" : " 版"}`} onClose={onClose}>
     <p className="review-context">{view.record?.taskId} · {view.policy.stages.find(s => s.id === snapshot.kind)?.name} · {snapshot.path}</p>
@@ -29,6 +36,11 @@ export function DocumentReview({ taskId, document: initial, view, active, busy, 
       </div>
       <aside className="review-decision">
         <h3>{en ? "Review decision" : "审查结论"}</h3>
+        {!!pendingArt.length && <div className="review-blockers">
+          <strong>{en ? `${pendingArt.length} art feedback items still need closure` : `确认前还需处理 ${pendingArt.length} 条美术反馈`}</strong>
+          <p>{en ? "Recheck the latest fixes in the art workspace. You can still request further changes below." : "请先在统一协作区查看修改结果并逐项复验；如果仍不满意，也可以在下方选择“需要修改”。"}</p>
+          {onArtFeedback && <button className="secondary-button" onClick={onArtFeedback}>{en ? "Go to changes and rechecks" : "前往修改与复验"}</button>}
+        </div>}
         {reason && <p role="status">{reason}</p>}
         {view.record?.approvals.filter(a => a.kind === snapshot.kind && a.documentRevision === snapshot.revision).map((a,i) =>
           <p key={i}>{a.decision === "accepted" ? (en ? "Approved" : "已确认") : (en ? "Changes requested" : "已退回修改")} · {new Date(a.decidedAt).toLocaleString()}<br/>{a.feedback}</p>)}
@@ -41,15 +53,16 @@ export function DocumentReview({ taskId, document: initial, view, active, busy, 
           </fieldset>
           <label className="field">{decision === "reject" ? (en ? "Required changes (required)" : "修改意见（必填）") : (en ? "Notes (optional)" : "审查意见（可选）")}
             <textarea rows={6} value={feedback} disabled={busy} maxLength={4000} onChange={e => setFeedback(e.target.value)} /></label>
-          {decision === "accept" && approveReason && <p role="alert">{approveReason}</p>}
+          {!pendingArt.length && !reason && approveReason && <p className="art-blocker-note">{approveReason}</p>}
           {error && <p role="alert" className="inline-error">{error}</p>}
         </>}
       </aside>
     </div>
     <div className="modal-actions review-footer">
+      {approval && <div id={reasonId} className="review-submit-guidance" role="status">{submitReason || (en ? "Ready. This submits only the version you reviewed." : "条件已满足，将提交你刚审阅的这一版决定。")}</div>}
       <button className="secondary-button" onClick={onClose}>{en ? "Close" : "关闭"}</button>
-      {approval && <button className="primary-button" disabled={busy || !!reason || !decision || (decision === "accept" ? !!approveReason : !feedback.trim())}
-        onClick={() => void onDecide(snapshot, decision === "accept", feedback)}>{busy ? (en ? "Saving…" : "正在提交…") : decision === "reject" ? (en ? "Submit changes" : "提交修改意见") : (en ? "Confirm this version and continue" : "确认此版本并继续")}</button>}
+      {approval && <button className="primary-button" aria-describedby={reasonId} disabled={!!submitReason}
+        onClick={() => { if (!submitReason) void onDecide(snapshot, decision === "accept", feedback); }}>{busy ? (en ? "Saving…" : "正在提交…") : decision === "reject" ? (en ? "Submit changes" : "提交修改意见") : (en ? "Confirm this version and continue" : "确认此版本并继续")}</button>}
     </div>
   </Modal>;
 }

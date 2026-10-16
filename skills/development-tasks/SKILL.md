@@ -1,5 +1,29 @@
 # Development Tasks Skill
 
+## Unified art collaboration (2026-10-16)
+The resources stage uses one ArtWorkflowPanel instead of separate reference, report,
+gallery and feedback cards. Default to the latest visual per group in this cycle;
+history/drafts remain read-only and history media loads only after expansion.
+Reference upload/paste remains in an optional modal. The central guide prioritizes
+pending questions, art rechecks, AI updates, then exact-version document review.
+One Changes and rechecks pane owns art feedback; no gameplay feedback controls appear
+there. Keep its editor mounted across pane changes and focus only on explicit navigation.
+Top TaskGuidance routes blocked art review to this workspace. DocumentReview explains
+all submission prerequisites beside the footer, links unresolved art feedback back to
+the hub, and fails closed when approval checks are absent. Rejecting for changes stays
+available when approval alone is blocked. Never auto-close feedback or auto-approve.
+APP resolve and projected actions.recheck share interaction::art_recheck. It rejects
+unfinished AI work, stale candidate IDs and altered media; unavailable/missing data
+does not become a successful review. Count unresolved art feedback in approval errors.
+Existing pinned policies and explicit decision/revision/hash requirements are retained.
+Regress latest/history filtering, optional references, draft protection, stale rechecks,
+missing checks, explicit closure then approval, task switches and existing gameplay flow.
+Stale art candidates expose Ask AI to update recheck material. This explicitly reopens
+the existing feedback with a bounded user reason, saves reopenReason/history, reopens
+the owning stage and only then requests continuation of the original conversation.
+It never closes feedback, changes candidate identity or approves a document. A failed
+continuation retains the saved request and reports the connection prerequisite.
+
 ## Readable workspace presentation (2026-10-16)
 ReadableText renders only authored text: Markdown headings/bold, numbered/bulleted
 lines and short leading colon labels. Other HTML/links/media remain literal text;

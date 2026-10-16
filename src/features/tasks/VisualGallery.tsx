@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import type { ProductionArtifact } from "../../shared/production";
 import { ArtifactMedia, ArtifactPreview } from "./ArtifactPreview";
 const labels: Record<string, string> = { reference: "参考图", mockup: "设计示意", render: "引擎渲染", gameplay: "游戏实拍", feedback: "反馈附件" };
-export function VisualGallery({ taskId, artifacts, bindings = {}, en = false, onFeedback, feedbackActions = {} }: {
+export function VisualGallery({ taskId, artifacts, bindings = {}, en = false, onFeedback, feedbackActions = {}, embedded = false }: {
   taskId: string; artifacts: ProductionArtifact[]; bindings?: Record<string, string>; en?: boolean;
-  onFeedback?: (id: string) => void; feedbackActions?: Record<string,string>;
+  onFeedback?: (id: string) => void; feedbackActions?: Record<string,string>; embedded?: boolean;
 }) {
   const items = artifacts.filter(a => a.mediaType && a.sourceType !== "feedback" && !a.plannerReference);
   const [selected, setSelected] = useState<string[]>([]);
@@ -12,8 +12,8 @@ export function VisualGallery({ taskId, artifacts, bindings = {}, en = false, on
   useEffect(() => { setSelected([]); setPreview(undefined); }, [taskId]);
   if (!items.length) return null;
   const toggle = (id: string) => setSelected(old => old.includes(id) ? old.filter(v => v !== id) : [...old.slice(-1), id]);
-  return <section className="production-card">
-    <h4>{en ? "Visual proposals and results" : "视觉方案与实际效果"}</h4>
+  return <section className={embedded ? "art-visual-content" : "production-card"}>
+    {!embedded && <h4>{en ? "Visual proposals and results" : "视觉方案与实际效果"}</h4>}
     <p>{en ? "Click an image to enlarge. Select two items to compare." : "点击图片查看大图；可选择两张进行对照。设计示意与游戏实拍分别标注。"}</p>
     <div className="visual-card-grid">{items.map(a => <article className="visual-card" key={a.id}>
       <div className="visual-thumbnail" role="button" tabIndex={0} aria-label={`${en ? "Preview" : "查看大图"} ${a.title}`}

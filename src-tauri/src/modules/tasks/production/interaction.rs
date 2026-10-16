@@ -13,9 +13,14 @@ pub(super) fn approve(r: &ProductionRecord, root: &Path, kind: &str) -> AppResul
             .iter()
             .any(|f| f["stage"] == "resources" && f["status"] != "resolved")
     {
-        return Err(AppError::validation(
-            "美术反馈仍需复验关闭，请先查看修改结果。",
-        ));
+        let pending = r
+            .feedback
+            .iter()
+            .filter(|f| f["stage"] == "resources" && f["status"] != "resolved")
+            .count();
+        return Err(AppError::validation(format!(
+            "还有 {pending} 条美术反馈未关闭。请进入“修改与复验”，确认修改结果后再批准方案；仍不满意可选择“需要修改”。"
+        )));
     }
     validation::clear_issues(r, kind)
 }
@@ -81,13 +86,28 @@ pub(super) fn visual_candidate(
         })
         .ok_or_else(|| AppError::validation("尚无当前视觉修订。"))?;
     if latest["id"] != candidate {
-        return Err(AppError::validation("请查看最新视觉修订后再复验。"));
+        return Err(AppError::validation(
+            "这条反馈尚未关联最新视觉修订，请让 AI 更新复验结果后再处理。",
+        ));
     }
     let path = mutation::text(latest, "path")?;
     if latest["sha256"] != files::hash_file(&files::safe_path(root, path)?)?.0 {
         return Err(AppError::validation("视觉修订文件已变化。"));
     }
     Ok(())
+}
+
+pub(super) fn art_recheck(r: &ProductionRecord, root: &Path, feedback: &Value) -> AppResult<()> {
+    if feedback["status"] != "awaiting-recheck" {
+        return Err(AppError::validation(
+            "AI 尚未提交这条反馈的修复结果，请等待 AI 修改并提供复验说明。",
+        ));
+    }
+    let candidate = feedback["candidateArtifactId"]
+        .as_str()
+        .filter(|id| !id.trim().is_empty())
+        .ok_or_else(|| AppError::validation("AI 尚未提供这条反馈的复验图片，请先补齐修改结果。"))?;
+    visual_candidate(r, root, mutation::text(feedback, "artifactId")?, candidate)
 }
 
 fn feedback_check(
@@ -186,5 +206,15 @@ pub(super) fn actions(r: &ProductionRecord, root: &Path, active: bool) -> Value 
             feedback_actions.insert(id.to_string(), reason(feedback(r, root, Some(id))));
         }
     }
-    json!({"review":review_actions,"approve":approve_actions,"feedback":feedback_actions})
+    let recheck_actions: BTreeMap<_, _> = r
+        .feedback
+        .iter()
+        .filter(|f| f["artifactId"].is_string())
+        .filter_map(|f| {
+            f["id"]
+                .as_str()
+                .map(|id| (id.to_owned(), reason(art_recheck(r, root, f))))
+        })
+        .collect();
+    json!({"review":review_actions,"approve":approve_actions,"feedback":feedback_actions,"recheck":recheck_actions})
 }

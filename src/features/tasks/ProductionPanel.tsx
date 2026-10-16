@@ -14,7 +14,7 @@ import { ProductionTiming } from "./ProductionTiming";
 import { AcceptanceLauncher } from "./AcceptanceLauncher";
 import { VisualGallery } from "./VisualGallery";
 import { FeedbackPanel } from "./FeedbackPanel";
-import { ArtReferences } from "./ArtReferences";
+import { ArtWorkflowPanel } from "./ArtWorkflowPanel";
 import { DocumentReview } from "./DocumentReview";
 import { programmerIssue, activeProgrammerIssues } from "./programmerIssue";
 import { ProgrammerIssueExport } from "./ProgrammerIssueExport";
@@ -105,6 +105,7 @@ export function ProductionPanel({
   const [reviewDocument, setReviewDocument] = useState<ProductionDocument>();
   const [selected, setSelected] = useState(() => remembered(taskId));
   const [visualFeedback, setVisualFeedback] = useState<string>();
+  const [artFeedbackRequest, setArtFeedbackRequest] = useState(0);
   const sequence = useRef(0),
     alive = useRef(true),
     mutating = useRef(false);
@@ -235,6 +236,11 @@ export function ProductionPanel({
       setError(errorMessage(e));
     }
   }
+  function updateArt(next: ProductionView) {
+    if (!alive.current || next.record?.taskId !== taskId) return;
+    ++sequence.current;
+    setView(old => !old?.record || next.record!.revision >= old.record.revision ? next : old);
+  }
   const issueCard = (i: ProductionIssue) => (
     <article className={`production-issue-card issue-${i.status}${programmerIssue(i) && i.status !== "resolved" ? " programmer-issue" : ""}`} key={i.id}>
       {programmerIssue(i,en) && <div className="programmer-issue-label"><TriangleAlert size={18} aria-hidden="true"/>
@@ -303,7 +309,8 @@ export function ProductionPanel({
   return (
     <div className="production-panel">
       {reviewDocument && view && <DocumentReview taskId={taskId} document={reviewDocument} view={view}
-        active={active} busy={busy} error={error} en={en} onClose={() => setReviewDocument(undefined)} onDecide={decide} />}
+        active={active} busy={busy} error={error} en={en} onClose={() => setReviewDocument(undefined)} onDecide={decide}
+        onArtFeedback={() => { setReviewDocument(undefined); select("resources"); setArtFeedbackRequest(v => v + 1); }} />}
       {r && view && (
         <nav className="production-stage-nav" aria-label={s.method}>
           {view.policy.stages.map((item, index) => {
@@ -423,7 +430,7 @@ export function ProductionPanel({
               <ProgrammerIssueExport taskId={taskId} revision={r.revision} issueIds={r.issues.filter(i => i.status !== "resolved" && programmerIssue(i)).map(i => i.id)} en={en}/>
             </div>
           </section>}
-          <section
+          {stage !== "resources" && <section
             className={`production-overview ${openIssues.length ? "has-issues" : ""}`}
           >
             <span className={`production-status status-${states[stage]}`}>
@@ -452,7 +459,7 @@ export function ProductionPanel({
                         ? "Latest saved progress is shown here."
                         : "成果和进展会随制作过程更新。")}
             </small>
-          </section>
+          </section>}
           {view.warnings
             .filter((w) => w.startsWith(stage))
             .map((w) => (
@@ -461,11 +468,11 @@ export function ProductionPanel({
               </div>
             ))}
           {stage === "resources" && (
-            <ArtReferences key={`art-references:${taskId}`} taskId={taskId} record={r} active={active} en={en}
-              onUpdated={next => { ++sequence.current; setView(old => !old?.record || !next.record || next.record.revision >= old.record.revision ? next : old); }}
+            <ArtWorkflowPanel key={`art-workflow:${taskId}`} taskId={taskId} view={view} active={active} en={en}
+              feedbackRequest={artFeedbackRequest} onUpdated={updateArt} onReview={d => { setError(""); setReviewDocument(d); }}
               onContinue={onContinue ? (message, revision) => onContinue(message, undefined, revision) : undefined} />
           )}
-          <section className="production-card">
+          {stage !== "resources" && <section className="production-card">
             <h4>
               <FileText size={17} />
               {en ? "Results and reports" : "阶段成果与报告"}
@@ -565,7 +572,7 @@ export function ProductionPanel({
             >
               {en ? "Open combined stage report" : "打开相关阶段汇总报告"}
             </button>
-          </section>
+          </section>}
           <div className="production-support-grid">
           <section className="production-card">
             <h4>
@@ -733,11 +740,11 @@ export function ProductionPanel({
             </section>
           )}
           {["review", "delivery"].includes(stage) && <AcceptanceLauncher key={`acceptance:${taskId}`} taskId={taskId} active={active} en={en} />}
-          {["resources", "plan", "review", "delivery"].includes(stage) && <VisualGallery taskId={taskId}
+          {["plan", "review", "delivery"].includes(stage) && <VisualGallery taskId={taskId}
             artifacts={(view.artifacts ?? r.artifacts ?? []).filter(a => a.stage === "resources" || a.sourceType === "gameplay" || a.sourceType === "feedback")}
             bindings={r.documents.resources?.artifactBindings ?? r.documents.plan?.artifactBindings} en={en} onFeedback={active ? setVisualFeedback : undefined} feedbackActions={view.actions?.feedback} />}
-          {["resources", "plan", "review", "delivery"].includes(stage) && <FeedbackPanel key={`feedback:${taskId}`} taskId={taskId} record={{...r,artifacts:view.artifacts ?? r.artifacts}} active={active} en={en}
-            actions={view.actions?.feedback} onDismiss={() => setVisualFeedback(undefined)} selectedArtifact={visualFeedback} onUpdated={setView} onContinue={async (message, revision) => onContinue?.(message, undefined, revision)} />}
+          {["plan", "review", "delivery"].includes(stage) && <FeedbackPanel key={`feedback:${taskId}`} taskId={taskId} record={{...r,artifacts:view.artifacts ?? r.artifacts}} active={active} en={en}
+            actions={view.actions?.feedback} recheckActions={view.actions?.recheck} onDismiss={() => setVisualFeedback(undefined)} selectedArtifact={visualFeedback} onUpdated={setView} onContinue={async (message, revision) => onContinue?.(message, undefined, revision)} />}
           {stage === "review" && modern && <section className="production-card"><h4>{en ? "Required checks" : "当前版本必要自测"}</h4>
             {(r.selfTests ?? []).filter(c => c.version === r.currentVersion).map((c, i) => <p key={i}>{c.id} · {statusName(c.status, locale)} · {c.observations}</p>)}
             <p>{en ? "Play, give feedback, and accept the final candidate when satisfied. There is no fixed round count." : "现在可以试玩并反馈；修改后复验，满意后确认交付。没有固定迭代轮数。"}</p></section>}

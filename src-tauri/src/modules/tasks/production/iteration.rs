@@ -200,9 +200,10 @@ impl TaskService {
                     let id = mutation::text(data,"id")?;
                     let index = r.feedback.iter().position(|f| f["id"] == id).ok_or_else(|| AppError::validation("反馈不存在。"))?;
                     let resolving = input.operation == "resolve";
-                    if resolving && let Some(original) = r.feedback[index]["artifactId"].as_str() {
-                        if r.feedback[index]["status"] != "awaiting-recheck" { return Err(AppError::validation("请先等待 AI 提交视觉修改与复验说明。")); }
-                        super::interaction::visual_candidate(r, &root, original, mutation::text(&r.feedback[index], "candidateArtifactId")?)?;
+                    let reopen_reason = data.get("reason").filter(|v| !v.is_null()).map(|v| v.as_str().ok_or_else(|| AppError::validation("请使用文字说明重新处理的原因。"))).transpose()?.unwrap_or("");
+                    if reopen_reason.chars().count() > 2000 { return Err(AppError::validation("重新处理原因请控制在2000字以内。")); }
+                    if resolving && r.feedback[index]["artifactId"].is_string() {
+                        super::interaction::art_recheck(r, &root, &r.feedback[index])?;
                     }
                     if resolving && r.feedback[index]["stage"] == "review" && r.feedback[index]["artifactId"].is_null() {
                         if r.feedback[index]["status"] != "awaiting-recheck" || r.feedback[index]["candidateVersion"] != json!(r.current_version) {
@@ -214,7 +215,8 @@ impl TaskService {
                     let status = if resolving {"resolved"} else {"open"};
                     let at = now();
                     r.feedback[index]["status"] = json!(status); r.feedback[index]["updatedAt"] = json!(at);
-                    r.feedback[index]["history"].as_array_mut().unwrap().push(json!({"actor":"user","status":status,"at":at,"version":r.current_version}));
+                    if !resolving { r.feedback[index]["reopenReason"] = json!(reopen_reason); }
+                    r.feedback[index]["history"].as_array_mut().unwrap().push(json!({"actor":"user","status":status,"at":at,"version":r.current_version,"reason":reopen_reason}));
                     if !resolving && r.feedback[index]["artifactId"].is_string() {
                         let stage = if super::interaction::art_approval(r) {"resources"} else {"plan"};
                         for id in ["resources", "plan", "implementation", "review", "delivery", "closeout"].iter().skip_while(|id| **id != stage) { r.stages.insert((*id).into(), "not-started".into()); }

@@ -8,6 +8,7 @@ import type { AttentionTarget } from "../../shared/notifications";
 import { useTaskAttention } from "../../shared/useTaskAttention";
 import { ProgrammerIssueExport } from "./ProgrammerIssueExport";
 import { programmerIssue } from "./programmerIssue";
+import { isArtFeedback } from "./artWorkflow";
 
 export function TaskGuidance({ taskId, active, control, workflow, en = false, onStage, onTerminal, onReview, onPendingChange }: {
   taskId: string; active: boolean; control?: TaskControlState; workflow?: TerminalWorkflowSnapshot; en?: boolean;
@@ -31,6 +32,7 @@ export function TaskGuidance({ taskId, active, control, workflow, en = false, on
     return () => { alive = false; window.clearInterval(timer); window.removeEventListener("abya:control-changed", refresh); };
   }, [taskId]);
   const model = taskGuidanceState(taskId, active, view, control, workflow, en, view ? attention : undefined);
+  const artPending = model.action === "review" && model.stage === "resources" ? (view?.record?.feedback ?? []).filter(f => isArtFeedback(f) && f.status !== "resolved").length : 0;
   const { questions, reviews, terminal } = model.pending;
   useEffect(() => { onPendingChange?.({taskId, questions, reviews, terminal}); }, [taskId, questions, reviews, terminal, onPendingChange]);
   const previousKey = useRef<string | undefined>(undefined);
@@ -43,6 +45,7 @@ export function TaskGuidance({ taskId, active, control, workflow, en = false, on
     return () => window.clearTimeout(timer);
   }, [model.key, model.attention]);
   function act() {
+    if (artPending) { onStage("resources"); return; }
     if (model.action === "question") window.dispatchEvent(new CustomEvent("abya:open-intake", {detail:{taskId,groupId:model.groupId}}));
     else if (model.action === "review") {
       const document = view?.record?.documents[model.reviewKind!];
@@ -61,11 +64,11 @@ export function TaskGuidance({ taskId, active, control, workflow, en = false, on
       <div className="guidance-copy"><div className="guidance-eyebrow">
         <strong>{model.tone === "programmer" ? (en ? "Programmer action required" : "需要程序处理") : model.attention ? (en ? "Your action is needed" : "需要你的操作") : model.tone === "waiting" ? (en ? "No action needed" : "当前无需操作") : (en ? "Task status" : "任务状态")}</strong>
         {model.stageLabel && <span>{model.stageLabel}</span>}
-      </div><h2>{model.title}</h2><p>{model.instruction}</p></div>
+      </div><h2>{artPending ? (en ? "Art confirmation needs feedback rechecks" : "美术确认前，还需处理修改反馈") : model.title}</h2><p>{artPending ? (en ? `${artPending} open feedback items. Follow the art workspace guidance before approving.` : `有 ${artPending} 条反馈未关闭，请按美术协作区的引导处理后再确认。`) : model.instruction}</p></div>
     </div>
     <div className="guidance-action">
       {model.destination && <span className="guidance-destination"><MapPin size={15} aria-hidden="true" />{model.destination}</span>}
-      {model.action !== "none" && <button className={model.attention ? "guidance-primary" : "guidance-secondary"} onClick={act}>{model.button}<ArrowRight size={17} aria-hidden="true" /></button>}
+      {model.action !== "none" && <button className={model.attention ? "guidance-primary" : "guidance-secondary"} onClick={act}>{artPending ? (en ? "Open art workspace" : "前往美术协作区") : model.button}<ArrowRight size={17} aria-hidden="true" /></button>}
       {model.tone === "programmer" && view?.record?.taskId === taskId && <ProgrammerIssueExport taskId={taskId} revision={view.record.revision} issueIds={view.record.issues.filter(i => i.status !== "resolved" && programmerIssue(i)).map(i => i.id)} en={en}/>}
     </div>
     <div className="guidance-detail"><Info size={15} aria-hidden="true" /><span>{model.detail}</span>
