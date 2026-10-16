@@ -1,5 +1,13 @@
 # Release Skill
 
+## Runtime instance discovery (2026-10-16)
+Default/Validation builds use runtime-instance-discovery-20261016. Ship the
+canonical AbyaPB Tools/AbyaCli discovery module and its tests. Deduplicate exact
+registrations; resolve remaining candidates with bounded authenticated status
+reads and matching PID, project and managed desktop launch identity. Keep two
+verified live endpoints ambiguous. Four-process fixtures prove CLI routing only,
+not Unity gameplay. Run the full portable checks and preserve CLI-to-dev ordering.
+
 ## Programmer issue Markdown export (2026-10-15)
 Default/Validation builds use programmer-issue-export-20261015. Validate single and
 aggregate exports, missing evidence and literal Markdown content, saved-path/reveal

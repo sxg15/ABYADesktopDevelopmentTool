@@ -1,4 +1,4 @@
-> 此目录是桌面随包快照。这里的 npm test 运行 12 项运行时/桌面契约测试；包含 Unity 源码边界的全部 26 项测试在 AbyaPB/Tools/AbyaCli 中运行。
+> 此目录是桌面随包快照。这里的 npm test 运行运行时、实例发现与桌面契约测试；包含 Unity 源码边界和构建流程的完整测试在 AbyaPB/Tools/AbyaCli 中运行。
 
 # ABYA CLI（开发预览）
 
@@ -22,6 +22,10 @@ node ./bin/abya.mjs capability describe runtime_get_status --json
 的 `--project` 对应构建的 `*_Data` 路径。连接已知本机实例时也可传入
 `--endpoint http://127.0.0.1:<port>`，并通过当前进程环境变量
 `ABYA_CLI_TOKEN` 提供令牌，不在命令行参数中传令牌。
+
+完全相同的注册记录会去重；多个候选端点会进行限时、带认证的只读状态核验，
+匹配 PID、项目和托管桌面实例身份后排除失效记录。多个有效端点仍报告歧义。
+此过程不删除登记文件，也不执行或重试玩法写入。
 
 实例登记保存在当前 Windows 用户的
 `%LOCALAPPDATA%\AbyaPB\Cli\instances\`，含临时访问凭证；不要分享或

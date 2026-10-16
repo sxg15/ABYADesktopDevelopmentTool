@@ -26,7 +26,7 @@ test('--json emits machine-readable failures even during parsing', async () => {
   assert.equal(JSON.parse(lines[0]).errorCode, 'invalid_request');
 });
 
-test('instance discovery requires an unambiguous live process', async t => {
+test('instance discovery deduplicates identical registrations', async t => {
   const folder = await mkdtemp(path.join(os.tmpdir(), 'abya-cli-test-'));
   t.after(() => rm(folder, { recursive: true, force: true }));
   const descriptor = {
@@ -38,7 +38,7 @@ test('instance discovery requires an unambiguous live process', async t => {
   assert.equal((await findInstance({ project: descriptor.projectPath }, env)).token,
     'test-token');
   await writeFile(path.join(folder, 'two.json'), JSON.stringify(descriptor));
-  await assert.rejects(findInstance({}, env), /Multiple instances/);
+  assert.equal((await findInstance({}, env)).endpoint, descriptor.endpoint);
   await assert.rejects(findInstance({ project: '/other' }, env), /No matching/);
 });
 

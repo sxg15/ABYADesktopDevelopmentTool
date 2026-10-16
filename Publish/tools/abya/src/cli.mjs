@@ -1,4 +1,5 @@
 import { runBuild } from './build-command.mjs';
+import { liveCandidates } from './instance-discovery.mjs';
 import { randomUUID } from 'node:crypto';
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -70,19 +71,27 @@ export async function findInstance(flags, env = process.env) {
     if (error.code === 'ENOENT') files = [];
     else throw error;
   }
-  const instances = [];
+  const descriptors = new Map();
   for (const file of files.filter(name => name.endsWith('.json'))) {
     try {
       const data = JSON.parse(await readFile(path.join(directory, file), 'utf8'));
-      if (!data.token || !data.processId || !data.projectPath ||
+      if (typeof data.token !== 'string' || !data.token ||
+          !Number.isSafeInteger(data.processId) || data.processId <= 0 ||
+          typeof data.projectPath !== 'string' || !data.projectPath ||
           new URL(data.endpoint).hostname !== '127.0.0.1' || new URL(data.endpoint).protocol !== 'http:') continue;
       if (flags.instance && String(data.processId) !== flags.instance) continue;
       if (flags.project && path.resolve(data.projectPath).toLowerCase() !==
           path.resolve(flags.project).toLowerCase()) continue;
       process.kill(data.processId, 0);
-      instances.push(data);
+      data.endpoint = new URL(data.endpoint).origin;
+      const key = JSON.stringify([data.processId, data.endpoint, data.token,
+        path.resolve(data.projectPath).toLowerCase()]);
+      descriptors.set(key, data);
     } catch { /* Ignore stale or incomplete instance descriptors. */ }
   }
+  let instances = [...descriptors.values()];
+  if (instances.length > 1)
+    instances = await liveCandidates(instances, env, request);
   if (instances.length === 0)
     throw new CliError('instance_not_found', 'No matching ABYA instance is running.');
   if (instances.length > 1)

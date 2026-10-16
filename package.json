@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "vitest run src && node --test tools/abya/test/cli.test.mjs tools/abya/test/desktop-contract.test.mjs scripts/portable-package.test.mjs",
+    "test": "vitest run src && node --test tools/abya/test/cli.test.mjs tools/abya/test/desktop-contract.test.mjs tools/abya/test/instance-discovery.test.mjs tools/abya/test/four-processes.test.mjs scripts/portable-package.test.mjs",
     "check:portable": "node scripts/portable-package.mjs --require-tracked",
     "check:skills": "node scripts/check-module-skills.mjs && node scripts/sync-game-workflow.mjs --check && node --test scripts/import-task-template.check.mjs scripts/bot-workflow.check.mjs scripts/game-workflow.check.mjs",
     "sync:workflow": "node scripts/sync-game-workflow.mjs",

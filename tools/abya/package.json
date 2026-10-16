@@ -10,6 +10,6 @@
     "abya": "./bin/abya.mjs"
   },
   "scripts": {
-    "test": "node --test test/cli.test.mjs test/desktop-contract.test.mjs"
+    "test": "node --test test/cli.test.mjs test/desktop-contract.test.mjs test/instance-discovery.test.mjs test/four-processes.test.mjs"
   }
 }

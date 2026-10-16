@@ -33,6 +33,14 @@ read_artifact canonicalizes both the task runtime artifact root and requested fi
 
 The shared process budget allows eight concurrent runtime CLI calls. Stopping a terminal requests cancellation for its active session. Release builds require bundled CLI and Node files and never fall back to the developer source tree.
 
+Bundled CLI discovery deduplicates identical registration records. Multiple remaining
+candidates are checked using authenticated status reads, four at a time with a
+1.5-second per-host deadline. PID, project and ABYA_CLI_DESKTOP_INSTANCE_ID must
+match. Stale or foreign endpoints are excluded; multiple verified endpoints still
+fail with ambiguous_instance. Discovery neither deletes registrations nor invokes
+gameplay capabilities. Runtime ID is not the CLI selector. Four independent process
+fixtures cover PID routing even when legacy Runtime IDs are identical.
+
 ## Task acceptance orchestration
 
 start_acceptance resolves TaskService's fingerprinted version specification, launches a visible single-player or Host/Client group through InstanceService, and rechecks every seat after joining.
