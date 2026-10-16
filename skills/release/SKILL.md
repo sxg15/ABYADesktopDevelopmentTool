@@ -1,6 +1,10 @@
 # Release Skill
 
 ## Game art design workflow 2.2 (2026-10-16)
+Content-only design-prompt refinements may reuse the already verified executable when
+Rust/React/policy contracts are unchanged: validate Skills/provider parity, copy complete
+canonical provider resources into the candidate and regenerate/verify its inventory.
+Keep embedded executable hashes/build identity unchanged and preserve pinned task upgrades.
 This user-requested change develops on 美术优化 after integrating origin/CLI and dev.
 Publish the verified feature commit, integrate it into CLI then dev using normal merges,
 verify remote ancestry and leave the requested 美术优化 branch checked out.

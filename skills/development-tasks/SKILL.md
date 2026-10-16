@@ -1,6 +1,12 @@
 # Development Tasks Skill
 
 ## Game art traceability and library (2026-10-16)
+The complete planner-supplied design prompt is distilled into structural-exploration
+and anti-default-audit references: full new/redesign work compares three genuinely
+different structures, derives five domain prototypes/product decisions and records
+grayscale/logo/platform/container/genericity checks. Local fixes retain scoped behavior.
+Existing direction fields and confirmation documents hold this rationale; visual
+self-test observations hold actual rendering audits. Counts never prove design quality.
 Workflow 2.2 enables artDesignVersion=1 only for new/explicitly upgraded tasks.
 ArtDesign keeps planner input sources, stable quoted requirements, source reviews,
 reference analyses, direction, design coverage, runtime comparisons, case drafts and uses.

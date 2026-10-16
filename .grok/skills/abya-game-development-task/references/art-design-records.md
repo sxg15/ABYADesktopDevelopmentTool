@@ -29,6 +29,9 @@ quote/sourceId/kind 一经登记，AI 不可静默变更；补充解读可以更
 | save-art-realization | requirementId、target、evidenceIds数组、comparison、differences、status:matched/mismatch/blocked；服务绑定当前实际版本与设计摘要 |
 
 来源、要求与周期构成 inputHash；设计记录构成 designHash。摘要由 APP 计算，AI 不提供或伪造它们。
+完整版设计方法映射到现有记录，不新增审批点：tasksAndInformation 保存设计推导与领域到结构关系；representativeScene 保存3个低保真方向、至少3维差异、结构检查和选型；visualRules 保存至少5个产品专属决定及视觉职责；acceptance 保存实际检查方法。
+这些内容同时进入美术确认单，不能只在会话里思考后丢弃。完整设计按数目要求探索，局部/已确认方向明确范围与沿用依据。数量不证明结构质量，不能以凑条目或自评分数冒充设计有效。
+运行后将默认风格、通用性和产品识别审查写入 visual 自测的 observations，并关联实际渲染证据；逐条 realization 引用有关结论，不机械复制整份全局审查。没有人工测试时明确是 AI 自检。
 提交新图后更新关联，不覆盖旧文件。来源变更后逐条复核仍有效要求，再更新 direction/coverage。
 requirements、resources、plan、delivery 仍是原有确认点，没有新增固定确认菜单或固定迭代轮次。
 资源仅复用或无需新增也要说明判断、适配和验收；不为了满足表格新造资产或无关任务。
@@ -48,6 +51,7 @@ requirements、resources、plan、delivery 仍是原有确认点，没有新增�
 
 save-art-case-draft：id、title、artifactIds（1–16个本轮正式成果）、tags数组、context、plannerRequirements、visualRules、decisions、production、applicability、limitations、sources。
 可选 referenceIds 保存与本案例有关且允许保留的原始参考；参考与成果合计最多16个，并分别标注。sources 写明其来源/使用范围；参考不能代替正式成果或实机证据。
+decisions 同时保留“领域原型如何形成结构、其他方向为何淘汰、哪个专属决定经过实际验证”；让后续任务借鉴方法和适用边界，不只继承配色与外形。
 可选 parentCaseId/parentVersion 创建已有案例的修订草稿；必须基于该案例最新版本。
 草稿描述满意成果的具体范围，不包含无关聊天、账号或机器路径。来源与许可范围写清楚，不能推定可跨项目复制原参考素材。
 APP 让策划查看草稿及图片，填写满意范围后收录；AI 无收录、撤回案例、导入或审批 CLI。
