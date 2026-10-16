@@ -498,6 +498,9 @@ fn sync_skill_directory(
 ) -> AppResult<()> {
     let skills_root = workspace.join(llm_directory).join("skills");
     std::fs::create_dir_all(&skills_root)?;
+    // Keep the Windows extended-length prefix for staged copies and the final rename.
+    // Nested portable design references can exceed MAX_PATH in long task workspaces.
+    let skills_root = skills_root.canonicalize()?;
     let workspace_resolved = workspace.canonicalize()?;
     let skills_resolved = skills_root.canonicalize()?;
     if !skills_resolved.starts_with(&workspace_resolved) {
@@ -553,7 +556,11 @@ fn sync_skill_directory(
     }
     if let Err(error) = std::fs::rename(&temporary, &target) {
         let _ = std::fs::remove_dir_all(&temporary);
-        return Err(error.into());
+        return Err(AppError::new(
+            "skillDeployment",
+            "无法安装已复制的 Skill。",
+            format!("{} -> {}: {error}", temporary.display(), target.display()),
+        ));
     }
     Ok(())
 }
@@ -582,14 +589,30 @@ fn discover_managed_skill_source(llm_directory: &str) -> Option<PathBuf> {
 }
 
 fn copy_directory(source: &Path, target: &Path) -> AppResult<()> {
-    std::fs::create_dir_all(target)?;
+    std::fs::create_dir_all(target).map_err(|e| {
+        AppError::new(
+            "skillDeployment",
+            "无法创建 Skill 资源目录。",
+            format!("{}: {e}", target.display()),
+        )
+    })?;
     for entry in std::fs::read_dir(source)? {
         let entry = entry?;
         let destination = target.join(entry.file_name());
         if entry.file_type()?.is_dir() {
             copy_directory(&entry.path(), &destination)?;
         } else {
-            std::fs::copy(entry.path(), destination)?;
+            std::fs::copy(entry.path(), &destination).map_err(|e| {
+                AppError::new(
+                    "skillDeployment",
+                    "无法复制 Skill 资源。",
+                    format!(
+                        "{} -> {}: {e}",
+                        entry.path().display(),
+                        destination.display()
+                    ),
+                )
+            })?;
         }
     }
     Ok(())
@@ -733,7 +756,10 @@ mod tests {
         "scripts/bot-evidence-checks.mjs",
     ];
 
-    const PRODUCTION_RESOURCES: [&str; 12] = [
+    const PRODUCTION_RESOURCES: [&str; 15] = [
+        "references/art-design-records.md",
+        "references/game-art-design/SKILL.md",
+        "references/game-art-design/references/product-interface-design/SKILL.md",
         "references/production-stages.md",
         "references/production-records.md",
         "references/runtime-authoring.md",

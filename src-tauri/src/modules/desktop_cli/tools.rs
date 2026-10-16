@@ -533,6 +533,21 @@ impl DesktopToolDispatcher {
                     .tasks
                     .production_update(decode(arguments)?)?,
             ),
+            "development_production_art_library_list" => serialize(
+                self.dependencies
+                    .tasks
+                    .art_library_list(arguments["query"].as_str().unwrap_or(""), false)?,
+            ),
+            "development_production_art_library_get" => {
+                let id = arguments["caseId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("caseId is required."))?;
+                let version = arguments["version"]
+                    .as_u64()
+                    .and_then(|v| u32::try_from(v).ok())
+                    .ok_or_else(|| AppError::validation("version is required."))?;
+                serialize(self.dependencies.tasks.art_library_get(id, version)?)
+            }
             "development_production_report" => {
                 let id = arguments["taskId"]
                     .as_str()

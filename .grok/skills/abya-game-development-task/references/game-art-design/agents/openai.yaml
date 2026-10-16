@@ -1,0 +1,4 @@
+interface:
+  display_name: "游戏美术设计与还原"
+  short_description: "从策划原话与玩法推导游戏美术，解析多参考并逐项验证设计还原"
+  default_prompt: "使用 $game-art-design，核对策划要求与风格参考，为当前游戏设计可实现的美术方案并验证实机还原。"

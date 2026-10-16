@@ -280,6 +280,42 @@ fn read_production_media(
 }
 
 #[tauri::command(async)]
+fn list_art_cases(
+    query: String,
+    history: bool,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state.tasks.art_library_list(&query, history)
+}
+
+#[tauri::command(async)]
+fn read_art_case(
+    id: String,
+    version: u32,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state.tasks.art_library_get(&id, version)
+}
+
+#[tauri::command(async)]
+fn read_art_case_media(
+    id: String,
+    version: u32,
+    index: usize,
+    state: State<'_, AppState>,
+) -> AppResult<String> {
+    state.tasks.art_library_media(&id, version, index)
+}
+
+#[tauri::command(async)]
+fn mutate_art_library(
+    input: ProductionMutation,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    state.tasks.art_library_action(input)
+}
+
+#[tauri::command(async)]
 fn submit_production_feedback(
     input: ProductionMutation,
     state: State<'_, AppState>,
@@ -442,7 +478,12 @@ fn open_production_artifact(
 ) -> AppResult<()> {
     use tauri_plugin_opener::OpenerExt;
     let path = state.tasks.production_artifact_path(&task_id, &path)?;
-    if reveal.unwrap_or(false) {
+    if reveal.unwrap_or(false)
+        || std::path::Path::new(&path)
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
+    {
         return app
             .opener()
             .reveal_item_in_dir(path)
@@ -1090,6 +1131,10 @@ pub fn run() {
             get_task_acceptance,
             read_production_media,
             submit_production_feedback,
+            list_art_cases,
+            read_art_case,
+            read_art_case_media,
+            mutate_art_library,
             update_task_production,
             answer_task_questions,
             continue_intake_questions,

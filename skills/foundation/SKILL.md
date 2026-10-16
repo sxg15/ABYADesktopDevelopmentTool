@@ -1,5 +1,13 @@
 # Foundation Skill
 
+## Art design contracts (2026-10-16)
+Additive art_library_cases stores immutable versioned curated case bodies and separately
+managed availability, without a task foreign-key cascade. The tasks module owns all
+case/domain rules and checked media snapshots. Production DTOs add defaulted artDesign,
+document artDesignHash and optional view artDesignStatus; legacy records remain readable.
+Shared artDesign adapters expose typed Tauri list/read/media/user-only library actions.
+Validate database creation/reopen, legacy JSON and task-deletion independence.
+
 ProductionView.actions adds optional recheck reasons keyed by visual feedback ID.
 Empty reason means the current candidate is eligible for user recheck; submission
 still revalidates task revision and candidate/files in TaskService. No new command,

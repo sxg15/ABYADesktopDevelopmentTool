@@ -1,5 +1,10 @@
 # LLM Maintenance Contract
 
+Task-specific branch exception (user request, 2026-10-16): game art workflow and
+reference-library work develops on 美术优化, created from synchronized CLI/dev.
+After verification, push this feature branch and integrate into CLI then dev under
+the normal non-destructive release policy; leave 美术优化 checked out for follow-up.
+
 Release branch policy (user clarification, 2026-10-15): all development happens
 on CLI. Before editing, inspect the working tree, fetch origin/CLI and origin/dev,
 switch to CLI, and integrate both latest remote branches into CLI. Preserve local

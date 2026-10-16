@@ -6,6 +6,8 @@ use std::collections::BTreeMap;
 #[serde(rename_all = "camelCase")]
 pub struct ProductionRecord {
     #[serde(default)]
+    pub art_design: ArtDesign,
+    #[serde(default)]
     pub acceptance_config: Value,
     #[serde(default)]
     pub acceptance_sessions: Vec<Value>,
@@ -97,6 +99,8 @@ pub struct AnswerRevision {
 #[serde(rename_all = "camelCase")]
 pub struct Document {
     #[serde(default)]
+    pub art_design_hash: Option<String>,
+    #[serde(default)]
     pub art_scope: Option<String>,
     #[serde(default)]
     pub artifact_bindings: BTreeMap<String, String>,
@@ -109,6 +113,22 @@ pub struct Document {
     pub content: String,
     pub game_version: Option<String>,
     pub submitted_at: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ArtDesign {
+    pub sources: Vec<Value>,
+    pub requirements: Vec<Value>,
+    pub source_reviews: Vec<Value>,
+    pub reference_analyses: Vec<Value>,
+    pub direction: Value,
+    pub coverage: Vec<Value>,
+    pub realizations: Vec<Value>,
+    pub case_drafts: Vec<Value>,
+    pub case_uses: Vec<Value>,
+    pub planner_notes: Vec<Value>,
+    pub conversation_inputs: Vec<Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -156,6 +176,7 @@ pub struct SkillEntry {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProductionView {
+    pub art_design_status: Value,
     pub actions: Value,
     pub stage_statuses: BTreeMap<String, String>,
     pub artifacts: Vec<Value>,

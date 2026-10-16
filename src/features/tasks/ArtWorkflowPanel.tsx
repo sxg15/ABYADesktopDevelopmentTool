@@ -4,6 +4,8 @@ import { Modal } from "../../app/Modal";
 import { productionApi, type ProductionDocument, type ProductionView } from "../../shared/production";
 import { errorMessage } from "../../shared/api";
 import { ArtReferences } from "./ArtReferences";
+import { ArtTracePanel } from "./ArtTracePanel";
+import { ArtLibraryPanel } from "./ArtLibraryPanel";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { VisualGallery } from "./VisualGallery";
 import { artDocument, artRecheckReason, artVisuals, isArtFeedback } from "./artWorkflow";
@@ -15,7 +17,8 @@ export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, 
   onContinue?: (message: string, revision: number) => Promise<void>; feedbackRequest?: number;
 }) {
   const r = view.record!;
-  const [pane, setPane] = useState<"proposal"|"feedback">("proposal");
+  const [pane, setPane] = useState<"proposal"|"feedback"|"requirements">("proposal");
+  const [library, setLibrary] = useState(false);
   const [references, setReferences] = useState(false), [error, setError] = useState("");
   const [selectedArtifact, setSelectedArtifact] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -47,7 +50,8 @@ export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, 
   const feedbackTarget = current.find(a => view.actions?.feedback[a.id] === "");
   return <section className="production-card art-workflow" aria-label={en ? "Art collaboration" : "美术方案协作区"}>
     <header className="art-workflow-heading"><div><Palette size={24}/><h4>{en ? "Art proposal · review together" : "美术方案 · 统一确认"}</h4></div>
-      <button className="secondary-button" onClick={() => setReferences(true)}><ImagePlus size={16}/>{en ? "References (optional)" : "补充参考（可选）"} · {referenceCount}</button></header>
+      <div className="art-inline-actions"><button className="secondary-button" onClick={() => setReferences(true)}><ImagePlus size={16}/>{en ? "References (optional)" : "补充参考（可选）"} · {referenceCount}</button>
+        <button className="secondary-button" onClick={() => setLibrary(true)}>{en ? "Art design library" : "美术设计库"}</button></div></header>
     <ol className="art-workflow-steps" aria-label={en ? "Art workflow" : "美术确认步骤"}>
       <li><ImagePlus size={17}/><span>{en ? "1 · References (optional)" : "1 · 补充参考（可选）"}</span></li>
       <li><Palette size={17}/><span>{en ? "2 · Read latest proposal" : "2 · 查看最新方案"}</span></li>
@@ -60,10 +64,14 @@ export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, 
         : document && <button className={active && canReview && !approved ? "primary-button" : "secondary-button"} onClick={() => onReview(document)}>{canReview && active && !approved ? (en ? "Review and confirm" : "审查并确认本版") : (en ? "Read recorded document" : "阅读已登记文档")}<ArrowRight size={16}/></button>}
     </div>
     <div className="art-workflow-tabs" role="tablist" aria-label={en ? "Art workspace panels" : "美术协作内容"}>
+      <button role="tab" aria-selected={pane === "requirements"} onClick={() => setPane("requirements")}>{en ? "Requirements and references" : "要求与参考"} · {r.artDesign?.requirements.filter(q=>!q.withdrawn).length??0}</button>
       <button role="tab" aria-selected={pane === "proposal"} onClick={() => setPane("proposal")}><Palette size={16}/>{en ? "Current proposal" : "本版方案"}</button>
       <button role="tab" aria-selected={pane === "feedback"} onClick={() => setPane("feedback")}><ClipboardCheck size={16}/>{en ? "Changes and rechecks" : "修改与复验"} · {pending.length}</button>
     </div>
     {error && <p role="alert">{error}</p>}
+    <div hidden={pane !== "requirements"} role="tabpanel" aria-label={en ? "Requirements and references" : "要求与参考"}>
+      <ArtTracePanel key={taskId} taskId={taskId} view={view} active={active} en={en} onUpdated={onUpdated} onContinue={onContinue}/>
+    </div>
     {pane === "proposal" && <div className="art-current-proposal" role="tabpanel" aria-label={en ? "Current proposal" : "本版方案"}>
       {document ? <div className="art-document-strip"><FileText size={21}/><div><strong>{en ? `Review document · v${document.revision}` : `本版确认单 · 第 ${document.revision} 版`}</strong>
         <small>{approved ? (en ? "Confirmed" : "已确认") : canReview ? (en ? "Submitted for review" : "已提交审查") : (en ? "Recorded document; see guidance above" : "已登记文档，处理方式见上方引导")}</small></div>
@@ -93,5 +101,6 @@ export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, 
       <ArtReferences taskId={taskId} record={record} active={active} en={en} onUpdated={onUpdated} onContinue={onContinue}/>
       <div className="modal-actions"><button className="secondary-button" onClick={() => setReferences(false)}>{en ? "Back to art workflow" : "返回美术协作区"}</button></div>
     </Modal>}
+    {library&&<ArtLibraryPanel key={taskId} taskId={taskId} view={view} active={active} en={en} onClose={()=>setLibrary(false)} onContinue={onContinue}/>}
   </section>;
 }

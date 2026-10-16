@@ -84,6 +84,15 @@ impl Database {
                     body TEXT NOT NULL,
                     PRIMARY KEY(task_id, revision)
                 );
+                CREATE TABLE IF NOT EXISTS art_library_cases (
+                    id TEXT NOT NULL,
+                    version INTEGER NOT NULL,
+                    status TEXT NOT NULL,
+                    body TEXT NOT NULL,
+                    source_key TEXT NOT NULL UNIQUE,
+                    created_at TEXT NOT NULL,
+                    PRIMARY KEY(id, version)
+                );
                 CREATE TABLE IF NOT EXISTS task_notification_receipts (
                     event_key TEXT PRIMARY KEY,
                     task_id TEXT NOT NULL REFERENCES development_tasks(id) ON DELETE CASCADE,

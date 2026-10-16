@@ -1,4 +1,9 @@
 mod acceptance;
+mod art_design;
+mod art_design_sources;
+mod art_design_validation;
+mod art_library;
+mod art_library_package;
 mod art_references;
 pub use acceptance::AcceptanceSpec;
 mod catalog;
@@ -84,7 +89,8 @@ impl TaskService {
             stages.insert(stage["id"].as_str().unwrap().into(), "not-started".into());
         }
         stages.insert("requirements".into(), "in-progress".into());
-        let record = ProductionRecord {
+        let mut record = ProductionRecord {
+            art_design: ArtDesign::default(),
             schema: "abya.game-development-workflow/v1".into(),
             task_id: task.id.clone(),
             revision: 1,
@@ -124,6 +130,7 @@ impl TaskService {
             legacy_record: legacy,
             updated_at: now(),
         };
+        art_design_sources::refresh(&mut record, &task);
         self.database.with_connection(|c| {
             if load(c, &task.id)?.is_some() {
                 return Err(conflict());
@@ -251,7 +258,11 @@ impl TaskService {
         root: &Path,
         attention_only: bool,
     ) -> AppResult<ProductionView> {
-        let record = self.database.with_connection(|c| load(c, id))?;
+        let mut record = self.database.with_connection(|c| load(c, id))?;
+        let task = self.database.with_connection(|c| read_task(c, id))?;
+        if let Some(r) = &mut record {
+            art_design_sources::refresh(r, &task);
+        }
         let warnings = record
             .as_ref()
             .filter(|_| !attention_only)
@@ -292,6 +303,8 @@ impl TaskService {
             .map(|r| interaction::actions(r, root, active))
             .unwrap_or_else(|| json!({}));
         Ok(ProductionView {
+            art_design_status: record.as_ref().map(|r| json!({"enabled":art_design_sources::enabled(r),
+                "inputHash":art_design_sources::inputs_hash(r),"designHash":art_design_sources::design_hash(r)})).unwrap_or(Value::Null),
             actions,
             stage_statuses,
             artifacts,
@@ -306,6 +319,9 @@ impl TaskService {
     pub fn production_update(&self, input: ProductionMutation) -> AppResult<ProductionView> {
         if input.operation == "initialize" {
             return self.production_initialize(input);
+        }
+        if ["inspect-art-case", "use-art-case"].contains(&input.operation.as_str()) {
+            return self.art_library_use(input);
         }
         let root = self.production_workspace(&input.task_id)?;
         self.production_commit(&input.task_id, input.expected_revision, |record| {
@@ -328,7 +344,8 @@ impl TaskService {
         change: impl FnOnce(&mut ProductionRecord) -> AppResult<()>,
     ) -> AppResult<()> {
         self.database.with_connection(|c| {
-            if read_task(c, id)?.status != TaskStatus::Active {
+            let task = read_task(c, id)?;
+            if task.status != TaskStatus::Active {
                 return Err(AppError::validation("仅进行中的任务可以修改制作记录。"));
             }
             let mut record =
@@ -337,7 +354,35 @@ impl TaskService {
                 return Err(conflict());
             }
             let previous = serde_json::to_string(&record)?;
+            let previous_case_ids: Vec<_> = record
+                .art_design
+                .case_uses
+                .iter()
+                .map(|c| c["id"].clone())
+                .collect();
+            art_design_sources::refresh(&mut record, &task);
             change(&mut record)?;
+            art_design_sources::refresh(&mut record, &task);
+            for case in record
+                .art_design
+                .case_uses
+                .iter()
+                .filter(|case| !previous_case_ids.contains(&case["id"]))
+            {
+                let id = mutation::text(case, "caseId")?;
+                let version = case["version"]
+                    .as_u64()
+                    .and_then(|v| u32::try_from(v).ok())
+                    .ok_or_else(conflict)?;
+                let current = art_library::read(c, id, version)?;
+                if current["status"] != "accepted"
+                    || case["caseHash"] != art_design_sources::hash(&current)
+                {
+                    return Err(AppError::validation(
+                        "案例在引用提交前已变化或撤回，请重新选择。",
+                    ));
+                }
+            }
             workspace::record_transition(&mut record, &previous)?;
             record.revision += 1;
             record.updated_at = now();

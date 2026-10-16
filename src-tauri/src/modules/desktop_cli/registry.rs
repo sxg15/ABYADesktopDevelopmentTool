@@ -90,7 +90,7 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             "Update production workflow",
             object_schema(
                 json!({"taskId":{"type":"string"},"expectedRevision":{"type":"integer","minimum":0},
-                "operation":{"type":"string","enum":["initialize","configure","configure-acceptance","register-visual","save-self-test","update-feedback","reuse-evidence","publish-questions","register-artifact","update-stage","register-approved-template","submit-document","register-evidence","set-milestone","save-issue","save-round","complete-stage","save-knowledge"]},
+                "operation":{"type":"string","enum":["initialize","configure","configure-acceptance","register-visual","save-self-test","update-feedback","reuse-evidence","publish-questions","register-artifact","update-stage","register-approved-template","submit-document","register-evidence","set-milestone","save-issue","save-round","complete-stage","save-knowledge","record-art-input","save-art-requirement","review-art-source","analyze-art-reference","save-art-direction","save-art-coverage","save-art-realization","save-art-case-draft","inspect-art-case","use-art-case"]},
                 "data":{"type":"object","description":"initialize: questionMode; submit-document: kind/path; register-evidence: id/path/kind/captureType/reviewed/description; set-milestone: name/evidenceIds; save-issue: id/kind/status/stage/description/fix/recheck/evidenceIds/resumeWhen; save-round: number/close/checks/questions/evidenceIds; complete-stage: stage/summary/checks; save-knowledge: entries; configure: questionMode/playerMode/taskTemplate/artTemplate; publish-questions: id/title/questions (id/text/options/optional), binding supplied by Desktop. Record saved-file versions through production version."}}),
                 &["expectedRevision", "operation", "data"],
             ),
@@ -102,6 +102,26 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             "Generate production reports",
             object_schema(json!({"taskId":{"type":"string"}}), &[]),
             reversible_write(),
+        ),
+        tool(
+            "development_production_art_library_list",
+            "Search curated art cases by gameplay, platform, camera, interaction and style keywords. Inspect images and applicability before borrowing. Accepted latest cases only; no model training or task approval.",
+            "Search art design library",
+            object_schema(
+                json!({"taskId":{"type":"string"},"query":{"type":"string","maxLength":200}}),
+                &[],
+            ),
+            read_only(),
+        ),
+        tool(
+            "development_production_art_library_get",
+            "Read a fixed art case and its provenance. Use production update/inspect-art-case to materialize candidate media, actually inspect images, then use-art-case to record borrow/adapt/avoid. Cases never override planner requirements.",
+            "Read art design case",
+            object_schema(
+                json!({"taskId":{"type":"string"},"caseId":{"type":"string"},"version":{"type":"integer","minimum":1,"maximum":4294967295u64}}),
+                &["caseId", "version"],
+            ),
+            read_only(),
         ),
         tool(
             "development_skill_list",

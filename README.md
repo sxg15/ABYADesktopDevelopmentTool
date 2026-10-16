@@ -1,5 +1,8 @@
 # ABYA Desktop Development Tool
 
+游戏美术流程 2.2 增加原话与设计/实机追踪、美术设计库和案例复用。
+使用方式、旧任务升级与案例导入导出见 [美术设计流程](docs/ART_DESIGN_WORKFLOW.md)。
+
 ## 策划直接使用（Windows x64）
 
 1. 切换并拉取仓库的 **dev** 分支，获取已同步的源码与完整运行包。

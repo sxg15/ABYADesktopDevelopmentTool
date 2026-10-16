@@ -1,8 +1,18 @@
 use super::*;
+mod art_design_tests;
+mod art_library_tests;
 mod art_references_tests;
 mod issue_export_tests;
 use crate::foundation::{AppPaths, Database};
 use crate::modules::tasks::TaskInput;
+
+// Existing fixtures intentionally exercise pinned pre-2.2 contracts.
+fn prior_policy() -> Value {
+    let mut p = policy();
+    p.as_object_mut().unwrap().remove("artDesignVersion");
+    p["workflowVersion"] = json!("2.1.0");
+    p
+}
 
 struct Fixture {
     service: TaskService,
@@ -696,7 +706,7 @@ fn modern_fixture() -> Fixture {
     f.initial();
     f.service
         .production_commit(&f.id, f.record().revision, |r| {
-            r.policy = policy();
+            r.policy = prior_policy();
             r.workflow_version = "2.0.0".into();
             r.policy["stages"][1]["approval"] = Value::Null;
             r.policy["workflowVersion"] = json!("2.0.0");
@@ -732,7 +742,7 @@ fn art_confirmation_is_required_and_no_art_scope_is_explicitly_reviewed() {
     let f = Fixture::new();
     f.service
         .production_commit(&f.id, f.record().revision, |r| {
-            r.policy = policy();
+            r.policy = prior_policy();
             r.workflow_version = "2.1.0".into();
             Ok(())
         })
@@ -787,7 +797,7 @@ fn feedback_rejects_empty_stage_drafts_missing_files_and_replaced_visual_version
     let f = Fixture::new();
     f.service
         .production_commit(&f.id, f.record().revision, |r| {
-            r.policy = policy();
+            r.policy = prior_policy();
             Ok(())
         })
         .unwrap();
@@ -990,7 +1000,7 @@ fn visual_plan_binds_exact_files_and_preserves_prior_versions() {
     let f = Fixture::new();
     f.service
         .production_commit(&f.id, f.record().revision, |r| {
-            r.policy = policy();
+            r.policy = prior_policy();
             Ok(())
         })
         .unwrap();
@@ -1050,7 +1060,7 @@ fn explicit_upgrade_preserves_approvals_and_round_history_without_inventing_self
     let old = f.record();
     let view = f.service.production_upgrade(&f.id, old.revision).unwrap();
     let r = view.record.unwrap();
-    assert_eq!(r.workflow_version, "2.1.0");
+    assert_eq!(r.workflow_version, "2.2.0");
     assert_eq!(r.cycle, old.cycle);
     assert_eq!(r.approvals.len(), old.approvals.len());
     assert_eq!(r.documents["plan"].sha256, old.documents["plan"].sha256);

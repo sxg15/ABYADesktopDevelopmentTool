@@ -1,5 +1,20 @@
 # Desktop CLI
 
+## Art design workflow 2.2 (2026-10-16)
+Authenticated `art list` / `art get` map to development_production_art_library_list/get,
+use the caller's task binding and expose only curated library data. Latest accepted
+search is read-only; fixed-version read preserves imported/withdrawn provenance.
+production update supports record-art-input, save-art-requirement, review-art-source,
+analyze-art-reference, save-art-direction, save-art-coverage, save-art-realization,
+save-art-case-draft, inspect-art-case and use-art-case. Exact contracts are in bundled art-design-records.
+inspect-art-case copies candidate references into the task before visual inspection;
+it does not adopt a case, invalidate a confirmed design or approve anything.
+use-art-case copies verified frozen media into the task and records borrow/adapt/avoid;
+it does not approve a design. Collection, requirement withdrawal, library import/export
+and recommendation withdrawal remain APP-only. Never authenticate AI-transcribed text
+as a human source or allow CLI operations to alter existing planner requirement scope.
+Validate both provider contexts, stale revisions, schema discovery and no approval bypass.
+
 ## Game client settings composition (2026-10-14)
 
 SettingsView composes game-clients' GitHubAccountSettings and source/installation picker.

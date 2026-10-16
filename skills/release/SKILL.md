@@ -1,5 +1,26 @@
 # Release Skill
 
+## Game art design workflow 2.2 (2026-10-16)
+This user-requested change develops on 美术优化 after integrating origin/CLI and dev.
+Publish the verified feature commit, integrate it into CLI then dev using normal merges,
+verify remote ancestry and leave the requested 美术优化 branch checked out.
+Default/Validation builds use game-art-design-library-20261016. Ship the nested portable
+game-art-design Skill and its complete generic product-interface-design reference tree
+in both providers; sync:workflow recursively maintains parity. New tasks use 2.2;
+existing task workspaces remain pinned until explicit backed-up upgrade.
+Validate source/requirement/visual/version consistency, human-only case collection,
+case ZIP import/export, frozen references, legacy contracts and real component UI.
+Use scripts/art-design-preview.html only with isolated fixtures, then run standard
+checks and full package integrity/relocation validation. Do not seed the library with
+fabricated planner approvals or claim fixtures prove generated game art quality.
+scripts/test-art-design-native.mjs init/run uses a fresh marker-owned data directory,
+disabled notifications, ports 43921/43922 and WebView CDP 9246. Set ABYA_TEST_MODE=1,
+the returned LOCALAPPDATA/WebView paths and ABYA_TEST_PLAYWRIGHT to an installed
+Playwright package; preserve the real USERPROFILE. Before any mutation the runner
+asserts get_app_paths matches its isolated data and the task list is empty. It
+validates real Tauri source gates, explicit synthetic collection, media/export and
+case use, without models or game launches. Stop only the owned fixture process.
+
 ## Unified art workflow (2026-10-16)
 Default/Validation use art-collaboration-flow-20261016. Test the real unified resource
 hub with old/current images, references, unfinished/stale/ready feedback and approval.

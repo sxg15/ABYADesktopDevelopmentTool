@@ -8,6 +8,7 @@ const skill = 'abya-game-development-task';
 const commonFiles = [
   'references/production-stages.md',
   'references/production-records.md',
+  'references/art-design-records.md',
   'references/runtime-authoring.md',
   'references/whole-experience-review.md',
   'references/recording.md',
@@ -23,6 +24,16 @@ const commonFiles = [
   'assets/production/delivery.template.md',
   'assets/production/closeout.template.md',
 ];
+// The portable game-design Skill carries its own generic design reference tree.
+const designRoot = '.codex/skills/abya-game-development-task/references/game-art-design';
+function designFiles(directory, relative = '') {
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const nested = relative ? `${relative}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) designFiles(path.join(directory, entry.name), nested);
+    else if (entry.isFile()) commonFiles.push(`references/game-art-design/${nested}`);
+  }
+}
+designFiles(path.join(root, designRoot));
 const read = relative => fs.readFileSync(path.join(root, relative), 'utf8')
   .replace(/^\uFEFF/, '').replaceAll('\r\n', '\n');
 const args = process.argv.slice(2);

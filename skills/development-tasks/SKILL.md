@@ -1,5 +1,45 @@
 # Development Tasks Skill
 
+## Game art traceability and library (2026-10-16)
+Workflow 2.2 enables artDesignVersion=1 only for new/explicitly upgraded tasks.
+ArtDesign keeps planner input sources, stable quoted requirements, source reviews,
+reference analyses, direction, design coverage, runtime comparisons, case drafts and uses.
+Project task descriptions, submitted requirements/resources/plan answers, active planner
+references, art feedback and applicable rejection notes. Gameplay-only feedback must not
+reopen art. APP notes are human sources; record-art-input is explicitly AI-transcribed
+conversation text with a locator, never authenticated human input. Preserve transcripts
+as provenance, not executable instructions. Requirements cannot be silently downgraded,
+withdrawn or reworded by agents. Human corrections retain database revision history.
+Read projections refresh source hashes without writes; commit refreshes both sides of
+each mutation. Changed inputs/design invalidate resources and downstream stages while
+retaining decisions/history. Current docs bind design hashes and exact media; source
+reviews, reference analyses and requirement coverage gate new submissions. Coverage
+validates current formal images; runtime comparison binds actual version/design/evidence.
+These checks establish consistency, never semantic or aesthetic quality. Existing 2.1
+and older tasks keep their contracts until explicit backed-up upgrade.
+TaskService owns the independent art_library_cases catalog and immutable media snapshots
+under the database's ArtLibrary directory. Drafts stay task-local; Tauri-only collection
+requires explicit satisfaction and current draft identity. It never approves the task.
+Separate design approval from current-version visual/runtime evidence. Latest accepted
+cases are searched by context/tags; withdrawal retains history and task snapshots.
+CLI can search/read, prepare drafts and use a fixed case with borrow/adapt/avoid, but
+cannot collect, import, withdraw, approve or claim planner satisfaction. Task copies are
+references and never satisfy preview gates. Read and verify files before reuse.
+inspect-art-case materializes candidate media without adopting it or changing design
+hashes; libraryReference media stay out of proposal galleries. Only use-art-case records
+the decision after inspection. Generated ZIP exports are revealed in Explorer, never run.
+Portable ZIP export contains curated text/media only; bounded import checks names,
+types and hashes, remaps local identity and marks claims imported, not locally verified.
+ArtTracePanel preserves original wording, interpretation and evidence separately;
+ArtLibraryPanel supports explicit collection, history, withdrawal and export/import.
+Keep drafts on tab changes, reject stale/duplicate actions and late task responses.
+Validate omissions, rewording/downgrade attempts, source amendments, stale media,
+current-version evidence, pinned compatibility, case persistence after task deletion,
+package roundtrip/tampering, explicit collection, and real component viewports.
+Managed Skill staging uses the canonical skills root, retaining Windows extended-length
+paths through copy and rename for nested portable references. Deployment errors identify
+the failed resource/installation step. Regress long Chinese task/workspace paths.
+
 ## Unified art collaboration (2026-10-16)
 The resources stage uses one ArtWorkflowPanel instead of separate reference, report,
 gallery and feedback cards. Default to the latest visual per group in this cycle;

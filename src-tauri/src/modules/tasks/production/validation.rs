@@ -111,6 +111,9 @@ pub(super) fn version(r: &ProductionRecord) -> AppResult<&str> {
 }
 
 pub(super) fn document_gate(r: &ProductionRecord, root: &Path, kind: &str) -> AppResult<()> {
+    if kind == "delivery" {
+        super::art_design_validation::gate(r, root, kind, None)?;
+    }
     clear_issues_for(r, kind, "submit-document")?;
     if r.question_groups
         .iter()

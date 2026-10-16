@@ -62,6 +62,23 @@ task_production_history are authoritative; artifacts/game-development JSON/HTML
 are exports, distinct from terminal workflow projections. Revision-checked mutations
 manage documents, evidence, issues, versions and rounds. Only a Tauri user action
 can decide document approvals (requirements/resources/plan/delivery in 2.1); CLI cannot approve or fabricate acceptance.
+
+Workflow 2.2 adds defaulted artDesign records and version-bound design hashes.
+TaskService projects planner sources from task descriptions, submitted relevant answers,
+references and art feedback; terminal quotations remain explicitly AI-transcribed.
+Stable quoted requirements map to current design media and actual-version runtime
+evidence. New inputs invalidate affected art approvals without replacing history;
+existing tasks remain pinned until explicit upgrade. The same projected sources appear
+in exported reports. Material checks do not establish aesthetic or semantic quality.
+
+The tasks module also owns art_library_cases and checked media snapshots under the
+database's ArtLibrary directory, independent of task deletion. AI prepares drafts;
+Tauri-only collection records explicit planner satisfaction, separately from runtime
+verification. CLI searches/reads curated cases and materializes fixed versions into
+task-local reference files with borrow/adapt/avoid decisions. Imported packages retain
+external provenance; no import, collection or approval operation is exposed to agents.
+Portable game-art-design and its generic interface-design reference ship inside the
+managed task Skill, with complete provider parity and Windows long-path-safe deployment.
 Stage gates check current document hashes, actual saved archive/Player fingerprints,
 evidence files and issue closure. Pinned 1.x tasks retain round/question gates; workflow 2.0 uses current-version self-tests and user-closed feedback. They validate declared
 materials, not gameplay quality or user experience. Scoped tasks remain opt-in.

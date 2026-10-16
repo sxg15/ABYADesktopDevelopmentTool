@@ -1,6 +1,6 @@
 use super::{ProductionRecord, ROOT, TaskService, files, load};
 use crate::foundation::{AppError, AppResult};
-use serde_json::Value;
+use serde_json::{Value, json};
 
 fn escape(text: &str) -> String {
     text.replace('&', "&amp;")
@@ -97,6 +97,9 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
             .collect(),
     );
     if phase == "plan" {
+        if super::art_design_sources::enabled(r) {
+            body += &art_design_report(r);
+        }
         body += "<h2>美术需求确认单</h2>";
         body += &document(r, "resources");
         body += "<h2>资源与视觉预览</h2>";
@@ -370,6 +373,74 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
     )
 }
 
+fn art_design_report(r: &ProductionRecord) -> String {
+    let a = &r.art_design;
+    let mut body = String::from(
+        "<h2>策划原话、设计落实与实机对照</h2><p>关联记录仅证明材料可追溯，不代表语义满足、美术优秀或策划已验收。</p>",
+    );
+    body += &rows(
+        &[
+            "要求",
+            "原话",
+            "解读/范围",
+            "设计位置",
+            "实机对象/对照",
+            "状态",
+        ],
+        a.requirements
+            .iter()
+            .map(|q| {
+                let c = a.coverage.iter().find(|x| x["id"] == q["id"]);
+                let real = a.realizations.iter().find(|x| x["id"] == q["id"]);
+                vec![
+                    q["id"].as_str().unwrap_or("").into(),
+                    q["quote"].as_str().unwrap_or("").into(),
+                    format!(
+                        "{} / {}",
+                        q["interpretation"].as_str().unwrap_or(""),
+                        q["scope"].as_str().unwrap_or("")
+                    ),
+                    c.and_then(|c| c["designLocation"].as_str())
+                        .unwrap_or("未关联")
+                        .into(),
+                    real.map(|x| {
+                        format!(
+                            "{} / {} / {}",
+                            x["target"].as_str().unwrap_or(""),
+                            x["comparison"].as_str().unwrap_or(""),
+                            x["differences"].as_str().unwrap_or("")
+                        )
+                    })
+                    .unwrap_or("未验证".into()),
+                    if q["withdrawn"] == true {
+                        format!("策划撤回：{}", q["withdrawReason"].as_str().unwrap_or(""))
+                    } else {
+                        q["kind"].as_str().unwrap_or("").into()
+                    },
+                ]
+            })
+            .collect(),
+    );
+    body += "<h3>当前原始输入</h3>";
+    for s in &a.sources {
+        body += &format!(
+            "<details><summary>{}</summary><pre>{}</pre></details>",
+            cell(&s["id"]),
+            cell(&s["text"])
+        );
+    }
+    body += "<h3>设计依据与参考解析</h3>";
+    body += &format!(
+        "<pre>{}</pre>",
+        escape(
+            &serde_json::to_string_pretty(&json!({"direction":a.direction,
+        "references":a.reference_analyses,"sourceReviews":a.source_reviews,"caseUses":a.case_uses}))
+            .unwrap_or_default()
+        )
+    );
+    body
+}
+
 fn phase_for(stage: &str) -> &str {
     match stage {
         "requirements" | "resources" | "plan" => "plan",
@@ -411,10 +482,14 @@ impl TaskService {
 
     pub fn production_export(&self, id: &str) -> AppResult<Vec<String>> {
         let root = self.production_workspace(id)?;
-        let record = self
+        let mut record = self
             .database
             .with_connection(|c| load(c, id))?
             .ok_or_else(|| AppError::validation("尚未启用制作流程。"))?;
+        let task = self
+            .database
+            .with_connection(|c| super::super::read_task(c, id))?;
+        super::art_design_sources::refresh(&mut record, &task);
         let warnings = super::validation::warnings(&record, &root);
         files::write_file(
             &root,
@@ -455,11 +530,18 @@ impl TaskService {
             .to_lowercase();
         if ![
             "md", "json", "txt", "log", "png", "jpg", "jpeg", "webp", "mp4", "mkv", "webm", "avi",
-            "html",
+            "html", "zip",
         ]
         .contains(&extension.as_str())
         {
             return Err(AppError::validation("仅可打开任务文档、媒体和生成报告。"));
+        }
+        if extension == "zip"
+            && !relative
+                .replace('\\', "/")
+                .starts_with("artifacts/art-library-exports/")
+        {
+            return Err(AppError::validation("仅可定位本任务导出的美术案例包。"));
         }
         if extension == "html" {
             let allowed = ["plan", "review", "closeout"]

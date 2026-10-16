@@ -19,6 +19,8 @@ fn command(group: &str, action: &str) -> Option<&'static str> {
         ("production", "version") => "development_production_version",
         ("skill", "list") => "development_skill_list",
         ("skill", "read") => "development_skill_read",
+        ("art", "list") => "development_production_art_library_list",
+        ("art", "get") => "development_production_art_library_get",
         ("recording", "tools") => "game_recording_tools",
         ("recording", "start") => "game_recording_start",
         ("recording", "get") => "game_recording_get",
@@ -70,7 +72,7 @@ fn execute() -> Result<Value, Box<dyn std::error::Error>> {
             "--help" => {
                 return Ok(json!({"success":true,"data":{
                 "usage":"abya-desktop <group> <action> --input-file FILE|- --json",
-                "groups":["doctor","capabilities","task","production","skill","recording","conversation","instance","runtime","archive","log"],
+                "groups":["doctor","capabilities","task","production","skill","art","recording","conversation","instance","runtime","archive","log"],
                 "context":"ABYA_DEVELOPMENT_TASK_ID, ABYA_DEVELOPMENT_CONVERSATION_ID, ABYA_DEVELOPMENT_PROVIDER",
                 "schemas":"abya-desktop capabilities --json"}}));
             }

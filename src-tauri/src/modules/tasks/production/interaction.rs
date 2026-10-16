@@ -8,6 +8,7 @@ pub(super) fn art_approval(r: &ProductionRecord) -> bool {
 
 pub(super) fn approve(r: &ProductionRecord, root: &Path, kind: &str) -> AppResult<()> {
     review(r, root, kind)?;
+    super::art_design_validation::gate(r, root, kind, None)?;
     if kind == "resources"
         && r.feedback
             .iter()
@@ -51,6 +52,14 @@ pub(super) fn review(r: &ProductionRecord, root: &Path, kind: &str) -> AppResult
 }
 
 pub(super) fn current_art(r: &ProductionRecord, root: &Path, d: &Document) -> AppResult<()> {
+    if super::art_design_sources::enabled(r)
+        && ["resources", "plan", "delivery"].contains(&d.kind.as_str())
+        && d.art_design_hash.as_deref() != Some(&super::art_design_sources::design_hash(r))
+    {
+        return Err(AppError::validation(
+            "策划要求、参考或设计记录已变化，请更新并重新提交本版方案。",
+        ));
+    }
     if art_approval(r)
         && ["resources", "plan"].contains(&d.kind.as_str())
         && d.artifact_bindings != visuals::bindings(r, root)?

@@ -30,6 +30,10 @@ Only public task/provider/foundation interfaces. Platform libraries stay in foun
 
 ## Validation
 
+The ProductionView fixture includes nullable artDesignStatus for workflow 2.2.
+Attention continues to use existing projected action gates; it never approves source
+coverage, collects cases or treats a design hash as planner satisfaction.
+
 Run npm run check, Rust fmt, Clippy and tests. Regressions cover baseline, foreground/disabled/OS-disabled suppression, all tasks, draft/restart dedupe, versioned identities, unknown delivery, read failures, deletion, stale clicks, unobservable Grok and UI lifecycle races. Isolated portable acceptance checks name/icon, foreground/minimized/other-task behavior, toast and Action Center clicks, unchanged decisions, spaces/Chinese paths and test identity cleanup. Never synthesize waits in real AI sessions.
 
 ## LLM Maintenance Rule

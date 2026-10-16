@@ -1,5 +1,15 @@
 # 桌面 CLI 命令契约
 
+## 美术设计与案例库（2.2）
+
+`art list` 接受 `{ "query": "desktop inventory" }`，检索最新有效案例；先按玩法、平台、镜头与输入筛选，再看风格。
+`art get` 接受 `{ "caseId": "…", "version": 1 }`，读取固定版本与来源说明。两者均使用已认证任务会话；参数通过 `--input-file` 提交。
+先用 `production update/inspect-art-case`（caseId/version）将候选媒体复制到任务内并实际查看；检查候选不等于采纳，不改变当前设计摘要。
+`production update/use-art-case` 接受 caseId/version/borrow/adapt/avoid，将经校验的案例媒体复制到任务内并冻结引用；历史认可不代表本任务已通过。
+新增操作包括 record-art-input、save-art-requirement、review-art-source、analyze-art-reference、save-art-direction、save-art-coverage、save-art-realization、save-art-case-draft。
+准确字段、版本与限制见随包 `references/art-design-records.md`。原话、来源与设计摘要由服务校验；缺失/过期的关联阻止提交。
+策划认可、要求撤回、案例收录/撤回/导入导出仅由 APP 用户操作，CLI 不提供代理入口。
+
 桌面应用继续拥有所有业务状态。托管任务中的 abya-desktop 通过认证的本机命名管道调用应用服务，
 由桌面使用现有 abya CLI 操作游戏。没有旧协议适配器或自动降级。
 

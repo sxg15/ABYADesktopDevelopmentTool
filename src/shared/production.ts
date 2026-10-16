@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { ArtDesign } from "./artDesign";
 export interface AcceptanceSession {
   id?: string; version?: string; status: string; message?: string; instanceIds?: string[];
   startedAt?: string; updatedAt?: string; cleanupFailures?: string[];
@@ -42,6 +43,7 @@ export interface ProductionRound {
   evidenceIds?: string[]; startedAt?: string; closedAt?: string;
 }
 export interface ProductionRecord {
+  artDesign?: ArtDesign;
   acceptanceConfig?: { version: string; seats: number; requireUi: boolean; requiredTools: string[] } | null;
   acceptanceSessions?: AcceptanceSession[];
   feedback?: ProductionFeedback[];
@@ -61,6 +63,7 @@ export interface ProductionRecord {
   skillPins: TaskSkill[]; legacyRecord?: string; updatedAt: string;
 }
 export interface ProductionView {
+  artDesignStatus?: {enabled:boolean;inputHash:string;designHash:string};
   actions?: { review: Record<string,string>; approve: Record<string,string>; feedback: Record<string,string>; recheck?: Record<string,string> };
   stageStatuses?: Record<string,string>;
   artifacts?: ProductionArtifact[];
@@ -129,6 +132,7 @@ export interface IntakeQuestionGroup {
 }
 
 export interface ProductionArtifact {
+  libraryReference?: boolean;
   plannerReference?: boolean;
   mediaType?: string; sourceType?: string; roles?: string[]; visualVersion?: string; groupId?: string;
   sha256?: string; temporary?: boolean; source?: string;

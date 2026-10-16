@@ -2,7 +2,8 @@ import type { ProductionArtifact, ProductionFeedback, ProductionRecord, Producti
 
 export const isArtFeedback = (f: ProductionFeedback) => f.stage === "resources" || !!f.artifactId;
 export function artVisuals(record: ProductionRecord, artifacts = record.artifacts ?? []) {
-  const all = artifacts.filter(a => a.stage === "resources" && a.mediaType && !a.plannerReference && a.sourceType !== "feedback");
+  const all = artifacts.filter(a => a.stage === "resources" && a.mediaType && !a.plannerReference && !a.libraryReference && a.sourceType !== "feedback"
+    && (a.sourceType !== "reference" || !record.artDesign?.caseUses.some(c=>c.paths.includes(a.path))));
   const groups = new Map<string, ProductionArtifact>();
   for (const a of all) if (a.cycle === undefined || a.cycle === record.cycle) groups.set(a.groupId || a.id, a);
   const current = [...groups.values()];

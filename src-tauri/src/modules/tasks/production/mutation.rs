@@ -36,6 +36,14 @@ pub(super) fn apply(
         return Err(AppError::validation("data 必须为对象。"));
     }
     match operation {
+        "record-art-input"
+        | "save-art-requirement"
+        | "review-art-source"
+        | "analyze-art-reference"
+        | "save-art-direction"
+        | "save-art-coverage"
+        | "save-art-realization"
+        | "save-art-case-draft" => super::art_design::apply(r, root, operation, data, false),
         "configure-acceptance" => super::acceptance::configure(r, data),
         "register-visual" => super::visuals::register(r, root, data),
         "save-self-test" => super::iteration::save_test(r, root, data),
@@ -198,6 +206,10 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
     } else {
         Default::default()
     };
+    super::art_design_validation::gate(r, root, kind, art_scope.as_deref())?;
+    let art_design_hash = (super::art_design_sources::enabled(r)
+        && ["resources", "plan", "delivery"].contains(&kind))
+    .then(|| super::art_design_sources::design_hash(r));
     let mut template_choices = std::collections::BTreeMap::new();
     for key in ["taskTemplate", "artTemplate"] {
         if let Some(id) = data[key].as_str() {
@@ -230,6 +242,7 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
     }
     if r.documents.get(kind).is_some_and(|d| {
         d.sha256 == sha256
+            && d.art_design_hash == art_design_hash
             && d.art_scope == art_scope
             && d.artifact_bindings == artifact_bindings
             && d.template_choices == template_choices
@@ -264,6 +277,7 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
     r.documents.insert(
         kind.into(),
         Document {
+            art_design_hash,
             art_scope,
             artifact_bindings,
             template_choices,
@@ -638,6 +652,7 @@ fn complete(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
             r.current_stage = "plan".into();
         }
         "implementation" => {
+            super::art_design_validation::gate(r, root, "implementation", None)?;
             if super::iteration::enabled(r) {
                 validation::approved(r, root, "requirements")?;
                 validation::approved(r, root, "plan")?;

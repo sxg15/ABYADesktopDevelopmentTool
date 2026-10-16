@@ -158,6 +158,8 @@ impl TaskService {
         self.production_commit(&input.task_id,input.expected_revision,|r| {
             let data = &input.data;
             match input.operation.as_str() {
+                "add-art-note" | "withdraw-art-requirement" | "save-art-requirement" =>
+                    super::art_design::apply(r, &root, &input.operation, data, true)?,
                 "attach-art-reference" => super::art_references::attach(r, &root, data)?,
                 "remove-art-reference" => super::art_references::withdraw(r, data)?,
                 "attach" => {

@@ -147,6 +147,7 @@ pub(super) fn bindings_for(
     for a in &r.artifacts {
         if a["stage"] == "resources"
             && a["plannerReference"] != true
+            && (a["sourceType"] != "reference" || !super::art_design_sources::enabled(r))
             && a["mediaType"].is_string()
             && a["sourceType"] != "gameplay"
             && a["sourceType"] != "feedback"

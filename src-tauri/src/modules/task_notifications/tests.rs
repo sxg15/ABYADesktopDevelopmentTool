@@ -281,6 +281,7 @@ fn projection_prioritizes_human_actions_and_keys_versions_not_timestamps() {
     let mut r = f.record("a", "q");
     r["documents"] = json!({"requirements":{"kind":"requirements","revision":2,"path":"a.md","sha256":"hash","content":"draft","submittedAt":"now"}});
     let mut view = ProductionView {
+        art_design_status: serde_json::Value::Null,
         actions: json!({"review":{"requirements":""}}),
         stage_statuses: Default::default(),
         artifacts: vec![],
