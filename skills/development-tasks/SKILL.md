@@ -1,5 +1,13 @@
 # Development Tasks Skill
 
+## Task description disclosure (2026-10-16)
+TasksView keys TaskDescription by task identity. Default collapsed, remember explicit
+expand/collapse per task in sessionStorage; polling and tab switches must not reset
+it. Storage failure only disables remembering. Full text/workspace are selectable
+plain text inside the expanded region; collapse is presentation only, never a task
+mutation. Validate long/newline text, task isolation, remount persistence, keyboard
+access and wide/narrow/short-window layout without remounting provider terminals.
+
 ## Programmer Markdown export (2026-10-15)
 The red task guide and Lua-stage banner export all unresolved programmer issues;
 individual source/build issue cards also export a single issue, including resolved

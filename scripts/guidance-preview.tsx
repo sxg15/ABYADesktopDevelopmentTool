@@ -13,7 +13,13 @@ const view:ProductionView={policy:{workflowVersion:"2.1.0",iterationMode:"human-
   record:{taskId:"fixture",revision:2,workflowVersion:"2.1.0",questionMode:"ask",currentStage:"resources",currentRound:0,cycle:1,stages:{requirements:"passed",resources:"awaiting-confirmation",plan:"not-started",implementation:"not-started",review:"not-started",delivery:"not-started",closeout:"not-started"},documents:{resources:doc},approvals:[],versionDetails:{},issues:[],evidence:[],rounds:[],milestones:{},knowledge:[],skillPins:[],updatedAt:"now"}};
 let state="review";
 const snapshot=()=>{const next=structuredClone(view);if(state!=="review"){next.actions!.review.resources="尚未提交审查";next.record!.stages.resources="in-progress";}return next;};
-api.listTasks=async()=>[{id:"fixture",title:"舒尔特方格 · 联机竞技",description:"浏览器隔离测试数据",workspacePath:"D:/Fixtures/舒尔特方格",status:"active",createdAt:"2026-10-12T10:00:00Z",updatedAt:"2026-10-12T10:00:00Z"}];
+const longDescription = new URLSearchParams(location.search).has("long-description");
+const description = longDescription ? ["一句话概述：30 秒内在旋转的毛线团上插针，插得越多分越高，总分最高者获胜。",
+  "3.1 基础规则：人数 2–20 人；时长 30 秒。每成功插 1 针得 5 分，插针失败不扣分。",
+  "3.2 玩法规则：按下鼠标左键或空格插针。插针判定为球周围 5° 的扇区是否有针；有针则失败，无针则成功。球上的针随球旋转。每秒获得 1 根针，最后 10 秒加速旋转与发针。",
+  ...Array.from({length:5}, (_,i)=>`${i+1}. 美术设计：中间展示游戏区域，右侧显示计分。使用温暖的粉彩纸感配色，毛线团、针和背景保持清晰对比。按键时在插入的位置播放星形粒子特效。设计示意必须与实际游戏效果分别标注。`),
+  "长路径折行验证："+"very-long-reference-name-".repeat(16)].join("\n\n") : "浏览器隔离测试数据";
+api.listTasks=async()=>[{id:"fixture",title:longDescription?"见缝插针":"舒尔特方格 · 联机竞技",description,workspacePath:"D:/Fixtures/舒尔特方格",status:"active",createdAt:"2026-10-12T10:00:00Z",updatedAt:"2026-10-12T10:00:00Z"}];
 api.listInstances=async()=>[];
 terminalApi.availability=async()=>({available:false,reason:"浏览器测试不启动原生终端",workingDirectory:"D:/Fixtures",executablePath:"",version:"fixture"}) as Awaited<ReturnType<typeof terminalApi.availability>>;
 terminalApi.listConversations=async()=>[{id:"original",taskId:"fixture",title:"当前任务原会话",createdAt:"now",updatedAt:"now",nativeSessionId:"fixture-native"}];

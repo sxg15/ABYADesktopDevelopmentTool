@@ -20,6 +20,14 @@ selected client, local fallback and ordinary user folder intact, with zero auth 
 Never launch the sentinel game EXEs. UI update scenarios use game-clients-preview.html
 fixtures update/retained and remain distinct from real GitHub/native installation.
 
+## Task header description (2026-10-16)
+Originally released as task-description-collapse-20261016 and retained in the
+current game-client-update-flow package. Check the real TasksView
+with long descriptions at wide, narrow and short sizes; collapse/expand must preserve
+guidance, task actions and terminal space. Retain runtime instance discovery and all
+prior features. Run normal checks and complete-package validation, then publish CLI
+before synchronizing dev and leave the checkout on CLI.
+
 ## Runtime instance discovery (2026-10-16)
 Default/Validation builds use runtime-instance-discovery-20261016. Ship the
 canonical AbyaPB Tools/AbyaCli discovery module and its tests. Deduplicate exact

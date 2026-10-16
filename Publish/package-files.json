@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "runtime-instance-discovery-20261016",
-  "totalBytes": 317966591,
+  "releaseLabel": "game-client-update-flow-20261016",
+  "totalBytes": 318276001,
   "files": [
     {
       "path": ".codex/README.md",
@@ -760,18 +760,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 24136192,
-      "sha256": "5d6ad6c035d38bf92925683d0ef7bd1cb61eadbeed45ccd364a449bca103d221"
+      "bytes": 24443392,
+      "sha256": "8e32d994b7269f9c7c4ce2d218947d8f31a34ce36816bf9ea8b6288c96caaa51"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 5965824,
-      "sha256": "3f32327cbed84989927a17094ab7750f6bc26b8c73821eeb7de1f8376fe32665"
+      "bytes": 5967872,
+      "sha256": "f821b929367d92ff1b943af07f4fe68483d8b3fd0be5c1c2bcffcd041c8fd0de"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 660,
-      "sha256": "77a43b5bfe42a290113d1383e739234480c7adaca0afe000cb8bc5db3d3a735f"
+      "bytes": 657,
+      "sha256": "1b43750828bace8abaf567e3c7e6bd590b4a89bc40dd18bcb45267882c1ca625"
     },
     {
       "path": "runtime/LICENSE.txt",
@@ -825,8 +825,8 @@
     },
     {
       "path": "tools/abya/src/instance-discovery.mjs",
-      "bytes": 1418,
-      "sha256": "bbb72d41dba978e270573260a2ff21dd8f89147bffec2be88f0cea7e2d213ff2"
+      "bytes": 1447,
+      "sha256": "2cd2fae22dacabab37a92bcd2c129120f405318cc6ba81b6dfe23bd83ad548e2"
     },
     {
       "path": "tools/abya/src/unity-process.mjs",
@@ -860,13 +860,13 @@
     },
     {
       "path": "tools/abya/test/four-processes.test.mjs",
-      "bytes": 2871,
-      "sha256": "dc6b10efedfc566d5aa844a9b229494400c6cd0bee1b3a0d9de541cb609f2676"
+      "bytes": 2930,
+      "sha256": "a1d65065e1b6b4a0f8739e373e87cc2be518200682994fd37f2ff5e1b5b97cab"
     },
     {
       "path": "tools/abya/test/instance-discovery.test.mjs",
-      "bytes": 3499,
-      "sha256": "bb67a4eb50a61d33c1ec1ceef24e8b8018db5b046964bc8405d3d7d17558d4be"
+      "bytes": 3576,
+      "sha256": "9881b4cba502a85645b9726fca665443e2a2831a9cc3de784a46b9f9aa820c81"
     },
     {
       "path": "tools/ffmpeg/runtime/LICENSE.txt",

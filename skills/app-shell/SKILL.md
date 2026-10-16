@@ -1,5 +1,14 @@
 # App Shell Skill
 
+## Collapsible task description (2026-10-16)
+Task headers use a title/actions grid with a full-width description row beneath.
+Do not apply the generic 720px paragraph limit to task descriptions. The disclosure
+defaults closed with a single-line summary; expanded plain text preserves newlines,
+wraps long tokens and exposes the workspace path inside a bounded scroll region.
+Keep the toggle visible outside that region, keyboard accessible with expanded/controls
+state. Short windows must still permit reading expanded text. Preserve guidance,
+tabs and terminal space; other page headers retain their existing text measure.
+
 ## Remote game clients (2026-10-14)
 
 Navigation adds gameClients between archive transfer and logs. The public feature view
