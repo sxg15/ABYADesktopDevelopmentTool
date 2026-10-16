@@ -167,6 +167,7 @@ fn update_settings(
     mut input: PublicSettingsUpdate,
     state: State<'_, AppState>,
 ) -> AppResult<AppSettings> {
+    let _files = foundation::EXECUTABLE_FILES.read();
     state.game_clients.resolve_settings(&mut input)?;
     let settings = state.settings.update_public(input)?;
     state
@@ -1075,6 +1076,9 @@ pub fn run() {
             game_client_commands::game_client_upload,
             game_client_commands::game_client_install,
             game_client_commands::game_client_check_update,
+            game_client_commands::game_client_activate,
+            game_client_commands::game_client_discard_pending,
+            game_client_commands::game_client_maintain,
             get_task_attention,
             get_task_notification_settings,
             set_task_notification_enabled,

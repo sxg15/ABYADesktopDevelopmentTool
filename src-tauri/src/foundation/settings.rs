@@ -86,6 +86,7 @@ struct StoredSettings {
 pub struct SettingsService {
     database: Database,
     default_workspace_root: PathBuf,
+    gate: std::sync::Arc<parking_lot::ReentrantMutex<()>>,
 }
 
 impl SettingsService {
@@ -108,10 +109,12 @@ impl SettingsService {
         Self {
             database,
             default_workspace_root,
+            gate: Default::default(),
         }
     }
 
     pub fn get(&self) -> AppResult<AppSettings> {
+        let _guard = self.gate.lock();
         let stored = self.database.with_connection(|connection| {
             let mut statement =
                 connection.prepare("SELECT value_json FROM settings WHERE key=?1")?;
@@ -179,6 +182,7 @@ impl SettingsService {
     }
 
     pub fn save(&self, settings: &AppSettings) -> AppResult<()> {
+        let _guard = self.gate.lock();
         if settings.desktop_cli_port < 1024 {
             return Err(AppError::validation(
                 "Desktop CLI port must be between 1024 and 65535.",
@@ -229,6 +233,7 @@ impl SettingsService {
     }
 
     pub fn update_public(&self, input: PublicSettingsUpdate) -> AppResult<AppSettings> {
+        let _guard = self.gate.lock();
         let mut settings = self.get()?;
         settings.game_executable_path = input.game_executable_path;
         settings.game_client = input.game_client;
@@ -247,8 +252,24 @@ impl SettingsService {
     }
 
     pub fn regenerate_token(&self) -> AppResult<AppSettings> {
+        let _guard = self.gate.lock();
         let mut settings = self.get()?;
         settings.desktop_cli_token = generate_token();
+        self.save(&settings)?;
+        Ok(settings)
+    }
+
+    /// Caller validates the managed installation; preserve all other freshly read settings.
+    pub fn update_game_client(
+        &self,
+        mut selection: GameClientSelection,
+        executable_path: String,
+    ) -> AppResult<AppSettings> {
+        let _guard = self.gate.lock();
+        let mut settings = self.get()?;
+        selection.local_executable_path = settings.game_client.local_executable_path;
+        settings.game_client = selection;
+        settings.game_executable_path = executable_path;
         self.save(&settings)?;
         Ok(settings)
     }

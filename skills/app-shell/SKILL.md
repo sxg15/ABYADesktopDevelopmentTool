@@ -8,14 +8,20 @@ installation. GitHub browser login, one-time code, remember-login, retry/cancel 
 live only in Settings. Unsigned client management shows its missing-login message and
 Go to settings to sign in action, which focuses the GitHub account section. The manager's
 signed-in account links to the same section. Preserve draft Player selection on auth changes.
-Settings offers local/remote source, installed version/EXE selection, remote
+Settings offers local/remote source, the selected version/EXE, remote
 version download and storage-folder choice. Keep both locales complete, including errors,
 busy/cancellation, empty repository and missing installation states. Distinguish a
 metadata/web-page download response from a size/SHA-256 mismatch. Failed installation
-preserves the selected game and never saves settings. An optional update
-badge appears after startup checks and every 30 minutes for the active remote selection;
-clicking navigates to the suggested Release without changing settings. Downloads do not
-switch versions. Preserve mounted task terminals. Layout reflows at narrow widths and
+preserves the selected game. ClientWorkflowProvider stays above navigation and owns the
+download/EXE-choice/activation dialog. Download and use is a large primary action in a
+highlighted panel before release notes; verified packages activate and save immediately.
+For saved remote mode, startup, focus, sign-in and 30-minute checks open a direct optional
+update dialog with Update now / Not now. Declining suppresses that exact candidate for
+this session; a prominent reminder reopens it. Never auto-download. Ignore stale responses
+after source/selection changes; serialize duplicate actions and require ambiguous ZIP/EXE
+choices. Show why older task-pinned/running/local/inaccessible packages await cleanup.
+Source/local-path/manual settings edits still use Save. Client activation updates the
+client fields without resetting unrelated unsaved settings drafts. Preserve mounted task terminals. Layout reflows at narrow widths and
 long asset names/paths wrap. Validate fixture screenshots separately from real GitHub writes.
 
 ## IME positioning (2026-10-13)

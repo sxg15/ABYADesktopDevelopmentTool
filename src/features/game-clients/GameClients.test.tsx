@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render as renderComponent, screen, waitFor, within } from "@testing-library/react";
 import { GameClientsView } from "./GameClientsView";
 import { GameClientSettings } from "./GameClientSettings";
+import { ClientWorkflowProvider } from "./ClientWorkflow";
 import { GitHubAccountSettings } from "./GitHubAccountSettings";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { SettingsView } from "../settings/SettingsView";
@@ -22,10 +23,15 @@ const release: ClientRelease = { id: 1, tagName: "v1.0", name: "Windows v1.0", b
 const record: ClientInstallation = { id: "installed-1", releaseId: 1, tagName: "v1.0", prerelease: false, publishedAt: "2026-10-14", assetId: 10,
   assetName: "Windows.zip", assetUpdatedAt: "2026-10-14", sha256: "abc", digestVerified: true, directory: "D:\\Clients\\one", executableCandidates: ["Game.exe"], installedAt: "2026-10-14T00:00:00Z" };
 let state: GameClientState;
+let providerSettings: AppSettings;
+const onClientSaved = vi.fn();
+const render = (ui: ReactElement) => renderComponent(<ClientWorkflowProvider settings={providerSettings} t={t} onSaved={onClientSaved} notify={vi.fn()}>{ui}</ClientWorkflowProvider>);
 const authorization = (): LoginAuthorization => ({ id: "attempt", userCode: "ABCD-EFGH", verificationUri: "https://github.com/login/device", expiresAt: new Date(Date.now() + 900_000).toISOString(), pollAfterSeconds: 1 });
 const view = (onOpenSettings = vi.fn()) => render(<GameClientsView t={t} notify={vi.fn()} onOpenSettings={onOpenSettings} />);
 
 beforeEach(() => {
+  onClientSaved.mockReset();
+  providerSettings = { gameExecutablePath: "C:\\Local.exe", gameClient: emptyClientSelection(), workspaceRootPath: "D:\\Work", locale: "zh-CN", desktopCliPort: 47600, gameGatewayPort: 47610, preferredAdapterId: "", lanBroadcastEnabled: true, toolId: "fixture" };
   state = { repository: "sxg15/PlatverseOutput", account: { login: "fixture", canManage: true, remembered: true }, installations: [], defaultStorageRoot: "D:\\Clients", operation };
   vi.spyOn(clientApi, "state").mockImplementation(async () => structuredClone(state));
   vi.spyOn(clientApi, "operation").mockResolvedValue(operation);
@@ -40,6 +46,10 @@ beforeEach(() => {
   vi.spyOn(clientApi, "deleteAsset").mockResolvedValue();
   vi.spyOn(clientApi, "install").mockImplementation(async () => { state.installations = [record]; return record; });
   vi.spyOn(clientApi, "checkUpdate").mockResolvedValue(null);
+  vi.spyOn(clientApi, "maintain").mockResolvedValue({ removed: 0, deferred: [] });
+  vi.spyOn(clientApi, "discardPending").mockResolvedValue();
+  vi.spyOn(clientApi, "activate").mockImplementation(async (installationId, executableRelativePath) => ({ ...providerSettings,
+    gameClient: { ...emptyClientSelection(), source: "remote", installationId, executableRelativePath } }));
   vi.spyOn(api, "updateSettings");
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -164,14 +174,14 @@ it("read-only accounts can install but cannot create, upload, edit or delete", a
   expect((screen.getByRole("button", { name: t("gcInstall") }) as HTMLButtonElement).disabled).toBe(false);
 });
 
-it("installing a release does not save settings or force navigation", async () => {
+it("downloads and activates a release with one prominent action without navigating to settings", async () => {
   const navigate = vi.fn(); view(navigate); await screen.findByText("Test notes");
   fireEvent.click(screen.getByRole("button", { name: t("gcInstall") }));
-  await screen.findByText("v1.0 · Windows.zip");
+  await waitFor(() => expect(onClientSaved).toHaveBeenCalledOnce());
   expect(clientApi.install).toHaveBeenCalledWith(1, 10, "D:\\Clients");
+  expect(clientApi.activate).toHaveBeenCalledWith(record.id, "Game.exe");
+  expect(screen.getByRole("button", { name: t("gcInstall") }).className).toContain("client-download-primary");
   expect(api.updateSettings).not.toHaveBeenCalled(); expect(navigate).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: t("gcUseInstalled") }));
-  expect(navigate).toHaveBeenCalledWith("installed-1");
 });
 
 function SelectionHarness({ initial, preferred }: { initial: GameClientSelection; preferred?: string }) {
@@ -194,11 +204,12 @@ it("keeps the local path while selecting an offline installed remote version and
 
 it("shows a newer version as optional and retains the selected installation", async () => {
   state.installations = [record];
-  vi.mocked(clientApi.checkUpdate).mockResolvedValue({ releaseId: 2, tagName: "v2", currentTag: "v1.0" });
+  providerSettings.gameClient = { ...emptyClientSelection(), source: "remote", installationId: record.id };
+  vi.mocked(clientApi.checkUpdate).mockResolvedValue({ releaseId: 2, tagName: "v2", currentTag: "v1.0", key: "2:20", assets: release.assets, preferredAssetId: 10 });
   render(<SelectionHarness initial={{ ...emptyClientSelection(), source: "remote", installationId: record.id, executableRelativePath: "Game.exe" }} />);
-  await screen.findByRole("option", { name: /v1.0 · Windows.zip/ });
-  fireEvent.click(screen.getByRole("button", { name: t("gcCheckUpdate") }));
-  await screen.findByText(`${t("gcUpdate")}: v2`);
+  await screen.findByRole("dialog", { name: t("gcUpdateTitle") });
+  expect(screen.getByRole("button", { name: t("gcUpdateNow") })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: t("gcLater") }));
   expect(JSON.parse(screen.getByTestId("selection").textContent!).installationId).toBe(record.id);
   expect(clientApi.install).not.toHaveBeenCalled();
 });
@@ -208,7 +219,7 @@ it("shows a non-file download response separately and preserves the selected gam
   vi.mocked(clientApi.install).mockRejectedValue({ code: "clientDownloadResponse" });
   render(<SelectionHarness initial={{ ...emptyClientSelection(), source: "remote", installationId: record.id,
     executableRelativePath: "Game.exe", storageRoot: "D:\\Clients" }} />);
-  await screen.findByRole("option", { name: /v1.0 · Windows.zip/ });
+  await screen.findByText(/当前选择: v1.0 · Windows.zip/);
   await waitFor(() => expect((screen.getByRole("button", { name: t("gcInstall") }) as HTMLButtonElement).disabled).toBe(false));
   const original = screen.getByTestId("selection").textContent;
   fireEvent.click(screen.getByRole("button", { name: t("gcInstall") }));
@@ -229,7 +240,7 @@ it("saves the source, local fallback and remote selection together only on Save"
   vi.spyOn(api, "paths").mockResolvedValue({ dataDir: "D:\\Fixture" } as never);
   vi.mocked(api.updateSettings).mockResolvedValue({ ...settings, gameExecutablePath: "D:\\Clients\\one\\Game.exe" });
   render(<SettingsView settings={settings} locale="zh-CN" t={t} onSaved={vi.fn()} notify={vi.fn()} onManageClients={vi.fn()} preferredInstallationId={record.id} />);
-  await screen.findByLabelText(t("gcExe"));
+  await screen.findByText(/当前选择: v1.0 · Windows.zip/);
   expect(api.updateSettings).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: t("save") }));
   await waitFor(() => expect(api.updateSettings).toHaveBeenCalledWith(expect.objectContaining({

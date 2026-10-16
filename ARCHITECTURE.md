@@ -153,7 +153,13 @@ Browser OAuth uses a registered public client ID with Device Flow. Settings owns
 the manager routes unsigned users there. Native-only device/access/refresh secrets, serialized
 refresh and generation-checked commits prevent late authorization from undoing logout.
 Tauri adapters delegate blocking network/archive work to workers; React never sends
-GitHub requests. New installations are versioned side by side and never replace a
-running or task-pinned Player. Foundation settings retain local/remote source metadata
-and the resolved gameExecutablePath consumed by existing launch workflows. Selection
-is explicit; update checks only suggest a candidate. No MCP/CLI tools are added.
+GitHub requests. A verified download is selected and saved by one explicit user action;
+multiple Players still require an EXE choice. Keep the selected remote package and
+remove only recorded, marker-verified older package directories. Task pins and live
+processes defer cleanup, with visible reasons and periodic retry. TaskService exposes
+read-only current Player pins; InstanceService exposes running executable paths.
+Foundation's executable-file gate coordinates launches/version capture with cleanup.
+Foundation settings retain local/remote source metadata and the resolved
+gameExecutablePath consumed by existing launch workflows. Startup, focus and periodic
+update checks open a dismissible APP dialog; downloading still requires user consent.
+No MCP/CLI tools are added, and task-version pins are never rewritten.

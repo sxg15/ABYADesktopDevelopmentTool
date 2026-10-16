@@ -21,6 +21,7 @@ import { NotificationSettingsPanel } from "../task-notifications/NotificationSet
 import { GameClientSettings } from "../game-clients/GameClientSettings";
 import { GitHubAccountSettings } from "../game-clients/GitHubAccountSettings";
 import { clientError, emptyClientSelection } from "../../shared/gameClients";
+import { useClientWorkflow } from "../game-clients/ClientWorkflow";
 
 export function SettingsView({
   settings,
@@ -41,6 +42,7 @@ export function SettingsView({
   preferredInstallationId?: string;
   focusGitHub?: boolean;
 }) {
+  const clientWorkflow = useClientWorkflow();
   const [gameClient, setGameClient] = useState(emptyClientSelection);
   const [clientBusy, setClientBusy] = useState(false);
   const [accountRevision, setAccountRevision] = useState(0);
@@ -58,12 +60,15 @@ export function SettingsView({
 
   useEffect(() => {
     setGameClient(settings?.gameClient ?? { ...emptyClientSelection(), localExecutablePath: settings?.gameExecutablePath ?? "" });
+  }, [settings?.gameClient, settings?.gameExecutablePath]);
+
+  useEffect(() => {
     setWorkspaceRoot(settings?.workspaceRootPath ?? "");
     setSelectedLocale((settings?.locale as Locale) || locale);
     setGatewayPort(settings?.gameGatewayPort ?? 47610);
     setPreferredAdapterId(settings?.preferredAdapterId ?? "");
     setBroadcastEnabled(settings?.lanBroadcastEnabled ?? true);
-  }, [settings, locale]);
+  }, [settings?.workspaceRootPath, settings?.locale, settings?.gameGatewayPort, settings?.preferredAdapterId, settings?.lanBroadcastEnabled, locale]);
 
   useEffect(() => {
     void refreshState();
@@ -154,7 +159,7 @@ export function SettingsView({
         </button>
       </header>
 
-      <GitHubAccountSettings t={t} focus={focusGitHub} onChanged={() => setAccountRevision(value => value + 1)} />
+      <GitHubAccountSettings t={t} focus={focusGitHub} onChanged={() => { setAccountRevision(value => value + 1); clientWorkflow.refreshUpdates(); }} />
       <GameClientSettings value={gameClient} onChange={setGameClient} t={t} onManage={onManageClients} accountRevision={accountRevision}
         preferredInstallationId={preferredInstallationId} onBusyChange={setClientBusy} />
 

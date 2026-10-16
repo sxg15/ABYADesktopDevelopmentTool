@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { errorMessage } from "./api";
 import type { MessageKey } from "../i18n";
+import type { AppSettings } from "./types";
 
 export interface GameClientSelection {
   source: "local" | "remote";
@@ -27,10 +28,12 @@ export interface GameClientState {
   repository: string; account: GitHubAccount | null; installations: ClientInstallation[];
   defaultStorageRoot: string; operation: ClientOperation;
   authorization?: LoginAuthorization | null;
+  retention?: ClientRetention;
 }
+export interface ClientRetention { removed: number; deferred: Array<{ installationId: string; tagName: string; reason: string }> }
 export interface LoginAuthorization { id: string; userCode: string; verificationUri: string; expiresAt: string; pollAfterSeconds: number }
 export interface LoginPoll { status: "pending" | "authenticated"; authorization: LoginAuthorization | null }
-export interface ClientUpdate { releaseId: number; tagName: string; currentTag: string }
+export interface ClientUpdate { releaseId: number; tagName: string; currentTag: string; key: string; assets: ReleaseAsset[]; preferredAssetId: number | null }
 export interface ReleaseInput { id: number | null; tagName: string; name: string; body: string; draft: boolean; prerelease: boolean }
 
 export const emptyClientSelection = (): GameClientSelection => ({
@@ -52,6 +55,9 @@ export const clientApi = {
   upload: (releaseId: number, path: string) => invoke<ReleaseAsset>("game_client_upload", { releaseId, path }),
   install: (releaseId: number, assetId: number, storageRoot: string) => invoke<ClientInstallation>("game_client_install", { input: { releaseId, assetId, storageRoot } }),
   checkUpdate: () => invoke<ClientUpdate | null>("game_client_check_update"),
+  activate: (installationId: string, executableRelativePath: string) => invoke<AppSettings>("game_client_activate", { installationId, executableRelativePath }),
+  discardPending: (installationId: string) => invoke<void>("game_client_discard_pending", { installationId }),
+  maintain: () => invoke<ClientRetention>("game_client_maintain"),
 };
 
 export function clientError(error: unknown, t: (key: MessageKey) => string): string {
@@ -63,6 +69,7 @@ export function clientError(error: unknown, t: (key: MessageKey) => string): str
     clientForbidden: "gcErrorPermission", clientNotFound: "gcErrorNotFound", clientRateLimit: "gcErrorRate",
     clientNetwork: "gcErrorNetwork", clientServer: "gcErrorNetwork", clientResponse: "gcErrorNetwork",
     clientBusy: "gcErrorBusy", clientCancelled: "gcCancelled", clientImmutable: "gcErrorImmutable",
+    clientPendingSelection: "gcPendingSelection",
     clientDuplicateAsset: "gcErrorDuplicate", clientConflict: "gcErrorConflict", clientReleaseInput: "gcErrorInput",
     clientAssetMissing: "gcErrorMissing", clientInstallationMissing: "gcErrorInstallation", clientChooseExecutable: "gcChooseExe",
     clientPackageFormat: "gcErrorPackage", clientNoExecutable: "gcErrorNoExe", clientIntegrity: "gcErrorIntegrity",

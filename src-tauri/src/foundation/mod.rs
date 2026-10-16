@@ -19,3 +19,7 @@ pub mod clipboard;
 pub mod notifications;
 pub mod secrets;
 pub mod single_instance;
+
+/// Coordinate managed executable reads with removal of managed client packages.
+/// Take a read guard for launch/version capture, a write guard for client maintenance.
+pub static EXECUTABLE_FILES: parking_lot::RwLock<()> = parking_lot::RwLock::new(());

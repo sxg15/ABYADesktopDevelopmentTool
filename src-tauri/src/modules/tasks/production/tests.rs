@@ -928,6 +928,20 @@ fn acceptance_uses_recorded_player_and_rejects_changed_files() {
 }
 
 #[test]
+fn client_retention_reads_current_task_pins_without_changing_records_or_workspaces() {
+    let f = modern_fixture();
+    let before = serde_json::to_value(f.record()).unwrap();
+    let expected = before["versionDetails"]["playerSource"].as_str().unwrap();
+    assert_eq!(f.service.pinned_player_paths().unwrap(), vec![expected]);
+    f.service.set_status(&f.id, TaskStatus::Archived).unwrap();
+    assert_eq!(f.service.pinned_player_paths().unwrap(), vec![expected]);
+    assert_eq!(serde_json::to_value(f.record()).unwrap(), before);
+    f.service.delete(&f.id).unwrap();
+    assert!(f.service.pinned_player_paths().unwrap().is_empty());
+    assert!(f.workspace.is_dir());
+}
+
+#[test]
 fn visual_plan_binds_exact_files_and_preserves_prior_versions() {
     let f = Fixture::new();
     f.service

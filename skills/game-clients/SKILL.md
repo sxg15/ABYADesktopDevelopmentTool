@@ -7,7 +7,7 @@ Manage sxg15/PlatverseOutput GitHub Releases and install user-selected Windows U
 ## Ownership
 
 Own GitHub account authorization, Release/asset CRUD, downloads, safe ZIP extraction,
-installation records, remote selection validation and advisory update checks. All network,
+installation records, remote selection, single-package retention and optional update prompts. All network,
 archive and credential work stays in Rust. No desktop CLI/MCP access is added.
 
 ## Public Contracts
@@ -56,8 +56,13 @@ entries and 16 GiB expanded. Reject traversal, drive/UNC/ADS paths, Windows devi
 case-insensitive collisions, links and reparse-point destinations. Stream bytes, verify
 expected length and GitHub SHA-256 when present, extract into a new task-owned staging
 directory and atomically rename after success. Only Unity EXEs with matching _Data and
-UnityPlayer.dll are selectable; multiple Players require an explicit choice. Keep older
-installations; do not overwrite running clients, user directories or task-pinned Players.
+UnityPlayer.dll are selectable; multiple Players require an explicit choice. A download
+creates one pending complete installation. The APP workflow stays mounted across navigation,
+then calls activate with the sole EXE or the user's explicit choice. Activation saves only
+client selection against fresh settings, preserves the local fallback and unrelated values,
+and never launches/stops a game. Failure/cancellation retains the previous selection. Cancel
+after extraction discards the pending choice; a later maintenance pass removes that unused
+package. Reuse an already complete record for the same asset ID/update timestamp.
 Failed operations remove only their own fresh staging directory. An app crash can leave
 a hidden staging directory, never a selectable partial installation.
 
@@ -65,17 +70,39 @@ Settings persist local/remote source, previous local path, storage root, install
 relative EXE and resolved gameExecutablePath. Installation records retain their storage
 root and use normal drive paths for UI and Unity launches; filesystem checks still canonicalize.
 Legacy settings default to local. Remote
-selection resolves only a recorded complete installation and is saved explicitly after
-download. Existing task-pinned Player and LAN Host selection retain precedence. Installation
-alone and update checks never change the active Player or stop instances. Updates compare
+selection resolves only a recorded complete installation. The explicit Download and use / Update
+now action includes activation and saving; no second settings visit or Save is required.
+Manual source/local-path edits still use Settings Save. Existing task-pinned Player and LAN
+Host selection retain precedence. Checks never change the active Player or stop instances. Updates compare
 published versions on the selected stable/prerelease channel; a replaced asset in the same
-release also qualifies. Background checks run at startup and every 30 minutes while remote
-source is active. Failures preserve offline installed-client use; manual refresh shows errors.
+release also qualifies. Background checks run at startup, window focus, after sign-in and
+every 30 minutes while the saved source is remote. Open a dismissible global dialog with
+Update now and Not now. A candidate key includes release/asset identity, update time and
+digest; suppress repeats within this APP session, but allow manual reopening and changed
+candidates. Same-name assets are preferred; multiple unmatched ZIPs need an explicit choice.
+Reject late checks after source/selection changes. Failures preserve offline use.
+
+game_client_activate, game_client_discard_pending and game_client_maintain are APP-only typed
+commands. Maintenance runs at startup, after activation/cancellation and every minute, keeping
+the selected installation even in local mode plus the current pending download. Remove only
+unselected recorded UUID directories at <storage>/PlatverseOutput/<release>-<asset>-<uuid>,
+after matching the bounded .abya-client.json marker and checking the full tree for links.
+Never recursively delete storage roots, arbitrary folders or unmarked partial staging paths.
+Collect current task Player pins through TaskService.pinned_player_paths and running paths
+through InstanceService.running_executable_paths while holding foundation EXECUTABLE_FILES
+exclusively. Launch/version capture hold shared guards. Referenced local fallback EXEs are
+also protected. Defer task/running/local/unavailable packages, expose reasons in both views,
+and retry without changing task pins. A corrupt usage snapshot prevents all deletion.
+Existing unselected installations and abandoned complete downloads are eligible on restart;
+arbitrary unmarked directories are not. An unused record is removed only after its owned
+directory is gone. This is not a replacement for task-version registration or acceptance.
 
 ## Dependencies
 
-Foundation database/settings/DPAPI, reqwest, zip, sha2, native filesystem. React consumes
-typed foundation adapters; shell composes views and settings. No dependency on game processes.
+Foundation database/settings/DPAPI/executable-file gate, reqwest, zip, sha2, native filesystem.
+React consumes typed foundation adapters; shell composes the persistent workflow provider,
+views and settings. Tauri composes the public task-pin and running-process snapshots; the
+client module never queries task/instance tables or controls their lifecycle.
 
 ## Validation
 
@@ -85,6 +112,11 @@ rejection, integrity failure/cancellation, multiple EXEs, persisted selection an
 channel rules. Use isolated files and loopback mock API fixtures for write/install tests;
 never create or delete real repository Releases just for testing. Check actual GitHub reads
 separately, and label a fixture UI preview distinctly from native end-to-end validation.
+Retention tests cover cross-root removal, unchanged unrelated settings, task/running/local
+and pending protection, explicit EXE selection, restart recovery, tampered markers and
+nested junction rejection before deletion. UI tests cover direct consent from the task
+workspace, one prompt per candidate, same-release asset replacement, duplicate clicks,
+navigation during download, failure, cancellation and stale checks after source changes.
 The ignored live_github_account_and_release_reads test requires ABYA_TEST_GITHUB_READS=1
 and an already authenticated gh CLI. It borrows the credential in native test memory,
 uses a test-only session initializer against an isolated database, performs /user/repository/release
@@ -106,4 +138,5 @@ authorization by the account owner is a separate acceptance step; do not automat
 ## LLM Maintenance Rule
 
 Update this Skill, shared settings/app-shell/desktop-cli Skills and changelog with contract
-changes. No automatic release deletion, version switch, local client deletion or forced update.
+changes. No automatic remote Release deletion or forced update. User-authorized selection
+includes removal of unused managed older packages, with the usage/ownership guards above.

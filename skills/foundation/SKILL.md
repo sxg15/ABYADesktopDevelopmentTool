@@ -16,6 +16,20 @@ classification and validation remain in development-tasks; no database migration
 
 ## Game client selection (2026-10-14)
 
+2026-10-16: typed adapters add APP-only activate/discardPending/maintain and retention
+reason DTOs. ClientUpdate includes a candidate key, installable assets and optional
+preferred asset ID for a direct confirmation dialog. Activation saves fresh client
+fields while preserving other settings and the previous local path. Public
+EXECUTABLE_FILES is an in-process RwLock: instance launch and task version capture
+hold shared access; client cleanup/settings activation take exclusive access. Settings
+updates hold shared access across remote resolution and saving. It coordinates file
+ownership only; foundation does not select packages, inspect task pins or delete files.
+SettingsService clones share a reentrant gate across get/save and each read-modify-save
+operation, including token rotation and update_game_client. This prevents get's legacy
+normalization writeback from overwriting a concurrent client selection. Client-only
+updates preserve the freshly read local fallback and unrelated settings; callers still
+own installation validation. Validate concurrent activation/token rotation without loss.
+
 AppSettings/StoredSettings add defaulted gameClient source (local/remote), local path,
 installation ID, relative EXE and storage root. Legacy settings retain their local EXE.
 PublicSettingsUpdate groups the public settings input; the game-clients service validates

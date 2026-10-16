@@ -39,7 +39,7 @@ pub(super) fn service(root: &Temp) -> GameClientService {
     GameClientService::new(database, settings, root.0.clone())
 }
 
-fn package(extra: &[(&str, &[u8])]) -> Vec<u8> {
+pub(super) fn package(extra: &[(&str, &[u8])]) -> Vec<u8> {
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let options = zip::write::SimpleFileOptions::default();
     zip.add_directory("Windows/Game_Data/", options).unwrap();
@@ -77,7 +77,11 @@ fn release(id: u64, date: &str, prerelease: bool) -> ClientRelease {
     }
 }
 
-fn installed(service: &GameClientService, root: &Temp, bytes: Vec<u8>) -> ClientInstallation {
+pub(super) fn installed(
+    service: &GameClientService,
+    root: &Temp,
+    bytes: Vec<u8>,
+) -> ClientInstallation {
     let mut release = release(1, "2026-10-01T00:00:00Z", false);
     release.assets[0].size = bytes.len() as u64;
     release.assets[0].digest = Some(format!("sha256:{:x}", Sha256::digest(&bytes)));

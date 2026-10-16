@@ -94,6 +94,22 @@ pub struct GameClientState {
     pub default_storage_root: String,
     pub operation: ClientOperation,
     pub authorization: Option<LoginAuthorization>,
+    pub retention: ClientRetention,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientRetention {
+    pub removed: usize,
+    pub deferred: Vec<DeferredClient>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeferredClient {
+    pub installation_id: String,
+    pub tag_name: String,
+    pub reason: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -138,4 +154,7 @@ pub struct ClientUpdate {
     pub release_id: u64,
     pub tag_name: String,
     pub current_tag: String,
+    pub key: String,
+    pub assets: Vec<ReleaseAsset>,
+    pub preferred_asset_id: Option<u64>,
 }

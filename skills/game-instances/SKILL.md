@@ -12,6 +12,13 @@ and discovery belong to `game-archives`.
 
 ## Public Contracts
 
+Client retention (2026-10-16): running_executable_paths projects managed launching,
+running and stopping paths plus a read-only OS process executable snapshot, including
+user-started games. No process is stopped. launch holds foundation EXECUTABLE_FILES
+shared through validation/spawn/registration, preventing a cleanup snapshot from racing
+a managed launch. The APP coordinator takes exclusive access before collecting paths
+and deleting unselected managed packages. Existing LAN Host and task pin precedence remain.
+
 `LaunchProfile`, `LaunchMode`, `ArchiveSelection`, `GameInstance`,
 `InstanceOrigin`, `ProcessState`, `ConnectionState`, `InstanceStopResult`,
 `LaunchReportResult`, `WindowVisibilityMode`, and instance lifecycle commands.

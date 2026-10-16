@@ -1,5 +1,25 @@
 # Release Skill
 
+## Remote client update flow (2026-10-16)
+Default/Validation builds use game-client-update-flow-20261016. For this explicitly
+requested branch exception, integrate latest CLI/dev into 游戏客户端管理 before edits,
+then push the verified complete feature branch and integrate it into dev; leave this
+requested branch checked out. The normal CLI policy below applies to other tasks.
+Validate direct update consent, same-candidate deferral, ambiguous assets/EXEs, failure
+and cancellation, selection persistence, and owned-directory cleanup including current
+task pins, running/local references, tampered markers and nested junctions. The current
+frontend test command scans --dir src, excluding disposable old checkout tests in logs.
+Use the real-component preview and the isolated native retention fixture, then the full
+portable inventory, relocated package and fresh tracked checkout. Keep real accounts,
+user game clients and existing task version pins out of acceptance fixtures.
+scripts/test-game-client-retention.mjs init/report creates a fresh marker-owned data
+directory with three non-runnable client sentinels across two storage roots. Launch the
+candidate with its returned LOCALAPPDATA/WebView paths, ABYA_TEST_MODE=1 and normal
+USERPROFILE after checking ports 43921/43922. report proves startup cleanup leaves the
+selected client, local fallback and ordinary user folder intact, with zero auth records.
+Never launch the sentinel game EXEs. UI update scenarios use game-clients-preview.html
+fixtures update/retained and remain distinct from real GitHub/native installation.
+
 ## Runtime instance discovery (2026-10-16)
 Default/Validation builds use runtime-instance-discovery-20261016. Ship the
 canonical AbyaPB Tools/AbyaCli discovery module and its tests. Deduplicate exact
