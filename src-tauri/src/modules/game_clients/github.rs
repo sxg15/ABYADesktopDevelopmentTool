@@ -11,6 +11,22 @@ use std::{io::Read, time::Duration};
 
 const API: &str = "https://api.github.com";
 
+#[test]
+#[ignore = "Public HEAD requests through an existing local system proxy; opt-in only"]
+fn live_system_proxy_route() {
+    let expected: std::net::SocketAddr = std::env::var("ABYA_TEST_EXPECTED_PROXY")
+        .expect("Set the expected local system proxy address")
+        .parse()
+        .unwrap();
+    assert!(expected.ip().is_loopback());
+    let github = GitHub::new(None).unwrap();
+    for url in [API, "https://release-assets.githubusercontent.com"] {
+        let response = github.client.head(url).send().expect("Public HEAD request");
+        assert_eq!(response.remote_addr(), Some(expected));
+        println!("System proxy route verified: {url} via {expected}");
+    }
+}
+
 pub(super) fn error(code: &str) -> AppError {
     AppError::new(code, "Game client operation failed.", "")
 }
@@ -24,7 +40,7 @@ pub(super) struct GitHub {
     client: Client,
     token: Option<String>,
     #[cfg(test)]
-    test_api: Option<String>,
+    pub(super) test_api: Option<String>,
 }
 
 impl GitHub {
@@ -47,6 +63,13 @@ impl GitHub {
     #[cfg(test)]
     pub fn with_test_api(token: Option<String>, api: String) -> AppResult<Self> {
         let mut github = Self::new(token)?;
+        // 模拟服务器必须独立于开发机的系统代理和环境变量。
+        github.client = Client::builder()
+            .no_proxy()
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(Duration::from_secs(60))
+            .build()
+            .map_err(network_error)?;
         github.test_api = Some(api);
         Ok(github)
     }

@@ -279,8 +279,8 @@ fn service_download_activate_cleanup_and_exact_asset_reuse_share_one_persisted_s
     let next = service.install(download()).unwrap();
     assert!(next.digest_verified);
     assert_eq!(
-        next.storage_root,
-        root.0.join("GameClients").to_string_lossy()
+        fs::canonicalize(&next.storage_root).unwrap(),
+        fs::canonicalize(root.0.join("GameClients")).unwrap()
     );
     assert_eq!(
         service.settings.get().unwrap().game_client.installation_id,

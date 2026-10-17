@@ -131,7 +131,11 @@ fn legacy_settings_remain_local_and_remote_selection_survives_restart_without_lo
     service.resolve_settings(&mut input).unwrap();
     assert!(!input.game_executable_path.starts_with(r"\\?\"));
     assert!(!record.directory.starts_with(r"\\?\"));
-    assert_eq!(record.storage_root, root.0.to_string_lossy());
+    assert!(!record.storage_root.starts_with(r"\\?\"));
+    assert_eq!(
+        fs::canonicalize(&record.storage_root).unwrap(),
+        fs::canonicalize(&root.0).unwrap()
+    );
     assert!(
         input.game_executable_path.ends_with("Windows\\Game.exe")
             || input.game_executable_path.ends_with("Windows/Game.exe")

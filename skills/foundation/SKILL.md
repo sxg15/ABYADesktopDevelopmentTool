@@ -70,6 +70,10 @@ process, log, or MCP business workflows.
 
 ## Public Contracts
 
+The standalone CLI HTTP transport explicitly disables proxies: its validated 127.0.0.1
+endpoint and bearer token must stay on the local connection even when the application
+enables reqwest system-proxy support for remote GitHub requests. Named pipes are unchanged.
+
 Shared adapters expose typed intake groups/answer versions/player mode, APP-only answer actions,
 native-bound Codex continuation, and scoped conversation recovery. They never transport session
 credentials. Intake answers and approvals remain separate domain actions; business logic stays

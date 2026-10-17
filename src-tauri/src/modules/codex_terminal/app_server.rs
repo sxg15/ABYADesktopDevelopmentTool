@@ -495,6 +495,8 @@ fn reserve_loopback_port() -> AppResult<u16> {
 
 fn wait_until_ready(port: u16) -> AppResult<()> {
     let client = reqwest::blocking::Client::builder()
+        // 就绪检查只访问本机 app-server，不经过代理。
+        .no_proxy()
         .timeout(Duration::from_millis(500))
         .build()
         .map_err(AppError::internal)?;

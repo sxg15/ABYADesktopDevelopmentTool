@@ -17,6 +17,9 @@ snapshots. Intervals may overlap; never label them pure model computation or sum
 Rebinding backs up and resets old workflow/connection projections to avoid mixing identities.
 
 ## Public Contracts
+The app-server HTTP readiness probe explicitly disables system/environment proxies because
+its endpoint is always 127.0.0.1. Remote GitHub proxy support must not affect local startup.
+
 Conversation CRUD, rename/archive, availability, open/write/resize/stop, workflow reads,
 project workspace, recovery candidates/binding repair, and continue_questions.
 

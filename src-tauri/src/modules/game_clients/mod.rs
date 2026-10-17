@@ -5,6 +5,8 @@ mod models;
 mod oauth;
 #[cfg(test)]
 mod oauth_tests;
+#[cfg(all(test, windows))]
+mod proxy_tests;
 mod retention;
 #[cfg(test)]
 mod retention_tests;

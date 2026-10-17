@@ -12,6 +12,21 @@ archive and credential work stays in Rust. No desktop CLI/MCP access is added.
 
 ## Public Contracts
 
+Native GitHub API, OAuth and signed CDN requests use reqwest's system-proxy feature
+to follow the Windows current-user proxy and supported proxy environment variables.
+Do not hardcode a localhost port or silently retry direct when a configured proxy fails.
+Keep the explicit dependency feature when disabling reqwest defaults. CDN requests still
+omit GitHub Authorization. Restart the APP/retry the transfer after changing proxy settings.
+The Windows proxy regression runs in a child process with HKCU redirected to a UUID test
+key, never the user's Internet Settings; it verifies API/CDN/OAuth routing, local CLI bypass
+and direct binary downloads when disabled. It uses no real account or remote package.
+The ignored live_system_proxy_route test requires ABYA_TEST_EXPECTED_PROXY=127.0.0.1:PORT
+for an already enabled local system proxy. It sends unauthenticated public HEAD requests
+to GitHub API/CDN and verifies the connected peer address, without downloading a package.
+Ordinary local API/OAuth fixtures explicitly disable proxies. Proxy regressions instead
+use the production constructors. Path identity assertions allow Windows short-name aliases
+while still rejecting verbatim prefixes in persisted UI paths.
+
 Typed Tauri commands expose account metadata, releases/assets, installation records,
 operation progress/cancellation, and optional update candidates. GitHub login/logout lives
 in Settings. An unsigned manager shows the missing-login state and a button that navigates

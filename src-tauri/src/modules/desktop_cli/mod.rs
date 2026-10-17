@@ -611,7 +611,7 @@ mod tests {
     fn serves_cli_commands_and_rejects_legacy_protocol() {
         let fixture = fixture();
         let state = fixture.service.start(&fixture.settings).unwrap();
-        let client = Client::new();
+        let client = Client::builder().no_proxy().build().unwrap();
         let request = |command: &str, arguments: Value| {
             json!({"version":1,
             "requestId":Uuid::new_v4().to_string(),"command":command,"arguments":arguments})

@@ -56,6 +56,8 @@ impl Connection {
     pub fn request(&self, request: &Value, timeout: Duration) -> AppResult<Value> {
         match self {
             Self::Http { endpoint, token } => reqwest::blocking::Client::builder()
+                // 本机认证通道始终直连，不交给系统或环境代理。
+                .no_proxy()
                 .connect_timeout(Duration::from_secs(3))
                 .timeout(timeout)
                 .redirect(reqwest::redirect::Policy::none())

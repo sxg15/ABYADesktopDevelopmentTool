@@ -41,6 +41,10 @@ Own authenticated loopback command dispatch, schemas, task/conversation validati
 
 ## Public Contracts
 
+Standalone loopback HTTP calls use foundation's no-proxy transport, including when Windows
+proxy settings lack a localhost exclusion. Managed named-pipe transport remains unchanged.
+Local HTTP server fixtures also disable proxies so tests never depend on a running proxy.
+
 production update accepts publish-questions and configure playerMode. The dispatcher overwrites
 question provider/conversation/nativeSessionId from authenticated context; callers cannot select
 another answer destination. Agent mutations never save drafts or submit user answers; those are

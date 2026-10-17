@@ -50,6 +50,19 @@ pub(super) struct OAuth {
 }
 
 impl OAuth {
+    #[cfg(test)]
+    pub fn with_test_base(base: String) -> AppResult<Self> {
+        Ok(Self {
+            client: Client::builder()
+                .no_proxy()
+                .redirect(reqwest::redirect::Policy::none())
+                .timeout(Duration::from_secs(30))
+                .build()
+                .map_err(network_error)?,
+            base: Some(base),
+        })
+    }
+
     pub fn new() -> AppResult<Self> {
         Ok(Self {
             client: Client::builder()

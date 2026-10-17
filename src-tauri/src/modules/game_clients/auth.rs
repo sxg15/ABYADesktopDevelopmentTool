@@ -65,14 +65,11 @@ pub(super) struct AuthState {
 
 impl GameClientService {
     fn oauth(&self) -> AppResult<OAuth> {
-        let oauth = OAuth::new()?;
         #[cfg(test)]
-        let oauth = {
-            let mut oauth = oauth;
-            oauth.base = self.oauth_base.clone();
-            oauth
-        };
-        Ok(oauth)
+        if let Some(base) = &self.oauth_base {
+            return OAuth::with_test_base(base.clone());
+        }
+        OAuth::new()
     }
 
     fn github_token(&self, token: String) -> AppResult<GitHub> {

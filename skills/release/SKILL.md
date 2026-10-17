@@ -1,5 +1,13 @@
 # Release Skill
 
+## Game client system proxy (2026-10-17)
+Default/Validation builds use game-client-system-proxy-20261017. Enable reqwest system-proxy
+explicitly alongside rustls; keep local CLI and app-server readiness HTTP clients direct.
+The Windows regression redirects HKCU only inside a single isolated test child process,
+validates proxy routing without external traffic and removes its UUID fixture registry key.
+Run standard checks, full portable inventory and relocated/fresh tracked checkout validation,
+then promote the complete package and publish CLI before dev. Preserve all prior features.
+
 ## Game art design workflow 2.2 (2026-10-16)
 Content-only design-prompt refinements may reuse the already verified executable when
 Rust/React/policy contracts are unchanged: validate Skills/provider parity, copy complete
