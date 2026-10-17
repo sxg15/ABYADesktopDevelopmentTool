@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
+import {spawnSync} from 'node:child_process';
 import {DatabaseSync} from 'node:sqlite';
 const [action,directory]=process.argv.slice(2);
 if(!['init','run'].includes(action)||!directory)throw new Error('Usage: init|run <fresh owned fixture directory>');
@@ -45,6 +46,15 @@ if(action==='init'){
   assert.ok((await invoke('read_task_skill',{taskId:task.id,provider:'codex',skillId:interfaceSkill.id})).includes('从产品推导界面'));
   const source=view.record.artDesign.sources[0];
   const write=(file,text)=>{fs.mkdirSync(path.dirname(path.join(task.workspacePath,file)),{recursive:true});fs.writeFileSync(path.join(task.workspacePath,file),text);};
+  for(const provider of ['codex','grok']){
+    const design=catalog.find(skill=>skill.provider===provider&&skill.name==='product-interface-design');
+    assert.ok((await invoke('read_task_skill',{taskId:task.id,provider,skillId:design.id})).includes('visual-refinement'));
+    const helper=path.join(task.workspacePath,`.${provider}/skills/${design.id}/scripts/visual-tools.mjs`);
+    assert.ok(fs.existsSync(helper),'Portable visual helper must be deployed with its references');
+    write('artifacts/contrast-fixture.json',JSON.stringify({pairs:[{fg:'#888',bg:'#fff',fontSizePx:18}]}));
+    const check=spawnSync(process.execPath,[helper,'contrast',path.join(task.workspacePath,'artifacts/contrast-fixture.json')],{encoding:'utf8',windowsHide:true});
+    assert.equal(check.status,1,check.stderr);assert.equal(JSON.parse(check.stdout).results[0].threshold,4.5);
+  }
   write('artifacts/requirements.md','# 隔离测试需求\n以物品显示库存。');
   await update('submit-document',{kind:'requirements',path:'artifacts/requirements.md'});
   view=await invoke('decide_task_production',{input:{taskId:task.id,expectedRevision:view.record.revision,kind:'requirements',documentHash:view.record.documents.requirements.sha256,accepted:true,feedback:'Synthetic fixture only'}});

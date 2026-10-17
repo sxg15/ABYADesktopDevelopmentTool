@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>游戏 HUD · 视觉规则受控样本</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:24px;background:#eef2ef;color:#263d36;font:14px/1.6 "Microsoft YaHei UI",sans-serif}
+h1{font-size:22px;margin:0}p{max-width:850px}.samples{display:grid;gap:24px}figure{margin:0;max-width:1000px}figcaption{margin:8px 0;font-weight:600}
+.world{height:440px;position:relative;overflow:hidden;background:repeating-linear-gradient(35deg,transparent 0 18px,#647b5938 19px 25px),linear-gradient(120deg,#304831 0 28%,#cbb588 29% 66%,#7b9a7b 67%)}
+.target{position:absolute;left:50%;top:48%;width:130px;height:130px;transform:translate(-50%,-50%);border:9px double #654029;border-radius:50%;background:#c78554;box-shadow:5px 7px 0 #443c2d75}
+.target:after{content:"瞄准中心";position:absolute;inset:42px 0;text-align:center;color:#322317;font-weight:bold}
+.identity{display:flex;gap:18px;flex-wrap:wrap;position:absolute;top:18px;left:20px}.identity span{border-bottom:4px solid var(--player);padding:3px 8px}
+.clock{position:absolute;right:20px;top:18px;font:600 24px/1.4 Consolas,monospace}.items{position:absolute;bottom:18px;left:calc(50% - 145px);width:290px;text-align:center}
+.items b{display:inline-block;background:#4b6044;border:2px solid #d9dfc4;width:13px;height:38px;margin:8px 12px 0;box-shadow:2px 2px #3d3a2d}
+.items b.spent{opacity:.25}.hint{position:absolute;left:20px;bottom:20px}.before{color:#858d76}.before .clock{font-size:15px;font-weight:400}
+.after{color:#fff6df}.after .identity,.after .clock,.after .hint{background:#293d31;border:1px solid #566b54;padding:8px 12px;box-shadow:3px 3px 0 #26342580}
+.after .clock{color:#ffe6a1}.after .items{background:#e9dfc5;color:#34492f;border:2px solid #677456;box-shadow:4px 4px 0 #39493180;padding:8px 10px}
+.after .hint{max-width:150px;font-size:12px}.after .items b.spent{background:transparent;border-color:#687759;border-style:dashed;opacity:1;box-shadow:none}
+@media(max-width:680px){body{padding:12px}.identity{gap:4px;font-size:11px}.clock{top:70px}.world{height:480px}.hint{bottom:145px}.after .clock{top:80px}}
+</style></head><body>
+<h1>游戏 HUD：保留内容与风格，调整可读性</h1>
+<p>程序绘制的受控样本，非 Astra 输出、非实机、非策划认可。两图使用相同背景、对象与状态。四种玩家身份色、五枚物品及其中两枚已消耗保持一致；只检查层级、背景分离与物品轮廓。</p>
+<div class="samples"></div>
+<script>
+const players=[['玩家一','#f5a267'],['玩家二','#77bbe8'],['玩家三','#cab0eb'],['玩家四','#a7cb77']];
+for(const mode of ['before','after']){
+ const figure=document.createElement('figure');
+ figure.innerHTML=`<figcaption>${mode==='before'?'调整前：背景干扰、余量状态模糊':'调整后：局部底板、计时层级、清楚的已消耗轮廓'}</figcaption><div class="world ${mode}" role="img" aria-label="同一游戏状态的 HUD 规则示例"><div class="target"></div><div class="identity">${players.map(([name,color])=>`<span style="--player:${color}">${name}</span>`).join('')}</div><div class="clock">00:05</div><div class="items">剩余物品${Array.from({length:5},(_,i)=>`<b class="${i>2?'spent':''}"></b>`).join('')}</div><div class="hint">鼠标瞄准 · 单击发射</div></div>`;
+ document.querySelector('.samples').append(figure);
+}
+</script></body></html>

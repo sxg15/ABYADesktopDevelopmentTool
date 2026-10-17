@@ -21,7 +21,16 @@ it("exposes embedded design content without treating it as a selected template",
   await screen.findByRole("heading",{name:"Game art design"}); expect(productionApi.readSkill).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button",{name:"Read Skill"}));
   await screen.findByText("Actual pinned design content");
+  expect(screen.queryByText(/This version includes visual refinement/)).toBeNull();
   expect(productionApi.readSkill).toHaveBeenCalledWith("task","codex",skill.id); expect(productionApi.update).not.toHaveBeenCalled();
+});
+it("describes refinement only when present in the task's actually read design version", async () => {
+  vi.mocked(productionApi.readSkill).mockResolvedValue("Read references/visual-refinement.md for scoped review.");
+  render(<SkillLibrary taskId="task" active locale="en-US"/>);
+  await screen.findByRole("heading",{name:"Game art design"});
+  fireEvent.click(screen.getByRole("button",{name:"Read Skill"}));
+  await screen.findByText(/This version includes visual refinement/);
+  expect(productionApi.update).not.toHaveBeenCalled();
 });
 it("retains unsubmitted case notes across library section changes", async () => {
   render(<SkillLibrary taskId="task" active/>);await screen.findByRole("heading",{name:"游戏美术设计"});

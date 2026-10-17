@@ -1,0 +1,28 @@
+{
+  "scope": "controlled real-component and static HUD fixtures; no model A/B, real game or planner approval",
+  "observations": [
+    {
+      "build": "before",
+      "retainedRequirements": true,
+      "retainedNavigation": true,
+      "viewports": [
+        "1440x960",
+        "1100x760",
+        "960x720"
+      ],
+      "horizontalOverflow": false
+    },
+    {
+      "build": "after",
+      "retainedRequirements": true,
+      "retainedNavigation": true,
+      "viewports": [
+        "1440x960",
+        "1100x760",
+        "960x720"
+      ],
+      "horizontalOverflow": false
+    }
+  ],
+  "errors": []
+}

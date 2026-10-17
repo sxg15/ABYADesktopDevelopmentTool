@@ -68,7 +68,9 @@ export function SkillLibrary({ taskId, active, visible = true, initialSection = 
     </div>
     {error && <div role="alert" className="inline-error">{error}</div>}{notice && <p role="status" className="skill-library-notice">{notice}</p>}
     <div hidden={section !== "skills"}>
-      {body ? <div className="skill-reading"><button className="secondary-button" onClick={() => setBody(undefined)}>{s.back}</button><h4>{title(body.skill)}</h4><small>{body.skill.provider} · {body.skill.sha256.slice(0, 12)}</small><div className="production-document"><ReadableText text={body.text} /></div></div> : <>
+      {body ? <div className="skill-reading"><button className="secondary-button" onClick={() => setBody(undefined)}>{s.back}</button><h4>{title(body.skill)}</h4><small>{body.skill.provider} · {body.skill.sha256.slice(0, 12)}</small>
+        {body.skill.kind === "design" && body.text.includes("visual-refinement") && <p className="skill-design-note">{t("本版本包含视觉细化与实机审查：用于方向确定后的层级、排版、配色和反馈检查，保留当前需求与风格。", "This version includes visual refinement and runtime review: hierarchy, typography, color and feedback within the current requirements and style.")}</p>}
+        <div className="production-document"><ReadableText text={body.text} /></div></div> : <>
         <div className="skill-library-search"><label><Search size={16}/><input aria-label={s.search} placeholder={s.search} value={query} onChange={e => setQuery(e.target.value)}/></label><select aria-label={s.source} value={provider} onChange={e => { readRequest.current++; setReading(false); setProvider(e.target.value); }}><option value="codex">Codex</option><option value="grok">Grok</option></select></div>
         {skills.some(k => k.provider === provider && k.kind === "design") && <p className="skill-design-note"><Palette size={17}/>{t("游戏美术与通用界面设计方法随制作流程提供；当前任务保持原有版本。", "Game art and interface design methods are included in the workflow; this task keeps its pinned version.")}</p>}
         {loading && <p role="status">{t("正在读取当前任务的 Skill…", "Loading this task's skills…")}</p>}{reading && <p role="status">{t("正在读取正文…", "Loading Skill content…")}</p>}

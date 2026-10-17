@@ -18,6 +18,18 @@ quote/sourceId/kind 一经登记，AI 不可静默变更；补充解读可以更
 
 ## 设计操作
 
+### 视觉细化的三个接入点
+
+方向明确后按通用 Skill 的 visual-refinement 模块细化，不新增操作、字段、审批或固定轮次。
+生成前：direction.visualRules 保存注意力顺序、持续信息、色彩职责、密度、字体/图像尺度、
+关键反馈和风格边界；platformAndCamera 写目标平台，acceptance 写实际检查方法。
+方案提交前：逐条核对当前要求与禁止项、全部有效参考的应用、代表状态和制作能力；
+resources 文档说明本次改动及保留项，coverage 只关联当前正式方案。
+实现后：visual 自测 observations 保存位置/证据、观察、任务影响、依据、修正/保留和复验；
+realizations 继续按有效要求绑定当前版本与证据，不把全局审查复制成每项“已满足”。
+对比度或变量工具只验证明确输入，unverified 不能填通过；不擅自安装依赖或生成新审批。
+保留来源原文；已确认流程、身份色、布局和便捷操作不得因通用美化建议被静默移除。
+
 | operation | data |
 |---|---|
 | record-art-input | id、text（完整原话）、locator（会话/消息位置）；只追加，不覆盖，来源标明 AI 摘录 |
@@ -55,6 +67,7 @@ APP 的“让 AI 评估并参考 / 整理案例草稿 / 整理新版本”会先
 save-art-case-draft：id、title、artifactIds（1–16个本轮正式成果）、tags数组、context、plannerRequirements、visualRules、decisions、production、applicability、limitations、sources。
 可选 referenceIds 保存与本案例有关且允许保留的原始参考；参考与成果合计最多16个，并分别标注。sources 写明其来源/使用范围；参考不能代替正式成果或实机证据。
 decisions 同时保留“领域原型如何形成结构、其他方向为何淘汰、哪个专属决定经过实际验证”；让后续任务借鉴方法和适用边界，不只继承配色与外形。
+其中补充实际视觉问题、选择的方法和例外理由；production 记录实机差异及修正，applicability/limitations 记录可借鉴及不能套用的条件。不新增评分充当认可，不补造旧案例的历史验证。
 可选 parentCaseId/parentVersion 创建已有案例的修订草稿；必须基于该案例最新版本。
 草稿描述满意成果的具体范围，不包含无关聊天、账号或机器路径。来源与许可范围写清楚，不能推定可跨项目复制原参考素材。
 APP 让策划查看草稿及图片，填写满意范围后收录；AI 无收录、撤回案例、导入或审批 CLI。

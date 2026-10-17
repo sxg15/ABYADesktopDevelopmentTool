@@ -8,6 +8,7 @@ import { ArtifactMedia } from "./ArtifactPreview";
 import { ArtCaseThumbnail } from "./ArtCaseThumbnail";
 import "./artDesign.css";
 import "./skillLibrary.css";
+import "./visualRefinement.css";
 
 function CaseMedia({entry,index,en=false}:{entry:ArtCase;index:number;en?:boolean}) {
   const [src,setSrc]=useState(""),[error,setError]=useState("");
@@ -79,9 +80,13 @@ export function ArtLibraryPanel({taskId,view,active,en=false,onClose,onContinue,
     </div><div className="art-case-detail">
       {selected?<>
         <h3>{selected.title}</h3>
+        <div className="art-case-context">
+          {selected.satisfaction&&<section><h4>{selected.provenance==="imported"?t("来源方声明的认可范围（未在本机复验）","Source-reported satisfaction (not locally revalidated)"):t("策划满意的具体范围","Planner satisfaction scope")}</h4><p className="art-source-text">{selected.satisfaction}</p></section>}
+          <section><h4>{t("适用条件","Applicability")}</h4><p className="art-source-text">{selected.applicability || t("尚未记录，请结合当前需求判断。","Not recorded; assess against current requirements.")}</p></section>
+          <section><h4>{t("不适用情况与限制","Limitations")}</h4><p className="art-source-text">{selected.limitations || t("尚未记录，不能据此推定没有限制。","Not recorded; do not infer there are no limitations.")}</p></section>
+        </div>
         <div className="art-case-media">{isDraft?[...(selected.artifactIds??[]),...(selected.referenceIds??[])].map(id=>{const a=(view.artifacts??r?.artifacts??[]).find(a=>a.id===id);return a&&<figure key={id}><ArtifactMedia taskId={taskId} artifact={a} en={en}/><figcaption>{a.sourceType==="reference"?t("原始参考 · ","Original reference · "):""}{a.title}</figcaption></figure>;}):selected.media?.map((_,i)=><CaseMedia key={`${selected.id}:${selected.version}:${i}`} entry={selected} index={i} en={en}/>)}</div>
-        {artCaseFields.map(([key,zh,english])=><section key={key}><h4>{t(zh,english)}</h4><p className="art-source-text">{selected[key]}</p></section>)}
-        {selected.satisfaction&&<section><h4>{t("策划满意的具体范围","Planner satisfaction scope")}</h4><p>{selected.satisfaction}</p></section>}
+        {artCaseFields.filter(([key])=>key!=="applicability"&&key!=="limitations").map(([key,zh,english])=><section key={key}><h4>{t(zh,english)}</h4><p className="art-source-text">{selected[key]}</p></section>)}
         {!isDraft&&<p>{selected.provenance==="imported"?t("导入包保留来源说明，其认可和验证声明不代表本机策划已复验。","Imported approval and verification claims are not local revalidation."):selected.runtimeVerified?t("包含收录时对应作品版本的视觉验证；用于新项目仍需重新验证。","Contains visual evidence for the collected game version; new projects require new validation."):t("已认可设计方向，未标记为已完成实机验证。","Approved design direction; not marked as runtime verified.")}</p>}
         {isDraft?<form className="art-collect-form" onSubmit={e=>{e.preventDefault();void act("collect",{draftId:selected.id,satisfaction});}}>
           <label>{t("我满意的具体部分与原因","What I am satisfied with and why")}<textarea value={satisfaction} maxLength={4000} required onChange={e=>setSatisfaction(e.target.value)}/></label>

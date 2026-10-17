@@ -1,0 +1,9 @@
+.art-visual-brief{border-top:1px solid #d7e5df;padding-top:12px;margin-top:14px;min-width:0}
+.art-visual-brief summary{cursor:pointer;font-weight:600;color:#235e51;line-height:1.6}
+.art-visual-brief summary:focus-visible{outline:2px solid #16705b;outline-offset:4px;border-radius:3px}
+.art-visual-brief .readable-text{font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.art-visual-brief p{overflow-wrap:anywhere}
+.art-case-context{padding:14px 16px;border-left:3px solid #418572;background:#f0f7f3;border-radius:0 8px 8px 0;margin:12px 0 18px}
+.art-case-context section+section{margin-top:12px}
+.art-case-context h4{margin:0 0 5px;font-size:13px;color:#285d50}
+.art-case-context p{margin:0;line-height:1.7;color:#364f49;overflow-wrap:anywhere}

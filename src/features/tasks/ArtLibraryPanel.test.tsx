@@ -11,6 +11,15 @@ vi.mock("../../shared/artDesign",async original=>{
   return {...actual,artLibraryApi:{list:vi.fn(async()=>[]),media:vi.fn(async()=>"data:image/png;base64,AA=="),action:vi.fn(),get:vi.fn(),request:vi.fn()}};
 });
 afterEach(()=>{cleanup();vi.clearAllMocks();});
+it("keeps imported satisfaction separate from local approval and does not invent missing limits",async()=>{
+  vi.mocked(artLibraryApi.list).mockResolvedValue([{...artCaseFixture(),provenance:"imported",limitations:""}]);
+  render(<ArtLibraryPanel taskId="task" view={artViewFixture()} active embedded/>);
+  fireEvent.click(await screen.findByRole("button",{name:/用物品轮廓表达剩余次数/}));
+  expect(screen.getByRole("heading",{name:"来源方声明的认可范围（未在本机复验）"})).toBeTruthy();
+  expect(screen.queryByRole("heading",{name:"策划满意的具体范围"})).toBeNull();
+  expect(screen.getByText("尚未记录，不能据此推定没有限制。")).toBeTruthy();
+  expect(artLibraryApi.action).not.toHaveBeenCalled();
+});
 it("requires an explicit satisfaction scope before collecting a reviewed draft",async()=>{
   vi.mocked(artLibraryApi.action).mockResolvedValue(artCaseFixture());
   render(<ArtLibraryPanel taskId="task" view={artViewFixture()} active onClose={vi.fn()}/>);

@@ -1,5 +1,19 @@
 # Release Skill
 
+## Contextual visual refinement (2026-10-17)
+Default/Validation builds use visual-refinement-integration-20261017. Retain workspace
+refinement and the concurrent proxy fix. Source game/product Skills live in the canonical
+.codex managed bundle; sync:workflow propagates the complete tree to .grok. Explicit
+sync-design-skills.mjs --write <personal-skills-directory> backs up changed personal files
+before installing the two portable entrypoints and never removes unrelated files.
+check:skills now verifies contrast boundaries, token exports and all portable reference links.
+Node helpers are shipped with both providers; no Python or Tailwind dependency is required.
+Run real component previews, current/pinned native deployment and relocated package checks.
+Separate controlled layout examples from actual model A/B evaluation and human art approval.
+Stop this task's Vite preview watchers before native tests whose workspaces sit under the
+repository: on Windows their directory handles can interfere with managed Skill renames.
+Keep the formal APP closed after promotion; preserve task databases and pinned workspaces.
+
 ## Game client system proxy (2026-10-17)
 Retain the game-client-system-proxy-20261017 fix in the current UI build. Enable reqwest system-proxy
 explicitly alongside rustls; keep local CLI and app-server readiness HTTP clients direct.

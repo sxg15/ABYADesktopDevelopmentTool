@@ -1,5 +1,17 @@
 # Development Tasks Skill
 
+## Contextual visual refinement (2026-10-17)
+The canonical portable product-interface-design includes a selectively loaded visual-refinement
+module and Node-only opaque text-contrast/token helpers. Keep game and product Skills as the
+two entrypoints. Direction.visualRules and existing resources/self-test/realization/case fields
+carry the brief, evidence, exceptions and reuse decisions; no new schema or approval stage.
+ArtProposalContext discloses the recorded visual rules as literal text and displays runtime
+differences only for the current design hash, version and cycle. Never infer approval from them.
+Case detail brings satisfaction scope/applicability/limits before the media and retains all
+other context. Missing limits remain unknown. Skill reading advertises refinement only when
+the actually read design body references that module; legacy pins retain their content.
+Regress stale comparisons, literal markup, old pins, existing gates and library draft retention.
+
 ## Integrated Skill and art library (2026-10-17)
 SkillLibrary separates skills/templates and the shared ArtLibraryPanel in embedded mode;
 the resources-stage modal remains available. Keep drafts mounted across section changes,
