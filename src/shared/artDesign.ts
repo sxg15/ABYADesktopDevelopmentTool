@@ -25,10 +25,13 @@ export interface ArtDesign {
   referenceAnalyses:{id:string;sha256:string;role:string;observations:string;borrow:string;avoid:string;application:string;conflicts:string}[];
   direction:Record<string,string>|null;coverage:ArtCoverage[];realizations:ArtRealization[];caseDrafts:ArtCase[];
   caseUses:{id:string;caseId:string;version:number;title:string;borrow:string;adapt:string;avoid:string;paths:string[]}[];
+  caseRequests?:{id:string;selection:{kind:string;caseId:string|null;version:number|null;cycle:number;designHash:string};prompt:string;at:string;origin:string}[];
   plannerNotes:{id:string;text:string;at:string}[];
   conversationInputs?:{id:string;text:string;locator:string}[];
 }
 export const artLibraryApi = {
+  request:(taskId:string,expectedRevision:number,kind:"reference"|"draft"|"revision",caseId?:string,version?:number)=>
+    invoke<{revision:number;prompt:string}>("mutate_art_library",{input:{taskId,expectedRevision,operation:"request",data:{kind,caseId,version}}}),
   list:(query:string,history=false)=>invoke<ArtCase[]>("list_art_cases",{query,history}),
   get:(id:string,version:number)=>invoke<ArtCase>("read_art_case",{id,version}),
   media:(id:string,version:number,index:number)=>invoke<string>("read_art_case_media",{id,version,index}),

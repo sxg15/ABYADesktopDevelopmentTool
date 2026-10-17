@@ -9,6 +9,9 @@ import {
   Eye,
   EyeOff,
   Gamepad2,
+  ListTree,
+  Maximize2,
+  Minimize2,
   Play,
   Power,
   RotateCcw,
@@ -21,6 +24,7 @@ import { LaunchInstanceModal } from "../instances/LaunchInstanceModal";
 import { AcceptanceLauncher } from "./AcceptanceLauncher";
 import { InstanceDetailsModal } from "../instances/InstanceDetailsModal";
 import { DevelopmentTerminalView } from "../terminal/CodexTerminalView";
+import { TerminalContextPanel } from "../terminal/TerminalContextPanel";
 import { CodexWorkflowBar } from "./CodexWorkflowBar";
 import { ProductionPanel } from "./ProductionPanel";
 import { TaskIntakeDialog } from "./TaskIntakeDialog";
@@ -75,6 +79,12 @@ export function TasksView({
   const [showLaunch, setShowLaunch] = useState(false);
   const [detail, setDetail] = useState<GameInstance>();
   const [taskTabs, setTaskTabs] = useState<Record<string, TaskTab>>({});
+  const [openedSkillIds, setOpenedSkillIds] = useState<string[]>([]);
+  const [skillSections, setSkillSections] = useState<Record<string, "skills" | "cases">>({});
+  const [terminalFocus, setTerminalFocus] = useState(false);
+  const [terminalContextOpen, setTerminalContextOpen] = useState(() => window.innerWidth >= 1440);
+  const [terminalContextDialog, setTerminalContextDialog] = useState(false);
+  const tabContentRef = useRef<HTMLDivElement>(null);
   const [openedTerminalIds, setOpenedTerminalIds] = useState<string[]>([]);
   const [openedProviderKeys, setOpenedProviderKeys] = useState<string[]>([]);
   const [terminalProviders, setTerminalProviders] =
@@ -148,6 +158,18 @@ export function TasksView({
 
   const selected = tasks.find((task) => task.id === selectedId);
   const selectedTab = selected ? (taskTabs[selected.id] ?? "instances") : "instances";
+  useEffect(() => {
+    const area = tabContentRef.current;
+    if (!terminalContextOpen || selectedTab !== "terminal" || !area) return;
+    const fit = () => { const box = area.getBoundingClientRect(); if (box.width > 0 && (box.width < 980 || box.height < 420)) setTerminalContextOpen(false); };
+    fit(); const observer = new ResizeObserver(fit); observer.observe(area); return () => observer.disconnect();
+  }, [terminalContextOpen, selectedId, selectedTab]);
+  useEffect(() => setTerminalContextDialog(false), [selectedId, selectedTab]);
+  function toggleTerminalContext() {
+    const box = tabContentRef.current?.getBoundingClientRect();
+    if (box && box.width > 0 && (box.width < 980 || box.height < 420)) { setTerminalContextOpen(false); setTerminalContextDialog(true); }
+    else setTerminalContextOpen(value => !value);
+  }
   const selectedProvider = selected
     ? (terminalProviders[selected.id] ?? "codex")
     : "codex";
@@ -158,6 +180,18 @@ export function TasksView({
     ? terminalContexts[selectedContextKey]
     : undefined;
   const selectedControl=useTaskControl(selected?.id??"",selectedTerminalContext?.conversation?.id,selectedProvider);
+  useEffect(() => {
+    if (selectedTab === "skills" && selectedId) setOpenedSkillIds(ids => ids.includes(selectedId) ? ids : [...ids, selectedId]);
+  }, [selectedId, selectedTab]);
+  useEffect(() => {
+    if (!terminalFocus) return;
+    const exit = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.isComposing && !document.querySelector('[aria-modal="true"]')) {
+        event.preventDefault(); event.stopPropagation(); setTerminalFocus(false);
+      }
+    };
+    window.addEventListener("keydown", exit, true); return () => window.removeEventListener("keydown", exit, true);
+  }, [terminalFocus]);
   useEffect(() => {
     if (!notificationNavigation?.target) return;
     const activation = notificationNavigation, target = activation.target!;
@@ -592,7 +626,7 @@ export function TasksView({
   }
 
   return (
-    <div className="workspace tasks-workspace">
+    <div className={`workspace tasks-workspace ${terminalFocus && selectedTab === "terminal" ? "terminal-focus" : ""}`}>
       <aside className="task-list-pane">
         <div className="pane-header">
           <h1>{t("tasks")}</h1>
@@ -709,7 +743,7 @@ export function TasksView({
               </button>
             </div>
 
-            <div className="task-tab-content">
+            <div className="task-tab-content" ref={tabContentRef}>
               <div className="task-inline-notices">
               <TaskIntakeDialog key={`intake:${selected.id}`} taskId={selected.id} active={selected.status === "active"}
                 onEnsureConnection={ensureIntakeConnection}
@@ -726,8 +760,10 @@ export function TasksView({
                 onRepairIssue={selectedProvider === "codex" && selectedTerminalContext?.conversation ? repairSelectedIssue : undefined}
                 requestedReview={requestedReview?.taskId === selected.id ? requestedReview.document : undefined} onReviewOpened={() => setRequestedReview(undefined)}
                 onContinue={async (message, _group, afterRevision) => continueSelectedTask(message, afterRevision)} />}
-              {selectedTab === "skills" && <SkillLibrary key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
-                onContinue={continueSelectedTask} />}
+              <div className="skill-tab-panel" hidden={selectedTab !== "skills"}>
+                {openedSkillIds.includes(selected.id) && <SkillLibrary key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
+                  visible={selectedTab === "skills"} initialSection={skillSections[selected.id] ?? "skills"} onContinue={continueSelectedTask} />}
+              </div>
               <div
                 className="instance-tab-panel"
                 hidden={selectedTab !== "instances"}
@@ -857,7 +893,13 @@ export function TasksView({
                         </button>
                       ))}
                     </div>
+                    <div className="terminal-workspace-actions">
+                      <button className="secondary-button" aria-pressed={terminalContextOpen || terminalContextDialog} onClick={toggleTerminalContext}><ListTree size={15}/>{t("terminalContext")}</button>
+                      <button className="text-button" aria-pressed={terminalFocus} onClick={() => setTerminalFocus(value => !value)}>{terminalFocus ? <Minimize2 size={15}/> : <Maximize2 size={15}/>} {t(terminalFocus ? "terminalExitFocus" : "terminalFocusMode")}</button>
+                    </div>
                   </div>
+                  <div className={`terminal-workbench ${terminalContextOpen ? "with-context" : ""}`}>
+                  <div className="terminal-provider-stack">
                   {(["codex", "grok"] as const).map((provider) => {
                     const key = terminalContextKey(taskId, provider);
                     if (!openedProviderKeys.includes(key)) return null;
@@ -895,6 +937,13 @@ export function TasksView({
                       </div>
                     );
                   })}
+                  </div>
+                  <div className="terminal-context-slot" hidden={!terminalContextOpen}>
+                    <TerminalContextPanel workflow={terminalContexts[terminalContextKey(taskId, terminalProviders[taskId] ?? "codex")]?.workflow}
+                      control={taskId === selectedId ? selectedControl : undefined} t={t} onClose={() => setTerminalContextOpen(false)}
+                      onProduction={() => selectTab("production")} onArtLibrary={() => { setSkillSections(sections => ({ ...sections, [taskId]: "cases" })); selectTab("skills"); }}/>
+                  </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -902,6 +951,11 @@ export function TasksView({
         )}
       </section>
 
+      {terminalContextDialog && selected && <Modal title={t("terminalContext")} onClose={() => setTerminalContextDialog(false)}>
+        <div className="terminal-context-dialog"><TerminalContextPanel workflow={selectedTerminalContext?.workflow} control={selectedControl} t={t}
+          onClose={() => setTerminalContextDialog(false)} onProduction={() => { setTerminalContextDialog(false); selectTab("production"); }}
+          onArtLibrary={() => { setTerminalContextDialog(false); setSkillSections(sections => ({...sections,[selected.id]:"cases"})); selectTab("skills"); }}/></div>
+      </Modal>}
       {showCreate && (
         <CreateTaskModal
           t={t}

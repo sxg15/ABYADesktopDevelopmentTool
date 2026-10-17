@@ -3,6 +3,59 @@ use base64::Engine as _;
 pub(super) const PNG: &str =
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=";
 
+#[test]
+fn embedded_design_catalog_reads_pinned_resources_without_new_pins() {
+    let f = Fixture::new();
+    let before = serde_json::to_value(f.record()).unwrap();
+    for provider in ["codex", "grok"] {
+        let prefix = format!(".{provider}/skills/abya-game-development-task");
+        files::write_file(
+            &f.workspace,
+            &format!("{prefix}/SKILL.md"),
+            b"Pinned workflow",
+        )
+        .unwrap();
+        for reference in [
+            "references/game-art-design",
+            "references/game-art-design/references/product-interface-design",
+        ] {
+            files::write_file(
+                &f.workspace,
+                &format!("{prefix}/{reference}/SKILL.md"),
+                b"---\ndescription: Pinned design method\n---\nRead these original constraints.",
+            )
+            .unwrap();
+        }
+    }
+    let catalog = f.service.production_catalog(&f.id).unwrap();
+    let designs: Vec<_> = catalog
+        .iter()
+        .filter(|entry| entry.kind == "design")
+        .collect();
+    assert_eq!(designs.len(), 4);
+    for entry in designs {
+        assert_eq!(entry.sha256.len(), 64);
+        assert!(
+            f.service
+                .production_skill_text(&f.id, &entry.provider, &entry.id)
+                .unwrap()
+                .contains("Read these original constraints.")
+        );
+    }
+    assert!(
+        catalog::scan(&f.workspace)
+            .unwrap()
+            .iter()
+            .all(|entry| entry.kind != "design")
+    );
+    assert_eq!(serde_json::to_value(f.record()).unwrap(), before);
+    assert!(
+        f.service
+            .production_skill_text(&f.id, "codex", "../../outside")
+            .is_err()
+    );
+}
+
 pub(super) fn enabled_fixture() -> Fixture {
     let f = Fixture::new();
     f.service

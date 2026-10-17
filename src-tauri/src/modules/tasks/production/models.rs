@@ -127,6 +127,7 @@ pub struct ArtDesign {
     pub realizations: Vec<Value>,
     pub case_drafts: Vec<Value>,
     pub case_uses: Vec<Value>,
+    pub case_requests: Vec<Value>,
     pub planner_notes: Vec<Value>,
     pub conversation_inputs: Vec<Value>,
 }

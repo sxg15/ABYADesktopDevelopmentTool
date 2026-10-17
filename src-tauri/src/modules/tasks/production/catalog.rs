@@ -112,7 +112,49 @@ pub(super) fn validate_choice(root: &Path, key: &str, id: &str) -> AppResult<()>
 
 impl TaskService {
     pub fn production_catalog(&self, id: &str) -> AppResult<Vec<SkillEntry>> {
-        scan(&self.production_workspace(id)?)
+        let root = self.production_workspace(id)?;
+        let mut entries = scan(&root)?;
+        // Browsing projections only: the owning workflow remains the single pinned tree.
+        for provider in ["codex", "grok"] {
+            if !entries
+                .iter()
+                .any(|entry| entry.provider == provider && entry.id == "abya-game-development-task")
+            {
+                continue;
+            }
+            for (suffix, name) in [
+                ("references/game-art-design", "game-art-design"),
+                (
+                    "references/game-art-design/references/product-interface-design",
+                    "product-interface-design",
+                ),
+            ] {
+                let skill_id = format!("abya-game-development-task/{suffix}");
+                let relative = format!(".{provider}/skills/{skill_id}");
+                let path = files::safe_path(&root, &format!("{relative}/SKILL.md"))?;
+                if !path.is_file() {
+                    continue;
+                }
+                let (content, _) = files::text_file(&root, &format!("{relative}/SKILL.md"))?;
+                let description = content
+                    .lines()
+                    .find_map(|line| line.strip_prefix("description:"))
+                    .unwrap_or("")
+                    .trim()
+                    .trim_matches('"')
+                    .to_owned();
+                entries.push(SkillEntry {
+                    id: skill_id,
+                    provider: provider.into(),
+                    kind: "design".into(),
+                    name: name.into(),
+                    description,
+                    path: relative.clone(),
+                    sha256: tree_hash(&root, &relative)?,
+                });
+            }
+        }
+        Ok(entries)
     }
     pub fn production_skill_text(
         &self,

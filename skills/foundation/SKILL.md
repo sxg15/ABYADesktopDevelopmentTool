@@ -1,5 +1,12 @@
 # Foundation Skill
 
+## Workspace library contracts (2026-10-17)
+ArtDesign defaults an additive caseRequests array; older records remain readable.
+artLibraryApi.request uses the existing APP-only mutate_art_library adapter and returns
+the saved production revision and fixed domain prompt. No new transport, approval API
+or credential is introduced. TaskSkill kind=design uses the existing id/path/hash fields
+for exact nested resources; task pinning still owns the parent workflow tree.
+
 ## Art design contracts (2026-10-16)
 Additive art_library_cases stores immutable versioned curated case bodies and separately
 managed availability, without a task foreign-key cascade. The tasks module owns all

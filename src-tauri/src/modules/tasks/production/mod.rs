@@ -4,6 +4,7 @@ mod art_design_sources;
 mod art_design_validation;
 mod art_library;
 mod art_library_package;
+mod art_library_requests;
 mod art_references;
 pub use acceptance::AcceptanceSpec;
 mod catalog;

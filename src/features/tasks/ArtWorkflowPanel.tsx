@@ -6,6 +6,7 @@ import { errorMessage } from "../../shared/api";
 import { ArtReferences } from "./ArtReferences";
 import { ArtTracePanel } from "./ArtTracePanel";
 import { ArtLibraryPanel } from "./ArtLibraryPanel";
+import { ArtProposalContext } from "./ArtProposalContext";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { VisualGallery } from "./VisualGallery";
 import { artDocument, artRecheckReason, artVisuals, isArtFeedback } from "./artWorkflow";
@@ -24,7 +25,14 @@ export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, 
   const [historyOpen, setHistoryOpen] = useState(false);
   const feedbackArea = useRef<HTMLDivElement>(null);
   useEffect(() => { if (feedbackRequest) setPane("feedback"); }, [feedbackRequest]);
-  useEffect(() => { if (pane === "feedback") { feedbackArea.current?.scrollIntoView?.({block:"nearest"}); feedbackArea.current?.focus({preventScroll:true}); } }, [pane, feedbackRequest]);
+  useEffect(() => {
+    if (pane !== "feedback") return;
+    const target = feedbackArea.current;
+    target?.scrollIntoView?.({block:"nearest"}); target?.focus({preventScroll:true});
+    target?.classList.add("art-navigation-focus");
+    const timer = window.setTimeout(() => target?.classList.remove("art-navigation-focus"), 1100);
+    return () => { window.clearTimeout(timer); target?.classList.remove("art-navigation-focus"); };
+  }, [pane, feedbackRequest]);
   const artifacts = view.artifacts ?? r.artifacts ?? [];
   const record = {...r, artifacts};
   const { current, history } = artVisuals(r, artifacts);
@@ -48,6 +56,16 @@ export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, 
   async function reveal(path: string) { try { await productionApi.revealDocument(taskId, path); } catch(e) { setError(errorMessage(e)); } }
   const drafts = artifacts.filter(a => a.stage === "resources" && !a.mediaType && a.path !== document?.path);
   const feedbackTarget = current.find(a => view.actions?.feedback[a.id] === "");
+  const nextAction = <div className={`art-next-action ${approved ? "is-complete" : ready.length || canReview || question ? "needs-action" : "is-waiting"}`} role="status">
+      <div><strong>{title}</strong><p>{hint}</p></div>
+      {active && question ? <button className="primary-button" onClick={() => window.dispatchEvent(new CustomEvent("abya:open-intake",{detail:{taskId,groupId:question.id}}))}>{en ? "Answer questions" : "填写阶段问答"}<ArrowRight size={16}/></button>
+        : active && pending.length ? <button className="primary-button" onClick={() => setPane("feedback")}>{ready.length ? (en ? "Recheck fixes" : "进入修改与复验") : (en ? "See what's missing" : "查看等待原因")}<ArrowRight size={16}/></button>
+        : document && <button className={active && canReview && !approved ? "primary-button" : "secondary-button"} onClick={() => onReview(document)}>{canReview && active && !approved ? (en ? "Review and confirm" : "审查并确认本版") : (en ? "Read recorded document" : "阅读已登记文档")}<ArrowRight size={16}/></button>}
+    </div>;
+  const documentStrip = document ? <div className="art-document-strip"><FileText size={21}/><div><strong>{en ? `Review document · v${document.revision}` : `本版确认单 · 第 ${document.revision} 版`}</strong>
+    <small>{approved ? (en ? "Confirmed" : "已确认") : canReview ? (en ? "Submitted for review" : "已提交审查") : (en ? "Recorded document; see guidance" : "已登记文档，请查看引导")}</small></div>
+    <button className="text-button" onClick={() => onReview(document)}>{en ? "Read document" : "阅读确认单"}</button></div>
+    : <p className="production-empty">{en ? "No confirmation document yet. These images are drafts." : "AI 尚未提交确认单，当前图片仅为草稿。"}</p>;
   return <section className="production-card art-workflow" aria-label={en ? "Art collaboration" : "美术方案协作区"}>
     <header className="art-workflow-heading"><div><Palette size={24}/><h4>{en ? "Art proposal · review together" : "美术方案 · 统一确认"}</h4></div>
       <div className="art-inline-actions"><button className="secondary-button" onClick={() => setReferences(true)}><ImagePlus size={16}/>{en ? "References (optional)" : "补充参考（可选）"} · {referenceCount}</button>
@@ -57,12 +75,7 @@ export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, 
       <li><Palette size={17}/><span>{en ? "2 · Read latest proposal" : "2 · 查看最新方案"}</span></li>
       <li><ClipboardCheck size={17}/><span>{en ? "3 · Recheck and confirm" : "3 · 复验并确认"}</span></li>
     </ol>
-    <div className={`art-next-action ${approved ? "is-complete" : ready.length || canReview || question ? "needs-action" : "is-waiting"}`} role="status">
-      <div><strong>{title}</strong><p>{hint}</p></div>
-      {active && question ? <button className="primary-button" onClick={() => window.dispatchEvent(new CustomEvent("abya:open-intake",{detail:{taskId,groupId:question.id}}))}>{en ? "Answer questions" : "填写阶段问答"}<ArrowRight size={16}/></button>
-        : active && pending.length ? <button className="primary-button" onClick={() => setPane("feedback")}>{ready.length ? (en ? "Recheck fixes" : "进入修改与复验") : (en ? "See what's missing" : "查看等待原因")}<ArrowRight size={16}/></button>
-        : document && <button className={active && canReview && !approved ? "primary-button" : "secondary-button"} onClick={() => onReview(document)}>{canReview && active && !approved ? (en ? "Review and confirm" : "审查并确认本版") : (en ? "Read recorded document" : "阅读已登记文档")}<ArrowRight size={16}/></button>}
-    </div>
+    {pane !== "proposal" && nextAction}
     <div className="art-workflow-tabs" role="tablist" aria-label={en ? "Art workspace panels" : "美术协作内容"}>
       <button role="tab" aria-selected={pane === "requirements"} onClick={() => setPane("requirements")}>{en ? "Requirements and references" : "要求与参考"} · {r.artDesign?.requirements.filter(q=>!q.withdrawn).length??0}</button>
       <button role="tab" aria-selected={pane === "proposal"} onClick={() => setPane("proposal")}><Palette size={16}/>{en ? "Current proposal" : "本版方案"}</button>
@@ -73,15 +86,13 @@ export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, 
       <ArtTracePanel key={taskId} taskId={taskId} view={view} active={active} en={en} onUpdated={onUpdated} onContinue={onContinue}/>
     </div>
     {pane === "proposal" && <div className="art-current-proposal" role="tabpanel" aria-label={en ? "Current proposal" : "本版方案"}>
-      {document ? <div className="art-document-strip"><FileText size={21}/><div><strong>{en ? `Review document · v${document.revision}` : `本版确认单 · 第 ${document.revision} 版`}</strong>
-        <small>{approved ? (en ? "Confirmed" : "已确认") : canReview ? (en ? "Submitted for review" : "已提交审查") : (en ? "Recorded document; see guidance above" : "已登记文档，处理方式见上方引导")}</small></div>
-        <button className="text-button" onClick={() => onReview(document)}>{en ? "Read document" : "阅读确认单"}</button></div>
-        : <p className="production-empty">{en ? "No confirmation document yet. The images below are drafts." : "AI 尚未提交确认单，下方图片仅为草稿。"}</p>}
+      <div className="art-proposal-layout with-requirements"><div className="art-proposal-main">
       {current.length ? <><h5>{en ? "Latest visual revisions" : "本轮最新视觉方案"} · {current.length}</h5>
         {!submitted && <p className="art-blocker-note">{en ? "New images are not fully bound to the submitted document. Wait for AI to resubmit before approval." : "最新图片尚未全部关联到确认单，请等待 AI 更新并提交；此时不能确认新方案。"}</p>}
         <VisualGallery embedded taskId={taskId} artifacts={current} bindings={document?.artifactBindings} en={en}/>
       </> : <p className="production-empty">{en ? "No preview images registered. Reuse-only/no-art proposals follow the submitted document." : "暂无已登记的预览图。复用素材或无需新增美术的任务，以确认单说明为准。"}</p>}
       {active && feedbackTarget && <button className="secondary-button" onClick={() => { setSelectedArtifact(feedbackTarget.id); setPane("feedback"); }}>{en ? "Request visual changes" : "对本版图片提出修改意见"}</button>}
+      </div><div className="art-proposal-side">{nextAction}{documentStrip}<ArtProposalContext view={view} en={en} pending={pending.length} onRequirements={() => setPane("requirements")} onFeedback={() => setPane("feedback")} onReview={() => { if (document) onReview(document); }}/></div></div>
       <details className="art-history" onToggle={e => setHistoryOpen(e.currentTarget.open)}><summary><History size={16}/>{en ? "History, drafts and files" : "历史版本、草稿与文件"} · {history.length + drafts.length}</summary>
         <p>{en ? "History is read-only and does not represent the current proposal." : "历史版本仅供对照，不代表当前待确认方案。"}</p>
         {historyOpen && <VisualGallery embedded taskId={taskId} artifacts={history} en={en}/>}
@@ -101,6 +112,6 @@ export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, 
       <ArtReferences taskId={taskId} record={record} active={active} en={en} onUpdated={onUpdated} onContinue={onContinue}/>
       <div className="modal-actions"><button className="secondary-button" onClick={() => setReferences(false)}>{en ? "Back to art workflow" : "返回美术协作区"}</button></div>
     </Modal>}
-    {library&&<ArtLibraryPanel key={taskId} taskId={taskId} view={view} active={active} en={en} onClose={()=>setLibrary(false)} onContinue={onContinue}/>}
+    {library&&<ArtLibraryPanel key={taskId} taskId={taskId} view={view} active={active} en={en} onClose={()=>setLibrary(false)} onContinue={onContinue} onChanged={() => { void productionApi.get(taskId).then(onUpdated).catch(e => setError(errorMessage(e))); }}/ >}
   </section>;
 }

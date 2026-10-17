@@ -40,6 +40,9 @@ fn server(replies: Vec<String>) -> (String, thread::JoinHandle<Vec<String>>) {
                     Err(error) => panic!("{error}"),
                 }
             };
+            // Windows accepted sockets can inherit the listener's nonblocking mode.
+            // Header reads use the bounded blocking timeout below, not arrival timing.
+            socket.set_nonblocking(false).unwrap();
             socket
                 .set_read_timeout(Some(Duration::from_secs(5)))
                 .unwrap();

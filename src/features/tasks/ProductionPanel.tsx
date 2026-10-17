@@ -325,6 +325,7 @@ export function ProductionPanel({
               <button
                 key={item.id}
                 aria-pressed={stage === item.id}
+                aria-current={r.currentStage === item.id ? "step" : undefined}
                 aria-label={`${index + 1} ${label(item.id)} ${statusName(states[item.id], locale)}`}
                 title={label(item.id)}
                 className={`production-stage-button ${stage === item.id ? "selected" : ""} stage-${states[item.id]}`}

@@ -1,5 +1,23 @@
 # Development Tasks Skill
 
+## Integrated Skill and art library (2026-10-17)
+SkillLibrary separates skills/templates and the shared ArtLibraryPanel in embedded mode;
+the resources-stage modal remains available. Keep drafts mounted across section changes,
+discard stale body/task responses and refresh the production revision after actions.
+Case cards lazily read validated stored media; label original references/imported claims.
+Browsing remains available for scoped/pinned tasks; unavailable mutations stay explained.
+production_catalog additionally projects the two exact nested game-art-design and
+product-interface-design resources when present in the task's pinned workflow tree.
+These kind=design entries are read-only browsing projections, never extra skillPins,
+template choices or upgrade targets. Keep scan/deployment ownership unchanged.
+APP-only art-library request operations persist bounded, version/cycle/design-bound
+caseRequests before continuation. They validate reference status, retain history and
+deduplicate the same selection, without adopting media or invalidating art approvals.
+Draft/reference/revision requests are not semantic requirements or satisfied feedback.
+Continuation failure retains the request; agents can read it but cannot fabricate it.
+The proposal context shows literal requirements beside visuals, labels AI-recorded
+locations and routes feedback/review to existing gates. Retain all detailed input views.
+
 ## Game art traceability and library (2026-10-16)
 The complete planner-supplied design prompt is distilled into structural-exploration
 and anti-default-audit references: full new/redesign work compares three genuinely

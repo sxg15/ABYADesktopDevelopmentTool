@@ -20,6 +20,9 @@ omit GitHub Authorization. Restart the APP/retry the transfer after changing pro
 The Windows proxy regression runs in a child process with HKCU redirected to a UUID test
 key, never the user's Internet Settings; it verifies API/CDN/OAuth routing, local CLI bypass
 and direct binary downloads when disabled. It uses no real account or remote package.
+The fixture keeps accept bounded with a nonblocking listener, then explicitly restores
+blocking mode on each accepted socket before timed header/body reads. Windows can inherit
+the listener mode; do not let packet-arrival timing make proxy assertions intermittent.
 The ignored live_system_proxy_route test requires ABYA_TEST_EXPECTED_PROXY=127.0.0.1:PORT
 for an already enabled local system proxy. It sends unauthenticated public HEAD requests
 to GitHub API/CDN and verifies the connected peer address, without downloading a package.

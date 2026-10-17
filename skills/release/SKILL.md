@@ -1,12 +1,30 @@
 # Release Skill
 
 ## Game client system proxy (2026-10-17)
-Default/Validation builds use game-client-system-proxy-20261017. Enable reqwest system-proxy
+Retain the game-client-system-proxy-20261017 fix in the current UI build. Enable reqwest system-proxy
 explicitly alongside rustls; keep local CLI and app-server readiness HTTP clients direct.
 The Windows regression redirects HKCU only inside a single isolated test child process,
 validates proxy routing without external traffic and removes its UUID fixture registry key.
 Run standard checks, full portable inventory and relocated/fresh tracked checkout validation,
 then promote the complete package and publish CLI before dev. Preserve all prior features.
+
+## Retained UI refinement and integrated library (2026-10-17)
+Default/Validation builds use workspace-refinement-20261017. Continue on the requested
+美术优化 branch, integrate latest CLI/dev, and publish the verified feature to CLI then
+dev while retaining all earlier functionality. Leave 美术优化 checked out afterward.
+Validate retained guide/description/stage navigation, explicit stage selection, embedded
+case browsing, real nested Skill reads, durable case requests without adoption/approval,
+terminal focus/context and bounded history search. Preserve native IME and sessions.
+Use workspace-refinement-preview.html with real components and marked browser fixtures,
+then the extended marker-owned test-art-design-native.mjs on an isolated candidate and
+relocated complete package. No real AI or game session is started by these fixtures.
+Run the standard checks, Rust formatting/Clippy/tests and portable inventory/tracked
+checks. When launched from an 8.3 TEMP alias, set TEMP/TMP to the same canonical user
+temp directory for Rust test path comparisons; never change user settings or test data.
+Do not reopen the user's formal APP: the user explicitly left it closed. Promotion of
+the stopped complete package must preserve the normal database and task workspaces.
+The combined build includes proxy fix 0312873; rebuild from merged source and retain
+the system-proxy feature, local no_proxy behavior and isolated proxy regressions.
 
 ## Game art design workflow 2.2 (2026-10-16)
 Content-only design-prompt refinements may reuse the already verified executable when

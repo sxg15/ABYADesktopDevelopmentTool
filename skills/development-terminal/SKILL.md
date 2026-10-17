@@ -1,5 +1,20 @@
 # Development Terminal Skill
 
+## Context and loaded-history search (2026-10-17)
+TerminalContextPanel reads the already-selected conversation workflow/control only.
+Keep the original conversation list, provider controls and top workflow strip; this
+optional side panel never infers success from text and labels prior execution explicitly.
+Insufficient task-pane width/height collapses the optional side panel; explicitly
+opening context there uses the existing modal, preserving usable terminal geometry.
+Focus/context changes preserve PTY nodes, buffers, IME and independent scroll positions.
+History search is user-opened and snapshots the bounded recent DOM history (about
+2 MiB), not the complete transcript. Refresh only on explicit request; literal Unicode
+search supports case matching, caps results at 500 and renders small text-only excerpts.
+It never writes PTY input, changes terminal scroll or reads the system clipboard.
+The existing native copy-all action remains the way to obtain earlier full history.
+Regress literal hostile text, large match sets, stable snapshots, focus restoration,
+provider/conversation identity and unchanged mounting/connection behavior.
+
 ## IME anchor stability (2026-10-13)
 terminalComposition pins the public xterm helper textarea and composition view to
 their compositionstart position while a native IME is choosing text. Streaming TUI

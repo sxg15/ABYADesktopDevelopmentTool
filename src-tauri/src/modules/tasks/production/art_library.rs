@@ -44,6 +44,7 @@ pub(super) fn media_bytes(root: &Path, item: &Value) -> AppResult<Vec<u8>> {
 impl TaskService {
     pub fn art_library_action(&self, input: ProductionMutation) -> AppResult<Value> {
         match input.operation.as_str() {
+            "request" => self.request_art_case_work(input),
             "collect" => self.collect_art_case(input),
             "withdraw" => self.database.with_connection(|c| {
                 let id=text(&input.data,"id",100)?;

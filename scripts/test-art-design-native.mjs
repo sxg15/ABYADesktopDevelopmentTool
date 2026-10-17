@@ -39,6 +39,10 @@ if(action==='init'){
   let view;
   const update=async(operation,values)=>view=await invoke('update_task_production',{input:{taskId:task.id,expectedRevision:view?.record?.revision??0,operation,data:values}});
   await update('initialize',{questionMode:'no-followup'});assert.equal(view.record.workflowVersion,'2.2.0');
+  const catalog=await invoke('get_task_skills',{taskId:task.id});
+  assert.equal(catalog.filter(skill=>skill.kind==='design').length,4);
+  const interfaceSkill=catalog.find(skill=>skill.provider==='codex'&&skill.name==='product-interface-design');
+  assert.ok((await invoke('read_task_skill',{taskId:task.id,provider:'codex',skillId:interfaceSkill.id})).includes('从产品推导界面'));
   const source=view.record.artDesign.sources[0];
   const write=(file,text)=>{fs.mkdirSync(path.dirname(path.join(task.workspacePath,file)),{recursive:true});fs.writeFileSync(path.join(task.workspacePath,file),text);};
   write('artifacts/requirements.md','# 隔离测试需求\n以物品显示库存。');
@@ -60,6 +64,11 @@ if(action==='init'){
   await update('save-art-case-draft',{id:'draft',title:'原生隔离案例',artifactIds:[artifactId],tags:['桌面','库存'],context:'固定镜头',plannerRequirements:'用物品表达库存',visualRules:'清楚轮廓',decisions:'靠近操作区',production:'独立图层',applicability:'少量库存',limitations:'仅为隔离测试',sources:'程序绘制测试示意'});
   const caseEntry=await invoke('mutate_art_library',{input:{taskId:task.id,expectedRevision:view.record.revision,operation:'collect',data:{draftId:'draft',satisfaction:'隔离测试模拟用户认可，仅验证收录入口'}}});
   assert.equal(caseEntry.runtimeVerified,false);assert.equal(caseEntry.designApproved,true);
+  const requestHash=view.artDesignStatus.designHash,requestApprovals=view.record.approvals.length;
+  const caseRequest=await invoke('mutate_art_library',{input:{taskId:task.id,expectedRevision:view.record.revision,operation:'request',data:{kind:'reference',caseId:caseEntry.id,version:1}}});
+  view=await invoke('get_task_production',{taskId:task.id});
+  assert.equal(caseRequest.revision,view.record.revision);assert.equal(view.record.artDesign.caseRequests.length,1);
+  assert.equal(view.artDesignStatus.designHash,requestHash);assert.equal(view.record.approvals.length,requestApprovals);assert.equal(view.record.artDesign.caseUses.length,0);
   const media=await invoke('read_art_case_media',{id:caseEntry.id,version:1,index:0});assert.ok(media.startsWith('data:image/png;base64,'));
   const before=view.record.approvals.length;view=await invoke('get_task_production',{taskId:task.id});assert.equal(view.record.approvals.length,before);
   const exported=await invoke('mutate_art_library',{input:{taskId:task.id,expectedRevision:view.record.revision,operation:'export',data:{id:caseEntry.id,version:1}}});
@@ -70,7 +79,7 @@ if(action==='init'){
   assert.equal(view.record.artDesign.caseUses.length,1);
   view=await invoke('submit_production_feedback',{input:{taskId:task.id,expectedRevision:view.record.revision,operation:'add-art-note',data:{text:'最后一个物品也要显示。'}}});
   assert.equal(view.record.stages.resources,'in-progress');
-  const report={nativeBridge:true,manifestVerified:true,workflowVersion:'2.2.0',downgradeRejected,omissionRejected,explicitCollection:true,conceptNotRuntimeVerified:true,exported:true,frozenCaseReference:true,newInputInvalidated:true,taskId:task.id};
+  const report={nativeBridge:true,manifestVerified:true,workflowVersion:'2.2.0',nestedDesignSkills:true,requestPersistedWithoutAdoption:true,downgradeRejected,omissionRejected,explicitCollection:true,conceptNotRuntimeVerified:true,exported:true,frozenCaseReference:true,newInputInvalidated:true,taskId:task.id};
   fs.writeFileSync(path.join(root,'result.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
   await page.reload();await page.waitForLoadState('domcontentloaded');
   await page.getByText('制作流程',{exact:true}).click();
@@ -81,5 +90,16 @@ if(action==='init'){
   await page.getByRole('button',{name:/原生隔离案例/}).click();
   await page.getByRole('dialog').locator('img').first().waitFor({state:'visible'});
   await page.screenshot({path:path.join(root,'native-library.png')});
+  await page.getByRole('dialog').locator('.modal-header .icon-button').click();
+  await page.getByRole('tab',{name:'Skill 库',exact:true}).click();
+  await page.getByRole('heading',{name:'游戏美术设计',exact:true}).waitFor();
+  await page.getByRole('heading',{name:'产品界面设计',exact:true}).waitFor();
+  await page.screenshot({path:path.join(root,'native-skills.png')});
+  await page.getByRole('tab',{name:'美术设计库',exact:true}).click();
+  await page.getByRole('button',{name:/原生隔离案例/}).click();
+  await page.getByRole('button',{name:'让 AI 评估并参考',exact:true}).click();
+  await page.getByText(/请求已保存，继续处理需要注意/).waitFor();
+  const saved=await invoke('get_task_production',{taskId:task.id});assert.ok(saved.record.artDesign.caseRequests.length>=2);
+  await page.screenshot({path:path.join(root,'native-library-embedded.png')});
   await browser.close();
 }

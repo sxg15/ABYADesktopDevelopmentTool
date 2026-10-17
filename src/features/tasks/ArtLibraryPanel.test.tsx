@@ -8,7 +8,7 @@ vi.mock("@tauri-apps/plugin-dialog",()=>({open:vi.fn()}));
 vi.mock("../../shared/production",()=>({productionApi:{media:vi.fn(async()=>"data:image/png;base64,AA=="),revealDocument:vi.fn()}}));
 vi.mock("../../shared/artDesign",async original=>{
   const actual=await original<typeof import("../../shared/artDesign")>();
-  return {...actual,artLibraryApi:{list:vi.fn(async()=>[]),media:vi.fn(async()=>"data:image/png;base64,AA=="),action:vi.fn(),get:vi.fn()}};
+  return {...actual,artLibraryApi:{list:vi.fn(async()=>[]),media:vi.fn(async()=>"data:image/png;base64,AA=="),action:vi.fn(),get:vi.fn(),request:vi.fn()}};
 });
 afterEach(()=>{cleanup();vi.clearAllMocks();});
 it("requires an explicit satisfaction scope before collecting a reviewed draft",async()=>{
@@ -31,10 +31,20 @@ it("does not offer collection for a stale draft",()=>{
   expect(screen.getByText(/草稿对应的要求或设计已变化/)).toBeTruthy();
 });
 it("asks AI to inspect applicability without silently applying or approving a case",async()=>{
+  vi.mocked(artLibraryApi.request).mockResolvedValue({revision:5,prompt:"评估 case-fixture 第 1 版；当前策划要求优先"});
   vi.mocked(artLibraryApi.list).mockResolvedValue([artCaseFixture()]);const next=vi.fn().mockResolvedValue(undefined);
   render(<ArtLibraryPanel taskId="task" view={artViewFixture()} active onClose={vi.fn()} onContinue={next}/>);
   fireEvent.click(await screen.findByRole("button",{name:/用物品轮廓表达剩余次数/}));
   fireEvent.click(screen.getByRole("button",{name:"让 AI 评估并参考"}));
-  await waitFor(()=>expect(next).toHaveBeenCalledWith(expect.stringContaining("case-fixture 第 1 版"),4));
+  await waitFor(()=>expect(next).toHaveBeenCalledWith(expect.stringContaining("case-fixture 第 1 版"),5));
+  expect(artLibraryApi.request).toHaveBeenCalledWith("task",4,"reference","case-fixture",1);
   expect(artLibraryApi.action).not.toHaveBeenCalled();expect(next.mock.calls[0][0]).toContain("当前策划要求优先");
+});
+it("does not continue when saving the concrete case request fails",async()=>{
+  vi.mocked(artLibraryApi.list).mockResolvedValue([artCaseFixture()]);
+  vi.mocked(artLibraryApi.request).mockRejectedValue(new Error("版本已变化"));
+  const next=vi.fn();render(<ArtLibraryPanel taskId="task" view={artViewFixture()} active embedded onContinue={next}/>);
+  fireEvent.click(await screen.findByRole("button",{name:/用物品轮廓表达剩余次数/}));
+  fireEvent.click(screen.getByRole("button",{name:"让 AI 评估并参考"}));
+  await screen.findByText("版本已变化");expect(next).not.toHaveBeenCalled();expect(artLibraryApi.action).not.toHaveBeenCalled();
 });

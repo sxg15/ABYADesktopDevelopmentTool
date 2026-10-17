@@ -1,5 +1,21 @@
 # App Shell Skill
 
+## Retained workspace refinement (2026-10-17)
+Keep the two navigation columns, persistent TaskGuidance, task-description disclosure,
+conversation steps and seven policy-driven stage cards. workspaceRefinement.css owns
+the approved teal surface progression, amber human action emphasis and shared feedback;
+preserve blue/purple/red state semantics, keyboard outlines and reduced motion.
+Stage browsing uses aria-pressed; actual execution independently uses aria-current=step.
+Keep tab content as the only scrolling work area and validate narrow/short windows.
+Terminal focus is opt-in, hides navigation with CSS without unmounting sessions, and
+retains header/guidance. Explicit exit or non-IME Escape restores it; modal Escape
+remains owned by the dialog. Context/search additions must not restyle xterm helpers.
+Skill and case sections share the existing tab; once opened, keep that selected task's
+Skill workspace mounted while changing work areas so unsubmitted notes survive.
+The mounted Skill workspace keeps its own bounded scroll area instead of inheriting
+another tab's page offset. Narrow terminal context uses an explicit modal instead
+of taking the remaining terminal height; resizing never opens a modal by itself.
+
 ## Task workspace visual hierarchy (2026-10-16)
 Use the Chinese UI font stack with weight synthesis for fonts without a matching
 bold face. Task title, primary action and section headings have distinct sizes and

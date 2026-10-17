@@ -1,5 +1,13 @@
 # Codex Terminal Skill
 
+## Persisted case request continuation (2026-10-17)
+The fixed generic continuation prompt also tells the model to inspect APP-authored
+artDesign.caseRequests by cycle/version, reconcile already processed work and then
+inspect/adapt or prepare drafts. This supports older pinned Skills without rewriting
+them. Domain requests are saved before queuing; native identity, wait/approval gates,
+delivery receipts and targeted repair prompts are unchanged. Requests never imply
+adoption, planner satisfaction or permission to skip an existing confirmation.
+
 The fixed generic continuation prompt instructs AI to read active plannerReference
 artifact paths and notes, view the images and use them as art inputs. Withdrawn
 references are excluded; inputs never imply acceptance. This also supports pinned

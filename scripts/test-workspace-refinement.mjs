@@ -1,0 +1,67 @@
+// Private headless browser, real React components, synthetic adapter data only.
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
+const {chromium}=require(process.env.ABYA_TEST_PLAYWRIGHT||'playwright');
+const output=path.resolve(process.argv[2]||'logs/workspace-refinement-ui');
+fs.mkdirSync(output,{recursive:true});
+const browser=await chromium.launch({headless:true,...(process.env.ABYA_TEST_BROWSER?{executablePath:process.env.ABYA_TEST_BROWSER}:{})});
+const page=await browser.newPage({viewport:{width:1600,height:1000},locale:'zh-CN'});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+try {
+  await page.goto('http://127.0.0.1:1537/scripts/workspace-refinement-preview.html');
+  await page.getByRole('tab',{name:/制作流程/}).click();
+  await page.getByText('美术方案 · 统一确认',{exact:true}).waitFor();
+  assert.equal(await page.locator('.production-stage-button').count(),7);
+  await page.locator('.task-description-toggle').click();assert.equal(await page.locator('.task-description-body').isVisible(),true);
+  assert.equal(await page.locator('.task-guidance').isVisible(),true);await page.locator('.task-description-toggle').click();
+  await page.locator('.guidance-action>button').click();await page.getByRole('dialog').waitFor();
+  assert.equal(await page.getByRole('dialog').locator('input[type="radio"]:checked').count(),0);await page.keyboard.press('Escape');
+  await page.screenshot({path:path.join(output,'workflow.png')});
+  await page.locator('.production-panel').evaluate(e=>e.scrollTop=200);
+  await page.screenshot({path:path.join(output,'art-context.png')});
+  await page.getByRole('tab',{name:'Skill 库',exact:true}).click();
+  await page.getByRole('heading',{name:'游戏美术设计',exact:true}).waitFor();
+  await page.screenshot({path:path.join(output,'skills.png')});
+  const method=page.locator('.design-skill').filter({has:page.getByRole('heading',{name:'产品界面设计',exact:true})});
+  await method.getByRole('button').click();await page.locator('.skill-reading').waitFor();
+  assert.ok((await page.locator('.skill-reading').textContent()).includes('product-interface-design'));
+  await page.locator('.skill-reading>button').click();
+  await page.getByRole('tab',{name:'美术设计库',exact:true}).click();
+  await page.getByRole('button',{name:/待审阅草稿/}).click();await page.locator('.art-case-row').first().click();
+  await page.getByLabel('我满意的具体部分与原因').fill('未提交的隔离测试说明');
+  await page.getByRole('tab',{name:'技能与模板',exact:true}).click();await page.getByRole('tab',{name:'美术设计库',exact:true}).click();
+  assert.equal(await page.getByLabel('我满意的具体部分与原因').inputValue(),'未提交的隔离测试说明');
+  await page.getByRole('button',{name:'已收录案例',exact:true}).click();
+  await page.getByRole('button',{name:/物品库存 · 纸质桌游 HUD/}).click();
+  await page.locator('.art-case-detail img').first().waitFor({state:'visible'});
+  await page.screenshot({path:path.join(output,'library.png')});
+  await page.getByRole('button',{name:'让 AI 评估并参考',exact:true}).click();
+  await page.getByText(/案例请求已保存/).waitFor();
+  await page.getByRole('tab',{name:'终端',exact:true}).click();
+  const host=page.locator('.terminal-host:visible');await host.locator('.xterm').waitFor();
+  await page.waitForFunction(()=>document.querySelector('.terminal-history pre')?.textContent?.includes('物品'));
+  await host.evaluate(e=>e.dataset.testIdentity='retained');
+  await page.getByRole('button',{name:'专注模式',exact:true}).click();
+  assert.equal(await host.getAttribute('data-test-identity'),'retained');
+  await page.keyboard.press('Escape');assert.equal(await page.locator('.app-sidebar').isVisible(),true);
+  await page.getByRole('button',{name:'查找已加载历史',exact:true}).click();
+  await page.getByLabel('历史关键词').fill('物品');await page.locator('.history-search-result mark').waitFor();
+  await page.screenshot({path:path.join(output,'history-search.png')});await page.keyboard.press('Escape');
+  const sizes=[];
+  for (const [width,height] of [[1600,1000],[1280,800],[1024,700],[1280,620]]) {
+    await page.setViewportSize({width,height});
+    await page.waitForFunction(()=>{const e=document.querySelector('.terminal-host:not([hidden])');const b=e?.getBoundingClientRect();return b&&b.height>=75&&b.bottom<=innerHeight+1;});
+    const bounds=await host.boundingBox();sizes.push({width,height,terminal:bounds});
+    assert.ok(bounds.height>=75&&bounds.y+bounds.height<=height+1);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    await page.screenshot({path:path.join(output,`terminal-${width}-${height}.png`)});
+  }
+  await page.getByRole('button',{name:'步骤与上下文',exact:true}).click();await page.getByRole('dialog').waitFor();
+  assert.equal(await host.getAttribute('data-test-identity'),'retained');await page.keyboard.press('Escape');
+  assert.deepEqual(errors,[]);
+  const result={realComponents:true,syntheticData:true,descriptionAndGuidanceRetained:true,sevenStageNodes:true,libraryDraftPreserved:true,caseRequestRecorded:true,terminalRetained:true,historySearch:true,narrowContextDialog:true,sizes};
+  fs.writeFileSync(path.join(output,'result.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));
+} finally {await browser.close();}

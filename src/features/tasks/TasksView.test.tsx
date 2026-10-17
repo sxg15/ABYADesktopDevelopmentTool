@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { translator } from "../../i18n";
 import { api } from "../../shared/api";
@@ -177,7 +177,7 @@ describe("development task tabs", () => {
     });
     const terminalTab = screen.getByRole("tab", { name: "Terminal" });
     expect(instancesTab.getAttribute("aria-selected")).toBe("true");
-    expect(await screen.findByText("Inspect files")).toBeTruthy();
+    expect(await within(screen.getByRole("region", { name: translator("en-US")("workflowPlan") })).findByText("Inspect files")).toBeTruthy();
 
     fireEvent.click(terminalTab);
     const activeTerminal = await screen.findByTestId(
@@ -187,7 +187,7 @@ describe("development task tabs", () => {
 
     fireEvent.click(instancesTab);
     expect(activeTerminal.getAttribute("data-visible")).toBe("false");
-    expect(screen.getByText("Inspect files")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: translator("en-US")("workflowPlan") })).getByText("Inspect files")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Archived task/ }));
     fireEvent.click(screen.getByRole("tab", { name: "Terminal" }));
@@ -241,14 +241,15 @@ describe("development task tabs", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Select alternate conversation" }),
     );
-    expect(await screen.findByText("Run gameplay test")).toBeTruthy();
+    expect(await within(screen.getByRole("region", { name: translator("en-US")("workflowPlan") })).findByText("Run gameplay test")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Archived task/ }));
     fireEvent.click(screen.getByRole("button", { name: /Active task/ }));
 
     await waitFor(() => {
-      expect(screen.getByText("Run gameplay test")).toBeTruthy();
-      expect(screen.queryByText("Inspect files")).toBeNull();
+      const workflow = within(screen.getByRole("region", { name: translator("en-US")("workflowPlan") }));
+      expect(workflow.getByText("Run gameplay test")).toBeTruthy();
+      expect(workflow.queryByText("Inspect files")).toBeNull();
     });
   });
 

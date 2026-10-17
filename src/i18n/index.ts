@@ -1,9 +1,11 @@
 import { gameClientMessages } from "./gameClients";
+import { workspaceMessages } from "./workspace";
 export type Locale = "zh-CN" | "en-US";
 
 const messages = {
   "zh-CN": {
     ...gameClientMessages["zh-CN"],
+    ...workspaceMessages["zh-CN"],
     product: "ABYA 桌面开发工具",
     tasks: "开发任务",
     archiveTransfer: "传输存档",
@@ -288,6 +290,7 @@ const messages = {
   },
   "en-US": {
     ...gameClientMessages["en-US"],
+    ...workspaceMessages["en-US"],
     product: "ABYA Desktop Development Tool",
     tasks: "Development Tasks",
     archiveTransfer: "Transfer Archive",

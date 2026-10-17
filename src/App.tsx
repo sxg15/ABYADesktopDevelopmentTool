@@ -15,6 +15,7 @@ import {
   type MessageKey,
 } from "./i18n";
 import "./App.css";
+import "./app/workspaceRefinement.css";
 import { IconButtonTooltips } from "./app/IconButtonTooltips";
 import { useNotificationActivations } from "./app/useNotificationActivations";
 import type { NotificationActivation } from "./shared/notifications";

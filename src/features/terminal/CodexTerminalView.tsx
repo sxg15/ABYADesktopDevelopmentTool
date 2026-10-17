@@ -13,6 +13,7 @@ import {
   Pencil,
   RefreshCw,
   ScrollText,
+  Search,
   Square,
   SquareTerminal,
   Trash2,
@@ -37,6 +38,7 @@ import { productionApi, continuationMessages } from "../../shared/production";
 import { useTaskControl, controlText, controlLabel, connectionLabel } from "./useTaskControl";
 import { ExecutionSettings } from "./ExecutionSettings";
 import { installTerminalComposition } from "./terminalComposition";
+import { TerminalHistorySearch } from "./TerminalHistorySearch";
 
 const MAX_HISTORY_CHARACTERS = 2 * 1024 * 1024;
 const HISTORY_TRUNCATED_MESSAGE =
@@ -526,6 +528,7 @@ function ConversationTerminal({
   const [atBottom, setAtBottom] = useState(true);
   const [historyAtBottom, setHistoryAtBottom] = useState(true);
   const [copyState, setCopyState] = useState<"idle" | "copying" | "copied">("idle");
+  const [searchHistory, setSearchHistory] = useState(false);
   const copyBusyRef = useRef(false);
   const connectionRef = useRef(connectionRequest); connectionRef.current = connectionRequest;
   const control=useTaskControl(taskId,conversation.id,provider);
@@ -905,6 +908,7 @@ function ConversationTerminal({
           {state?.workingDirectory ?? availability.workingDirectory}
         </code>
         <div className="terminal-actions">
+          <button className="icon-button" title={t("terminalSearchHistory")} onClick={() => setSearchHistory(true)}><Search size={15}/></button>
           <span role="status" aria-live="polite">
             {copyState === "copied" && t("terminalHistoryCopied")}
           </span>
@@ -1004,6 +1008,7 @@ function ConversationTerminal({
         </div>
       </div>
       {error && !(provider==="codex"&&terminalEnded) && <div className="terminal-error">{error}</div>}
+      {searchHistory && <TerminalHistorySearch readSnapshot={() => historyContentRef.current?.textContent ?? ""} onClose={() => setSearchHistory(false)} t={t}/>}
     </div>
   );
 }

@@ -31,6 +31,48 @@ fn collect(f: &Fixture, id: &str) -> Value {
 }
 
 #[test]
+fn human_case_requests_survive_continuation_without_adoption_or_approval() {
+    let f = enabled_fixture();
+    let image = prepare(&f);
+    draft(&f, "request-candidate", &image, None);
+    let case = collect(&f, "request-candidate");
+    let before = f.record();
+    let hash = art_design_sources::design_hash(&before);
+    let data = json!({"kind":"reference","caseId":case["id"],"version":1});
+    let response = action(&f, "request", data.clone()).unwrap();
+    let after = f.record();
+    assert_eq!(after.art_design.case_requests.len(), 1);
+    assert_eq!(
+        after.art_design.case_requests[0]["selection"]["caseId"],
+        case["id"]
+    );
+    assert_eq!(response["revision"], after.revision);
+    assert!(
+        response["prompt"]
+            .as_str()
+            .unwrap()
+            .contains("inspect-art-case")
+    );
+    assert_eq!(art_design_sources::design_hash(&after), hash);
+    assert_eq!(after.stages, before.stages);
+    assert_eq!(
+        serde_json::to_value(after.approvals).unwrap(),
+        serde_json::to_value(before.approvals).unwrap()
+    );
+    assert!(after.art_design.case_uses.is_empty());
+    assert!(f.apply("request", data.clone()).is_err());
+    action(&f, "request", data.clone()).unwrap();
+    assert_eq!(f.record().art_design.case_requests.len(), 1);
+    action(
+        &f,
+        "withdraw",
+        json!({"id":case["id"],"version":1,"reason":"fixture withdrawn"}),
+    )
+    .unwrap();
+    assert!(action(&f, "request", data).is_err());
+}
+
+#[test]
 fn collecting_requires_explicit_satisfaction_preserves_task_and_is_idempotent() {
     let f = enabled_fixture();
     let image = prepare(&f);

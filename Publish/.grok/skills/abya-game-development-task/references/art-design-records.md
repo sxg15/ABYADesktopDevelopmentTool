@@ -40,6 +40,9 @@ requirements、resources、plan、delivery 仍是原有确认点，没有新增�
 
 ## 案例检索与借鉴
 
+APP 的“让 AI 评估并参考 / 整理案例草稿 / 整理新版本”会先保存到当前任务的 `artDesign.caseRequests`，再请求原会话继续。每次继续先读取这些 APP 用户请求，按 `selection.cycle`、具体案例版本和当前上下文核对适用性；`prompt` 是该次操作的具体意图。先核对已有 `caseUses`、草稿与对话中的处理记录，避免重复执行已处理的请求；设计变更后重新判断，不能把旧请求当作自动授权覆盖新要求。
+保存请求不代表已查阅、已采用或已认可，不改变美术确认状态。待人工回答或确认时，沿用原工作流条件，不能绕过。参考请求按下方 inspect/use 顺序执行；草稿和修订仍需策划在 APP 中明确收录。
+
 使用 `art list --input-file <json> --json`，参数 query（最多200字）；按玩法、输入、镜头、设备等分开检索，再看风格。无匹配时可以空 query 浏览最近案例，不强行套用。
 用 `art get --input-file <json> --json` 阅读 caseId/version 的固定案例。不要把导入案例的历史认可当作当前策划认可。
 先用 production update/inspect-art-case（caseId、version）将候选媒体复制到本任务；从返回 artifacts 中查看 libraryReference=true、source 为该案例的路径并实际看图。此操作不登记采纳、不改变设计摘要；不适用就不采用，不能在看图之前假写借鉴结论。
