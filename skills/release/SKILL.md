@@ -16,6 +16,14 @@ The combined package retains the concurrent task-detail overflow fix in App.css;
 rerun frontend checks and native terminal/Skill views after incorporating it.
 Historical release entries below describe prior deliveries; the current provider
 contract and release label here take precedence.
+## Task detail scrolling (2026-10-19)
+Default/Validation builds use task-detail-scroll-20261019. Verify the real workspace
+with a long task list and expanded description at normal, narrow and short heights.
+Check independent left-list scrolling, right-pane bottom reachability, tab content
+scrolling and terminal focus without recreating sessions. Run the standard frontend
+and Rust checks, rebuild the complete portable package and verify a relocated copy.
+Preserve occupied worktrees, their uncommitted work and the running installed APP;
+publish the isolated completed change to CLI then dev under the repository policy.
 
 ## Contextual visual refinement (2026-10-17)
 Default/Validation builds use visual-refinement-integration-20261017. Retain workspace
