@@ -3,6 +3,12 @@ import { taskGuidanceState } from "./taskGuidanceState";
 import type { ProductionView, TaskControlState } from "../../shared/production";
 import { attentionFixture } from "../../shared/notifications.test-fixtures";
 const view = {policy:{stages:[]},actions:{review:{},feedback:{}},record:undefined} as unknown as ProductionView;
+it("distinguishes interrupted input from a paused terminal",()=>{
+  const guide=taskGuidanceState('task',true,view,{taskId:'task',state:'awaitingInput',connection:'connected'} as TaskControlState,undefined,false);
+  expect(guide.title).toBe('当前执行已中断，等待新指令');
+  expect(guide.instruction).toContain('直接输入');
+  expect(guide.button).toBe('前往终端输入');
+});
 it("prioritizes unresolved ABYA defects over an AI-running message and clears on resolution",()=>{
   const record={taskId:'task',currentStage:'implementation',issues:[{id:'bug',kind:'blocker',status:'open',stage:'implementation',repairTarget:'abya-build',description:'Broken build'}],documents:{}};
   const input={...view,record} as unknown as ProductionView;

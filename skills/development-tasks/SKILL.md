@@ -1,5 +1,9 @@
 # Development Tasks Skill
 
+Task guidance maps connected awaitingInput to a direct original-terminal input action,
+separately from paused/Continue. Existing human questions, approval and programmer
+issue priority are unchanged; interruption never edits production records or approvals.
+
 ## Codex-only deployment and historical records (2026-10-19)
 Only .codex is discovered, deployed, catalogued, read or imported. New question
 bindings require provider codex; old question provider strings remain unchanged

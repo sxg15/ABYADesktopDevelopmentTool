@@ -1,5 +1,16 @@
 # Development Terminal Skill
 
+## Stop current execution (2026-10-19)
+The separate 中断执行（Stop）button calls interrupt_codex_turn for the exact task
+and conversation. Await native acknowledgement, then return to terminal view and
+focus input only when visible without a modal. Preserve mounted xterm, text/IME,
+history and connection. Never inject /Stop, Escape, Enter or any draft text.
+Keep Pause task as the existing full-stop action. Disable duplicate actions until
+the response, display errors without claiming success, and refresh backend control.
+awaitingInput means connected and ready for a new instruction, distinct from paused.
+Regress confirmed/failed interruption, no stop/open/write/continue side effects,
+and continued input/focus on the same mounted terminal.
+
 内存异常上下文只输出活动身份、状态、时间及保守过滤后的摘要。diagnostic_summary
 过滤凭据相关内容、原始命令运算符和长值；不复制完整终端或参数。缺失活动与迟到
 回执不推定为成功；原工作流仍为操作内容的权威记录。

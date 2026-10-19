@@ -44,6 +44,7 @@ const terminalApiMock = vi.hoisted(() => ({
   write: vi.fn(async () => undefined),
   resize: vi.fn(async () => undefined),
   stop: vi.fn(async () => undefined),
+  interrupt: vi.fn(async () => undefined),
   executionSettings: vi.fn(async () => ({connected:true,running:false,models:[],settings:{model:'fixture'}})),
 }));
 
@@ -302,6 +303,37 @@ it("does not send a pending continuation when the terminal unmounts before attac
 });
 
 describe("Codex conversation list", () => {
+  it("interrupts once, keeps the terminal mounted and focuses new input after native confirmation",async()=>{
+    renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
+    await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByTitle("Output history"));
+    let confirmInterrupt!:()=>void;
+    terminalApiMock.interrupt.mockImplementationOnce(()=>new Promise(resolve=>{confirmInterrupt=()=>resolve(undefined);}));
+    const button=screen.getByRole("button",{name:"中断执行（Stop）"});
+    fireEvent.click(button);fireEvent.click(button);
+    expect(terminalApiMock.interrupt).toHaveBeenCalledExactlyOnceWith("codex","task-1","conversation-1");
+    expect(screen.queryByText(/当前执行已中断，可直接输入/)).toBeNull();
+    terminalEvents.focus.mockClear();
+    await act(async()=>confirmInterrupt());
+    await screen.findByText(/当前执行已中断，可直接输入/);
+    expect((document.querySelector(".terminal-host") as HTMLElement).hidden).toBe(false);
+    expect(terminalEvents.focus).toHaveBeenCalled();
+    expect(terminalApiMock.open).toHaveBeenCalledTimes(1);
+    expect(terminalApiMock.stop).not.toHaveBeenCalled();
+    expect(terminalApiMock.write).not.toHaveBeenCalled();
+    expect(productionApiMock.continueTask).not.toHaveBeenCalled();
+    expect(productionApiMock.flushContinuation).not.toHaveBeenCalled();
+  });
+  it("shows failed interruption without closing the terminal or claiming success",async()=>{
+    terminalApiMock.interrupt.mockRejectedValueOnce(new Error("Codex 尚未确认中断"));
+    renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
+    await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button",{name:"中断执行（Stop）"}));
+    await screen.findByText(/Codex 尚未确认中断/);
+    expect(screen.queryByText(/当前执行已中断，可直接输入/)).toBeNull();
+    expect(terminalApiMock.stop).not.toHaveBeenCalled();
+    expect(terminalApiMock.open).toHaveBeenCalledTimes(1);
+  });
   it("serializes deletion and creation, ignoring focus refresh and old list responses", async () => {
     vi.spyOn(window,'confirm').mockReturnValue(true);
     let finishDelete!:()=>void;

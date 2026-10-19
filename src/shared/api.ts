@@ -93,6 +93,8 @@ export const api = {
     invoke<void>("resize_codex_terminal", { conversationId, columns, rows }),
   stopCodexTerminal: (conversationId: string) =>
     invoke<void>("stop_codex_terminal", { conversationId }),
+  interruptCodexTurn: (taskId: string, conversationId: string) =>
+    invoke<void>("interrupt_codex_turn", { taskId, conversationId }),
   listCodexConversations: (taskId: string) =>
     invoke<CodexConversation[]>("list_codex_conversations", { taskId }),
   createCodexConversation: (taskId: string, title?: string) =>
@@ -228,6 +230,8 @@ export const terminalApi = {
     withCodex(provider, () => api.resizeCodexTerminal(conversationId, columns, rows)),
   stop: (provider: TerminalProvider, conversationId: string) =>
     withCodex(provider, () => api.stopCodexTerminal(conversationId)),
+  interrupt: (provider: TerminalProvider, taskId: string, conversationId: string) =>
+    withCodex(provider, () => api.interruptCodexTurn(taskId, conversationId)),
   listConversations: (provider: TerminalProvider, taskId: string) =>
     withCodex(provider, () => api.listCodexConversations(taskId)),
   createConversation: (

@@ -683,6 +683,147 @@ fn reattached_terminal_does_not_report_disconnected_or_resend_pending_work() {
 }
 
 #[test]
+fn interrupt_turn_keeps_terminal_and_cancels_queued_continuation() {
+    let f = Fixture::new();
+    f.busy("original-turn");
+    let request = f
+        .service
+        .continue_after_revision(&f.task, &f.conversation, Some(f.revision()))
+        .unwrap();
+    assert_eq!(request.status, S::Queued);
+    let writer = f.service.session(&f.conversation).unwrap().writer;
+    let revision = f.revision();
+    f.service.interrupt_turn(&f.task, &f.conversation).unwrap();
+    assert_eq!(f.turns.lock()[0]["status"], "interrupted");
+    assert!(Arc::ptr_eq(
+        &writer,
+        &f.service.session(&f.conversation).unwrap().writer
+    ));
+    assert!(f.service.runtime_servers.lock()[&f.conversation].is_alive());
+    assert_eq!(
+        f.service
+            .conversation(&f.task, &f.conversation)
+            .unwrap()
+            .native_session_id
+            .as_deref(),
+        Some(f.native.as_str())
+    );
+    assert_eq!(f.revision(), revision);
+    let control = f.service.task_control(&f.task, &f.conversation).unwrap();
+    assert_eq!(control.state, "awaitingInput");
+    assert_eq!(control.connection, "connected");
+    assert!(!control.queued);
+    f.service.queue_event(&f.native, "original-turn", true);
+    assert_eq!(
+        f.service
+            .flush_continuation(
+                &f.task,
+                &f.conversation,
+                request.request_id.as_deref().unwrap()
+            )
+            .unwrap()
+            .status,
+        S::Paused
+    );
+    f.service.write(&f.conversation, "新的用户指令").unwrap();
+    assert!(f.calls.lock().is_empty());
+    // An explicit Continue remains possible; canceled work does not restart itself.
+    assert_eq!(
+        f.service
+            .continue_after_revision(&f.task, &f.conversation, None)
+            .unwrap()
+            .status,
+        S::Started
+    );
+    assert_eq!(f.calls.lock().len(), 1);
+}
+
+#[test]
+fn interrupt_failure_retains_terminal_without_claiming_input_ready() {
+    let f = Fixture::new();
+    let native = f.native.clone();
+    f.service.runtime_servers.lock().insert(
+        f.conversation.clone(),
+        AppServerHandle::for_rpc_test(move |method, _| {
+            if method == "thread/read" {
+                Ok(json!({"thread":{"id":native,"turns":[{"id":"busy","status":"inProgress"}]}}))
+            } else {
+                Err("Injected interrupt failure".into())
+            }
+        }),
+    );
+    assert!(f.service.interrupt_turn(&f.task, &f.conversation).is_err());
+    assert!(f.service.session(&f.conversation).is_ok());
+    assert!(f.service.runtime_servers.lock()[&f.conversation].is_alive());
+    assert_ne!(
+        f.service
+            .task_control(&f.task, &f.conversation)
+            .unwrap()
+            .state,
+        "awaitingInput"
+    );
+    assert!(f.calls.lock().is_empty());
+}
+
+#[test]
+fn interrupt_racing_with_dispatch_keeps_input_without_starting_another_turn() {
+    let f = Fixture::new();
+    let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    *f.start_gate.lock() = Some((entered_tx, release_rx));
+    let service = f.service.clone();
+    let task = f.task.clone();
+    let conversation = f.conversation.clone();
+    let dispatch =
+        std::thread::spawn(move || service.continue_after_revision(&task, &conversation, None));
+    entered_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    let service = f.service.clone();
+    let task = f.task.clone();
+    let conversation = f.conversation.clone();
+    let interruption = std::thread::spawn(move || service.interrupt_turn(&task, &conversation));
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while !f.service.cancelled.lock().contains(&f.conversation) {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::yield_now();
+    }
+    release_tx.send(()).unwrap();
+    dispatch.join().unwrap().unwrap();
+    interruption.join().unwrap().unwrap();
+    assert_eq!(f.calls.lock().len(), 1);
+    assert_eq!(f.turns.lock().last().unwrap()["status"], "interrupted");
+    f.service.write(&f.conversation, "new instruction").unwrap();
+    assert_eq!(
+        f.service
+            .task_control(&f.task, &f.conversation)
+            .unwrap()
+            .state,
+        "awaitingInput"
+    );
+}
+
+#[test]
+fn interrupt_rejects_foreign_task_and_malformed_native_state() {
+    let f = Fixture::new();
+    assert!(
+        f.service
+            .interrupt_turn(&Uuid::new_v4().to_string(), &f.conversation)
+            .is_err()
+    );
+    for response in [
+        json!({"thread":{"id":"foreign","turns":[]}}),
+        json!({"thread":{"id":f.native}}),
+    ] {
+        f.service.runtime_servers.lock().insert(
+            f.conversation.clone(),
+            AppServerHandle::for_rpc_test(move |_, _| Ok(response.clone())),
+        );
+        assert!(f.service.interrupt_turn(&f.task, &f.conversation).is_err());
+        assert!(f.service.session(&f.conversation).is_ok());
+    }
+    assert!(f.calls.lock().is_empty());
+}
+
+#[test]
 fn failed_attach_releases_only_its_executor_and_logs_safe_correlated_diagnostics() {
     let f = Fixture::new();
     let server = f

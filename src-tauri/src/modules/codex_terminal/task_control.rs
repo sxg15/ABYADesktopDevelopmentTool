@@ -214,6 +214,9 @@ impl CodexTerminalService {
             } else {
                 "waitingForApproval"
             }
+        } else if connected && runtime && queue.as_ref().is_some_and(|q| q.status == "interrupted")
+        {
+            "awaitingInput"
         } else if production.record.as_ref().is_some_and(|r| {
             production
                 .stage_statuses
@@ -226,7 +229,11 @@ impl CodexTerminalService {
         } else if active && !runtime {
             "disconnected"
         } else if turn.is_some_and(|t| t.status == CodexWorkflowTurnStatus::Interrupted) {
-            "paused"
+            if connected && runtime {
+                "awaitingInput"
+            } else {
+                "paused"
+            }
         } else if turn.is_some_and(|t| t.status == CodexWorkflowTurnStatus::Failed) {
             "failed"
         } else if turn.is_none() {

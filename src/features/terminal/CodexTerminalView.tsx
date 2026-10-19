@@ -16,6 +16,7 @@ import {
   Search,
   Square,
   SquareTerminal,
+  OctagonX,
   Trash2,
   X,
 } from "lucide-react";
@@ -535,6 +536,7 @@ function ConversationTerminal({
   const pendingContinue=useRef<{ resolve: () => void; reject: (error: unknown) => void } | undefined>(undefined);
   const actionBusyRef=useRef(false);
   const [actionBusy,setActionBusy]=useState(false);
+  const [interrupting,setInterrupting]=useState(false);
   const [actionNotice,setActionNotice]=useState("");
   useEffect(()=>setActionNotice(""),[control?.state]);
   async function continueTask() {
@@ -879,6 +881,21 @@ function ConversationTerminal({
     return () => window.cancelAnimationFrame(frame);
   }, [visible, viewMode]);
 
+  async function interruptTurn() {
+    if(actionBusyRef.current)return;
+    actionBusyRef.current=true;setActionBusy(true);setInterrupting(true);setError("");setActionNotice("");
+    try {
+      await terminalApi.interrupt(provider,taskId,conversation.id);
+      setViewMode("terminal");
+      setActionNotice("当前执行已中断，可直接输入新指令；终端和历史已保留。");
+      if(visibleRef.current&&!document.querySelector('[aria-modal="true"]')) terminalRef.current?.focus();
+    } catch(value) {setError(errorMessage(value));}
+    finally {
+      actionBusyRef.current=false;setActionBusy(false);setInterrupting(false);
+      window.dispatchEvent(new Event("abya:control-changed"));
+    }
+  }
+
   async function stop() {
     if(actionBusyRef.current)return;
     actionBusyRef.current=true;
@@ -971,6 +988,12 @@ function ConversationTerminal({
               <ArrowDown size={15} />
             </button>
           )}
+          {provider==="codex" && <button className="secondary-button"
+            title="中断当前执行，保留终端并返回输入（Stop）"
+            onClick={()=>void interruptTurn()}
+            disabled={actionBusy||state?.status!=="running"||!control?.nativeSessionId}>
+            <OctagonX size={15}/>{interrupting?"正在中断…":"中断执行（Stop）"}
+          </button>}
           {canStop && (
             <button
               className="secondary-button terminal-stop"

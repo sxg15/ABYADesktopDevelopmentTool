@@ -1,5 +1,12 @@
 # Foundation Skill
 
+interruptCodexTurn(taskId, conversationId) and terminalApi.interrupt route only Codex
+to the APP-only interrupt_codex_turn command. The adapter validates task binding,
+carries blocking native interruption on spawn_blocking to keep IPC responsive,
+cancels active runtime-bridge operations for that conversation and delegates native
+turn interruption. This preserves scoped access for future input and creates no CLI
+or MCP capability. TaskControlState may project awaitingInput after interruption.
+
 ## 内存保护适配接口（2026-10-19）
 共享 memory.ts 提供实例采样、阈值、单实例自动停止授权和报告入口。策略与授权仅为
 Tauri 用户操作，CLI 的 game_instance_get 只得到 InstanceRuntimeInfo.memory 投影。

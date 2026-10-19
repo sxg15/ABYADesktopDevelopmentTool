@@ -72,6 +72,7 @@ impl AppServerHandle {
             "thread/read",
             json!({"threadId":thread,"includeTurns":true}),
         )?;
+        validate_interrupt_snapshot(&current, thread)?;
         if let Some(turn) = current["thread"]["turns"]
             .as_array()
             .into_iter()
@@ -88,6 +89,7 @@ impl AppServerHandle {
                     "thread/read",
                     json!({"threadId":thread,"includeTurns":true}),
                 )?;
+                validate_interrupt_snapshot(&state, thread)?;
                 if !state["thread"]["turns"]
                     .as_array()
                     .into_iter()
@@ -98,7 +100,7 @@ impl AppServerHandle {
                 }
                 if start.elapsed() > Duration::from_secs(10) {
                     return Err(AppError::validation(
-                        "Codex 尚未确认暂停，权限和历史已保留，请重试暂停。",
+                        "Codex 尚未确认中断当前执行，会话和权限已保留，请核对终端后重试。",
                     ));
                 }
                 std::thread::sleep(Duration::from_millis(100));
@@ -406,6 +408,16 @@ pub(super) fn supports_app_server(codex: &ResolvedCodex) -> bool {
     #[cfg(windows)]
     std::os::windows::process::CommandExt::creation_flags(&mut command, super::CREATE_NO_WINDOW);
     command.status().is_ok_and(|status| status.success())
+}
+
+fn validate_interrupt_snapshot(snapshot: &Value, thread: &str) -> AppResult<()> {
+    if snapshot["thread"]["id"].as_str() != Some(thread) || !snapshot["thread"]["turns"].is_array()
+    {
+        return Err(AppError::validation(
+            "无法核对原生会话执行状态，未确认中断。",
+        ));
+    }
+    Ok(())
 }
 
 fn spawn_app_server(

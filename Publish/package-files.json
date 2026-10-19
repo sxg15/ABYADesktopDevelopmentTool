@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "terminal-one-click-continue-20261019",
-  "totalBytes": 320582260,
+  "releaseLabel": "terminal-interrupt-input-20261019",
+  "totalBytes": 320812657,
   "files": [
     {
       "path": ".codex/README.md",
@@ -485,18 +485,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 30290432,
-      "sha256": "7b9b68c13f75f6617d475aec4067d9a98efc7b4a6e89d364b91cf4fdd88b4792"
+      "bytes": 30524928,
+      "sha256": "d0cec695cebe1015c9299ef8c47e7d95e792a108e310f39a4571d0c9f8cccff1"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 5998080,
-      "sha256": "352d689b6d06e93821549b0e759d1a28ea16d332e44ac6c8d522b61b2bd4dfa4"
+      "bytes": 5993984,
+      "sha256": "119a7bf70fe9d92f539b2ac8102d7fd15ea3623e500ca5cccebb59e7ffc204c9"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 619,
-      "sha256": "3b6be403d67bbc99abb40987128995987b78b8310107f21f0ea2f0ffcd1d470e"
+      "bytes": 616,
+      "sha256": "de9ae8119ebe462e521d2bd95ac0a1863ff152b51b1de17144b45e1a3ecb3d6f"
     },
     {
       "path": "runtime/LICENSE.txt",

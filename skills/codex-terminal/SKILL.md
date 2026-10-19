@@ -1,5 +1,19 @@
 # Codex Terminal Skill
 
+## Interrupt current turn (2026-10-19)
+interrupt_turn(task, conversation) cancels queued work before the lifecycle lock,
+validates the exact native binding and interrupts through the existing app-server.
+After acknowledged native idle, keep the TUI, executor, history and scoped access
+for new user input. Do not detach, revoke or send a new model turn. Pause still
+closes/revokes normally. Park queue intents; confirmed interruption marks them
+interrupted, except uncertain sending/needsReview receipts remain for review.
+Native snapshots must have the matching thread ID and turns array. Failed or
+unknown acknowledgements do not claim success. Record requested/failed/confirmed
+events using fixed labels and IDs only. Connected interrupted conversations project
+awaitingInput, after higher-priority human gates and active native work.
+Test retained handles/input/native ID, canceled queues/late events, retry via explicit
+Continue, acknowledgement failures and foreign/malformed identity rejection.
+
 内存事件通过公开的 memory_incident_context 读取已存在的工作流元数据；最多三会话、
 每会话三轮、每轮32项活动。只保留身份、类型、状态、时间和过滤后的摘要，不复制原始
 终端、参数或认证材料。异常上下文采集不阻塞实例保护；缺失/中断不能补造历史或归因。

@@ -1,5 +1,12 @@
 # Release Skill
 
+## Current-turn interruption (2026-10-19)
+Default/Validation packages use terminal-interrupt-input-20261019. Retain one-click
+continuation and memory protections. Verify native RPC interruption without TUI or
+executor teardown, queue cancellation, failure feedback and preserved new-input access.
+Run the complete checks and native isolated startup/package verification, then promote
+the complete package with rollback. Keep the formal APP closed and preserve user data.
+
 ## One-click terminal continuation (2026-10-19)
 Default/Validation builds use terminal-one-click-continue-20261019, retaining the
 memory incident guard and earlier UI/transport fixes. Validate the real terminal
