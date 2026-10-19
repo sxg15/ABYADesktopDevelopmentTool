@@ -1,5 +1,17 @@
 # App Shell Skill
 
+## Compact task guidance (2026-10-19)
+workspaceRefinement.css keeps the status label and title on one wrapping row,
+with the instruction below. Use an 18px title, 13px instruction, 32px icon and
+32px minimum action button; reduce vertical padding and outer margins so a normal
+single-line guide is about 100px tall. Keep detail text, destinations and every
+action visible. Long/localized content wraps naturally; do not set a fixed height
+or truncate guidance. Narrow panes reflow actions below the copy. Short-window
+overrides must not enlarge the compact panel. Preserve semantic tones, keyboard
+focus, pending-item actions, programmer export and mounted terminal sessions.
+Verify real components in idle, running, human, terminal and error states plus
+long English copy, narrow/short windows and the task-detail scrolling fallback.
+
 ## Codex-only workspace (2026-10-19)
 Remove the Grok selector, availability/status/compatibility strings and Skill-source
 dropdown. Only Codex appears in terminal and Skill surfaces. Ignore retired provider
@@ -198,7 +210,8 @@ Tab content scrolls within its work area; the right pane also scrolls when the
 minimum work area and header exceed the window. Notices take a bounded natural-height row,
 so a pending answer or saved-operation notice cannot push a 100%-height terminal
 below the viewport. Container queries reflow the guide based on actual task-pane
-width; title/instruction/button sizes are 24/16/15px at normal size.
+width; the current workspace refinement uses 18/13/12px title/instruction/button
+sizes and a wrapping inline status/title row.
 Short windows compact the task header and show only the workflow summary with its
 existing detail-drawer entry, retaining content space. Pending badges have text and
 distinct stage/terminal colors. No absolute-position overlay covers the terminal.

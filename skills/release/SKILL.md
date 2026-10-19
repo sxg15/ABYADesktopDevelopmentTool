@@ -1,5 +1,15 @@
 # Release Skill
 
+## Compact task guidance package (2026-10-19)
+Default/Validation builds use compact-task-guidance-20261019, superseding the
+historical labels below. Keep the Codex-only package and task-detail overflow fix.
+Verify compact guidance in actual components and the native candidate, including
+long content, narrow/short windows, visible actions and terminal reachability.
+Run the standard frontend and Rust checks and validate the complete relocated
+portable package. Preserve any running Publish instance and its sessions; publish
+through an isolated checkout when necessary. Integrate the complete feature commit
+into CLI then dev without touching the occupied CLI worktree; leave 界面优化 selected.
+
 ## Codex-only package (2026-10-19)
 Default/Validation builds use codex-only-20261019. The requested 界面优化 branch
 is the task exception: integrate current remote CLI/dev, verify the complete package,
@@ -14,8 +24,8 @@ Abya/FFmpeg runtime files, verify inventory/tracking and a relocated complete pa
 Validate new and legacy task handling in an isolated candidate with no model turn.
 The combined package retains the concurrent task-detail overflow fix in App.css;
 rerun frontend checks and native terminal/Skill views after incorporating it.
-Historical release entries below describe prior deliveries; the current provider
-contract and release label here take precedence.
+Historical release entries below describe prior deliveries; the Codex-only provider
+contract remains current, while newer entries above determine the release label.
 ## Task detail scrolling (2026-10-19)
 Default/Validation builds use task-detail-scroll-20261019. Verify the real workspace
 with a long task list and expanded description at normal, narrow and short heights.
