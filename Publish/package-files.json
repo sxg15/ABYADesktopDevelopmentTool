@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "visual-refinement-integration-20261017",
-  "totalBytes": 323452398,
+  "releaseLabel": "task-detail-scroll-20261019",
+  "totalBytes": 319037411,
   "files": [
     {
       "path": ".codex/README.md",
@@ -960,18 +960,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 29373440,
-      "sha256": "7983c7783c7f4cec09276caea1c6ca321836aa3d83f3695d2e7f9d0a712c99c2"
+      "bytes": 24977920,
+      "sha256": "323594012552eb4810a7d52e855c55a81eebc4a7be663daface5447943a41e1a"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 5995008,
-      "sha256": "4081f443ee4f7d1fd258dde8756315134625317a8b3493f5b27f6e8bb4369afe"
+      "bytes": 5975552,
+      "sha256": "4cba48d8df2568a0c32a36956d8fb343c8a4136eb3287783c4c51204f1233c3a"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 663,
-      "sha256": "48ebe560e6fa20260e1db0452a43524a2e51ca994ab1c75b8cbfc1e05483aca1"
+      "bytes": 652,
+      "sha256": "15526c4aefb9efa1e063f2177efe8ea77cbf3e829c70d208500311a5ca4c511b"
     },
     {
       "path": "runtime/LICENSE.txt",

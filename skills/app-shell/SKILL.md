@@ -1,12 +1,24 @@
 # App Shell Skill
 
+## Task detail overflow (2026-10-19)
+Bound the task workspace grid row with minmax(0,1fr) and allow the task-list pane
+to shrink, so a long task list cannot stretch the right pane beyond the window.
+The right content pane owns vertical overflow with a stable scrollbar gutter.
+Give its tab content a non-shrinking 360px minimum work area; when the header,
+expanded description or guidance leaves less room, scroll the right pane to reach
+the full work area. Keep the left task list, production/Skill content and terminal
+history independently scrollable. Do not unmount sessions or change task state.
+Verify many tasks, long/expanded descriptions, short/narrow windows, every tab and
+terminal focus. Scroll to the bottom and check the terminal input is reachable.
+
 ## Retained workspace refinement (2026-10-17)
 Keep the two navigation columns, persistent TaskGuidance, task-description disclosure,
 conversation steps and seven policy-driven stage cards. workspaceRefinement.css owns
 the approved teal surface progression, amber human action emphasis and shared feedback;
 preserve blue/purple/red state semantics, keyboard outlines and reduced motion.
 Stage browsing uses aria-pressed; actual execution independently uses aria-current=step.
-Keep tab content as the only scrolling work area and validate narrow/short windows.
+Keep bounded tab-content scrolling plus the task-pane overflow fallback above.
+Validate narrow/short windows.
 Terminal focus is opt-in, hides navigation with CSS without unmounting sessions, and
 retains header/guidance. Explicit exit or non-IME Escape restores it; modal Escape
 remains owned by the dialog. Context/search additions must not restyle xterm helpers.
@@ -176,8 +188,9 @@ unavailable/compatibility Codex and Grok presentation.
 ## LLM Maintenance Rule
 
 ### Split action panel (2026-10-12)
-Task header, action panel, workflow summary and tabs are non-scrolling flex siblings.
-Only the remaining tab content scrolls. Notices take a bounded natural-height row,
+Task header, action panel, workflow summary and tabs are non-shrinking flex siblings.
+Tab content scrolls within its work area; the right pane also scrolls when the
+minimum work area and header exceed the window. Notices take a bounded natural-height row,
 so a pending answer or saved-operation notice cannot push a 100%-height terminal
 below the viewport. Container queries reflow the guide based on actual task-pane
 width; title/instruction/button sizes are 24/16/15px at normal size.
