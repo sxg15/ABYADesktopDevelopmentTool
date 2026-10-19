@@ -1,5 +1,13 @@
 # Release Skill
 
+## One-click terminal continuation (2026-10-19)
+Default/Validation builds use terminal-one-click-continue-20261019, retaining the
+memory incident guard and earlier UI/transport fixes. Validate the real terminal
+component across stopped/failed attachment, same-request flush, duplicate clicks,
+human gates and attachment-only reconnect; native execution status remains authoritative.
+Run the standard checks, rebuild and validate the complete portable inventory,
+then promote with a rollback copy while the formal APP is closed. Do not auto-open it.
+
 ## 内存保护与追溯（2026-10-19）
 默认与 Validation 包使用 memory-incident-guard-20261019。保留 Codex-only、紧凑任务引导
 及所有已有修复。验证压力事件去重/恢复、报告写失败、重启中断、明确自动停止授权、

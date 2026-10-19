@@ -26,6 +26,19 @@ The existing native copy-all action remains the way to obtain earlier full histo
 Regress literal hostile text, large match sets, stable snapshots, focus restoration,
 provider/conversation identity and unchanged mounting/connection behavior.
 
+## One-click continuation (2026-10-19)
+Continue remains available for stopped/failed terminals with an existing native ID.
+Create/reuse the durable intent first, attach that same conversation only when the
+backend returns needsConnection, then flush the exact request ID after successful
+attachment. Keep one synchronous action guard across request, attachment and flush;
+never ask the user to type Continue or click it again after a successful attachment.
+Attachment failure, timeout or unmount prevents the pending flush and permits an
+explicit retry. Ordinary reconnect and passive viewing remain attachment-only.
+Native working state still comes from actual task control, not connection success.
+Preserve human waits, receipt review and running-turn deduplication in the backend.
+Regress stopped/failed attachment, exact request identity, duplicate clicks during
+attachment/flush, retry after failure, and question/approval/review/running results.
+
 ## IME anchor stability (2026-10-13)
 terminalComposition pins the public xterm helper textarea and composition view to
 their compositionstart position while a native IME is choosing text. Streaming TUI
@@ -170,7 +183,7 @@ user action. Refresh control immediately after open success/failure. Failed Code
 open exposes the complete diagnostic message in an accessible wrapping alert and
 an explicit Reconnect original conversation button. Resize/poll must not retry it.
 A manual reconnect only attaches the exact ID; it neither creates nor flushes an
-intent. Continue task remains separate and unavailable while attachment has failed.
+intent. Continue task also handles failed attachment via the explicit same-ID flow above.
 Validate busy-error visibility, same-ID manual retry and no archive/new-chat calls.
 
 ## Conversation recreation (2026-10-13)

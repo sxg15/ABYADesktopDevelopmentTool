@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "memory-incident-guard-20261019",
-  "totalBytes": 320361112,
+  "releaseLabel": "terminal-one-click-continue-20261019",
+  "totalBytes": 320582260,
   "files": [
     {
       "path": ".codex/README.md",
@@ -485,18 +485,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 30069248,
-      "sha256": "c9b8cc110db7c3f39cc5ffa5080417d9c9aa6fb2f4396534f4eb40c0942bd9a4"
+      "bytes": 30290432,
+      "sha256": "7b9b68c13f75f6617d475aec4067d9a98efc7b4a6e89d364b91cf4fdd88b4792"
     },
     {
       "path": "abya-desktop.exe",
       "bytes": 5998080,
-      "sha256": "42a93f9477aa017802f61a40a257dcf4c836d137c4a49d154830e7ac3ed068b8"
+      "sha256": "352d689b6d06e93821549b0e759d1a28ea16d332e44ac6c8d522b61b2bd4dfa4"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 655,
-      "sha256": "6bb521292d16a1573639969ef05b78031ead6bf8815499859847d3bf21dfdf69"
+      "bytes": 619,
+      "sha256": "3b6be403d67bbc99abb40987128995987b78b8310107f21f0ea2f0ffcd1d470e"
     },
     {
       "path": "runtime/LICENSE.txt",

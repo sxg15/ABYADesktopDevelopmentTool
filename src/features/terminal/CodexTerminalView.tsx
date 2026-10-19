@@ -532,21 +532,35 @@ function ConversationTerminal({
   const copyBusyRef = useRef(false);
   const connectionRef = useRef(connectionRequest); connectionRef.current = connectionRequest;
   const control=useTaskControl(taskId,conversation.id,provider);
-  const pendingContinue=useRef<string | undefined>(undefined);
+  const pendingContinue=useRef<{ resolve: () => void; reject: (error: unknown) => void } | undefined>(undefined);
+  const actionBusyRef=useRef(false);
   const [actionBusy,setActionBusy]=useState(false);
   const [actionNotice,setActionNotice]=useState("");
   useEffect(()=>setActionNotice(""),[control?.state]);
   async function continueTask() {
-    if(actionBusy)return;setActionBusy(true);setError("");
+    if(actionBusyRef.current)return;
+    actionBusyRef.current=true;setActionBusy(true);setError("");
     try {
-      const result=await productionApi.continueTask(taskId,conversation.id);
+      let result=await productionApi.continueTask(taskId,conversation.id);
+      if(result.status==="needsConnection"&&result.requestId) {
+        setActionNotice("正在接回原对话，连接成功后自动继续执行…");
+        await new Promise<void>((resolve,reject)=>{
+          const timeout=window.setTimeout(()=>{
+            pendingContinue.current=undefined;
+            reject(new Error("原对话连接超时，未发送执行请求；请核对连接后重试继续任务。"));
+          },60000);
+          pendingContinue.current={
+            resolve:()=>{window.clearTimeout(timeout);resolve();},
+            reject:error=>{window.clearTimeout(timeout);reject(error);},
+          };
+          startRef.current(true);
+        });
+        result=await productionApi.flushContinuation(taskId,conversation.id,result.requestId);
+      }
       if (visibleRef.current && !document.querySelector('[aria-modal="true"]')) terminalRef.current?.focus();
       setActionNotice(continuationMessages[result.status]);
-      if(result.status==="needsConnection"&&result.requestId) {
-        pendingContinue.current=result.requestId; startRef.current(true);
-      }
-      window.dispatchEvent(new Event("abya:control-changed"));
-    }catch(e){setError(errorMessage(e));}finally{setActionBusy(false);}
+    }catch(e){setActionNotice("");setError(errorMessage(e));}
+    finally{actionBusyRef.current=false;setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
   }
 
   useEffect(() => {
@@ -744,17 +758,15 @@ function ConversationTerminal({
             void terminalApi.resize(provider, conversation.id, currentSize.columns, currentSize.rows).catch(() => undefined);
           }
           connectionRef.current?.finish(next.status === "running" ? undefined : new Error(next.lastError || "原会话尚未连接。"));
-          const request=pendingContinue.current;pendingContinue.current=undefined;
-          if(request&&next.status==="running") {
-            void productionApi.flushContinuation(taskId,conversation.id,request).then(result=>{
-              if(!disposed){setActionNotice(continuationMessages[result.status]);window.dispatchEvent(new Event("abya:control-changed"));}
-            }).catch(e=>{if(!disposed)setError(errorMessage(e));});
-          }
+          const pending=pendingContinue.current;pendingContinue.current=undefined;
+          if(next.status==="running") pending?.resolve();
+          else pending?.reject(new Error(next.lastError || "原对话尚未连接，未恢复执行。"));
         })
         .catch((value) => {
           if(disposed||generation!==attachment)return;
           opening = false;
-          pendingContinue.current=undefined;
+          const pending=pendingContinue.current;pendingContinue.current=undefined;
+          pending?.reject(value);
           connectionRef.current?.finish(value);
           setError(errorMessage(value));
           window.dispatchEvent(new Event("abya:control-changed"));
@@ -825,6 +837,8 @@ function ConversationTerminal({
 
     return () => {
       disposed = true;
+      const pending=pendingContinue.current;pendingContinue.current=undefined;
+      pending?.reject(new Error("终端已关闭，未发送继续执行请求。"));
       pendingStart = false;
       tryStartRef.current = () => undefined;
       window.cancelAnimationFrame(frame);
@@ -866,6 +880,8 @@ function ConversationTerminal({
   }, [visible, viewMode]);
 
   async function stop() {
+    if(actionBusyRef.current)return;
+    actionBusyRef.current=true;
     setActionNotice("");
     pendingContinue.current=undefined;setActionBusy(true);
     setError("");
@@ -878,7 +894,7 @@ function ConversationTerminal({
       );
     } catch (value) {
       setError(errorMessage(value));
-    } finally {setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
+    } finally {actionBusyRef.current=false;setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
   }
 
   const terminalEnded =
@@ -967,11 +983,12 @@ function ConversationTerminal({
             </button>
           )}
           {provider==="codex" && <button className="primary-button" onClick={()=>void continueTask()}
-            disabled={actionBusy||terminalEnded||!control?.nativeSessionId||["running","waitingForResponse","queued","pausing","closed"].includes(control?.state??"")}>{control?.state==="blocked"?"重新检查问题":"继续任务"}</button>}
+            disabled={actionBusy||state?.status==="starting"||!control?.nativeSessionId||["running","waitingForResponse","queued","pausing","closed"].includes(control?.state??"")}>{actionBusy?"正在处理…":control?.state==="blocked"?"重新检查问题":"继续任务"}</button>}
           {terminalEnded && (
             <button
               className="secondary-button"
               title={t("restartCodex")}
+              disabled={actionBusy}
               onClick={() => startRef.current(true)}
             >
               {"接回原对话"}
@@ -988,7 +1005,7 @@ function ConversationTerminal({
       {error && provider==="codex" && terminalEnded && <div className="terminal-recovery" role="alert">
         <strong>原对话尚未接回</strong>
         <p>{error}</p>
-        <span>处理完成后点击“接回原对话”。连接成功后，再点击“继续任务”恢复执行。</span>
+        <span>点击“继续任务”可接回原对话并自动恢复执行；“接回原对话”仅恢复连接，方便查看历史或处理终端确认。</span>
       </div>}
       <div className="terminal-content">
         <div className="terminal-host" hidden={showingHistory} ref={hostRef} />

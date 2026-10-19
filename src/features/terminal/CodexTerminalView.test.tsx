@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { translator } from "../../i18n";
 import type { CodexConversation } from "../../shared/types";
 import { DevelopmentTerminalView } from "./CodexTerminalView";
@@ -48,6 +48,19 @@ const terminalApiMock = vi.hoisted(() => ({
 }));
 
 const terminalGrid = vi.hoisted(() => ({ cols: 80, rows: 24 }));
+const productionApiMock=vi.hoisted(()=>({
+  control:vi.fn(),continueTask:vi.fn(),flushContinuation:vi.fn(),
+}));
+vi.mock("../../shared/production",async importOriginal=>({
+  ...await importOriginal<typeof import("../../shared/production")>(),
+  productionApi:productionApiMock,
+}));
+beforeEach(()=>{
+  productionApiMock.control.mockResolvedValue({taskId:"task-1",conversationId:"conversation-1",
+    nativeSessionId:"native-1",state:"paused",connection:"connected",queued:false,lastEventAt:"",updatedAt:""});
+  productionApiMock.continueTask.mockResolvedValue({status:"needsConnection",requestId:"request-1",conversationId:"conversation-1",nativeSessionId:"native-1"});
+  productionApiMock.flushContinuation.mockResolvedValue({status:"started",turnId:"turn-2",conversationId:"conversation-1",nativeSessionId:"native-1"});
+});
 const terminalEvents = vi.hoisted(() => ({ resize: undefined as undefined | ((size:{cols:number;rows:number})=>void), focus:vi.fn() }));
 const resizeObservers = vi.hoisted(() => ({
   callbacks: [] as ResizeObserverCallback[],
@@ -200,7 +213,92 @@ it("keeps a failed resume actionable and retries only on an explicit reconnect",
   expect(terminalApiMock.open).toHaveBeenNthCalledWith(2,'codex','task-1','conversation-1',80,24,expect.anything());
   expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
   expect(terminalApiMock.setArchived).not.toHaveBeenCalled();
+  expect(productionApiMock.continueTask).not.toHaveBeenCalled();
+  expect(productionApiMock.flushContinuation).not.toHaveBeenCalled();
   await waitFor(()=>expect(screen.queryByRole('alert')).toBeNull());
+});
+
+it("continues a stopped terminal through same-request attachment and execution without extra input",async()=>{
+  terminalApiMock.open.mockResolvedValueOnce({taskId:"task-1",conversationId:"conversation-1",
+    status:"exited",pid:0,workingDirectory:"D:\\Workspaces\\task-1",lastError:""});
+  renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
+  await screen.findByTitle("Reconnect terminal");
+  let finishOpen!:(value:Awaited<ReturnType<typeof terminalApiMock.open>>)=>void;
+  terminalApiMock.open.mockImplementationOnce(()=>new Promise(resolve=>{finishOpen=resolve;}));
+  const button=screen.getByRole("button",{name:"继续任务"});
+  expect((button as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(button);
+  await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(2));
+  fireEvent.click(button);
+  expect(productionApiMock.continueTask).toHaveBeenCalledTimes(1);
+  expect(productionApiMock.flushContinuation).not.toHaveBeenCalled();
+  let finishFlush!:(value:unknown)=>void;
+  productionApiMock.flushContinuation.mockImplementationOnce(()=>new Promise(resolve=>{finishFlush=resolve;}));
+  await act(async()=>finishOpen({taskId:"task-1",conversationId:"conversation-1",status:"running",
+    pid:10,workingDirectory:"D:\\Workspaces\\task-1",lastError:""}));
+  expect(productionApiMock.flushContinuation).toHaveBeenCalledExactlyOnceWith("task-1","conversation-1","request-1");
+  expect(screen.queryByText("运行中")).toBeNull();
+  fireEvent.click(button);
+  expect(productionApiMock.continueTask).toHaveBeenCalledTimes(1);
+  productionApiMock.control.mockResolvedValue({taskId:"task-1",conversationId:"conversation-1",
+    nativeSessionId:"native-1",state:"running",connection:"connected",lastEventAt:""});
+  await act(async()=>finishFlush({status:"started",conversationId:"conversation-1",nativeSessionId:"native-1",turnId:"turn-2"}));
+  await screen.findByText("运行中");
+  expect(terminalApiMock.open).toHaveBeenLastCalledWith("codex","task-1","conversation-1",80,24,expect.anything());
+  expect(terminalApiMock.write).not.toHaveBeenCalled();
+  expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
+});
+
+it("does not dispatch after failed continuation attachment and allows an explicit retry",async()=>{
+  terminalApiMock.open.mockRejectedValueOnce(new Error("原对话被占用"));
+  renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
+  await screen.findByRole("alert");
+  terminalApiMock.open.mockRejectedValueOnce(new Error("原对话仍被占用"));
+  fireEvent.click(screen.getByRole("button",{name:"继续任务"}));
+  await screen.findByText("Error: 原对话仍被占用");
+  expect(productionApiMock.flushContinuation).not.toHaveBeenCalled();
+  act(notifyResize);
+  expect(terminalApiMock.open).toHaveBeenCalledTimes(2);
+  fireEvent.click(screen.getByRole("button",{name:"继续任务"}));
+  await waitFor(()=>expect(productionApiMock.flushContinuation).toHaveBeenCalledExactlyOnceWith("task-1","conversation-1","request-1"));
+  expect(terminalApiMock.createConversation).not.toHaveBeenCalled();
+});
+
+it.each(["waitingForAnswers","waitingForApproval","needsReview","running"])("preserves %s when Continue rechecks the task",async status=>{
+  productionApiMock.continueTask.mockResolvedValueOnce({status,conversationId:"conversation-1",nativeSessionId:"native-1"});
+  renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
+  await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByRole("button",{name:"继续任务"}));
+  await waitFor(()=>expect(productionApiMock.continueTask).toHaveBeenCalledExactlyOnceWith("task-1","conversation-1"));
+  await waitFor(()=>expect((screen.getByRole("button",{name:"继续任务"}) as HTMLButtonElement).disabled).toBe(false));
+  expect(terminalApiMock.open).toHaveBeenCalledTimes(1);
+  expect(productionApiMock.flushContinuation).not.toHaveBeenCalled();
+  expect(terminalApiMock.write).not.toHaveBeenCalled();
+});
+
+it("continues an already connected terminal without reopening it",async()=>{
+  productionApiMock.continueTask.mockResolvedValueOnce({status:"started",conversationId:"conversation-1",nativeSessionId:"native-1",turnId:"turn-2"});
+  renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
+  await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByRole("button",{name:"继续任务"}));
+  await waitFor(()=>expect(productionApiMock.continueTask).toHaveBeenCalledTimes(1));
+  expect(productionApiMock.flushContinuation).not.toHaveBeenCalled();
+  expect(terminalApiMock.open).toHaveBeenCalledTimes(1);
+  expect(terminalApiMock.write).not.toHaveBeenCalled();
+});
+
+it("does not send a pending continuation when the terminal unmounts before attachment finishes",async()=>{
+  terminalApiMock.open.mockRejectedValueOnce(new Error("原对话未连接"));
+  const view=renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
+  await screen.findByRole("alert");
+  let finishOpen!:(value:Awaited<ReturnType<typeof terminalApiMock.open>>)=>void;
+  terminalApiMock.open.mockImplementationOnce(()=>new Promise(resolve=>{finishOpen=resolve;}));
+  fireEvent.click(screen.getByRole("button",{name:"继续任务"}));
+  await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(2));
+  view.unmount();
+  await act(async()=>finishOpen({taskId:"task-1",conversationId:"conversation-1",status:"running",
+    pid:10,workingDirectory:"D:\\Workspaces\\task-1",lastError:""}));
+  expect(productionApiMock.flushContinuation).not.toHaveBeenCalled();
 });
 
 describe("Codex conversation list", () => {
