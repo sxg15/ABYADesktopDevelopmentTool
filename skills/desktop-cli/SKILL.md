@@ -1,5 +1,10 @@
 # Desktop CLI
 
+game_instance_get 追加只读 memory 投影，包含最近样本、峰值、压力状态和异常报告路径。
+没有增加代理可调用的阈值修改或自动停止授权接口。runtimeInstanceBusy 与
+instanceMemoryPressure 的 not_executed 说明操作未派发；outcome_unknown 仍须核对原请求，
+不能盲目重放写操作。请求身份与输入摘要进入有界异常证据，认证信息不复制。
+
 ## Codex-only context (2026-10-19)
 CLI conversation/Skill provider schemas accept only codex. Removed provider inputs
 fail before binding or recording activity, even if they name an existing Codex ID.

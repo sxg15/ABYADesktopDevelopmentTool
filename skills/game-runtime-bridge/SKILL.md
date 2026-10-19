@@ -1,5 +1,17 @@
 # Game Runtime CLI Bridge
 
+## 内存保护与操作追踪（2026-10-19）
+同实例高开销 capability run 串行，全局八个 CLI 子进程上限保留；status、工具目录、
+read_me_first、editor_get_state、capability_search/describe 仍可用于诊断。内存压力下拒绝
+新高开销工具调用，返回 not_executed；执行中压力触发已有
+取消通道，结果继续是 outcome_unknown，不能证明包体已停止或自动重试写操作。
+发送前流式计算输入 SHA256 与大小，超过 16 MiB 拒绝；日志只保存摘要元数据、
+dryRun/save/分页参数、操作数量与请求/会话身份，不复制完整参数、脚本或连接凭据。
+started 在发起调用前持久化，返回/错误在结束时关联同一请求；真正工具失败与传输
+返回需区分。取消和串行不能替代包体内部检查点或性能修复。
+测试模式的 APP 数据目录独立，但 Unity 私有 CLI 注册目录由 Windows Known Folder
+决定；仅在该模式下为运行时 Node 显式提供 OS 目录，仍校验 PID/启动身份，不复制或输出凭据。
+
 Acceptance IPC adapters run startup/version hashing/readiness waits and status reads
 through spawn_blocking, keeping the async runtime available. Status uses get_readonly
 and avoids loading persisted production history when in-memory progress is present.

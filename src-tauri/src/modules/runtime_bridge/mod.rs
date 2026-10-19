@@ -1,7 +1,15 @@
 mod acceptance;
+mod operation_trace;
 mod process;
+fn memory_safe_tool(name: &str) -> bool {
+    matches!(
+        name,
+        "read_me_first" | "editor_get_state" | "capability_search" | "capability_describe"
+    )
+}
 use crate::foundation::{AppError, AppResult};
 use crate::modules::{instances::InstanceService, tasks::TaskService};
+use operation_trace::operation_metadata;
 use parking_lot::Mutex;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -89,6 +97,17 @@ impl RuntimeBridgeService {
         }
         let _slot = ProcessSlot(self.in_flight.clone());
         let pid = self.instances.runtime_pid(id)?;
+        if args.first() == Some(&"capability")
+            && args.get(1) == Some(&"run")
+            && !memory_safe_tool(args.get(2).copied().unwrap_or(""))
+            && self.instances.memory_pressured(id)
+        {
+            return Err(AppError::new(
+                "instanceMemoryPressure",
+                "实例处于内存保护状态；请查看异常报告，不要重放写操作。",
+                "not_executed",
+            ));
+        }
         let instance = self.instances.read(id)?;
         let task = self.tasks.get(
             instance
@@ -100,9 +119,65 @@ impl RuntimeBridgeService {
             .join("artifacts/runtime")
             .join(id)
             .join(operation);
-        process::execute(
-            pid, id, args, input, session, operation, &output, timeout, cancel,
-        )
+        let tool = args.get(2).or(args.first()).copied().unwrap_or("unknown");
+        let event = |status: &str| {
+            json!({"at":chrono::Utc::now().to_rfc3339(),"sessionId":session,
+            "requestId":operation,"tool":crate::modules::instances::diagnostic_text(tool),"status":status})
+        };
+        let mut started = event("started");
+        if let Some(input) = &input {
+            match operation_metadata(input) {
+                Ok(metadata) => started["input"] = metadata,
+                Err(error) => {
+                    started["status"] = json!("input_rejected_not_executed");
+                    self.instances.record_memory_operation(id, started);
+                    return Err(error);
+                }
+            }
+        }
+        if !self.instances.record_memory_operation(id, started)
+            && args.get(1) == Some(&"run")
+            && !memory_safe_tool(tool)
+        {
+            return Err(AppError::new(
+                "memoryTraceUnavailable",
+                "无法持久化操作诊断记录，已阻止本次操作；请检查日志目录。",
+                "not_executed",
+            ));
+        }
+        let pressure_instance = self.instances.clone();
+        let pressure_id = id.to_string();
+        let result = process::execute(
+            pid,
+            id,
+            args,
+            input,
+            session,
+            operation,
+            &output,
+            timeout,
+            cancel,
+            &|| {
+                args.get(1) == Some(&"run")
+                    && !memory_safe_tool(tool)
+                    && pressure_instance.memory_pressured(&pressure_id)
+            },
+        );
+        let mut completed = event(if result.is_ok() {
+            "returned"
+        } else {
+            "failed_or_interrupted"
+        });
+        if let Ok(value) = &result {
+            completed["runtimeSuccess"] = value.get("success").cloned().unwrap_or(Value::Null);
+        }
+        if let Err(error) = &result {
+            completed["errorCode"] = json!(error.code);
+            completed["message"] =
+                json!(crate::modules::instances::diagnostic_text(&error.message));
+        }
+        self.instances.record_memory_operation(id, completed);
+        result
     }
     pub fn read_artifact(&self, task_id: &str, file: &str) -> AppResult<String> {
         use base64::Engine as _;
@@ -204,6 +279,13 @@ impl RuntimeBridgeService {
             if active.contains_key(operation) {
                 return Err(AppError::validation(
                     "Operation is already running; do not replay writes.",
+                ));
+            }
+            if !memory_safe_tool(name) && active.values().any(|(owner, _, _)| owner == id) {
+                return Err(AppError::new(
+                    "runtimeInstanceBusy",
+                    "同一实例一次只执行一个工具操作；请等待原请求结束。",
+                    "not_executed",
                 ));
             }
             active.insert(

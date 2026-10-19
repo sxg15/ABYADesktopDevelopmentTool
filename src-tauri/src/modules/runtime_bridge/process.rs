@@ -45,6 +45,24 @@ fn command(pid: u32, id: &str, session: &str, args: &[&str]) -> AppResult<Comman
     {
         use std::os::windows::process::CommandExt;
         command.creation_flags(0x08000000);
+        // 隔离 APP 数据不改变 Unity 的 OS 私有注册目录；仍按 PID 和启动身份认证。
+        if cfg!(test) || std::env::var("ABYA_TEST_MODE").as_deref() == Ok("1") {
+            use windows::Win32::{
+                System::Com::CoTaskMemFree,
+                UI::Shell::{FOLDERID_LocalAppData, KF_FLAG_DEFAULT, SHGetKnownFolderPath},
+            };
+            unsafe {
+                let folder = SHGetKnownFolderPath(&FOLDERID_LocalAppData, KF_FLAG_DEFAULT, None)
+                    .map_err(AppError::internal)?;
+                let text = folder.to_string();
+                CoTaskMemFree(Some(folder.0.cast()));
+                command.env(
+                    "ABYA_CLI_INSTANCE_DIR",
+                    std::path::PathBuf::from(text.map_err(AppError::internal)?)
+                        .join("AbyaPB/Cli/instances"),
+                );
+            }
+        }
     }
     Ok(command)
 }
@@ -80,6 +98,7 @@ pub(super) fn execute(
     output: &Path,
     timeout: Duration,
     cancelled: Arc<AtomicBool>,
+    memory_pressure: &dyn Fn() -> bool,
 ) -> AppResult<Value> {
     let mut command = command(pid, id, session, args)?;
     command
@@ -113,7 +132,7 @@ pub(super) fn execute(
                 break None;
             }
         }
-        if cancelled.load(Ordering::SeqCst) || start.elapsed() >= timeout {
+        if cancelled.load(Ordering::SeqCst) || start.elapsed() >= timeout || memory_pressure() {
             unknown = true;
             if args.first() != Some(&"cancel") {
                 cancel_runtime(pid, id, session, operation);

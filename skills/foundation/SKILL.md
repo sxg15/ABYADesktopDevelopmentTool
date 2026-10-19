@@ -1,5 +1,12 @@
 # Foundation Skill
 
+## 内存保护适配接口（2026-10-19）
+共享 memory.ts 提供实例采样、阈值、单实例自动停止授权和报告入口。策略与授权仅为
+Tauri 用户操作，CLI 的 game_instance_get 只得到 InstanceRuntimeInfo.memory 投影。
+没有 raw command/path 输入；报告打开只能由 instances 服务解析固定数据目录中的路径。
+ABYA_TEST_MODE=1 与 Rust 测试一样使用数据目录内 IsolatedGameData 启动测试 Player；
+正常发布运行不修改游戏数据根。日志字段区分私有提交/工作集/系统提交，不能混称物理内存。
+
 ## Codex-only provider contract (2026-10-19)
 The active terminal provider type accepts only codex. Shared adapters expose no
 Grok commands. Persisted intake question provenance remains a string to preserve

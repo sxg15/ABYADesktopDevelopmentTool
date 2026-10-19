@@ -1,0 +1,156 @@
+{
+  "date": "2026-10-19",
+  "sourceChangeset": 11605,
+  "scope": "post-fix archive; no original failure snapshot or strict A/B",
+  "checks": {
+    "frontendPassed": 170,
+    "nodePassed": 69,
+    "rustLibraryPassed": 206,
+    "rustCliPassed": 2,
+    "rustOptInIgnored": 11,
+    "unityPassed": 14
+  },
+  "runs": [
+    {
+      "phase": "guard",
+      "observations": [
+        {
+          "tool": "read_me_first",
+          "milliseconds": 740,
+          "transportSuccess": true,
+          "runtimeError": null
+        },
+        {
+          "tool": "editor_get_state",
+          "milliseconds": 718,
+          "transportSuccess": true,
+          "runtimeError": null
+        }
+      ],
+      "peakPrivateBytes": 3443683328,
+      "incidentCreated": true,
+      "processAliveAfter": false,
+      "evidence": "logs/memory-new-guard-20261019/62bb2d9c-298d-4acc-9bac-9948f5eb4c1d/result.json"
+    },
+    {
+      "phase": "ui",
+      "observations": [
+        {
+          "tool": "read_me_first",
+          "milliseconds": 699,
+          "transportSuccess": true,
+          "runtimeError": null
+        },
+        {
+          "tool": "editor_get_state",
+          "milliseconds": 704,
+          "transportSuccess": true,
+          "runtimeError": null
+        },
+        {
+          "tool": "custom_ui_authoring_open",
+          "milliseconds": 1833,
+          "transportSuccess": true,
+          "runtimeError": null
+        },
+        {
+          "tool": "custom_ui_authoring_get_tree",
+          "milliseconds": 1343,
+          "transportSuccess": true,
+          "runtimeError": null
+        }
+      ],
+      "peakPrivateBytes": 3431018496,
+      "incidentCreated": false,
+      "processAliveAfter": false,
+      "evidence": "logs/memory-new-ui-20261019/76e69c65-df77-4bef-a643-47648212a837/result.json"
+    },
+    {
+      "phase": "manifest",
+      "observations": [
+        {
+          "tool": "read_me_first",
+          "file": "read_me_first.json",
+          "milliseconds": 706,
+          "transportSuccess": true,
+          "runtimeError": null
+        },
+        {
+          "tool": "editor_get_state",
+          "file": "editor_get_state.json",
+          "milliseconds": 707,
+          "transportSuccess": true,
+          "runtimeError": null
+        },
+        {
+          "tool": "editor_gameplay_architecture_snapshot",
+          "file": "editor_gameplay_architecture_snapshot.json",
+          "milliseconds": 16495,
+          "transportSuccess": true,
+          "runtimeError": null
+        },
+        {
+          "tool": "editor_gameplay_architecture_validate",
+          "file": "editor_gameplay_architecture_validate.json",
+          "milliseconds": 16164,
+          "transportSuccess": true,
+          "runtimeError": null
+        }
+      ],
+      "peakPrivateBytes": 3401826304,
+      "incidentCreated": false,
+      "processAliveAfter": false,
+      "evidence": "logs/memory-full-check-20261019/970f3298-9042-48cb-a724-bbaa14eeef7f/result.json"
+    },
+    {
+      "phase": "implementation-lint",
+      "observations": [
+        {
+          "tool": "read_me_first",
+          "file": "read_me_first.json",
+          "milliseconds": 787,
+          "transportSuccess": true,
+          "runtimeError": null
+        },
+        {
+          "tool": "editor_get_state",
+          "file": "editor_get_state.json",
+          "milliseconds": 720,
+          "transportSuccess": true,
+          "runtimeError": null
+        },
+        {
+          "tool": "editor_gameplay_architecture_snapshot",
+          "file": "editor_gameplay_architecture_snapshot.json",
+          "milliseconds": 17036,
+          "transportSuccess": true,
+          "runtimeError": null
+        },
+        {
+          "tool": "editor_gameplay_architecture_validate",
+          "file": "editor_gameplay_architecture_validate.json",
+          "milliseconds": 17101,
+          "transportSuccess": true,
+          "runtimeError": null
+        },
+        {
+          "tool": "editor_gameplay_architecture_lint",
+          "file": "editor_gameplay_architecture_lint.json",
+          "milliseconds": 60016,
+          "transportSuccess": true,
+          "runtimeError": null
+        }
+      ],
+      "peakPrivateBytes": 3440914432,
+      "incidentCreated": false,
+      "processAliveAfter": false
+    }
+  ],
+  "finalGuard": {
+    "incidentId": "bd57bffb-f78f-498a-a117-2073b5000da2",
+    "completeFiles": 10,
+    "secretSentinelAbsent": true,
+    "processAlive": false,
+    "peakPrivateBytes": 3442978816
+  }
+}

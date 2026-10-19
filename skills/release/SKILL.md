@@ -1,5 +1,15 @@
 # Release Skill
 
+## 内存保护与追溯（2026-10-19）
+默认与 Validation 包使用 memory-incident-guard-20261019。保留 Codex-only、紧凑任务引导
+及所有已有修复。验证压力事件去重/恢复、报告写失败、重启中断、明确自动停止授权、
+输入预算、同实例串行和取消；完整运行既有检查及原生隔离复现。
+测试资料包只从新目录提取并校验；每轮复制存档，完整 Player 目录不拆装。明确测试包
+来自故障后已修正存档，两份历史 Player 运行文件相同，不能称为故障时快照或代码 A/B。
+原生隔离使用 ABYA_TEST_MODE=1，此模式将游戏数据根定向到本次隔离 Data/IsolatedGameData。
+不能把受限采样未复现、单元测试或 CLI 取消回执表述为内存泄漏根因已解决。
+正式 APP 保持用户当前状态，未运行时可以替换完整包但不自动打开；保留回退与用户数据。
+
 ## Compact task guidance package (2026-10-19)
 Default/Validation builds use compact-task-guidance-20261019, superseding the
 historical labels below. Keep the Codex-only package and task-detail overflow fix.

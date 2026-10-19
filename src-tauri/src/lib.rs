@@ -730,6 +730,48 @@ fn get_instance(id: String, state: State<'_, AppState>) -> AppResult<InstanceRun
 }
 
 #[tauri::command]
+fn instance_memory_status(
+    id: String,
+    state: State<'_, AppState>,
+) -> AppResult<modules::instances::MemoryStatus> {
+    state.instances.memory_status(&id)
+}
+#[tauri::command]
+fn instance_memory_policy(state: State<'_, AppState>) -> modules::instances::MemoryPolicy {
+    state.instances.memory_policy()
+}
+#[tauri::command]
+fn set_instance_memory_policy(
+    policy: modules::instances::MemoryPolicy,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    state.instances.set_memory_policy(policy)
+}
+#[tauri::command]
+fn arm_instance_memory_stop(
+    id: String,
+    enabled: bool,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    state.instances.arm_memory_stop(&id, enabled)
+}
+#[tauri::command]
+fn open_memory_reports(
+    id: Option<String>,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let path = match id {
+        Some(id) => state.instances.memory_report(&id)?,
+        None => state.instances.memory_reports_directory()?,
+    };
+    app.opener()
+        .reveal_item_in_dir(path)
+        .map_err(foundation::AppError::internal)
+}
+
+#[tauri::command]
 fn discover_archives(
     root: Option<String>,
     state: State<'_, AppState>,
@@ -918,6 +960,10 @@ pub fn run() {
             let instances =
                 InstanceService::new(database.clone(), paths.clone(), connections.clone());
             let runtime_bridge = RuntimeBridgeService::new(instances.clone(), tasks.clone());
+            let memory_codex = codex_terminal.clone();
+            instances.set_memory_context_reader(std::sync::Arc::new(move |task| {
+                memory_codex.memory_incident_context(task)
+            }));
             let logs = LogService::new(database.clone(), connections.clone());
             let archive_transfers = ArchiveTransferService::new(
                 database.clone(),
@@ -1074,6 +1120,11 @@ pub fn run() {
             delete_codex_conversation,
             list_instances,
             get_instance,
+            instance_memory_status,
+            instance_memory_policy,
+            set_instance_memory_policy,
+            arm_instance_memory_stop,
+            open_memory_reports,
             discover_archives,
             list_archive_transfer_targets,
             list_archive_transfer_sources,

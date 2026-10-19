@@ -1,5 +1,6 @@
 mod app_server;
 mod diagnostics;
+mod memory_context;
 mod preflight;
 mod recovery;
 mod resume_failure;

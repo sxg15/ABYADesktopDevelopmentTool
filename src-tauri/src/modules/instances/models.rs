@@ -190,6 +190,7 @@ pub struct GameInstance {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceRuntimeInfo {
+    pub memory: super::MemoryStatus,
     pub instance: GameInstance,
     pub gateway_endpoint: String,
     pub report_path: Option<String>,

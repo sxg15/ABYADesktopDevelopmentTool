@@ -1,5 +1,9 @@
 # Development Terminal Skill
 
+内存异常上下文只输出活动身份、状态、时间及保守过滤后的摘要。diagnostic_summary
+过滤凭据相关内容、原始命令运算符和长值；不复制完整终端或参数。缺失活动与迟到
+回执不推定为成功；原工作流仍为操作内容的权威记录。
+
 ## Codex-only terminal (2026-10-19)
 Grok execution and its module are removed. Retain only Codex terminal routing and
 clipboard/IME/history/reconnect behavior. Reject unsupported provider values at

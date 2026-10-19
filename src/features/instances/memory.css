@@ -1,0 +1,5 @@
+.memory-metrics dd{margin:4px 0 0;font-weight:600}
+.memory-metrics dt{font-size:12px;color:#617879}
+.memory-metrics>div:last-child{grid-column:1/-1}
+.memory-stop-choice{display:flex;align-items:flex-start;gap:8px;margin:14px 0 8px;line-height:1.6}
+.memory-stop-choice input[type=checkbox]{width:16px;height:16px;padding:0;margin:4px 0 0;flex:0 0 16px}

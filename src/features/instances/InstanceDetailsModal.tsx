@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Eye, EyeOff, Power, Radio, RefreshCw, Trash2 } from "lucide-react";
 import { Modal } from "../../app/Modal";
 import { api, errorMessage } from "../../shared/api";
+import { MemoryPanel } from "./MemoryPanel";
 import type {
   GameInstance,
   InstanceRuntimeInfo,
@@ -125,6 +126,7 @@ export function InstanceDetailsModal({
         </code>
       </div>
 
+      <MemoryPanel id={instance.id} managed={current.origin === "managed"} running={running} en={t("close") === "Close"}/>
       <h3 className="compact-heading">{t("arguments")}</h3>
       <div className="argument-list">
         {instance.sanitizedArgs.map((argument, index) => (

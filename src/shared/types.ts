@@ -250,6 +250,7 @@ export interface GameInstance {
 }
 
 export interface InstanceRuntimeInfo {
+  memory?: import("./memory").MemoryStatus;
   instance: GameInstance;
   gatewayEndpoint: string;
   reportPath?: string;

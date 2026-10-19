@@ -1,5 +1,9 @@
 # Codex Terminal Skill
 
+内存事件通过公开的 memory_incident_context 读取已存在的工作流元数据；最多三会话、
+每会话三轮、每轮32项活动。只保留身份、类型、状态、时间和过滤后的摘要，不复制原始
+终端、参数或认证材料。异常上下文采集不阻塞实例保护；缺失/中断不能补造历史或归因。
+
 ## Persisted case request continuation (2026-10-17)
 The fixed generic continuation prompt also tells the model to inspect APP-authored
 artDesign.caseRequests by cycle/version, reconcile already processed work and then

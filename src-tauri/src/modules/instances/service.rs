@@ -30,8 +30,10 @@ struct LiveInstance {
 
 #[derive(Clone)]
 pub struct InstanceService {
+    launch_gate: Arc<Mutex<()>>,
+    pub(super) memory: super::memory::MemoryGuard,
     database: Database,
-    paths: AppPaths,
+    pub(super) paths: AppPaths,
     connections: GameConnectionService,
     live: Arc<Mutex<HashMap<String, LiveInstance>>>,
     pub(super) recordings: Arc<Mutex<HashMap<String, super::recording::LiveRecording>>>,
@@ -47,6 +49,8 @@ pub struct InstanceLogRepairReport {
 impl InstanceService {
     pub fn new(database: Database, paths: AppPaths, connections: GameConnectionService) -> Self {
         Self {
+            launch_gate: Default::default(),
+            memory: super::memory::MemoryGuard::new(paths.reports_dir.join("MemoryIncidents")),
             database,
             paths,
             connections,
@@ -108,6 +112,7 @@ impl InstanceService {
         let report_path = (instance.origin == InstanceOrigin::Managed)
             .then(|| AppPaths::display(&self.paths.instance_report_path(id)));
         Ok(InstanceRuntimeInfo {
+            memory: self.memory.status(id),
             gateway_endpoint: self.connections.state().preferred_endpoint,
             report_path,
             process_alive: self.live.lock().contains_key(id),
@@ -116,6 +121,8 @@ impl InstanceService {
     }
 
     pub fn launch(&self, mut input: LaunchInstanceInput) -> AppResult<GameInstance> {
+        let _launch_guard = self.launch_gate.lock();
+        self.memory.admit_launch()?;
         let _files = crate::foundation::EXECUTABLE_FILES.read();
         let task_id = input.task_id.trim();
         if task_id.is_empty() {
@@ -206,15 +213,15 @@ impl InstanceService {
         let executable = input.executable_path.trim().to_string();
         let working_directory = Path::new(&executable).parent().map(Path::to_path_buf);
         let log_path = PathBuf::from(&contract.log_path);
-        let args = contract.args;
-        #[cfg(test)]
-        let args = {
-            let mut isolated = args;
+        let args = if cfg!(test) || std::env::var("ABYA_TEST_MODE").as_deref() == Ok("1") {
+            let mut isolated = contract.args;
             isolated.push(format!(
                 "--abya-data-root={}",
                 self.paths.data_dir.join("IsolatedGameData").display()
             ));
             isolated
+        } else {
+            contract.args
         };
         let restore_foreground = capture_foreground_window();
         let mut command = CommandWrap::with_new(&executable, |command| {
@@ -649,11 +656,63 @@ impl InstanceService {
     fn monitor(&self, id: String, child: Arc<Mutex<Box<dyn ChildWrapper>>>, log_path: PathBuf) {
         let database = self.database.clone();
         let live = self.live.clone();
+        let memory = self.memory.clone();
+        let service = self.clone();
+        let instance = self.read(&id).ok();
+        if let Some(instance) = &instance
+            && let Err(error) = memory.start(instance)
+        {
+            memory.error(&id, &error.to_string());
+        }
         std::thread::spawn(move || {
+            let probe = instance
+                .as_ref()
+                .and_then(|item| item.pid)
+                .map(super::memory_probe::MemoryProbe::new);
+            let mut sampled_at = Instant::now() - Duration::from_secs(1);
+            let mut stop_requested = false;
             loop {
+                if sampled_at.elapsed() >= Duration::from_secs(1) {
+                    sampled_at = Instant::now();
+                    match &probe {
+                        Some(Ok(probe)) => match probe.sample() {
+                            Ok(sample) => {
+                                if memory.sample(&id, sample) && !stop_requested {
+                                    stop_requested = true;
+                                    let stopper = service.clone();
+                                    let stopped_id = id.clone();
+                                    std::thread::spawn(move || {
+                                        let result = stopper.stop(&stopped_id);
+                                        let outcome = match result {
+                                            Ok(value) => {
+                                                serde_json::json!({"protectionStop":{"instanceId":value.instance.id,"pid":value.instance.pid,"processAlive":value.process_alive,
+                                                    "gracefulExitRequested":value.graceful_exit_requested,"gracefulExitObserved":value.graceful_exit_observed,
+                                                    "forcedTermination":value.forced_termination,"timedOut":value.timed_out,"exitCode":value.instance.exit_code},"at":Utc::now().to_rfc3339()})
+                                            }
+                                            Err(error) => {
+                                                serde_json::json!({"stopError":super::diagnostic_text(&error.message)})
+                                            }
+                                        };
+                                        stopper.memory.record_stop_outcome(&stopped_id, outcome);
+                                    });
+                                }
+                            }
+                            Err(error) => memory.error(&id, &error.to_string()),
+                        },
+                        Some(Err(error)) => memory.error(&id, &error.to_string()),
+                        None => memory.error(&id, "无法取得托管进程 PID"),
+                    }
+                }
                 let _ = truncate_oversized_instance_log(&log_path);
-                match child.lock().try_wait() {
+                // 查询后立即释放子进程锁，避免与 runtime_pid 的 live→child 锁顺序相反。
+                let wait_result = child.lock().try_wait();
+                match wait_result {
                     Ok(Some(status)) => {
+                        let expected_stop = stop_requested
+                            || service.read(&id).is_ok_and(|instance| {
+                                matches!(instance.process_state, ProcessState::Stopping)
+                            });
+                        memory.finish(&id, serde_json::json!({"exitCode":status.code(),"observedAt":Utc::now().to_rfc3339(),"autoStopRequested":stop_requested}), !status.success() && !expected_stop);
                         if let Some(instance) = live.lock().remove(&id) {
                             instance.window.stop();
                         }
@@ -669,6 +728,7 @@ impl InstanceService {
                     }
                     Ok(None) => std::thread::sleep(Duration::from_millis(500)),
                     Err(error) => {
+                        memory.finish(&id, serde_json::json!({"monitorError":super::diagnostic_text(&error.to_string())}), true);
                         if let Some(instance) = live.lock().remove(&id) {
                             instance.window.stop();
                         }
