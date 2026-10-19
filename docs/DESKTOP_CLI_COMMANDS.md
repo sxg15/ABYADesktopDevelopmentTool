@@ -74,8 +74,7 @@ Changes task lifecycle status. Reversible write.
 
 ### `development_conversation_bind`
 
-Input: required `taskId` and `conversationId`; optional `provider` (`codex` or
-`grok`, default `codex`).
+Input: required `taskId` and `conversationId`; optional `provider` (`codex` only, default `codex`). Removed providers are rejected without binding or recording activity.
 
 Requires an initialized CLI session and validates that the provider-owned
 conversation belongs to the task. The binding is held only for that CLI

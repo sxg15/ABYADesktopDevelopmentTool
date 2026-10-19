@@ -15,6 +15,26 @@ const view: ProductionView = { record: { taskId: "task", revision: 1,
   warnings: [], reportPaths: [], availableUpdate: false };
 beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); sessionStorage.clear(); vi.mocked(productionApi.get).mockResolvedValue(view); });
 afterEach(cleanup);
+
+it("preserves legacy provider answers without opening or continuing a conversation", async () => {
+  const legacy = structuredClone(view);
+  legacy.record!.questionGroups![0].provider = "grok";
+  vi.mocked(productionApi.get).mockResolvedValue(legacy);
+  const saved = structuredClone(legacy);
+  saved.record!.revision = 2;
+  saved.record!.questionGroups![0].status = "submitted";
+  saved.record!.questionGroups![0].answers = [{ revision: 1, answers: { mode: "多人" }, submittedAt: "now" }];
+  vi.mocked(productionApi.answer).mockResolvedValue(saved);
+  const connect = vi.fn(), resume = vi.fn();
+  render(<TaskIntakeDialog taskId="task" active onEnsureConnection={connect} onContinue={resume}/>);
+  fireEvent.click(await screen.findByLabelText("多人"));
+  fireEvent.click(screen.getByText("保存答案"));
+  await screen.findByText(/答案已保存。此历史会话的服务商已移除/);
+  expect(productionApi.answer).toHaveBeenCalledWith("task", 1, "submit-answers", { id: "rules", answers: { mode: "多人" } });
+  expect(productionApi.submitAnswers).not.toHaveBeenCalled();
+  expect(connect).not.toHaveBeenCalled(); expect(resume).not.toHaveBeenCalled();
+  expect(screen.queryByText("重试继续（不重复提交答案）")).toBeNull();
+});
 it("keeps submit-and-continue alive when polling observes submitted answers before the response", async () => {
   let finish!:(value:Awaited<ReturnType<typeof productionApi.submitAnswers>>)=>void;
   vi.mocked(productionApi.submitAnswers).mockImplementation(()=>new Promise(resolve=>{finish=resolve;}));

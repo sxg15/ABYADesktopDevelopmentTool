@@ -11,7 +11,7 @@ function fixture(t) {
   t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
   const files=['ABYA Desktop Development Tool.exe','abya-desktop.exe','runtime/node.exe','runtime/LICENSE.txt','tools/abya/bin/abya.mjs',
     'tools/ffmpeg/source.json','tools/ffmpeg/runtime/bin/ffmpeg.exe','tools/ffmpeg/runtime/bin/ffprobe.exe',
-    'tools/ffmpeg/runtime/LICENSE.txt','.codex/skills/abya-game-development-task/SKILL.md','.grok/skills/abya-game-development-task/SKILL.md'];
+    'tools/ffmpeg/runtime/LICENSE.txt','.codex/skills/abya-game-development-task/SKILL.md'];
   for(const file of files){fs.mkdirSync(path.dirname(path.join(root,file)),{recursive:true});fs.writeFileSync(path.join(root,file),'fixture');}
   const sha=crypto.createHash('sha256').update('fixture').digest('hex');
   fs.writeFileSync(path.join(root,'build-manifest.json'),JSON.stringify({releaseLabel:'fixture',executable:files[0],sha256:sha,cliExecutable:files[1],cliSha256:sha}));
@@ -20,11 +20,18 @@ function fixture(t) {
 test('complete runtime verifies after relocation, without a system Node installation',async t=>{
   const original=fixture(t);await verifyPackage(original,{write:true});
   const moved=original+' 策划 (clone)';fs.renameSync(original,moved);t.after(()=>fs.rmSync(moved,{recursive:true,force:true}));
-  assert.equal((await verifyPackage(moved)).files,12);
+  assert.equal((await verifyPackage(moved)).files,11);
 });
 test('missing bundled runtime is rejected before launch',async t=>{
   const root=fixture(t);await verifyPackage(root,{write:true});fs.unlinkSync(path.join(root,'runtime/node.exe'));
   await assert.rejects(verifyPackage(root,{quick:true}),/Missing runtime/);
+});
+
+test('retired provider resources cannot enter a Codex-only package',async t=>{
+  const root=fixture(t),file=path.join(root,'.grok/skills/legacy/SKILL.md');
+  fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,'retired fixture');
+  await assert.rejects(verifyPackage(root,{write:true}),/Unexpected package content/);
+  assert.equal(fs.existsSync(path.join(root,'package-files.json')),false);
 });
 test('corrupt executable is rejected even by quick checks',async t=>{
   const root=fixture(t);await verifyPackage(root,{write:true});fs.writeFileSync(path.join(root,'abya-desktop.exe'),'changed');

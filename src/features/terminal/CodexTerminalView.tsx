@@ -265,7 +265,7 @@ export function DevelopmentTerminalView({
   if (!availability) {
     return (
       <div className="terminal-unavailable">
-        <span>{t(provider === "codex" ? "checkingCodex" : "checkingGrok")}</span>
+        <span>{t("checkingCodex")}</span>
       </div>
     );
   }
@@ -275,9 +275,9 @@ export function DevelopmentTerminalView({
       <div className="terminal-unavailable">
         <SquareTerminal size={28} />
         <strong>
-          {t(provider === "codex" ? "codexUnavailable" : "grokUnavailable")}
+          {t("codexUnavailable")}
         </strong>
-        <span>{t(provider === "codex" ? "codexNotFound" : "grokNotFound")}</span>
+        <span>{t("codexNotFound")}</span>
         <button
           className="icon-button"
           title={t("refresh")}
@@ -294,7 +294,7 @@ export function DevelopmentTerminalView({
       <aside className="conversation-pane">
         <div className="conversation-pane-header">
           <strong>
-            {t(provider === "codex" ? "codexConversations" : "grokConversations")}
+            {t("codexConversations")}
           </strong>
           <button
             className="icon-button"
@@ -958,12 +958,12 @@ function ConversationTerminal({
           {canStop && (
             <button
               className="secondary-button terminal-stop"
-              title={t(provider === "codex" ? "stopCodex" : "stopGrok")}
+              title={t("stopCodex")}
               onClick={stop}
               disabled={actionBusy || control?.state==="pausing"}
             >
               <Square size={15} fill="currentColor" />
-              {t(provider === "codex" ? "stopCodex" : "stopGrok")}
+              {t("stopCodex")}
             </button>
           )}
           {provider==="codex" && <button className="primary-button" onClick={()=>void continueTask()}
@@ -971,10 +971,10 @@ function ConversationTerminal({
           {terminalEnded && (
             <button
               className="secondary-button"
-              title={t(provider === "codex" ? "restartCodex" : "restartGrok")}
+              title={t("restartCodex")}
               onClick={() => startRef.current(true)}
             >
-              {provider === "codex" ? "接回原对话" : t("restartGrok")}
+              {"接回原对话"}
               <RefreshCw size={16} />
             </button>
           )}
@@ -1024,10 +1024,10 @@ function normalizeTerminalHistory(data: string) {
 
 function terminalStatus(
   t: (key: MessageKey) => string,
-  provider: TerminalProvider,
+  _provider: TerminalProvider,
   status?: CodexTerminalState["status"],
 ) {
-  const prefix = provider === "codex" ? "codex" : "grok";
+  const prefix = "codex";
   switch (status) {
     case "running":
       return t(`${prefix}Running` as MessageKey);

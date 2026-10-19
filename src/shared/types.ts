@@ -64,7 +64,7 @@ export interface DevelopmentTask {
   workspacePath: string;
 }
 
-export type TerminalProvider = "codex" | "grok";
+export type TerminalProvider = "codex";
 
 export interface CodexConversation {
   nativeSyncError?: string;

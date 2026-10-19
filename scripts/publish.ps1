@@ -8,10 +8,10 @@ $publishName = if ($RecorderStaging) { "Publish-Staging-Recorder" } elseif ($Val
 $publish = Join-Path $root $publishName
 $running = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith("$publish\", [StringComparison]::OrdinalIgnoreCase) }
 if ($running) { throw "Close the running package before replacing it: $publish" }
-$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } elseif ($UiStaging) { 'guidance-action-panel-20261012' } else { 'visual-refinement-integration-20261017' }
+$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } elseif ($UiStaging) { 'guidance-action-panel-20261012' } else { 'codex-only-20261019' }
 $env:ABYA_BUILD_UTC = [DateTime]::UtcNow.ToString('O')
 $packageVersion = (Get-Content -Raw -LiteralPath (Join-Path $root 'package.json') | ConvertFrom-Json).version
-$llmDirectories = @(".codex", ".grok")
+$llmDirectories = @(".codex")
 $managedSkillRelativePath = "skills\abya-game-development-task\SKILL.md"
 $managedSkillRequiredFiles = @(
     $managedSkillRelativePath,
@@ -106,6 +106,17 @@ $recorderDestination = Join-Path $toolsPath 'ffmpeg'
 New-Item -ItemType Directory -Path $recorderDestination -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $recorder 'source.json') -Destination $recorderDestination -Force
 Copy-Item -LiteralPath (Join-Path $recorder 'runtime') -Destination $recorderDestination -Recurse -Force
+
+$retiredBundle = Join-Path $publish '.grok'
+if (Test-Path -LiteralPath $retiredBundle) {
+    $resolvedPublish = (Resolve-Path -LiteralPath $publish).Path
+    $resolvedRetired = (Resolve-Path -LiteralPath $retiredBundle).Path
+    if ($resolvedRetired -ne (Join-Path $resolvedPublish '.grok') -or
+        ((Get-Item -Force -LiteralPath $retiredBundle).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw "Refusing to remove retired provider content outside the package: $resolvedRetired"
+    }
+    Remove-Item -LiteralPath $resolvedRetired -Recurse -Force
+}
 
 foreach ($directoryName in $llmDirectories) {
     $llmSource = Join-Path $root $directoryName

@@ -34,8 +34,8 @@ test('token export retains font quotes, object colors and semantic aliases witho
   assert.throws(() => emitTokens({ primitive: { a: { b: 1 }, 'a-b': 2 } }), /Duplicate/);
 });
 
-test('all portable design references and scripts resolve within both distributed providers', () => {
-  for (const provider of ['.codex', '.grok']) {
+test('all portable design references and scripts resolve within the Codex bundle', () => {
+  for (const provider of ['.codex']) {
     const root = path.resolve(provider, 'skills/abya-game-development-task/references/game-art-design');
     function walk(dir) {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

@@ -117,53 +117,6 @@ export const api = {
     }),
   deleteCodexConversation: (taskId: string, conversationId: string) =>
     invoke<void>("delete_codex_conversation", { taskId, conversationId }),
-  grokTerminalAvailability: () =>
-    invoke<CodexTerminalAvailability>("get_grok_terminal_availability"),
-  openGrokTerminal: (
-    taskId: string,
-    conversationId: string,
-    columns: number,
-    rows: number,
-    onEvent: Channel<CodexTerminalEvent>,
-  ) =>
-    invoke<CodexTerminalState>("open_grok_terminal", {
-      taskId,
-      conversationId,
-      columns,
-      rows,
-      onEvent,
-    }),
-  writeGrokTerminal: (conversationId: string, data: string) =>
-    invoke<void>("write_grok_terminal", { conversationId, data }),
-  resizeGrokTerminal: (conversationId: string, columns: number, rows: number) =>
-    invoke<void>("resize_grok_terminal", { conversationId, columns, rows }),
-  stopGrokTerminal: (conversationId: string) =>
-    invoke<void>("stop_grok_terminal", { conversationId }),
-  listGrokConversations: (taskId: string) =>
-    invoke<CodexConversation[]>("list_grok_conversations", { taskId }),
-  createGrokConversation: (taskId: string, title?: string) =>
-    invoke<CodexConversation>("create_grok_conversation", {
-      taskId,
-      title: title ?? null,
-    }),
-  renameGrokConversation: (
-    taskId: string,
-    conversationId: string,
-    title: string,
-  ) =>
-    invoke<CodexConversation>("rename_grok_conversation", {
-      taskId,
-      conversationId,
-      title,
-    }),
-  getGrokWorkflow: (taskId: string, conversationId: string) =>
-    invoke<CodexWorkflowSnapshot>("get_grok_workflow", {
-      taskId,
-      conversationId,
-    }),
-  deleteGrokConversation: (taskId: string, conversationId: string) =>
-    invoke<void>("delete_grok_conversation", { taskId, conversationId }),
-
   listInstances: (taskId?: string) =>
     invoke<GameInstance[]>("list_instances", { taskId: taskId ?? null }),
   getInstance: (id: string) =>
@@ -242,15 +195,13 @@ export const terminalApi = {
   repairBinding: (taskId: string, conversationId: string, nativeId: string) =>
     invoke<CodexConversation>("repair_codex_binding", { taskId, conversationId, nativeId }),
   copyHistory: (provider: TerminalProvider, taskId: string, conversationId: string) =>
-    invoke<boolean>("copy_terminal_history", { provider, taskId, conversationId }),
+    withCodex(provider, () => invoke<boolean>("copy_terminal_history", { provider, taskId, conversationId })),
   projectWorkspace: (taskId: string) => invoke<string>("get_codex_project_workspace", { taskId }),
   setArchived: (taskId: string, conversationId: string, archived: boolean) =>
     invoke<CodexConversation>("set_codex_conversation_archived", { taskId, conversationId, archived }),
   readClipboard: () => invoke<{ kind: "text"; text: string } | { kind: "image" | "empty" }>("read_terminal_clipboard"),
   availability: (provider: TerminalProvider) =>
-    provider === "codex"
-      ? api.codexTerminalAvailability()
-      : api.grokTerminalAvailability(),
+    withCodex(provider, () => api.codexTerminalAvailability()),
   open: (
     provider: TerminalProvider,
     taskId: string,
@@ -259,75 +210,51 @@ export const terminalApi = {
     rows: number,
     onEvent: Channel<CodexTerminalEvent>,
   ) =>
-    provider === "codex"
-      ? api.openCodexTerminal(
+    withCodex(provider, () => api.openCodexTerminal(
           taskId,
           conversationId,
           columns,
           rows,
           onEvent,
-        )
-      : api.openGrokTerminal(
-          taskId,
-          conversationId,
-          columns,
-          rows,
-          onEvent,
-        ),
+        )),
   write: (provider: TerminalProvider, conversationId: string, data: string) =>
-    provider === "codex"
-      ? api.writeCodexTerminal(conversationId, data)
-      : api.writeGrokTerminal(conversationId, data),
+    withCodex(provider, () => api.writeCodexTerminal(conversationId, data)),
   resize: (
     provider: TerminalProvider,
     conversationId: string,
     columns: number,
     rows: number,
   ) =>
-    provider === "codex"
-      ? api.resizeCodexTerminal(conversationId, columns, rows)
-      : api.resizeGrokTerminal(conversationId, columns, rows),
+    withCodex(provider, () => api.resizeCodexTerminal(conversationId, columns, rows)),
   stop: (provider: TerminalProvider, conversationId: string) =>
-    provider === "codex"
-      ? api.stopCodexTerminal(conversationId)
-      : api.stopGrokTerminal(conversationId),
+    withCodex(provider, () => api.stopCodexTerminal(conversationId)),
   listConversations: (provider: TerminalProvider, taskId: string) =>
-    provider === "codex"
-      ? api.listCodexConversations(taskId)
-      : api.listGrokConversations(taskId),
+    withCodex(provider, () => api.listCodexConversations(taskId)),
   createConversation: (
     provider: TerminalProvider,
     taskId: string,
     title?: string,
   ) =>
-    provider === "codex"
-      ? api.createCodexConversation(taskId, title)
-      : api.createGrokConversation(taskId, title),
+    withCodex(provider, () => api.createCodexConversation(taskId, title)),
   renameConversation: (
     provider: TerminalProvider,
     taskId: string,
     conversationId: string,
     title: string,
   ) =>
-    provider === "codex"
-      ? api.renameCodexConversation(taskId, conversationId, title)
-      : api.renameGrokConversation(taskId, conversationId, title),
+    withCodex(provider, () => api.renameCodexConversation(taskId, conversationId, title)),
   workflow: (
     provider: TerminalProvider,
     taskId: string,
     conversationId: string,
   ) =>
-    provider === "codex"
-      ? api.getCodexWorkflow(taskId, conversationId)
-      : api.getGrokWorkflow(taskId, conversationId),
+    withCodex(provider, () => api.getCodexWorkflow(taskId, conversationId)),
   deleteConversation: (
     provider: TerminalProvider,
     taskId: string,
     conversationId: string,
   ) =>
-    provider === "codex"
-      ? api.deleteCodexConversation(taskId, conversationId)
-      : api.deleteGrokConversation(taskId, conversationId),
+    withCodex(provider, () => api.deleteCodexConversation(taskId, conversationId)),
 };
 
 export function errorMessage(error: unknown): string {
@@ -337,4 +264,9 @@ export function errorMessage(error: unknown): string {
     return [value.message, value.detail].filter(Boolean).join(" ");
   }
   return "Unknown error";
+}
+
+function withCodex<T>(provider: TerminalProvider, action: () => Promise<T>): Promise<T> {
+  if (provider !== "codex") return Promise.reject(new Error("Unsupported terminal provider."));
+  return action();
 }

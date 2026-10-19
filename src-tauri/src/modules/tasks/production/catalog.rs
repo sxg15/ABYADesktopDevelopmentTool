@@ -38,7 +38,7 @@ fn tree_hash(workspace: &Path, relative: &str) -> AppResult<String> {
 
 pub(super) fn scan(workspace: &Path) -> AppResult<Vec<SkillEntry>> {
     let mut output = Vec::new();
-    for provider in [".codex", ".grok"] {
+    for provider in [".codex"] {
         let parent = files::safe_path(workspace, &format!("{provider}/skills"))?;
         if !parent.is_dir() {
             continue;
@@ -101,11 +101,9 @@ pub(super) fn validate_choice(root: &Path, key: &str, id: &str) -> AppResult<()>
     if !id.starts_with(prefix) {
         return Err(AppError::validation("模板种类不匹配。"));
     }
-    for provider in [".codex", ".grok"] {
-        let folder = files::safe_path(root, &format!("{provider}/skills/{id}"))?;
-        if !super::super::is_managed_template(&folder, id) {
-            return Err(AppError::validation("选定模板不可用。"));
-        }
+    let folder = files::safe_path(root, &format!(".codex/skills/{id}"))?;
+    if !super::super::is_managed_template(&folder, id) {
+        return Err(AppError::validation("选定模板不可用。"));
     }
     Ok(())
 }
@@ -115,7 +113,7 @@ impl TaskService {
         let root = self.production_workspace(id)?;
         let mut entries = scan(&root)?;
         // Browsing projections only: the owning workflow remains the single pinned tree.
-        for provider in ["codex", "grok"] {
+        for provider in ["codex"] {
             if !entries
                 .iter()
                 .any(|entry| entry.provider == provider && entry.id == "abya-game-development-task")
@@ -162,7 +160,7 @@ impl TaskService {
         provider: &str,
         skill: &str,
     ) -> AppResult<String> {
-        if !["codex", "grok"].contains(&provider) {
+        if !["codex"].contains(&provider) {
             return Err(AppError::validation("无效 provider。"));
         }
         let root = self.production_workspace(id)?;
@@ -183,13 +181,13 @@ impl TaskService {
         }
         let root = self.production_workspace(id)?.canonicalize()?;
         self.production_commit(id, expected_revision, |r| {
-            for pin in r.skill_pins.iter().filter(|p| p.kind != "user") {
+            for pin in r.skill_pins.iter().filter(|p| p.kind != "user" && p.provider == "codex") {
                 if tree_hash(&root, &pin.path)? != pin.sha256 {
                     return Err(AppError::validation("任务中的受管 Skill 有本地修改，请先处理差异；升级未执行。"));
                 }
             }
             let backup = format!("{}/skill-backups/{}", super::ROOT, uuid::Uuid::new_v4());
-            for pin in r.skill_pins.iter().filter(|p| p.kind != "user") {
+            for pin in r.skill_pins.iter().filter(|p| p.kind != "user" && p.provider == "codex") {
                 let from = files::safe_path(&root, &pin.path)?;
                 let mut pending = vec![from.clone()];
                 while let Some(folder) = pending.pop() {

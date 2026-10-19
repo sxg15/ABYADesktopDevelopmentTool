@@ -70,7 +70,6 @@ impl DesktopToolDispatcher {
             "{}-{}",
             match input.provider {
                 TerminalProvider::Codex => "codex",
-                TerminalProvider::Grok => "grok",
             },
             input.conversation_id
         );
@@ -133,7 +132,6 @@ impl DesktopToolDispatcher {
                     .dependencies
                     .codex_terminal
                     .native_session_id(&input.task_id, &input.conversation_id),
-                TerminalProvider::Grok => Ok(None),
             };
             match native {
                 Ok(id) => {
@@ -297,11 +295,6 @@ impl DesktopToolDispatcher {
                     .codex_terminal
                     .bind_conversation(&input.task_id, &input.conversation_id)?,
             )?,
-            TerminalProvider::Grok => serialize(
-                self.dependencies
-                    .grok_terminal
-                    .bind_conversation(&input.task_id, &input.conversation_id)?,
-            )?,
         };
         self.conversation_bindings.lock().insert(
             session_id.to_string(),
@@ -337,27 +330,11 @@ impl DesktopToolDispatcher {
                     &steps,
                     &input.summary,
                 )?,
-                TerminalProvider::Grok => self.dependencies.grok_terminal.record_reported_plan(
-                    &task_id,
-                    &conversation_id,
-                    &steps,
-                    &input.summary,
-                )?,
             };
         }
         match provider {
             TerminalProvider::Codex => {
                 serialize(self.dependencies.codex_terminal.record_reported_activity(
-                    &task_id,
-                    &conversation_id,
-                    input.status,
-                    input.kind,
-                    &input.summary,
-                    input.detail.as_deref().unwrap_or_default(),
-                )?)
-            }
-            TerminalProvider::Grok => {
-                serialize(self.dependencies.grok_terminal.record_reported_activity(
                     &task_id,
                     &conversation_id,
                     input.status,
@@ -384,18 +361,6 @@ impl DesktopToolDispatcher {
             TerminalProvider::Codex => self
                 .dependencies
                 .codex_terminal
-                .record_desktop_tool_activity(
-                    task_id,
-                    conversation_id,
-                    activity_id,
-                    tool_name,
-                    arguments,
-                    status,
-                )
-                .map(|_| ()),
-            TerminalProvider::Grok => self
-                .dependencies
-                .grok_terminal
                 .record_desktop_tool_activity(
                     task_id,
                     conversation_id,
@@ -1105,7 +1070,6 @@ mod tests {
     use crate::modules::desktop_cli::DesktopCliGameDependencies;
     use crate::modules::game_archives::ArchiveCatalogService;
     use crate::modules::game_connections::GameConnectionService;
-    use crate::modules::grok_terminal::GrokTerminalService;
     use crate::modules::instances::InstanceService;
     use crate::modules::logs::LogService;
     use crate::modules::runtime_bridge::RuntimeBridgeService;
@@ -1117,7 +1081,6 @@ mod tests {
         dispatcher: DesktopToolDispatcher,
         tasks: TaskService,
         codex_terminal: CodexTerminalService,
-        grok_terminal: GrokTerminalService,
         root: PathBuf,
     }
 
@@ -1146,7 +1109,6 @@ mod tests {
         let settings = SettingsService::new(database.clone(), paths.default_workspace_root.clone());
         let tasks = TaskService::new(database.clone(), paths.default_workspace_root.clone());
         let codex_terminal = CodexTerminalService::new(tasks.clone()).unwrap();
-        let grok_terminal = GrokTerminalService::new(tasks.clone()).unwrap();
         let connections = GameConnectionService::new();
         let archives = ArchiveCatalogService::new(paths.clone());
         let instances = InstanceService::new(database.clone(), paths.clone(), connections.clone());
@@ -1164,7 +1126,6 @@ mod tests {
                 settings,
                 tasks.clone(),
                 codex_terminal.clone(),
-                grok_terminal.clone(),
                 DesktopCliGameDependencies::new(
                     instances,
                     runtime_bridge,
@@ -1176,7 +1137,6 @@ mod tests {
             )),
             tasks,
             codex_terminal,
-            grok_terminal,
             root,
         }
     }
@@ -1187,7 +1147,7 @@ mod tests {
 
     #[test]
     #[ignore = "Requires ABYA_CLI_SMOKE_PLAYER, ABYA_CLI_SMOKE_ARCHIVE and ABYA_CLI_SMOKE_OUTPUT"]
-    fn real_player_cli_pipeline_with_both_provider_contexts() {
+    fn real_player_cli_pipeline_with_codex_context() {
         let executable = std::env::var("ABYA_CLI_SMOKE_PLAYER").unwrap();
         let archive_source = PathBuf::from(std::env::var("ABYA_CLI_SMOKE_ARCHIVE").unwrap());
         let output = PathBuf::from(std::env::var("ABYA_CLI_SMOKE_OUTPUT").unwrap());
@@ -1330,17 +1290,6 @@ mod tests {
                 std::fs::copy(image, output.join("runtime.png")).unwrap();
             }
         }
-        let grok = fixture
-            .grok_terminal
-            .create_conversation(&task.id, None)
-            .unwrap();
-        let result = fixture.dispatcher.call_with_context(
-            Some(json!({"provider":"grok","taskId":task.id,"conversationId":grok.id})),
-            &Uuid::new_v4().to_string(),
-            "game_runtime_call_tool",
-            json!({"instanceId":instance_id,"toolName":"runtime_get_status","arguments":{}}),
-        );
-        assert!(!result.is_error, "Grok context: {:?}", result);
         // 可选的人机就绪检查走真实托管 Player；只读定义与 API，不生成或保存玩法。
         let bot_prerequisites = std::env::var("ABYA_CLI_SMOKE_BOTS").as_deref() == Ok("1");
         if bot_prerequisites {
@@ -1354,7 +1303,7 @@ mod tests {
                     "缺少 {required}"
                 );
             }
-            for (provider, conversation_id) in [("codex", &codex.id), ("grok", &grok.id)] {
+            for (provider, conversation_id) in [("codex", &codex.id)] {
                 let bot_context =
                     json!({"provider":provider,"taskId":task.id,"conversationId":conversation_id});
                 for (name, tool, arguments) in [
@@ -1473,7 +1422,7 @@ mod tests {
         std::fs::write(
             output.join("summary.json"),
             json!({"success":true,"capabilities":tools.len(),"botPrerequisites":bot_prerequisites,
-            "providers":["codex","grok"],"pureLua":true,"screenshot":true,"multiplayer":multiplayer})
+            "providers":["codex"],"pureLua":true,"screenshot":true,"multiplayer":multiplayer})
             .to_string(),
         )
         .unwrap();
@@ -1737,49 +1686,34 @@ mod tests {
     }
 
     #[test]
-    fn binds_and_records_activity_for_a_grok_conversation() {
+    fn rejects_removed_provider_without_recording_codex_activity() {
         let fixture = fixture();
         let task = fixture
             .tasks
             .create(TaskInput {
-                title: "Grok observable".into(),
+                title: "Codex only".into(),
                 description: String::new(),
             })
             .unwrap();
         let conversation = fixture
-            .grok_terminal
+            .codex_terminal
             .create_conversation(&task.id, None)
             .unwrap();
-        let session_id = "grok-mcp-session";
-
-        let bound = fixture.dispatcher.call_for_session(
-            Some(session_id),
-            "development_conversation_bind",
-            json!({
-                "provider": "grok",
-                "taskId": task.id,
-                "conversationId": conversation.id
-            }),
-        );
-        assert!(!bound.is_error);
-        assert_eq!(result_json(bound)["provider"], "grok");
-
-        let listed = fixture.dispatcher.call_for_session(
-            Some(session_id),
+        let result = fixture.dispatcher.call_with_context(
+            Some(json!({"provider":"grok","taskId":task.id,"conversationId":conversation.id})),
+            &Uuid::new_v4().to_string(),
             "game_instance_list",
-            json!({ "taskId": task.id }),
+            json!({}),
         );
-        assert!(!listed.is_error);
-
-        let workflow = fixture
-            .grok_terminal
-            .workflow(&task.id, &conversation.id)
-            .unwrap();
+        assert!(result.is_error);
+        assert!(fixture.dispatcher.conversation_bindings.lock().is_empty());
         assert!(
-            workflow.turns[0]
-                .activities
-                .iter()
-                .any(|activity| activity.summary == "Using game_instance_list")
+            fixture
+                .codex_terminal
+                .workflow(&task.id, &conversation.id)
+                .unwrap()
+                .turns
+                .is_empty()
         );
     }
 

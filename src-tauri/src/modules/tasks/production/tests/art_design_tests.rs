@@ -7,7 +7,7 @@ pub(super) const PNG: &str =
 fn embedded_design_catalog_reads_pinned_resources_without_new_pins() {
     let f = Fixture::new();
     let before = serde_json::to_value(f.record()).unwrap();
-    for provider in ["codex", "grok"] {
+    for provider in ["codex"] {
         let prefix = format!(".{provider}/skills/abya-game-development-task");
         files::write_file(
             &f.workspace,
@@ -32,7 +32,7 @@ fn embedded_design_catalog_reads_pinned_resources_without_new_pins() {
         .iter()
         .filter(|entry| entry.kind == "design")
         .collect();
-    assert_eq!(designs.len(), 4);
+    assert_eq!(designs.len(), 2);
     for entry in designs {
         assert_eq!(entry.sha256.len(), 64);
         assert!(

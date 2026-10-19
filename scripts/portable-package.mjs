@@ -8,15 +8,15 @@ const inventoryName = 'package-files.json';
 const required = ['ABYA Desktop Development Tool.exe', 'abya-desktop.exe', 'build-manifest.json',
   'runtime/node.exe', 'runtime/LICENSE.txt', 'tools/abya/bin/abya.mjs', 'tools/ffmpeg/source.json',
   'tools/ffmpeg/runtime/bin/ffmpeg.exe', 'tools/ffmpeg/runtime/bin/ffprobe.exe', 'tools/ffmpeg/runtime/LICENSE.txt',
-  '.codex/skills/abya-game-development-task/SKILL.md', '.grok/skills/abya-game-development-task/SKILL.md'];
+  '.codex/skills/abya-game-development-task/SKILL.md'];
 const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
 function checkedPath(root, relative) {
   if (typeof relative !== 'string' || !relative || relative.includes('\\') || path.posix.isAbsolute(relative)
     || relative.split('/').some(p => !p || p === '.' || p === '..') || relative.includes(':')) throw new Error(`Invalid package path: ${relative}`);
   const leaf = path.posix.basename(relative);
   if (/^(auth\.json|cli-connection\.json|id_rsa|id_ed25519|\.env.*)$/i.test(leaf) || /\.(db|sqlite)(?:$|[.-])/i.test(leaf)) throw new Error(`Private data cannot be distributed: ${relative}`);
-  const allowed = ['ABYA Desktop Development Tool.exe','abya-desktop.exe','build-manifest.json',inventoryName,'.codex/README.md','.grok/README.md'].includes(relative)
-    || ['runtime/','tools/abya/','tools/ffmpeg/','.codex/skills/','.grok/skills/'].some(prefix => relative.startsWith(prefix));
+  const allowed = ['ABYA Desktop Development Tool.exe','abya-desktop.exe','build-manifest.json',inventoryName,'.codex/README.md'].includes(relative)
+    || ['runtime/','tools/abya/','tools/ffmpeg/','.codex/skills/'].some(prefix => relative.startsWith(prefix));
   if (!allowed) throw new Error(`Unexpected package content: ${relative}`);
   let current = root;
   for (const part of relative.split('/')) {

@@ -1,5 +1,17 @@
 # Development Tasks Skill
 
+## Codex-only deployment and historical records (2026-10-19)
+Only .codex is discovered, deployed, catalogued, read or imported. New question
+bindings require provider codex; old question provider strings remain unchanged
+and answers remain editable without starting a removed provider or remapping IDs.
+The APP explains that retired conversations cannot continue automatically.
+New production pins include Codex only. Reads never rewrite legacy pins; explicit
+upgrades check/back up only supported managed pins, keep revision history and
+leave old .grok/skills and grok-conversations files untouched. Removed-provider
+files, including missing or modified old pins, cannot block a Codex upgrade.
+Test Codex-only new tasks/templates/catalogs, old question read/save, no implicit
+continuation, legacy pin upgrade and byte preservation of unrelated task files.
+
 ## Contextual visual refinement (2026-10-17)
 The canonical portable product-interface-design includes a selectively loaded visual-refinement
 module and Node-only opaque text-contrast/token helpers. Keep game and product Skills as the
@@ -181,7 +193,7 @@ Resolved records leave active alerts and retain a neutral origin label. Explicit
 lua/other suppresses legacy inference. Old pinned records with explicit programmer
 handoff language plus engine/build context appear as suspected, never confirmed.
 Confirmed targets also receive red labels in exported issue reports. Bundled record
-instructions teach both providers to supply source evidence, build version and recheck
+instructions teach Codex to supply source evidence, build version and recheck
 conditions. Do not mutate pinned workspace Skills merely to add this presentation.
 
 ## Purpose
@@ -242,10 +254,9 @@ unique, title-derived directory below the configured foundation workspace root.
 Legacy tasks with an empty path receive a workspace lazily on first read.
 
 Every created or unpinned task receives provider-specific copies of the bundled
-managed Skill at `.codex/skills/abya-game-development-task` and
-`.grok/skills/abya-game-development-task`. Synchronization is idempotent and
+managed Skill at `.codex/skills/abya-game-development-task`. Synchronization is idempotent and
 may replace only those exact managed Skill directories. User-owned files and
-other Skills under either provider root are never removed or overwritten. Each
+other Skills under the Codex root are never removed or overwritten. Each
 bundled source is resolved from the matching project-root directory in the
 development repository or beside the portable executable.
 
@@ -282,7 +293,7 @@ implementation the provider writes the concrete manifest to the task-owned
 `artifacts/gameplay-architecture.v1.json`; this artifact belongs to the task
 workspace and is not persisted in the desktop database or the game archive.
 Bot requests additionally load references/bot-development.md and bot-artifacts.md.
-Both provider bundles ship versioned plan/report schemas, templates and four local
+The Codex bundle ship versioned plan/report schemas, templates and four local
 Node validator modules. Bot plans, definition snapshots and verification evidence
 live under artifacts/bot-integration in the task workspace. They do not add task
 database fields or automatically mark the task complete. New definitions use a
@@ -330,19 +341,15 @@ instance deletion rules itself.
 Task details expose `游戏实例` and `终端` tabs. Game instances remain the
 default tab. A persistent workflow strip sits between the task header and tabs,
 showing the selected task conversation's current-turn plan as horizontal nodes
-and arrows in both tabs. Hover/focus exposes recent step activity and clicking
-a node opens the complete timeline drawer. Each task retains its explicitly
-selected Codex or Grok provider and the last selected conversation for each
-provider while switching tasks. Stale workflow reads or terminal events must
-not replace that selection. Every task status may open either provider's
-conversations. Switching tabs, tasks, providers, or conversations does not stop
-existing sessions.
+and arrows in both tabs. Each task retains its selected Codex conversation.
+Stale workflow reads/events must not replace that selection. Every task status may
+read Codex conversations. Switching tabs, tasks or conversations preserves sessions.
 Conversation metadata and terminal history remain usable after the desktop
 tool restarts, so selecting an existing task conversation does not silently
 replace it with a new conversation.
 Task deletion unmounts that task's opened terminals first, then runs off the
 UI thread. It validates existing game-instance protection, disconnects and
-stops all task-owned Codex and Grok sessions without sending live terminal
+stops all task-owned Codex sessions without sending live terminal
 events, and only then deletes the durable task record. The task workspace is
 intentionally left on disk so source files and conversation transcripts are
 not destroyed by deleting the database record. Session stop drops the UI
@@ -360,14 +367,14 @@ Depends only on foundation. It must not launch processes or parse logs.
 
 ## Validation
 
-Test required titles, state transitions, timestamps, both-provider managed
+Test required titles, state transitions, timestamps, Codex managed
 template discovery, resource deployment and refresh, invalid marker filtering,
 unmanaged destination collisions, generic fallback and template routing,
 Skill deployment, architecture resources, and replacement boundaries, archive behavior, task
 deletion protection while instances run, idle-task deletion that keeps the
 workspace, frontend unmount of opened terminals before the delete command,
-both-provider terminal cleanup on successful task deletion without UI-channel
-waits, tab and provider selection retention, workflow visibility across tabs,
+Codex terminal cleanup on successful task deletion without UI-channel
+waits, tab and Codex conversation retention, workflow visibility across tabs,
 provider-scoped conversation/workflow synchronization, and task-workspace
 refresh after instance deletion.
 Also compare every deployed Bot schema/reference/module with its bundled source
@@ -447,9 +454,8 @@ Registered images open a zoomable/pannable modal by mouse or keyboard, returning
 on close; comparison is separate. Previews never approve or submit feedback.
 TaskGuidance prioritizes native terminal interaction, pending questions and valid review
 requests, then runtime state. It explicitly says no action is needed during execution.
-Grok uses recent observable workflow evidence; stale/unobservable state stays unknown.
 Validate IME composition, in-flight edits, late polling, duplicate submit, exact-version
-review, empty/draft/missing visual feedback, upgrade history and both provider bundles.
+review, empty/draft/missing visual feedback, upgrade history and the Codex bundle.
 
 Visual feedback reopens the owning art/plan stage and affected downstream stages so
 the continuation queue can deliver the requested changes. AI awaiting-recheck binds
@@ -477,4 +483,4 @@ issue existence/status/ownership and human gates; returns a SHA-256 issue finger
 and a fixed scoped prompt. It does not mutate issue state, approvals or evidence.
 Record success only through the existing validated production operations. Frontend
 submission is serialized and shows queue/delivery feedback; a reply ending is not
-proof of repair. Grok does not support this queued endpoint; show the Codex prerequisite.
+proof of repair.

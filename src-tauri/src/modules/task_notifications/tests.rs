@@ -69,7 +69,6 @@ impl Fixture {
         let (activation, receiver) = mpsc::channel();
         let service = TaskNotificationService(Arc::new(Inner {
             codex: CodexTerminalService::new(tasks.clone()).unwrap(),
-            grok: GrokTerminalService::new(tasks.clone()).unwrap(),
             tasks,
             settings: SettingsService::new(db.clone(), paths.default_workspace_root),
             store: NotificationStore(db.clone()),
@@ -133,6 +132,32 @@ impl Drop for Fixture {
         // SQLite can still hold its handles; cleanup is best effort and confined to this UUID fixture.
         let _ = std::fs::remove_dir_all(&self.root);
     }
+}
+
+#[test]
+fn retired_provider_receipts_and_questions_preserve_task_navigation_without_codex_binding() {
+    let f = Fixture::new();
+    f.task("legacy");
+    f.save("legacy", &f.record("legacy", "question"));
+    f.refresh();
+    let task = f.service.0.tasks.get_readonly("legacy").unwrap();
+    let snapshot = f.service.capture(&task).unwrap();
+    assert_eq!(snapshot.items[0].target.action, "question");
+    assert!(snapshot.items[0].target.provider.is_none());
+    let original = json!({"taskId":"legacy","action":"terminal","stage":"requirements",
+        "provider":"grok","conversationId":"old-id","groupId":null,"documentRevision":null,"documentHash":null}).to_string();
+    f.db.with_connection(|c| {
+        c.execute("INSERT INTO task_notification_receipts(event_key,task_id,target_json,disposition,observed_at) VALUES('legacy-receipt','legacy',?1,'notified','now')", [&original])?;
+        Ok(())
+    }).unwrap();
+    let target = f.service.0.store.target("legacy-receipt").unwrap().unwrap();
+    assert_eq!(target.task_id, "legacy");
+    assert_eq!(target.action, "stage");
+    assert!(target.provider.is_none());
+    assert!(target.conversation_id.is_none());
+    let retained: String = f.db.with_connection(|c| Ok(c.query_row("SELECT target_json FROM task_notification_receipts WHERE event_key='legacy-receipt'", [], |r| r.get(0))?)).unwrap();
+    assert_eq!(retained, original);
+    assert!(!f.root.join("legacy").exists());
 }
 
 #[test]
@@ -348,7 +373,7 @@ fn unknown_paused_normal_completion_and_running_never_create_waits() {
         "awaitingContinue",
     ] {
         let c = ConversationAttention {
-            provider: TerminalProvider::Grok,
+            provider: TerminalProvider::Codex,
             task_id: "a".into(),
             conversation_id: "c".into(),
             state: state.into(),

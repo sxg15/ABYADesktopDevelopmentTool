@@ -1,5 +1,13 @@
 # Task Notifications Skill
 
+## Retired-provider compatibility (2026-10-19)
+Only Codex attention is scanned. Old task question groups still project questions
+with no supported provider target; never coerce their conversation IDs to Codex.
+Reading a legacy notification receipt strips an unsupported provider/conversation
+from the returned target and routes terminal actions to the task stage. Receipt
+bytes remain unchanged, no native provider is started, and current Codex reminders
+retain their identity/deduplication. Test legacy receipts and question navigation.
+
 Frontend programmer-source/build escalation remains a distinct red guide above
 ordinary attention items; it does not consume a native attention item. Native human
 items, badges, remaining-item counts and notification activation remain available.
@@ -34,7 +42,7 @@ The ProductionView fixture includes nullable artDesignStatus for workflow 2.2.
 Attention continues to use existing projected action gates; it never approves source
 coverage, collects cases or treats a design hash as planner satisfaction.
 
-Run npm run check, Rust fmt, Clippy and tests. Regressions cover baseline, foreground/disabled/OS-disabled suppression, all tasks, draft/restart dedupe, versioned identities, unknown delivery, read failures, deletion, stale clicks, unobservable Grok and UI lifecycle races. Isolated portable acceptance checks name/icon, foreground/minimized/other-task behavior, toast and Action Center clicks, unchanged decisions, spaces/Chinese paths and test identity cleanup. Never synthesize waits in real AI sessions.
+Run npm run check, Rust fmt, Clippy and tests. Regressions cover baseline, foreground/disabled/OS-disabled suppression, all tasks, draft/restart dedupe, versioned identities, unknown delivery, read failures, deletion, stale clicks, unobservable native state and UI lifecycle races. Isolated portable acceptance checks name/icon, foreground/minimized/other-task behavior, toast and Action Center clicks, unchanged decisions, spaces/Chinese paths and test identity cleanup. Never synthesize waits in real AI sessions.
 
 ## LLM Maintenance Rule
 

@@ -1,15 +1,15 @@
-﻿{
-    "product":  "ABYA Desktop Development Tool",
-    "version":  "0.4.0",
-    "workflowVersion":  "2.2.0",
-    "releaseLabel":  "visual-refinement-integration-20261017",
-    "sourceBuiltAtUtc":  "2026-10-17T12:42:00.0956689Z",
-    "builtAtUtc":  "2026-10-17T12:46:21.3470522Z",
-    "executable":  "ABYA Desktop Development Tool.exe",
-    "sha256":  "7983C7783C7F4CEC09276CAEA1C6CA321836AA3D83F3695D2E7F9D0A712C99C2",
-    "cliExecutable":  "abya-desktop.exe",
-    "cliSha256":  "4081F443EE4F7D1FD258DDE8756315134625317A8B3493F5B27F6E8BB4369AFE",
-    "runtimeCliVersion":  "0.2.0",
-    "cliProtocolVersion":  1,
-    "nodeVersion":  "v24.11.1"
+{
+  "product": "ABYA Desktop Development Tool",
+  "version": "0.4.0",
+  "workflowVersion": "2.2.0",
+  "releaseLabel": "codex-only-20261019",
+  "sourceBuiltAtUtc": "2026-10-19T06:45:31.0173981Z",
+  "builtAtUtc": "2026-10-19T06:53:19.7010915Z",
+  "executable": "ABYA Desktop Development Tool.exe",
+  "sha256": "4C657CDE6DA906F5085ACD581AAEBF25251211DABDEE464DBCDDC6C1CC6BE4B4",
+  "cliExecutable": "abya-desktop.exe",
+  "cliSha256": "2D80458D791ABD5B211BDA671530E0A279F43B2B8842C9F24D33797B545936E0",
+  "runtimeCliVersion": "0.2.0",
+  "cliProtocolVersion": 1,
+  "nodeVersion": "v24.11.1"
 }

@@ -1,5 +1,10 @@
 # LLM Maintenance Contract
 
+Task-specific branch exception (user request, 2026-10-19): remove Grok on the
+requested 界面优化 branch based on synchronized CLI/dev. Validate and publish the
+complete feature commit to CLI then dev without changing the occupied CLI worktree
+or its uncommitted work. Leave 界面优化 checked out for follow-up UI work.
+
 Task-specific branch exception (user request, 2026-10-16): game art workflow and
 reference-library work develops on 美术优化, created from synchronized CLI/dev.
 After verification, push this feature branch and integrate into CLI then dev under

@@ -7,7 +7,6 @@ mod tests;
 use crate::foundation::notifications::{self, NotificationBackend, ToastMessage};
 use crate::foundation::{AppError, AppPaths, AppResult, Database, SettingsService, change_signal};
 use crate::modules::codex_terminal::CodexTerminalService;
-use crate::modules::grok_terminal::GrokTerminalService;
 use crate::modules::tasks::{DevelopmentTask, TaskService, TaskStatus};
 pub use model::{NotificationActivation, NotificationSettings, TaskAttentionSnapshot};
 use parking_lot::Mutex;
@@ -34,7 +33,6 @@ struct MonitorState {
 struct Inner {
     tasks: TaskService,
     codex: CodexTerminalService,
-    grok: GrokTerminalService,
     settings: SettingsService,
     store: NotificationStore,
     backend: Arc<dyn NotificationBackend>,
@@ -61,7 +59,6 @@ impl TaskNotificationService {
         settings: SettingsService,
         tasks: TaskService,
         codex: CodexTerminalService,
-        grok: GrokTerminalService,
         changed: ChangedHandler,
         activated: ActivatedHandler,
     ) -> Self {
@@ -76,7 +73,6 @@ impl TaskNotificationService {
         Self(Arc::new(Inner {
             tasks,
             codex,
-            grok,
             settings,
             store: NotificationStore(database),
             backend,
@@ -220,8 +216,7 @@ impl TaskNotificationService {
             });
         }
         let production = self.0.tasks.production_attention(task)?;
-        let mut conversations = self.0.codex.attention_states(task, &production)?;
-        conversations.extend(self.0.grok.attention_states(task)?);
+        let conversations = self.0.codex.attention_states(task, &production)?;
         Ok(projection::project(task, &production, &conversations))
     }
 

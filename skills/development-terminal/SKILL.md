@@ -1,5 +1,12 @@
 # Development Terminal Skill
 
+## Codex-only terminal (2026-10-19)
+Grok execution and its module are removed. Retain only Codex terminal routing and
+clipboard/IME/history/reconnect behavior. Reject unsupported provider values at
+native/API boundaries rather than forwarding old IDs to Codex. Historical timing
+may still read grok-conversations without starting, updating or deleting sessions.
+Regress stale provider preferences, preserved mounts and Codex empty/full history.
+
 ## Context and loaded-history search (2026-10-17)
 TerminalContextPanel reads the already-selected conversation workflow/control only.
 Keep the original conversation list, provider controls and top workflow strip; this
@@ -22,17 +29,17 @@ cursor movement must not relocate the candidate window. Keep xterm's own input,
 composition value and commit pipeline intact; do not buffer output or synthesize
 Enter/committed characters. Release after xterm's deferred compositionend commit,
 on blur, or on disposal; a new composition cancels the preceding release timer.
-Both providers install the same guard once per terminal. Validate real xterm
+Codex install the same guard once per terminal. Validate real xterm
 redraw/commit behavior plus rapid next-composition, blur and unmount cleanup.
 
 ## Purpose
 
 Provide the shared task-terminal experience and provider-neutral workflow
-model used by Codex and Grok.
+model used by Codex.
 
 ## Ownership
 
-Owns the shared terminal React view, explicit per-task provider selection,
+Owns the shared terminal React view, task-local Codex conversation selection,
 conversation-list presentation, xterm/history scrolling behavior, workflow
 DTO implementation, title validation, sanitization, and workflow persistence.
 
@@ -63,12 +70,12 @@ ID and workspace and offers scoped history recovery after pause, with metadata b
 not guarantee sidebar enrollment or simultaneous execution from another client. Recovery does
 not merge native histories or auto-resume. Refresh list is separate from continue execution.
 
-`TerminalProvider` is `codex` or `grok`. Each selected provider exposes
-availability, conversation CRUD, PTY open/write/resize/stop, workflow reads,
-and terminal events through typed frontend adapters. The user explicitly
-selects the provider with a segmented control; the last choice is retained per
-task in local UI state. Switching providers does not stop or unmount an opened
-provider terminal. Task deletion unmounts that task's opened terminals first.
+`TerminalProvider` accepts only `codex`. The typed API retains the Codex wire
+contracts for availability, conversation CRUD, PTYs, workflows and terminal events.
+No provider selector or removed-provider adapter exists. Old UI provider preferences
+are ignored unless they equal codex; a task opens its own Codex conversation list.
+Switching tasks/tabs/conversations preserves mounted terminals. Task deletion
+unmounts that task's terminals before cleanup.
 An explicit stop command marks the session exited in the UI after the backend
 returns because process-tree cleanup no longer emits a live Channel state
 event from the command thread.
@@ -91,7 +98,7 @@ persisted on disk.
 
 The toolbar's copy-all action copies the selected conversation's entire persisted
 PTY transcript, including output older than replay and UI retention windows. It
-works in terminal/history modes and after exit for both providers. The async
+works in terminal/history modes and after exit for Codex. The async
 copy_terminal_history adapter returns true only after native clipboard success;
 false means no text and preserves the clipboard. Disable concurrent clicks and
 show bilingual success, empty-history and retryable failure feedback. Read a
@@ -102,7 +109,7 @@ it does not expand tool results hidden by the provider UI. Tests cover multi-MiB
 history, Unicode, split escape sequences, empty files, errors and provider routing.
 
 PTY open and live resize clamp columns to 20–500 and rows to 5–200, matching
-Codex/Grok backend limits. The PTY is not opened until the selected host is
+Codex backend limits. The PTY is not opened until the selected host is
 visible and has a non-zero laid-out box. A later resize or visibility change
 completes a pending first open. Restoring an already-opened panel only refits;
 it does not start a second provider process.
@@ -110,11 +117,11 @@ it does not start a second provider process.
 ## Dependencies
 
 Depends on foundation contracts and development-task identity. Provider process
-construction remains in the Codex and Grok terminal modules.
+construction remains in the Codex terminal modules.
 
 ## Validation
 
-Test provider selection retention, provider-scoped conversation selection,
+Test Codex-only selection and task-scoped conversation retention,
 mounted-session preservation, deferred PTY open until the host is laid out,
 dimension clamping, bounded long-output scrolling,
 workflow persistence, compact bounded event-journal migration, title
@@ -172,4 +179,4 @@ they do not disable permission controls or claim that tools have executed succes
 
 ## Background task notifications (2026-10-14)
 
-ConversationAttention is a public readonly provider-neutral DTO (task/provider/conversation/state/turn/request/interaction). Workflow interactionId is optional with serde defaults for old records; begin/end clear it and snapshot writes signal changes. Codex sets it only on entering a native wait. Grok does not infer confirmations from terminal text or silence. Original terminal connectionRequest remains attachment-only and never creates a replacement conversation.
+ConversationAttention is a public readonly provider-neutral DTO (task/provider/conversation/state/turn/request/interaction). Workflow interactionId is optional with serde defaults for old records; begin/end clear it and snapshot writes signal changes. Codex sets it only on entering a native wait. Original terminal connectionRequest remains attachment-only and never creates a replacement conversation.

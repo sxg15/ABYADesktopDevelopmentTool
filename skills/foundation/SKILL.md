@@ -1,5 +1,12 @@
 # Foundation Skill
 
+## Codex-only provider contract (2026-10-19)
+The active terminal provider type accepts only codex. Shared adapters expose no
+Grok commands. Persisted intake question provenance remains a string to preserve
+old records; it is not authorization to start a provider. Removed provider values
+are rejected by terminal/CLI dispatch, never silently converted into Codex IDs.
+No task/account database or credential files are deleted for this retirement.
+
 ## Workspace library contracts (2026-10-17)
 ArtDesign defaults an additive caseRequests array; older records remain readable.
 artLibraryApi.request uses the existing APP-only mutate_art_library adapter and returns
@@ -102,8 +109,7 @@ validated task artifact in the OS file manager. Omitted/false retains normal art
 serialization helpers. Settings include the game gateway port, LAN broadcast
 switch, preferred adapter ID, and persistent discovery tool ID.
 
-Shared TypeScript command adapters carry `TerminalProvider` (`codex` or
-`grok`) plus typed provider availability, state, event, input, resize,
+Shared TypeScript command adapters carry `TerminalProvider` (`codex` only) plus typed provider availability, state, event, input, resize,
 conversation, and workspace contracts. They expose provider-specific commands
 through one typed terminal API while preserving the existing Codex wire
 contracts. Workflow turns, plan steps, activities, observability, rename, and

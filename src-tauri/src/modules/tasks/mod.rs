@@ -14,7 +14,7 @@ pub use production::{
 };
 
 const MANAGED_SKILL_NAME: &str = "abya-game-development-task";
-const MANAGED_LLM_DIRECTORIES: [&str; 2] = [".codex", ".grok"];
+const MANAGED_LLM_DIRECTORIES: [&str; 1] = [".codex"];
 const TEMPLATE_KINDS: [&str; 2] = ["abya-task-template", "abya-art-template"];
 
 #[derive(Deserialize)]

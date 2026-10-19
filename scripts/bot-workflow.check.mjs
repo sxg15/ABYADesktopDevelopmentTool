@@ -15,7 +15,7 @@ function editEvidence(f, id, edit) {
   const value = readJson(file); edit(value); f.write(ref.path, value); ref.sha256 = fileDigest(file); f.save();
 }
 
-for (const provider of ['codex', 'grok']) test(`${provider}: independent deployed validator accepts coherent synthetic materials`, async t => {
+for (const provider of ['codex']) test(`${provider}: independent deployed validator accepts coherent synthetic materials`, async t => {
   const f = fixture(t, provider);
   const module = await import(`../.${provider}/skills/abya-game-development-task/scripts/validate-bot-artifacts.mjs`);
   assert.equal(module.validateArtifacts(f.root).status, 'candidate-checked');
@@ -164,17 +164,15 @@ test('junction evidence pointing outside the artifact root is rejected', t => {
   fs.unlinkSync(path.join(f.root, 'escape'));
 });
 
-test('both providers distribute the same complete Bot resources and readable relative links', () => {
+test('Codex distributes complete Bot resources and readable relative links', () => {
   const files = ['references/bot-development.md', 'references/bot-artifacts.md',
     'references/gameplay-architecture.md', 'assets/gameplay-architecture.v1.template.json',
     ...fs.readdirSync(`${base}/scripts`).map(name => `scripts/${name}`),
     ...fs.readdirSync(`${base}/assets/bot-integration`).map(name => `assets/bot-integration/${name}`)];
   for (const relative of files) {
-    const left = fs.readFileSync(path.join(base, relative), 'utf8');
-    const right = fs.readFileSync(path.join(base.replace('.codex', '.grok'), relative), 'utf8');
-    assert.equal(left.replaceAll('\r\n', '\n'), right.replaceAll('\r\n', '\n'), relative);
+    assert.ok(fs.statSync(path.join(base, relative)).isFile(), relative);
   }
-  for (const provider of ['.codex', '.grok']) {
+  for (const provider of ['.codex']) {
     for (const file of ['abya-game-development-task/SKILL.md', 'abya-game-development-task/references/bot-development.md',
       'abya-task-template-multiplayer-workflow/SKILL.md', 'abya-task-template-multiplayer-workflow/references/network-and-acceptance.md']) {
       const filename = path.join(provider, 'skills', file);

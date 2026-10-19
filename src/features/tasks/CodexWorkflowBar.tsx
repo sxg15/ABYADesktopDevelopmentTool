@@ -43,7 +43,6 @@ interface HoveredStep {
 
 export function CodexWorkflowBar({
   control,
-  provider,
   conversation,
   workflow,
   loading = false,
@@ -131,9 +130,7 @@ export function CodexWorkflowBar({
               <span>
                 {control ? controlText(control) : currentTurn && ["interrupted","failed","completed"].includes(currentTurn.status)
                   ? turnStatusLabel(t,currentTurn.status) : t(
-                  provider === "codex"
-                    ? "codexCompatibilityWarning"
-                    : "grokCompatibilityWarning",
+                  "codexCompatibilityWarning",
                 )}
               </span>
             </div>
@@ -150,9 +147,7 @@ export function CodexWorkflowBar({
               />
               <span>
                 {t(
-                  provider === "codex"
-                    ? "workflowNoPlanCodex"
-                    : "workflowNoPlanGrok",
+                  "workflowNoPlanCodex",
                 )}
               </span>
             </div>

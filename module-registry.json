@@ -24,9 +24,14 @@
     },
     {
       "id": "game-clients",
-      "paths": ["src-tauri/src/modules/game_clients/", "src/features/game-clients/"],
+      "paths": [
+        "src-tauri/src/modules/game_clients/",
+        "src/features/game-clients/"
+      ],
       "skill": "skills/game-clients/SKILL.md",
-      "dependsOn": ["foundation"]
+      "dependsOn": [
+        "foundation"
+      ]
     },
     {
       "id": "game-archives",
@@ -74,22 +79,18 @@
       ]
     },
     {
-      "id": "grok-terminal",
+      "id": "task-notifications",
       "paths": [
-        "src-tauri/src/modules/grok_terminal/"
+        "src-tauri/src/modules/task_notifications/",
+        "src/features/task-notifications/"
       ],
-      "skill": "skills/grok-terminal/SKILL.md",
+      "skill": "skills/task-notifications/SKILL.md",
       "dependsOn": [
         "foundation",
         "development-tasks",
-        "development-terminal"
+        "development-terminal",
+        "codex-terminal"
       ]
-    },
-    {
-      "id": "task-notifications",
-      "paths": ["src-tauri/src/modules/task_notifications/", "src/features/task-notifications/"],
-      "skill": "skills/task-notifications/SKILL.md",
-      "dependsOn": ["foundation", "development-tasks", "development-terminal", "codex-terminal", "grok-terminal"]
     },
     {
       "id": "game-connections",
@@ -167,7 +168,6 @@
         "development-tasks",
         "development-terminal",
         "codex-terminal",
-        "grok-terminal",
         "game-instances",
         "game-connections",
         "game-runtime-bridge",

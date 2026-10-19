@@ -135,7 +135,7 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             "Read the selected installed Skill entry only. Read supporting references only when needed.",
             "Read task Skill",
             object_schema(
-                json!({"taskId":{"type":"string"},"provider":{"type":"string","enum":["codex","grok"]},"skillId":{"type":"string"}}),
+                json!({"taskId":{"type":"string"},"provider":{"type":"string","enum":["codex"]},"skillId":{"type":"string"}}),
                 &["provider", "skillId"],
             ),
             read_only(),
@@ -217,13 +217,13 @@ pub(crate) fn tools() -> Vec<CliCommand> {
         ),
         tool(
             "development_conversation_bind",
-            "Binds this initialized CLI conversation context to one task-owned Codex or Grok conversation so subsequent desktop tool calls can be recorded in its active plan step.",
+            "Binds this initialized CLI conversation context to one task-owned Codex conversation so subsequent desktop tool calls can be recorded in its active plan step.",
             "Bind development conversation",
             object_schema(
                 json!({
                     "provider": {
                         "type": "string",
-                        "enum": ["codex", "grok"],
+                        "enum": ["codex"],
                         "default": "codex"
                     },
                     "taskId": { "type": "string", "minLength": 1 },

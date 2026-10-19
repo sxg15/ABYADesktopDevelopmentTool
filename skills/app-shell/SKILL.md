@@ -1,12 +1,31 @@
 # App Shell Skill
 
+## Codex-only workspace (2026-10-19)
+Remove the Grok selector, availability/status/compatibility strings and Skill-source
+dropdown. Only Codex appears in terminal and Skill surfaces. Ignore retired provider
+preferences while retaining task/conversation selection and mounted terminal state.
+Historical question answers remain visible/saveable; do not offer automatic retired
+provider continuation. Test this alongside unchanged Codex tabs, history and controls.
+
+## Task detail overflow (2026-10-19)
+Bound the task workspace grid row with minmax(0,1fr) and allow the task-list pane
+to shrink, so a long task list cannot stretch the right pane beyond the window.
+The right content pane owns vertical overflow with a stable scrollbar gutter.
+Give its tab content a non-shrinking 360px minimum work area; when the header,
+expanded description or guidance leaves less room, scroll the right pane to reach
+the full work area. Keep the left task list, production/Skill content and terminal
+history independently scrollable. Do not unmount sessions or change task state.
+Verify many tasks, long/expanded descriptions, short/narrow windows, every tab and
+terminal focus. Scroll to the bottom and check the terminal input is reachable.
+
 ## Retained workspace refinement (2026-10-17)
 Keep the two navigation columns, persistent TaskGuidance, task-description disclosure,
 conversation steps and seven policy-driven stage cards. workspaceRefinement.css owns
 the approved teal surface progression, amber human action emphasis and shared feedback;
 preserve blue/purple/red state semantics, keyboard outlines and reduced motion.
 Stage browsing uses aria-pressed; actual execution independently uses aria-current=step.
-Keep tab content as the only scrolling work area and validate narrow/short windows.
+Keep bounded tab-content scrolling plus the task-pane overflow fallback above.
+Validate narrow/short windows.
 Terminal focus is opt-in, hides navigation with CSS without unmounting sessions, and
 retains header/guidance. Explicit exit or non-IME Escape restores it; modal Escape
 remains owned by the dialog. Context/search additions must not restyle xterm helpers.
@@ -127,11 +146,9 @@ position; the terminal only follows new output when already at the bottom.
 The output-history view keeps a rolling recent 2 MiB text window so sustained
 terminal redraws cannot make the WebView unresponsive; the complete provider
 transcript remains a task-workspace file rather than an unbounded DOM tree.
-The terminal panel contains an explicit Codex/Grok segmented provider selector
-and a task-local conversation list for the selected provider. Each task retains
-the user's last provider choice. Creating or selecting a conversation mounts
-its own terminal view while previously opened provider/conversation views
-remain mounted and keep their PTY and xterm scrollback.
+The terminal panel contains the Codex conversation list and its context/focus
+controls, without a provider selector. Creating or selecting a conversation mounts
+its own terminal view while previous Codex conversations retain PTY and scrollback.
 Conversation rows expose an icon-only rename action with a bounded inline input,
 save, and cancel controls.
 
@@ -140,7 +157,7 @@ the tabs. Its current plan uses fixed-width horizontal nodes and arrows with
 horizontal overflow scrolling. Status is conveyed by icon, color, and text.
 Mouse hover and keyboard focus show the most recent activities in a portal
 popover; activating a node opens a responsive right-side timeline drawer.
-Compatibility-mode Codex or Grok terminals remain usable and show an explicit
+Compatibility-mode Codex terminals remain usable and show an explicit
 provider-specific unobservable warning. Long plan text, activity details, and narrow viewports
 must not overlap the task header, tabs, terminal, or instance table.
 
@@ -171,13 +188,14 @@ Run frontend tests, both locale completeness checks, production build, and
 viewport screenshot verification, including destructive action layout,
 task-tab layout, workflow horizontal overflow, popover/drawer layout,
 conversation rename, explicit provider switching, terminal sizing, and
-unavailable/compatibility Codex and Grok presentation.
+unavailable/compatibility Codex presentation.
 
 ## LLM Maintenance Rule
 
 ### Split action panel (2026-10-12)
-Task header, action panel, workflow summary and tabs are non-scrolling flex siblings.
-Only the remaining tab content scrolls. Notices take a bounded natural-height row,
+Task header, action panel, workflow summary and tabs are non-shrinking flex siblings.
+Tab content scrolls within its work area; the right pane also scrolls when the
+minimum work area and header exceed the window. Notices take a bounded natural-height row,
 so a pending answer or saved-operation notice cannot push a 100%-height terminal
 below the viewport. Container queries reflow the guide based on actual task-pane
 width; title/instruction/button sizes are 24/16/15px at normal size.
@@ -189,12 +207,11 @@ When changing navigation, localization, shared controls, or layout behavior,
 update this Skill in the same change.
 
 ## Conversation controls
-The terminal toolbar includes Copy all conversation history for both Codex and
-Grok. Keep its accessible name stable while copying; show localized pending,
+The terminal toolbar includes Copy all conversation history for Codex. Keep its accessible name stable while copying; show localized pending,
 success (live status), empty-history and failure feedback. It remains available
 in both terminal/history views and after terminal exit.
 
-Codex conversation rows include archive/restore in addition to rename/delete; reserve room for all three controls. Active/archived filters and explicit synchronization sit above the list. Add bilingual clipboard-ready/size errors and archive labels. Grok retains its existing lifecycle controls.
+Codex conversation rows include archive/restore in addition to rename/delete; reserve room for all three controls. Active/archived filters and explicit synchronization sit above the list. Add bilingual clipboard-ready/size errors and archive labels.
 
 
 ## Stage workspace update

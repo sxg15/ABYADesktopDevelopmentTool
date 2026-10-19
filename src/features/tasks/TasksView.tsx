@@ -108,6 +108,7 @@ export function TasksView({
 
   function ensureIntakeConnection(group: Pick<IntakeQuestionGroup, "provider" | "conversationId">): Promise<void> {
     return new Promise((resolve, reject) => {
+      if (group.provider !== "codex") { reject(new Error("此历史会话的服务商已移除，不能恢复或转接到 Codex。请在 Codex 对话中读取已保存的任务记录。")); return; }
       if (!selectedId || pendingConnection.current) { reject(new Error("正在连接，请稍候。")); return; }
       const request: TerminalConnectionRequest = { id: crypto.randomUUID(), taskId: selectedId,
         provider: group.provider, conversationId: group.conversationId,
@@ -124,13 +125,9 @@ export function TasksView({
     });
   }
 
-  async function continueSelectedTask(message: string, afterRevision?: number) {
+  async function continueSelectedTask(_message: string, afterRevision?: number) {
     const conversation = selectedTerminalContext?.conversation;
     if (!selected || !conversation) throw new Error("请打开原会话后点击继续任务，决定已保存。");
-    if (selectedProvider !== "codex") {
-      await terminalApi.write(selectedProvider, conversation.id, `\x1b[200~${message}\x1b[201~\r`);
-      return;
-    }
     let result = await productionApi.continueTask(selected.id, conversation.id, afterRevision);
     if (result.status === "needsConnection" && result.requestId) {
       await ensureIntakeConnection({ provider: "codex", conversationId: conversation.id });
@@ -432,11 +429,8 @@ export function TasksView({
 
   async function refreshTerminalAvailability() {
     try {
-      const [codex, grok] = await Promise.all([
-        terminalApi.availability("codex"),
-        terminalApi.availability("grok"),
-      ]);
-      setTerminalAvailability({ codex, grok });
+      const codex = await terminalApi.availability("codex");
+      setTerminalAvailability({ codex });
     } catch (error) {
       notify(errorMessage(error), true);
     }
@@ -877,22 +871,7 @@ export function TasksView({
                   }
                 >
                   <div className="terminal-provider-bar">
-                    <span>{t("terminalProvider")}</span>
-                    <div className="segmented-control">
-                      {(["codex", "grok"] as const).map((provider) => (
-                        <button
-                          key={provider}
-                          className={
-                            (terminalProviders[taskId] ?? "codex") === provider
-                              ? "selected"
-                              : ""
-                          }
-                          onClick={() => selectTerminalProvider(taskId, provider)}
-                        >
-                          {provider === "codex" ? "Codex" : "Grok"}
-                        </button>
-                      ))}
-                    </div>
+                    <span>Codex</span>
                     <div className="terminal-workspace-actions">
                       <button className="secondary-button" aria-pressed={terminalContextOpen || terminalContextDialog} onClick={toggleTerminalContext}><ListTree size={15}/>{t("terminalContext")}</button>
                       <button className="text-button" aria-pressed={terminalFocus} onClick={() => setTerminalFocus(value => !value)}>{terminalFocus ? <Minimize2 size={15}/> : <Maximize2 size={15}/>} {t(terminalFocus ? "terminalExitFocus" : "terminalFocusMode")}</button>
@@ -900,7 +879,7 @@ export function TasksView({
                   </div>
                   <div className={`terminal-workbench ${terminalContextOpen ? "with-context" : ""}`}>
                   <div className="terminal-provider-stack">
-                  {(["codex", "grok"] as const).map((provider) => {
+                  {(["codex"] as const).map((provider) => {
                     const key = terminalContextKey(taskId, provider);
                     if (!openedProviderKeys.includes(key)) return null;
                     const selectedTaskProvider =
@@ -1102,7 +1081,7 @@ function loadTerminalProviders(): Record<string, TerminalProvider> {
     return Object.fromEntries(
       Object.entries(value).filter(
         (entry): entry is [string, TerminalProvider] =>
-          entry[1] === "codex" || entry[1] === "grok",
+          entry[1] === "codex",
       ),
     );
   } catch {

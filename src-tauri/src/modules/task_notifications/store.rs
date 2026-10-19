@@ -101,8 +101,20 @@ impl NotificationStore {
                     |r| r.get(0),
                 )
                 .optional()?;
-            json.map(|v| serde_json::from_str(&v).map_err(Into::into))
-                .transpose()
+            json.map(|v| {
+                let mut value: serde_json::Value = serde_json::from_str(&v)?;
+                // A retained receipt may refer to a removed provider. Keep navigation
+                // to the task, but never reinterpret its conversation as a Codex ID.
+                if value["provider"].as_str().is_some_and(|p| p != "codex") {
+                    value["provider"] = serde_json::Value::Null;
+                    value["conversationId"] = serde_json::Value::Null;
+                    if value["action"] == "terminal" {
+                        value["action"] = serde_json::json!("stage");
+                    }
+                }
+                serde_json::from_value(value).map_err(Into::into)
+            })
+            .transpose()
         })
     }
 }

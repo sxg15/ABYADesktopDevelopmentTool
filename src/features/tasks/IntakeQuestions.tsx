@@ -3,7 +3,7 @@ import { productionApi, type IntakeQuestionGroup, type ProductionView, type Inta
 import { errorMessage } from "../../shared/api";
 import { decodeAnswers, encodeAnswers, otherOption, type AnswerField } from "./intakeDraft";
 
-export function IntakeQuestions({ taskId, group, revision, active, onSaved, onContinue, onEnsureConnection, onContinuation, onSubmit, onDefer }: {
+export function IntakeQuestions({ taskId, group, revision, active, onSaved, onEnsureConnection, onContinuation, onSubmit, onDefer }: {
   taskId: string; group: IntakeQuestionGroup; revision: number; active: boolean;
   onSaved: (view: ProductionView) => void;
   onContinue?: (message: string, group: IntakeQuestionGroup) => Promise<void>;
@@ -107,7 +107,7 @@ export function IntakeQuestions({ taskId, group, revision, active, onSaved, onCo
           }
           setNotice(continuationMessages[result.status]);
         }
-      } else await onContinue?.(`问题组 ${group.id} 已提交，请读取最新记录继续。`, group);
+      } else throw new Error("此历史会话的服务商已移除。已保存的答案仍保留，请在 Codex 对话中读取任务记录；不会自动续接旧会话。");
     } catch (e) { setError(errorMessage(e)); }
     finally { submitting.current = false; if (alive.current) setBusy(false); }
   }
@@ -116,7 +116,7 @@ export function IntakeQuestions({ taskId, group, revision, active, onSaved, onCo
   const q = group.questions[index], field = fields[q.id];
   return <section className="intake-questions">
     <h3>{group.title}</h3>
-    <p>请完成以下问题，提交后 AI 将继续处理。已回答 {answered}/{group.questions.length}</p>
+    <p>{group.provider === "codex" ? "请完成以下问题，提交后 AI 将继续处理。" : "此历史会话的服务商已移除；可保存答案，但不会自动续接旧会话。"}已回答 {answered}/{group.questions.length}</p>
     {error && <p role="alert" className="inline-error">{error}</p>}
     {notice && <p role="status">{notice}</p>}
     <nav className="intake-progress" aria-label="选择阶段问题">{group.questions.map((item, i) =>
@@ -145,8 +145,8 @@ export function IntakeQuestions({ taskId, group, revision, active, onSaved, onCo
       {onDefer && <button className="secondary-button intake-defer" onClick={onDefer}>稍后回答 / 关闭</button>}
       <button className="secondary-button" disabled={index === 0 || busy} onClick={() => setIndex(i => i - 1)}>上一题</button>
       {index < group.questions.length - 1 && <button className="secondary-button" disabled={busy} onClick={() => setIndex(i => i + 1)}>下一题</button>}
-      {pending && (complete || index === group.questions.length - 1) && <button className="primary-button" disabled={busy || !active} onClick={() => void submit()}>{busy ? "正在提交…" : "提交并继续"}</button>}
-      {group.status === "submitted" && <button className="primary-button" disabled={busy || !active} onClick={() => void resume()}>继续任务</button>}
+      {pending && (complete || index === group.questions.length - 1) && <button className="primary-button" disabled={busy || !active} onClick={() => void submit()}>{busy ? "正在提交…" : group.provider === "codex" ? "提交并继续" : "保存答案"}</button>}
+      {group.status === "submitted" && group.provider === "codex" && <button className="primary-button" disabled={busy || !active} onClick={() => void resume()}>继续任务</button>}
     </div>
     {group.answers.length > 0 && <details><summary>已提交答案历史（{group.answers.length} 版）</summary>
       {group.answers.map(a => <article key={a.revision}><strong>第 {a.revision} 版 · {a.submittedAt}</strong>

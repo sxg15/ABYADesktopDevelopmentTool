@@ -41,12 +41,15 @@ if(action==='init'){
   const update=async(operation,values)=>view=await invoke('update_task_production',{input:{taskId:task.id,expectedRevision:view?.record?.revision??0,operation,data:values}});
   await update('initialize',{questionMode:'no-followup'});assert.equal(view.record.workflowVersion,'2.2.0');
   const catalog=await invoke('get_task_skills',{taskId:task.id});
-  assert.equal(catalog.filter(skill=>skill.kind==='design').length,4);
+  assert.equal(catalog.filter(skill=>skill.kind==='design').length,2);
+  assert.ok(catalog.every(skill=>skill.provider==='codex'));
+  assert.equal(fs.existsSync(path.join(task.workspacePath,'.grok')),false);
+  await assert.rejects(invoke('get_grok_terminal_availability'),/not found|unknown|未找到/i);
   const interfaceSkill=catalog.find(skill=>skill.provider==='codex'&&skill.name==='product-interface-design');
   assert.ok((await invoke('read_task_skill',{taskId:task.id,provider:'codex',skillId:interfaceSkill.id})).includes('从产品推导界面'));
   const source=view.record.artDesign.sources[0];
   const write=(file,text)=>{fs.mkdirSync(path.dirname(path.join(task.workspacePath,file)),{recursive:true});fs.writeFileSync(path.join(task.workspacePath,file),text);};
-  for(const provider of ['codex','grok']){
+  for(const provider of ['codex']){
     const design=catalog.find(skill=>skill.provider===provider&&skill.name==='product-interface-design');
     assert.ok((await invoke('read_task_skill',{taskId:task.id,provider,skillId:design.id})).includes('visual-refinement'));
     const helper=path.join(task.workspacePath,`.${provider}/skills/${design.id}/scripts/visual-tools.mjs`);
@@ -89,9 +92,11 @@ if(action==='init'){
   assert.equal(view.record.artDesign.caseUses.length,1);
   view=await invoke('submit_production_feedback',{input:{taskId:task.id,expectedRevision:view.record.revision,operation:'add-art-note',data:{text:'最后一个物品也要显示。'}}});
   assert.equal(view.record.stages.resources,'in-progress');
-  const report={nativeBridge:true,manifestVerified:true,workflowVersion:'2.2.0',nestedDesignSkills:true,requestPersistedWithoutAdoption:true,downgradeRejected,omissionRejected,explicitCollection:true,conceptNotRuntimeVerified:true,exported:true,frozenCaseReference:true,newInputInvalidated:true,taskId:task.id};
+  const report={nativeBridge:true,manifestVerified:true,codexOnlyCatalog:true,noRetiredProviderDeployment:true,retiredProviderCommandRejected:true,workflowVersion:'2.2.0',nestedDesignSkills:true,requestPersistedWithoutAdoption:true,downgradeRejected,omissionRejected,explicitCollection:true,conceptNotRuntimeVerified:true,exported:true,frozenCaseReference:true,newInputInvalidated:true,taskId:task.id};
   fs.writeFileSync(path.join(root,'result.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+  await page.evaluate(taskId=>localStorage.setItem('abya.taskTerminalProviders',JSON.stringify({[taskId]:'grok'})),task.id);
   await page.reload();await page.waitForLoadState('domcontentloaded');
+  assert.equal(await page.getByRole('button',{name:'Grok',exact:true}).count(),0);
   await page.getByText('制作流程',{exact:true}).click();
   await page.getByRole('tab',{name:/要求与参考/}).click();
   await page.getByText('策划要求与落实位置',{exact:true}).waitFor();
@@ -111,5 +116,9 @@ if(action==='init'){
   await page.getByText(/请求已保存，继续处理需要注意/).waitFor();
   const saved=await invoke('get_task_production',{taskId:task.id});assert.ok(saved.record.artDesign.caseRequests.length>=2);
   await page.screenshot({path:path.join(root,'native-library-embedded.png')});
+  await page.getByRole('tab',{name:'终端',exact:true}).click();
+  await page.getByText('Codex 对话',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Grok',exact:true}).count(),0);
+  await page.screenshot({path:path.join(root,'native-codex-only-terminal.png')});
   await browser.close();
 }

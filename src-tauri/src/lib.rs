@@ -22,10 +22,6 @@ use modules::game_connections::{
     ConnectionRegistration, GameConnectionHandler, GameConnectionService, GameConnectionState,
     GameHello, LanInterface, LogBatch, LogBatchAck,
 };
-use modules::grok_terminal::{
-    GrokConversation, GrokTerminalAvailability, GrokTerminalEvent, GrokTerminalService,
-    GrokTerminalState,
-};
 use modules::instances::{
     GameInstance, InstanceLogRepairReport, InstanceRuntimeInfo, InstanceService,
     InstanceStopResult, LaunchInstanceInput, WindowVisibilityMode,
@@ -50,7 +46,6 @@ struct AppState {
     game_clients: GameClientService,
     tasks: TaskService,
     codex_terminal: CodexTerminalService,
-    grok_terminal: GrokTerminalService,
     connections: GameConnectionService,
     archives: ArchiveCatalogService,
     archive_transfers: ArchiveTransferService,
@@ -544,7 +539,6 @@ fn set_task_status(
 fn delete_task(id: String, state: State<'_, AppState>) -> AppResult<()> {
     state.tasks.ensure_deletable(&id)?;
     state.codex_terminal.stop_task(&id);
-    state.grok_terminal.stop_task(&id);
     state.tasks.delete(&id)
 }
 
@@ -625,9 +619,6 @@ fn copy_terminal_history(
     let text = match provider {
         TerminalProvider::Codex => state
             .codex_terminal
-            .transcript_text(&task_id, &conversation_id)?,
-        TerminalProvider::Grok => state
-            .grok_terminal
             .transcript_text(&task_id, &conversation_id)?,
     };
     if text.trim().is_empty() {
@@ -722,107 +713,6 @@ fn delete_codex_conversation(
 ) -> AppResult<()> {
     state
         .codex_terminal
-        .delete_conversation(&task_id, &conversation_id)
-}
-
-#[tauri::command]
-fn get_grok_terminal_availability(state: State<'_, AppState>) -> GrokTerminalAvailability {
-    state.grok_terminal.availability()
-}
-
-#[tauri::command]
-fn open_grok_terminal(
-    task_id: String,
-    conversation_id: String,
-    columns: u16,
-    rows: u16,
-    on_event: Channel<GrokTerminalEvent>,
-    state: State<'_, AppState>,
-) -> AppResult<GrokTerminalState> {
-    state
-        .grok_terminal
-        .open(&task_id, &conversation_id, columns, rows, on_event)
-}
-
-#[tauri::command]
-async fn write_grok_terminal(
-    conversation_id: String,
-    data: String,
-    state: State<'_, AppState>,
-) -> AppResult<()> {
-    let service = state.grok_terminal.clone();
-    tauri::async_runtime::spawn_blocking(move || service.write(&conversation_id, &data))
-        .await
-        .map_err(foundation::AppError::internal)?
-}
-
-#[tauri::command]
-async fn resize_grok_terminal(
-    conversation_id: String,
-    columns: u16,
-    rows: u16,
-    state: State<'_, AppState>,
-) -> AppResult<()> {
-    let service = state.grok_terminal.clone();
-    tauri::async_runtime::spawn_blocking(move || service.resize(&conversation_id, columns, rows))
-        .await
-        .map_err(foundation::AppError::internal)?
-}
-
-#[tauri::command(async)]
-fn stop_grok_terminal(conversation_id: String, state: State<'_, AppState>) -> AppResult<()> {
-    state
-        .runtime_bridge
-        .cancel_session(&format!("grok-{conversation_id}"));
-    state.grok_terminal.stop(&conversation_id)
-}
-
-#[tauri::command]
-fn list_grok_conversations(
-    task_id: String,
-    state: State<'_, AppState>,
-) -> AppResult<Vec<GrokConversation>> {
-    state.grok_terminal.list_conversations(&task_id)
-}
-
-#[tauri::command]
-fn create_grok_conversation(
-    task_id: String,
-    title: Option<String>,
-    state: State<'_, AppState>,
-) -> AppResult<GrokConversation> {
-    state.grok_terminal.create_conversation(&task_id, title)
-}
-
-#[tauri::command]
-fn rename_grok_conversation(
-    task_id: String,
-    conversation_id: String,
-    title: String,
-    state: State<'_, AppState>,
-) -> AppResult<GrokConversation> {
-    state
-        .grok_terminal
-        .rename_conversation(&task_id, &conversation_id, &title)
-}
-
-#[tauri::command]
-fn get_grok_workflow(
-    task_id: String,
-    conversation_id: String,
-    state: State<'_, AppState>,
-) -> AppResult<CodexWorkflowSnapshot> {
-    state.grok_terminal.workflow(&task_id, &conversation_id)
-}
-
-#[tauri::command(async)]
-fn delete_grok_conversation(
-    task_id: String,
-    conversation_id: String,
-    state: State<'_, AppState>,
-) -> AppResult<()> {
-    state
-        .grok_terminal
         .delete_conversation(&task_id, &conversation_id)
 }
 
@@ -1023,7 +913,6 @@ pub fn run() {
                 PathBuf::from(&current_settings.workspace_root_path),
             );
             let codex_terminal = CodexTerminalService::new(tasks.clone())?;
-            let grok_terminal = GrokTerminalService::new(tasks.clone())?;
             let connections = GameConnectionService::new();
             let archives = ArchiveCatalogService::new(paths.clone());
             let instances =
@@ -1045,7 +934,6 @@ pub fn run() {
                 settings.clone(),
                 tasks.clone(),
                 codex_terminal.clone(),
-                grok_terminal.clone(),
                 DesktopCliGameDependencies::new(
                     instances.clone(),
                     runtime_bridge.clone(),
@@ -1065,7 +953,6 @@ pub fn run() {
                 settings.clone(),
                 tasks.clone(),
                 codex_terminal.clone(),
-                grok_terminal.clone(),
                 std::sync::Arc::new(move |snapshot| {
                     let _ = changed_handle.emit("task-attention-changed", snapshot);
                 }),
@@ -1088,7 +975,6 @@ pub fn run() {
                 game_clients,
                 tasks,
                 codex_terminal,
-                grok_terminal,
                 connections,
                 archives,
                 archive_transfers,
@@ -1186,16 +1072,6 @@ pub fn run() {
             rename_codex_conversation,
             get_codex_workflow,
             delete_codex_conversation,
-            get_grok_terminal_availability,
-            open_grok_terminal,
-            write_grok_terminal,
-            resize_grok_terminal,
-            stop_grok_terminal,
-            list_grok_conversations,
-            create_grok_conversation,
-            rename_grok_conversation,
-            get_grok_workflow,
-            delete_grok_conversation,
             list_instances,
             get_instance,
             discover_archives,
@@ -1247,7 +1123,6 @@ pub fn run() {
                 state.task_notifications.stop();
                 state.archive_transfers.stop_all();
                 state.codex_terminal.stop_all();
-                state.grok_terminal.stop_all();
                 state.instances.stop_all();
                 state.connections.stop();
                 state.desktop_cli.stop();

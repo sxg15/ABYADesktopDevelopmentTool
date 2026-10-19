@@ -87,7 +87,6 @@ pub fn project(
             t.group_id = Some(group.id.clone());
             t.provider = match group.provider.as_str() {
                 "codex" => Some(TerminalProvider::Codex),
-                "grok" => Some(TerminalProvider::Grok),
                 _ => None,
             };
             t.conversation_id = Some(group.conversation_id.clone());

@@ -1,5 +1,7 @@
 # ABYA Desktop Development Tool
 
+开发工具现仅支持 Codex。Grok 界面、终端服务和随包资源已移除；已有任务、历史文件和用户账号数据保留。
+
 游戏美术流程 2.2 增加原话与设计/实机追踪、美术设计库和案例复用。
 使用方式、旧任务升级与案例导入导出见 [美术设计流程](docs/ART_DESIGN_WORKFLOW.md)。
 
@@ -7,9 +9,9 @@
 
 1. 切换并拉取仓库的 **dev** 分支，获取已同步的源码与完整运行包。
 2. 双击仓库根目录的 **ABYA 开发工具.cmd**。
-3. 首次使用在 APP 设置中选择自己电脑上的 ABYA Player 路径；AI 会话使用自己电脑的 Codex/Grok 安装和登录。
+3. 首次使用在 APP 设置中选择自己电脑上的 ABYA Player 路径；AI 会话使用自己电脑的 Codex 安装和登录。
 
-`Publish/` 是完整、已编译的运行包，包含桌面程序、Desktop CLI、Node、Abya CLI、FFmpeg 和两套工作流资源。
+`Publish/` 是完整、已编译的运行包，包含桌面程序、Desktop CLI、Node、Abya CLI、FFmpeg 和 Codex 工作流资源。
 不需要安装 Rust、Node、npm 或自行编译，也不需要 Git LFS。保持整个仓库目录结构，不要单独复制 EXE。
 启动入口按自身位置寻找程序，支持任意盘符、中文及空格路径；不依赖开发者电脑的绝对路径快捷方式。
 Windows 需要可用的 WebView2 Runtime；Windows 11 通常已提供，缺少时按系统提示安装微软运行时。

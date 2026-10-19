@@ -9,7 +9,6 @@ use crate::modules::archive_transfer::ArchiveTransferService;
 use crate::modules::codex_terminal::CodexTerminalService;
 use crate::modules::game_archives::ArchiveCatalogService;
 use crate::modules::game_connections::GameConnectionService;
-use crate::modules::grok_terminal::GrokTerminalService;
 use crate::modules::instances::InstanceService;
 use crate::modules::logs::LogService;
 use crate::modules::runtime_bridge::RuntimeBridgeService;
@@ -39,7 +38,6 @@ pub struct DesktopCliDependencies {
     settings: SettingsService,
     tasks: TaskService,
     codex_terminal: CodexTerminalService,
-    grok_terminal: GrokTerminalService,
     instances: InstanceService,
     runtime_bridge: RuntimeBridgeService,
     logs: LogService,
@@ -82,14 +80,12 @@ impl DesktopCliDependencies {
         settings: SettingsService,
         tasks: TaskService,
         codex_terminal: CodexTerminalService,
-        grok_terminal: GrokTerminalService,
         game: DesktopCliGameDependencies,
     ) -> Self {
         Self {
             settings,
             tasks,
             codex_terminal,
-            grok_terminal,
             instances: game.instances,
             runtime_bridge: game.runtime_bridge,
             logs: game.logs,
@@ -291,7 +287,6 @@ mod tests {
             SettingsService::new(database.clone(), paths.default_workspace_root.clone());
         let tasks = TaskService::new(database.clone(), paths.default_workspace_root.clone());
         let codex_terminal = CodexTerminalService::new(tasks.clone()).unwrap();
-        let grok_terminal = GrokTerminalService::new(tasks.clone()).unwrap();
         let connections = GameConnectionService::new();
         let archives = ArchiveCatalogService::new(paths.clone());
         let instances = InstanceService::new(database.clone(), paths.clone(), connections.clone());
@@ -308,7 +303,6 @@ mod tests {
             settings_service,
             tasks.clone(),
             codex_terminal.clone(),
-            grok_terminal,
             DesktopCliGameDependencies::new(
                 instances,
                 runtime_bridge,
@@ -473,8 +467,8 @@ mod tests {
             "desktop_identity_mismatch"
         );
         let second_context =
-            json!({"provider":"grok","taskId":"task-two","conversationId":"conversation-two"});
-        let second_env = cli_sessions::environment("grok", "task-two", "conversation-two");
+            json!({"provider":"codex","taskId":"task-two","conversationId":"conversation-two"});
+        let second_env = cli_sessions::environment("codex", "task-two", "conversation-two");
         let second = Connection::Pipe {
             name: pipe.clone(),
             credential: second_env

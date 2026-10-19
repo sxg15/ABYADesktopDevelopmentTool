@@ -87,12 +87,10 @@ export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnectio
       setFeedback("答案已提交，无需重复提交。"); setError(result.warning ?? "");
       if (result.warning) setRetryGroup(savedGroup);
       if(result.continuation)void continueResult(result.continuation,result.production.record?.questionGroups?.find(g=>g.id===group.id)??group);
-      else if (group.provider === "grok") void (async () => {
-        try {
-          if (!onContinue) throw new Error("请连接原会话后继续。");
-          await onContinue(`问题组 ${group.id} 的答案已在 APP 提交，请读取最新制作记录继续。`,group);
-        } catch (e) { if (alive.current) { setError(`答案已保存。${errorMessage(e)}`); setRetryGroup(savedGroup); } }
-      })();
+      else if (group.provider !== "codex") {
+        setFeedback("答案已保存。此历史会话的服务商已移除，请在 Codex 对话中读取已保存的任务记录；未自动续接旧会话。");
+        setRetryGroup(undefined);
+      }
     }
     return result.production;
   }
@@ -106,16 +104,14 @@ export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnectio
     if (!retryGroup || retrying) return;
     setRetrying(true); setError("");
     try {
+      if (retryGroup.provider !== "codex") throw new Error("此历史会话的服务商已移除，答案仍保留，不能自动续接旧会话。");
       if (onEnsureConnection) await onEnsureConnection(retryGroup);
       if (!alive.current) return;
       if (retryGroup.provider === "codex") {
         const version = retryGroup.answers[retryGroup.answers.length - 1]?.revision;
         if (version === undefined) throw new Error("正在核对已提交答案，请稍后重试。");
         await continueResult(await productionApi.continueQuestions(taskId, retryGroup.id, version), retryGroup);
-      } else {
-        if (!onContinue) throw new Error("请在原会话继续任务。");
-        await onContinue(`问题组 ${retryGroup.id} 已提交，请读取最新记录继续。`, retryGroup);
-        setFeedback("继续请求已发送，请查看原会话。"); setRetryGroup(undefined);
+
       }
     } catch (e) { if (alive.current) setError(errorMessage(e)); }
     finally { if (alive.current) setRetrying(false); }

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const providers = [".codex", ".grok"];
+const providers = [".codex"];
 
 function readTree(directory, relative = "") {
   const files = new Map();
@@ -76,7 +76,7 @@ export function importTemplate({ source, destination, slug, displayName, descrip
     if (/\.(md|ya?ml)$/i.test(name)) files.set(name, Buffer.from(bytes.toString("utf8").replaceAll(`$${nameValue}`, `$${id}`)));
   }
   files.set(marker, Buffer.from(JSON.stringify({ schemaVersion: 1, kind: templateKind, id, displayName, description, sourceSkillName: nameValue }, null, 2) + "\n"));
-  // Stage both providers before replacing either one; roll back on write failure.
+  // Stage the Codex template before replacing it; roll back on write failure.
   const staged = [];
   try {
     for (const target of targets) {

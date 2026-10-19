@@ -9,11 +9,9 @@ const registry = JSON.parse(
 const required = ["Purpose", "Ownership", "Public Contracts", "Dependencies", "Validation", "LLM Maintenance Rule"];
 const bundledTaskSkills = [
   ".codex/skills/abya-game-development-task/SKILL.md",
-  ".grok/skills/abya-game-development-task/SKILL.md",
 ];
 const errors = [];
-const templateSets = [];
-for (const provider of [".codex", ".grok"]) {
+for (const provider of [".codex"]) {
   const skills = path.join(root, provider, "skills");
   for (const file of ["SKILL.md", "scripts/import-template.mjs"]) {
     if (!fs.existsSync(path.join(skills, "abya-import-task-template", file))) {
@@ -35,12 +33,7 @@ for (const provider of [".codex", ".grok"]) {
       templates.set(entry.name, JSON.stringify(marker));
     } catch (error) { errors.push(`${provider}/${entry.name}: ${error.message}`); }
   }
-  templateSets.push(templates);
 }
-for (const id of new Set(templateSets.flatMap(templates => [...templates.keys()]))) {
-  if (templateSets[0].get(id) !== templateSets[1].get(id)) errors.push(`Task template must have matching metadata for both providers: ${id}`);
-}
-
 for (const module of registry.modules) {
   const skillPath = path.join(root, module.skill);
   if (!fs.existsSync(skillPath)) {

@@ -9,7 +9,7 @@
     "runId": {"$ref": "#/$defs/text"}, "target": {"type": "object", "additionalProperties": false,
       "required": ["archiveId", "levelId", "buildId"], "properties": {
         "archiveId": {"$ref": "#/$defs/text"}, "levelId": {"$ref": "#/$defs/text"}, "buildId": {"$ref": "#/$defs/text"}}},
-    "provider": {"enum": ["codex", "grok"]},
+    "provider": {"enum": ["codex"]},
     "definitionsHash": {"$ref": "#/$defs/hash"}, "archiveHash": {"$ref": "#/$defs/hash"},
     "staticChecks": {"type": "array", "items": {"type": "object", "additionalProperties": false,
       "required": ["kind", "path", "sha256", "successPointer"], "properties": {

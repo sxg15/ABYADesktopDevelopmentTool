@@ -1,5 +1,14 @@
 # Desktop CLI
 
+## Codex-only context (2026-10-19)
+CLI conversation/Skill provider schemas accept only codex. Removed provider inputs
+fail before binding or recording activity, even if they name an existing Codex ID.
+GrokTerminalService is absent from dependencies, bootstrap and shutdown. Existing
+Codex command names, session capabilities and ownership checks remain unchanged.
+The opt-in Player test is real_player_cli_pipeline_with_codex_context; distinguish
+its execution from normal tests that do not launch a Player. Regress unsupported
+provider rejection and intact Codex activity/plan binding.
+
 ## Art design workflow 2.2 (2026-10-16)
 Authenticated `art list` / `art get` map to development_production_art_library_list/get,
 use the caller's task binding and expose only curated library data. Latest accepted
@@ -13,7 +22,7 @@ use-art-case copies verified frozen media into the task and records borrow/adapt
 it does not approve a design. Collection, requirement withdrawal, library import/export
 and recommendation withdrawal remain APP-only. Never authenticate AI-transcribed text
 as a human source or allow CLI operations to alter existing planner requirement scope.
-Validate both provider contexts, stale revisions, schema discovery and no approval bypass.
+Validate the Codex context, stale revisions, schema discovery and no approval bypass.
 
 ## Game client settings composition (2026-10-14)
 
@@ -71,20 +80,20 @@ ownership checks. Reports and videos are task-owned artifacts; neither their
 creation nor command success marks a task complete. Recording is video-only,
 bounded to two hours and never records a desktop-wide source.
 
-Authenticated command integration, Origin rejection, old endpoint absence, schema uniqueness, task ownership, both providers, activity updates, runtime failures and command parsing.
+Authenticated command integration, Origin rejection, old endpoint absence, schema uniqueness, task ownership, Codex, activity updates, runtime failures and command parsing.
 
 ## LLM Maintenance Rule
 
 Update this Skill, command documentation and tests whenever these contracts change.
 
-Managed log-session and transfer IDs are resolved to their instance before ownership checks. External sources retain logs/archive-transfer access only. The real Player opt-in test verifies CreatorEditor readiness, HighImpact pure Lua, screenshots, both provider contexts and independent LAN Host/Client readiness without launching model inference.
+Managed log-session and transfer IDs are resolved to their instance before ownership checks. External sources retain logs/archive-transfer access only. The real Player opt-in test verifies CreatorEditor readiness, HighImpact pure Lua, screenshots, the Codex context and independent LAN Host/Client readiness without launching model inference.
 The opt-in test saves runtime-catalog.json and checks essential capabilities plus
 retired log-server exclusions instead of fixing the total catalog size. Inspect
 that captured catalog for Bot integration prerequisites; transport readiness with
 an older Player is not evidence of Bot gameplay or runtime_bot_diagnostics support.
 Set ABYA_CLI_SMOKE_BOTS=1 for the opt-in real Player test to require Bot definition
 get/set and diagnostics in the catalog, then read definitions, diagnostics and the
-exact receive/submit_action Lua API under both provider contexts. It saves separate
+exact receive/submit_action Lua API under the Codex context. It saves separate
 bot-<provider>-<check>.json evidence without authoring or saving any Bot definitions.
 
 ## Windows sandbox sessions

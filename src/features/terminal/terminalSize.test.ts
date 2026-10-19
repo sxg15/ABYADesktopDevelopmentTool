@@ -13,7 +13,7 @@ describe("clampTerminalSize", () => {
     expect(clampTerminalSize(80, 24)).toEqual({ columns: 80, rows: 24 });
   });
 
-  it("clamps to the PTY limits used by Codex and Grok", () => {
+  it("clamps to the PTY limits used by Codex", () => {
     expect(clampTerminalSize(2, 1)).toEqual({
       columns: TERMINAL_MIN_COLUMNS,
       rows: TERMINAL_MIN_ROWS,

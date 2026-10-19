@@ -9,7 +9,7 @@ const skillRoot = provider => path.join(root, provider, 'skills', 'abya-game-dev
 const json = file => JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
 const unique = values => assert.equal(new Set(values).size, values.length);
 
-for (const provider of ['.codex', '.grok']) {
+for (const provider of ['.codex']) {
   test(`${provider}: production policy retains the agreed gates and complete pilot coverage`, () => {
     const policy = json(path.join(skillRoot(provider), 'assets/production/workflow-policy.json'));
     unique(policy.stages.map(stage => stage.id));

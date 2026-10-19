@@ -34,23 +34,20 @@ Foundation owns unpackaged Windows ToastGeneric, per-user AUMID/shortcut and COM
 activation, with isolated test identities. App shell composes settings and exact-target
 navigation. No CLI/MCP commands, tray lifetime or connection secrets are introduced.
 
-`development-terminal` owns the provider-neutral conversation workflow model,
-sanitized timeline persistence, shared terminal UI, and explicit per-task
-Codex/Grok selection. A task can keep independent provider conversation
-directories containing metadata, output-only terminal replay, `workflow.json`,
-and a bounded compact-revision `workflow-events.jsonl`. The UI never exposes arbitrary
-commands, executable paths, working directories, or raw provider arguments.
-`development-tasks` also deploys the provider-specific bundled
-`abya-game-development-task` Skill into both `.codex/skills` and
-`.grok/skills` whenever a task workspace is created or read. Only those exact
-managed Skill directories may be replaced; user-owned Skills remain intact.
+`development-terminal` owns the Codex conversation workflow model, sanitized
+timeline persistence and terminal UI. Task-local conversations retain metadata,
+output-only replay, workflow.json and a bounded compact workflow-events.jsonl.
+The UI never exposes arbitrary commands, executable paths, working directories
+or raw provider arguments. `development-tasks` deploys only the bundled Codex
+`abya-game-development-task` under `.codex/skills` for new or unpinned tasks.
+Only exact managed Skill directories may be replaced; user-owned Skills remain intact.
 Tasks additionally discover bundled `abya-task-template-*` directories with a
 valid `abya-task-template.json` marker and sync their complete resources to
 the corresponding provider workspace. Matching unmarked user directories are
 never overwritten. Template selection lives in the task production record for
 full workflows or in scoped-task conversation context. The maintenance-only
 `abya-import-task-template` Skill ships beside the executable for importing
-templates into both provider roots and is not a gameplay template.
+templates into the Codex provider root and is not a gameplay template.
 The same deployment boundary supports `abya-art-template-*` with a valid
 `abya-art-template.json` marker. Task-template suggestions join requirements
 confirmation; art-template suggestions join resources confirmation in 2.1 and execution-plan confirmation in older pinned policies.
@@ -78,14 +75,13 @@ verification. CLI searches/reads curated cases and materializes fixed versions i
 task-local reference files with borrow/adapt/avoid decisions. Imported packages retain
 external provenance; no import, collection or approval operation is exposed to agents.
 Portable game-art-design and its generic interface-design reference ship inside the
-managed task Skill, with complete provider parity and Windows long-path-safe deployment.
+managed task Skill, with complete resources and Windows long-path-safe deployment.
 Stage gates check current document hashes, actual saved archive/Player fingerprints,
 evidence files and issue closure. Pinned 1.x tasks retain round/question gates; workflow 2.0 uses current-version self-tests and user-closed feedback. They validate declared
 materials, not gameplay quality or user experience. Scoped tasks remain opt-in.
-First-batch common workflow resources are maintained in the repository .codex
-bundle and synchronized into .grok by npm run sync:workflow, preserving Grok
-entry metadata. The check command rejects drift; remaining resources retain
-their existing ownership. Once production is enabled, ordinary task reads stop
+Common workflow resources are maintained in the repository .codex bundle.
+Checks validate resource links, policy contracts and deployment. Once production
+is enabled, ordinary task reads stop
 refreshing managed Skills. Explicit upgrades require stopped terminals, check for
 local modifications, preserve backups/history; migration to human feedback retains valid requirement/plan approvals and requests actual current-version self-tests.
 The task UI separates production, installed Skill browsing and native conversation
@@ -99,7 +95,7 @@ The pinned LGPL shared runtime, license materials and source manifest ship along
 the application. It never captures the whole desktop or accepts arbitrary commands.
 
 Bot development is a conditional part of the managed task Skill, shared by the
-multiplayer template and both providers. Task-owned artifacts/bot-integration
+multiplayer template and Codex. Task-owned artifacts/bot-integration
 contains the plan, before/current/candidate/reloaded definition snapshots and
 version-bound verification materials. Standalone bundled Node modules validate
 update scope, artifacts and explicit evidence assertions without game writes.
@@ -136,14 +132,15 @@ verified same-workspace native history; neither native history is rewritten.
 The terminal UI owns paste gestures; foundation reads the Windows clipboard
 only on demand. Plain text uses bracketed paste and serialized bounded IPC
 chunks. Only actual images trigger the provider's native image-paste command.
-`grok-terminal` independently discovers Grok, owns its PTYs and process trees,
-creates or resumes UUID sessions, and incrementally maps the native ACP
-`updates.jsonl` plan/tool/turn stream into the same workflow model. Codex uses
-`<workspace>/conversations`; Grok uses
-`<workspace>/grok-conversations`. Grok discovers its task workflow from
-`<workspace>/.grok/skills/abya-game-development-task`. Native authenticated
-provider state remains in the user's normal `.codex` or `.grok` directory and
-is never copied into a task workspace.
+Codex conversations use `<workspace>/conversations`; authenticated native state
+remains in the user's normal `.codex` directory and is never copied to a task.
+Grok is retired: no discovery, PTY service, Tauri commands, CLI binding, live
+notification scanner or bundled `.grok` resources remain. Existing account data,
+task `.grok` files and `grok-conversations` are untouched. Historical question
+provenance remains readable but is never remapped to a Codex conversation. Old
+notification receipts fall back to task navigation; historical timing remains
+read-only. Explicit Skill upgrades validate/back up only supported Codex pins,
+retaining previous records in revision history and leaving retired files intact.
 
 `desktop-cli` exposes authenticated non-MCP command dispatch. Managed terminal CLIs use a local-only Windows named pipe, restricted client SIDs, and revocable in-memory session capabilities bound to provider/task/conversation. Foundation owns transport and session-capability primitives; provider services issue and revoke capabilities without depending on desktop-cli. Desktop retains the long-term credential; sandbox CLIs never decrypt it. Normal same-user standalone CLI access retains the DPAPI-backed HTTP route; managed pipe failures never fall back to it. Each command validates ownership and records sanitized activities. Runtime operations start bundled Abya CLI with managed PID and launch identity. No MCP adapter exists.
 

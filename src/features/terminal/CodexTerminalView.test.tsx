@@ -266,13 +266,13 @@ describe("Codex conversation list", () => {
     await screen.findByText("All conversation history copied");
   });
 
-  it("uses the selected Grok provider and reports empty history without success", async () => {
+  it("reports empty Codex history without success", async () => {
     terminalApiMock.copyHistory.mockResolvedValueOnce(false);
-    render(<DevelopmentTerminalView provider="grok" taskId="task-1" visible
+    render(<DevelopmentTerminalView provider="codex" taskId="task-1" visible
       availability={availability} t={translator("en-US")} onRefreshAvailability={vi.fn()} />);
     fireEvent.click(await screen.findByRole("button", { name: "Copy all conversation history" }));
     await screen.findByText("This conversation has no history to copy yet.");
-    expect(terminalApiMock.copyHistory).toHaveBeenCalledWith("grok", "task-1", "conversation-1");
+    expect(terminalApiMock.copyHistory).toHaveBeenCalledWith("codex", "task-1", "conversation-1");
     expect(screen.queryByText("All conversation history copied")).toBeNull();
   });
 

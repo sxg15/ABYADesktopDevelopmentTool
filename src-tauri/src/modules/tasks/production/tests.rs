@@ -218,6 +218,70 @@ fn corrective_document_can_be_submitted_but_required_issue_still_blocks_acceptan
 }
 
 #[test]
+fn retired_skill_pins_do_not_block_codex_catalog_or_upgrade_and_files_remain_untouched() {
+    let f = Fixture::new();
+    files::write_file(
+        &f.workspace,
+        ".codex/skills/abya-game-development-task/SKILL.md",
+        b"---\nname: abya-game-development-task\ndescription: Codex\n---\n",
+    )
+    .unwrap();
+    let legacy_file = ".grok/skills/abya-game-development-task/SKILL.md";
+    files::write_file(&f.workspace, legacy_file, b"user-edited retired workflow").unwrap();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.skill_pins = catalog::scan(&f.workspace)?;
+            r.skill_pins.push(SkillEntry {
+                id: "abya-game-development-task".into(),
+                provider: "grok".into(),
+                kind: "workflow".into(),
+                name: "old".into(),
+                description: String::new(),
+                path: ".grok/skills/abya-game-development-task".into(),
+                sha256: "old-hash".into(),
+            });
+            r.skill_pins.push(SkillEntry {
+                id: "deleted-retired-template".into(),
+                provider: "grok".into(),
+                kind: "task".into(),
+                name: "missing".into(),
+                description: String::new(),
+                path: ".grok/skills/deleted-retired-template".into(),
+                sha256: "old-hash".into(),
+            });
+            Ok(())
+        })
+        .unwrap();
+    let before = f.record();
+    assert_eq!(before.skill_pins.len(), 3);
+    assert!(
+        f.service
+            .production_catalog(&f.id)
+            .unwrap()
+            .iter()
+            .all(|s| s.provider == "codex")
+    );
+    assert!(
+        f.service
+            .production_skill_text(&f.id, "grok", "abya-game-development-task")
+            .is_err()
+    );
+    assert_eq!(f.record().revision, before.revision);
+    let upgraded = f
+        .service
+        .production_upgrade(&f.id, before.revision)
+        .unwrap()
+        .record
+        .unwrap();
+    assert_eq!(upgraded.skill_pins.len(), 1);
+    assert_eq!(upgraded.skill_pins[0].provider, "codex");
+    assert_eq!(
+        std::fs::read(f.workspace.join(legacy_file)).unwrap(),
+        b"user-edited retired workflow"
+    );
+}
+
+#[test]
 fn compatible_workflow_upgrade_retains_approved_documents() {
     let f = Fixture::new();
     f.doc("requirements", "Rules");

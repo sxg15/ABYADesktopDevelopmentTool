@@ -19,13 +19,9 @@ dist-ssr
 !/Publish/runtime/
 !/Publish/tools/
 !/Publish/.codex/
-!/Publish/.grok/
 /Publish/.codex/*
 !/Publish/.codex/README.md
 !/Publish/.codex/skills/
-/Publish/.grok/*
-!/Publish/.grok/README.md
-!/Publish/.grok/skills/
 /Publish/**/*.db
 /Publish/**/*.db-*
 /Publish/**/*.sqlite*

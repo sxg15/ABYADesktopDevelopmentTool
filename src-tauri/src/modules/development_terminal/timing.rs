@@ -74,6 +74,7 @@ pub fn task_timing(tasks: &TaskService, task_id: &str) -> AppResult<Value> {
     let mut missing = 0;
     let (mut human, mut blocked, mut rework) = (vec![], vec![], vec![]);
     let (mut elapsed, mut first_playable) = (None, None);
+    // Retain read-only historical timing; the retired provider has no executable service.
     for folder in ["conversations", "grok-conversations"] {
         if let Ok(entries) = std::fs::read_dir(root.join(folder)) {
             for entry in entries.flatten() {

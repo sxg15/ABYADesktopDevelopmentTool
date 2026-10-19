@@ -124,7 +124,7 @@ export const continuationMessages: Record<IntakeContinuation["status"],string> =
 
 export interface IntakeQuestionGroup {
   stage?: string; cycle?: number;
-  id: string; title: string; provider: "codex" | "grok"; conversationId: string;
+  id: string; title: string; provider: string; conversationId: string;
   nativeSessionId?: string; status: string; publishedAt: string; updatedAt: string;
   questions: { id: string; text: string; options: string[]; optional: boolean }[];
   draft: Record<string, string>;

@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { translator } from "../../i18n";
-import { api } from "../../shared/api";
+import { api, terminalApi } from "../../shared/api";
 import type {
   CodexConversation,
   CodexWorkflowSnapshot,
@@ -127,7 +127,7 @@ vi.mock("../terminal/CodexTerminalView", () => ({
     visible,
     onConversationChange,
   }: {
-    provider: "codex" | "grok";
+    provider: "codex";
     taskId: string;
     visible: boolean;
     onConversationChange?: (conversation?: CodexConversation) => void;
@@ -204,27 +204,15 @@ describe("development task tabs", () => {
     expect(activeTerminal.getAttribute("data-visible")).toBe("true");
   });
 
-  it("lets the user explicitly switch a task between Codex and Grok", async () => {
+  it("ignores a retired provider selection and opens only Codex", async () => {
+    window.localStorage.setItem("abya.taskTerminalProviders", JSON.stringify({ "task-active": "grok" }));
     render(<TasksView t={translator("en-US")} notify={vi.fn()} />);
-
     fireEvent.click(await screen.findByRole("tab", { name: "Terminal" }));
-    expect(
-      (await screen.findByTestId("terminal-task-active-codex")).getAttribute(
-        "data-visible",
-      ),
-    ).toBe("true");
-
-    fireEvent.click(screen.getByRole("button", { name: "Grok" }));
-    expect(
-      (await screen.findByTestId("terminal-task-active-grok")).getAttribute(
-        "data-visible",
-      ),
-    ).toBe("true");
-    expect(
-      screen
-        .getByTestId("terminal-task-active-codex")
-        .getAttribute("data-visible"),
-    ).toBe("false");
+    expect((await screen.findByTestId("terminal-task-active-codex")).getAttribute("data-visible")).toBe("true");
+    expect(screen.queryByRole("button", { name: "Grok" })).toBeNull();
+    expect(screen.queryByTestId("terminal-task-active-grok")).toBeNull();
+    expect(terminalApi.availability).not.toHaveBeenCalledWith("grok");
+    expect(terminalApi.listConversations).not.toHaveBeenCalledWith("grok", expect.anything());
   });
 
   it("keeps the workflow strip on the task's selected conversation", async () => {

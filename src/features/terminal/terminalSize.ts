@@ -1,4 +1,4 @@
-/** Must match MIN/MAX columns and rows in the Codex and Grok terminal modules. */
+/** Must match MIN/MAX columns and rows in the Codex terminal modules. */
 export const TERMINAL_MIN_COLUMNS = 20;
 export const TERMINAL_MAX_COLUMNS = 500;
 export const TERMINAL_MIN_ROWS = 5;

@@ -158,7 +158,7 @@ pub(super) fn publish(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
     }
     let provider = mutation::text(data, "provider")?;
     let conversation = mutation::text(data, "conversationId")?;
-    if !["codex", "grok"].contains(&provider) || uuid::Uuid::parse_str(conversation).is_err() {
+    if !["codex"].contains(&provider) || uuid::Uuid::parse_str(conversation).is_err() {
         return Err(AppError::validation("问题必须关联有效的任务会话。"));
     }
     r.question_groups.push(QuestionGroup {

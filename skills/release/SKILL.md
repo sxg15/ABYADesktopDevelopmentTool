@@ -1,13 +1,30 @@
 # Release Skill
 
+## Codex-only package (2026-10-19)
+Default/Validation builds use codex-only-20261019. The requested 界面优化 branch
+is the task exception: integrate current remote CLI/dev, verify the complete package,
+then publish its commit to CLI followed by dev. Preserve the occupied dirty CLI
+worktree; leave 界面优化 checked out for follow-up work.
+Remove the source .grok tree, Grok terminal module/Skill, dual-provider sync script
+and package allowlist entries. Importers, validators and deployment target Codex only.
+publish.ps1 removes only the resolved non-reparse .grok directory inside its selected
+package output, never task histories or user account directories. Portable inventory
+rejects any leftover retired-provider files. Rebuild APP/CLI and copy all Codex/Node/
+Abya/FFmpeg runtime files, verify inventory/tracking and a relocated complete package.
+Validate new and legacy task handling in an isolated candidate with no model turn.
+The combined package retains the concurrent task-detail overflow fix in App.css;
+rerun frontend checks and native terminal/Skill views after incorporating it.
+Historical release entries below describe prior deliveries; the current provider
+contract and release label here take precedence.
+
 ## Contextual visual refinement (2026-10-17)
 Default/Validation builds use visual-refinement-integration-20261017. Retain workspace
 refinement and the concurrent proxy fix. Source game/product Skills live in the canonical
-.codex managed bundle; sync:workflow propagates the complete tree to .grok. Explicit
+.codex managed bundle, copied completely into portable output. Explicit
 sync-design-skills.mjs --write <personal-skills-directory> backs up changed personal files
 before installing the two portable entrypoints and never removes unrelated files.
 check:skills now verifies contrast boundaries, token exports and all portable reference links.
-Node helpers are shipped with both providers; no Python or Tailwind dependency is required.
+Node helpers are shipped with Codex; no Python or Tailwind dependency is required.
 Run real component previews, current/pinned native deployment and relocated package checks.
 Separate controlled layout examples from actual model A/B evaluation and human art approval.
 Stop this task's Vite preview watchers before native tests whose workspaces sit under the
@@ -42,7 +59,7 @@ the system-proxy feature, local no_proxy behavior and isolated proxy regressions
 
 ## Game art design workflow 2.2 (2026-10-16)
 Content-only design-prompt refinements may reuse the already verified executable when
-Rust/React/policy contracts are unchanged: validate Skills/provider parity, copy complete
+Rust/React/policy contracts are unchanged: validate Skills/resource completeness, copy complete
 canonical provider resources into the candidate and regenerate/verify its inventory.
 Keep embedded executable hashes/build identity unchanged and preserve pinned task upgrades.
 This user-requested change develops on 美术优化 after integrating origin/CLI and dev.
@@ -50,7 +67,7 @@ Publish the verified feature commit, integrate it into CLI then dev using normal
 verify remote ancestry and leave the requested 美术优化 branch checked out.
 Default/Validation builds use game-art-design-library-20261016. Ship the nested portable
 game-art-design Skill and its complete generic product-interface-design reference tree
-in both providers; sync:workflow recursively maintains parity. New tasks use 2.2;
+in the Codex bundle. New tasks use 2.2;
 existing task workspaces remain pinned until explicit backed-up upgrade.
 Validate source/requirement/visual/version consistency, human-only case collection,
 case ZIP import/export, frozen references, legacy contracts and real component UI.
@@ -173,7 +190,7 @@ the isolated portable package and a fresh dev checkout in a relocated path.
 
 ## Programmer alert release (2026-10-13)
 Default/Validation builds use programmer-alert-20261013. Sync the updated canonical
-production-records reference to Grok and ship both bundles. Verify confirmed/legacy
+production-records reference and ship the Codex bundle. Verify confirmed/legacy
 suspected classifications, ordinary Lua exclusions, resolved alerts and responsive
 red guidance. Keep existing task pins and previous terminal fixes intact.
 
@@ -269,13 +286,12 @@ ABYA_TEST_MODE=1. Preserve pinned user Skills unless explicitly upgrading throug
 backups. Real-model test output contains identifiers and metrics only; credentials stay in memory.
 
 `npm run check`, `npm run build:portable`, the release executable, and
-`Publish/build-manifest.json`. The project-root `.codex/` and `.grok/`
-directories are required and their complete contents are copied to matching
-directories in portable output. Both source directories must contain
+`Publish/build-manifest.json`. The project-root `.codex/` directory is required
+and its complete contents are copied into portable output. It must contain
 `skills/abya-game-development-task/SKILL.md`; checks and publishing fail when
-either provider's bundled task Skill is absent. The published managed Skill
+the bundled task Skill is absent. The published managed Skill
 also includes its gameplay architecture reference and versioned JSON template.
-Both provider bundles additionally require the Bot workflow/artifact references,
+The Codex bundle additionally require the Bot workflow/artifact references,
 plan/report schemas and templates, and all four validator modules. Publishing
 preflights these files and copies them with the complete provider root.
 check:skills runs scripts/bot-workflow.check.mjs: update-scope preservation,
@@ -288,7 +304,7 @@ into the fixed repository-local Publish-Staging-Bot directory, allowing package
 validation while the normal Publish executable is in use. The default remains
 Publish; both destinations retain the same resolved-path deletion boundary.
 
-Both provider roots also ship `abya-import-task-template/SKILL.md` and its
+The Codex root also ship `abya-import-task-template/SKILL.md` and its
 standalone Node `scripts/import-template.mjs`. Import accepts an original Skill
 folder, destination tool root, slug, display name and summary. It preserves
 resources and optional frontmatter, rewrites name/description and `$old-name`
@@ -307,24 +323,20 @@ The importer additionally accepts `--kind art` (default remains `task`) for
 `abya-art-template`. Both kinds share preflight, identity protection, staging,
 rollback and binary resource preservation. Imported art instructions defer to
 task font requirements and the art choice confirmed in the execution plan. Checks validate
-both namespaces and provider parity; importer and task deployment tests cover
+both namespaces and resource completeness; importer and task deployment tests cover
 both kinds. The comic-arcade-ui bundle includes its complete source artwork,
 preview HTML, PNG kit, design tokens, references and optional generation script.
 
-`check:skills` verifies both importer entries and template identities/provider
-metadata parity and runs the importer behavioral tests. Zero templates is valid.
+`check:skills` verifies the importer entry and template identities/metadata and runs the importer behavioral tests. Zero templates is valid.
 Publishing copies all template resources through the existing complete-root
 copy, and fails on missing importer resources or malformed template metadata.
 
 ## Dependencies
 
-First-batch workflow content has a canonical source in .codex. npm run sync:workflow
-updates only the listed repository .grok resources, including importer routing and
-the two existing templates, while keeping Grok-specific entry metadata. It does
-not update installed Publish directories or user task workspaces. check:skills
-rejects stale copies and checks policy identities, all pilot rounds/questions,
-blank initial acceptance/evidence and relative resource links. The task-service
-tests verify real create/refresh deployment and preserve existing task records.
+Workflow content has one canonical source in .codex. check:skills verifies
+policy identities, templates, resource links and the complete design trees.
+There is no provider-mirroring script or sync:workflow command. Task-service
+tests verify real deployment and preserve existing pinned task records.
 Production resources in assets/production and conditional references ship
 through the existing complete-directory copy. These checks do not run an AI model
 or establish gameplay acceptance. Backend production gates have separate Rust
@@ -351,9 +363,9 @@ portable executable.
 ## Validation
 
 Verify the release build succeeds, no installer is generated, the executable
-opens, the Codex and Grok provider choices render in the packaged application,
-the complete project-root `.codex/` and `.grok/` contents appear under matching
-`Publish` directories, both published provider roots contain the managed ABYA
+opens, the Codex provider choices render in the packaged application,
+the complete project-root `.codex/` contents appear under `Publish/.codex`,
+and the published bundle contains the managed ABYA
 task Skill and architecture resources, stale published LLM files are removed on repeat builds, no
 authentication/session/log/cache content is introduced, and the manifest
 checksum matches.

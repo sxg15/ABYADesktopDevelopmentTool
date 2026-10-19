@@ -30,6 +30,6 @@
 ## 维护与验证
 
 SQLite 是任务与案例元数据来源；workflow.json 和 HTML 是导出。不要直接修改导出来推进状态。
-通用 Skill 与游戏专项 Skill 的参考全部使用相对路径；仓库 .codex 为规范来源，sync:workflow 同步 .grok，运行包复制完整资源。
+通用 Skill 与游戏专项 Skill 的参考全部使用相对路径；仓库 .codex 为唯一规范来源，运行包复制完整 Codex 资源，不再维护其他服务商镜像。
 自动回归覆盖遗漏、原话保护、来源变更、版本过期、媒体校验、案例独立性、导入导出及人工操作边界。
 scripts/art-design-preview.html 为真实 React 组件的隔离交互预览；其图片和案例不是已完成游戏或策划认可证据。
