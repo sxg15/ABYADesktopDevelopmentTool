@@ -1,5 +1,31 @@
 # Codex Terminal Skill
 
+## Reliable stop control (2026-10-20)
+Pause/interrupt/explicit forceStop share an exact-task/conversation controller.
+Stop duplicate operations and PTY input while controlling; cancel automatic queue work
+before waiting at most two seconds for the lifecycle lock. Native interruption has
+a twenty-second total budget, five-second RPC cap, and expired unsent RPCs are discarded.
+Use current runtime turn events plus the newest native snapshot turn; never use an old
+continuation receipt or the first historical inProgress entry. Refresh once only for
+classified turn-change errors, bound turn switches, and confirm terminal state before success.
+Keep execution-control.json separately from continuation.json. Persist operation/request
+IDs, exact native/turn IDs, PID, status, duration and safe error category/code/method.
+Connection logs include selected targets and both workflow/continuation turn IDs; never
+persist raw native error messages/data, tool arguments, tokens or terminal contents.
+Project stopFailed until resolved; a prior process's unfinished stop is unconfirmed.
+Only explicit force_stop(task, conversation) revokes access and terminates the owned
+Windows Job Object, then closes the TUI through its retained process handle. Never
+kill by process name or infer ownership from a recycled PID. Verify exit within bounds;
+retain handles on failure for retry. Keep native history/identity; do not replay a turn.
+Ordinary interruption retains executor/TUI/scoped access. Pause closes only after ack.
+Test strict native IDs, stale history, bounded refresh, rejection redaction, failed-state
+durability, foreign-task rejection, owned descendant termination and unrelated-job survival.
+Opt-in real_dual_connection_interrupt_pause_force_and_independent_runtime requires
+ABYA_TEST_CODEX, uses isolated test conversations and actual inference, and checks both
+control-origin and terminal-origin turns plus pause/force and independent executor survival.
+The original incident's exact -32600 cause remains unconfirmed without its raw classified
+response; passing reproduction scenarios must not be reported as proving that cause.
+
 ## Interrupt current turn (2026-10-19)
 interrupt_turn(task, conversation) cancels queued work before the lifecycle lock,
 validates the exact native binding and interrupts through the existing app-server.

@@ -21,6 +21,7 @@ export function useTaskControl(taskId:string,conversationId:string|undefined,pro
 export function controlText(state:TaskControlState|undefined) {
   if(!state)return "正在核对任务状态";
   const text:Record<string,string>={queued:"操作已保存，当前回复结束后继续，无需重复提交",running:"AI 正在处理当前任务，当前无需操作",waitingForResponse:"正在等待 AI 输出，当前无需操作",
+    stopFailed:state.lastError||"自动续接已禁止，但当前执行尚未确认停止；请重试或强制停止此会话",
     awaitingInput:"当前执行已中断，终端保持连接，可直接输入新指令",
     waitingForTerminal:"终端需要你输入或确认，请前往终端处理",pausing:"正在暂停任务",paused:"任务已暂停，答案和历史已保存",waitingForAnswers:"等待你回答阶段问题",blocked:"当前阶段遇到问题，可查看处理方案或重新检查",
     waitingForApproval:"等待你确认文档版本",needsReview:"执行结果需要核对，未自动重发",disconnected:"原对话需要重新接入，请先核对后台状态",
@@ -30,6 +31,7 @@ export function controlText(state:TaskControlState|undefined) {
 }
 export function controlLabel(state:TaskControlState|undefined) {
   const labels:Record<string,string>={waitingForTerminal:"终端待处理",running:"运行中",waitingForResponse:"等待响应",queued:"已排队",paused:"已暂停",pausing:"暂停中",
+    stopFailed:"停止失败",
     awaitingInput:"等待新指令",
     awaitingContinue:"等待继续",blocked:"遇到问题",waitingForAnswers:"等待回答",waitingForApproval:"等待确认",needsReview:"需要核对",failed:"执行失败",disconnected:"待接回原对话",ready:"可继续",notStarted:"待开始",closed:"任务已结束"};
   return state ? labels[state.state]??"核对中" : "核对中";

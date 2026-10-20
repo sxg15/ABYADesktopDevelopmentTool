@@ -26,6 +26,7 @@ pub struct TaskControlState {
     pub queued: bool,
     pub request_id: Option<String>,
     pub last_error: Option<String>,
+    pub execution_control: Option<super::execution_control::ExecutionControl>,
     pub updated_at: String,
     pub last_event_at: String,
     pub sequence: u64,
@@ -146,6 +147,14 @@ impl CodexTerminalService {
         let conversation_id = metadata.id.as_str();
         let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);
         let queue = continuation_queue::read(&directory)?;
+        let mut execution_control = super::execution_control::read(&directory)?;
+        if let Some(control) = &mut execution_control
+            && control.status == "stopping"
+            && control.owner != self.process_epoch
+        {
+            control.status = "failed".into();
+            control.error = Some("上次停止过程未完成确认，请核对原会话。".into());
+        }
         if track_queue && queue.is_some() {
             self.queue_tasks
                 .lock()
@@ -167,6 +176,17 @@ impl CodexTerminalService {
             .get(conversation_id)
             .is_some_and(|s| s.is_alive());
         let connected = self.sessions.lock().contains_key(conversation_id);
+        let same_executor = execution_control.as_ref().is_some_and(|control| {
+            control.native_id == metadata.native_session_id
+                && (!runtime
+                    || (control.owner == self.process_epoch
+                        && control.backend_pid
+                            == self
+                                .runtime_servers
+                                .lock()
+                                .get(conversation_id)
+                                .and_then(AppServerHandle::pid)))
+        });
         let queued = queue.as_ref().is_some_and(|q| {
             q.status == "queued"
                 && q.owner == self.process_epoch
@@ -174,6 +194,19 @@ impl CodexTerminalService {
         });
         let state = if self.stopping.lock().contains(conversation_id) {
             "pausing"
+        } else if same_executor
+            && execution_control
+                .as_ref()
+                .is_some_and(|c| c.status == "failed")
+        {
+            "stopFailed"
+        } else if !runtime
+            && same_executor
+            && execution_control
+                .as_ref()
+                .is_some_and(|c| c.status == "stopped")
+        {
+            "paused"
         } else if runtime && workflow.terminal_interaction {
             "waitingForTerminal"
         } else if runtime && active {
@@ -214,7 +247,13 @@ impl CodexTerminalService {
             } else {
                 "waitingForApproval"
             }
-        } else if connected && runtime && queue.as_ref().is_some_and(|q| q.status == "interrupted")
+        } else if connected
+            && runtime
+            && (queue.as_ref().is_some_and(|q| q.status == "interrupted")
+                || (same_executor
+                    && execution_control
+                        .as_ref()
+                        .is_some_and(|c| c.status == "interrupted")))
         {
             "awaitingInput"
         } else if production.record.as_ref().is_some_and(|r| {
@@ -259,7 +298,12 @@ impl CodexTerminalService {
             turn_started_at: turn.map(|t| t.started_at.clone()),
             queued,
             request_id: queue.as_ref().map(|q| q.id.clone()),
-            last_error: queue.and_then(|q| q.error),
+            last_error: execution_control
+                .as_ref()
+                .filter(|_| same_executor)
+                .and_then(|c| c.error.clone())
+                .or_else(|| queue.and_then(|q| q.error)),
+            execution_control,
             updated_at: Utc::now().to_rfc3339(),
             last_event_at: workflow.updated_at.clone(),
             sequence: if track_queue {

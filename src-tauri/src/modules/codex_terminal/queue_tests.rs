@@ -1,5 +1,7 @@
 use super::intake_receipt::IntakeContinueStatus as S;
 use super::*;
+#[path = "native_control_tests.rs"]
+mod native_control_tests;
 use crate::foundation::{AppPaths, Database};
 use crate::modules::tasks::{ProductionMutation, TaskInput};
 use serde_json::Value;
@@ -82,11 +84,17 @@ impl Fixture {
                 Ok(json!({"turn":turn}))
             }
             "turn/interrupt" => {
-                for x in t.lock().iter_mut() {
-                    if x["status"] == "inProgress" {
-                        x["status"] = json!("interrupted");
-                    }
+                if params["threadId"] != n {
+                    return Err(json!({"code":-32600,"message":"thread not found"}).to_string());
                 }
+                let mut turns = t.lock();
+                let active = turns
+                    .last_mut()
+                    .filter(|t| t["status"] == "inProgress" && t["id"] == params["turnId"])
+                    .ok_or_else(|| {
+                        json!({"code":-32600,"message":"expected active turn id supplied but found current"}).to_string()
+                    })?;
+                active["status"] = json!("interrupted");
                 Ok(json!({}))
             }
             _ => Err(format!("Unexpected RPC {method}")),
@@ -121,6 +129,8 @@ impl Fixture {
                         .unwrap(),
                 )),
                 killer: Arc::new(Mutex::new(Box::new(Killer))),
+                #[cfg(windows)]
+                process: None,
                 subscriber: Default::default(),
             },
         );
@@ -761,6 +771,94 @@ fn interrupt_failure_retains_terminal_without_claiming_input_ready() {
             .unwrap()
             .state,
         "awaitingInput"
+    );
+    assert!(f.calls.lock().is_empty());
+    let control = f.service.task_control(&f.task, &f.conversation).unwrap();
+    assert_eq!(control.state, "stopFailed");
+    assert!(control.last_error.unwrap().contains("尚未确认停止"));
+    assert_eq!(control.execution_control.unwrap().status, "failed");
+}
+
+#[test]
+fn stale_old_receipt_and_stale_history_do_not_interrupt_wrong_turn() {
+    let f = Fixture::new();
+    f.busy("old");
+    f.service
+        .continue_after_revision(&f.task, &f.conversation, Some(f.revision()))
+        .unwrap();
+    f.busy("manual-new");
+    f.service.interrupt_turn(&f.task, &f.conversation).unwrap();
+    assert_eq!(f.turns.lock()[0]["status"], "inProgress");
+    assert_eq!(f.turns.lock()[1]["status"], "interrupted");
+    let record = f
+        .service
+        .task_control(&f.task, &f.conversation)
+        .unwrap()
+        .execution_control
+        .unwrap();
+    assert_eq!(record.turn_id.as_deref(), Some("manual-new"));
+}
+
+#[test]
+fn stopping_rejects_new_input_and_duplicate_stop_without_clearing_the_owner() {
+    let f = Fixture::new();
+    f.service.stopping.lock().insert(f.conversation.clone());
+    assert!(f.service.write(&f.conversation, "new turn\r").is_err());
+    assert!(f.service.interrupt_turn(&f.task, &f.conversation).is_err());
+    assert!(f.service.stopping.lock().contains(&f.conversation));
+    f.service.stopping.lock().remove(&f.conversation);
+}
+
+#[test]
+fn explicit_force_stop_is_scoped_preserves_history_and_does_not_replay() {
+    let f = Fixture::new();
+    let other = Fixture::new();
+    f.busy("active");
+    let native = f.native.clone();
+    f.service.runtime_servers.lock().insert(
+        f.conversation.clone(),
+        AppServerHandle::for_rpc_test(move |_, _| {
+            Err(json!({"code":-32600,"message":"native rejection"}).to_string())
+        }),
+    );
+    assert!(f.service.stop(&f.conversation).is_err());
+    assert_eq!(
+        f.service
+            .task_control(&f.task, &f.conversation)
+            .unwrap()
+            .state,
+        "stopFailed"
+    );
+    assert!(f.service.force_stop(&other.task, &f.conversation).is_err());
+    f.service.force_stop(&f.task, &f.conversation).unwrap();
+    assert!(f.service.session(&f.conversation).is_err());
+    assert!(
+        !f.service
+            .runtime_servers
+            .lock()
+            .contains_key(&f.conversation)
+    );
+    assert!(
+        other
+            .service
+            .runtime_servers
+            .lock()
+            .contains_key(&other.conversation)
+    );
+    assert!(other.service.session(&other.conversation).is_ok());
+    assert_eq!(
+        f.service
+            .native_session_id(&f.task, &f.conversation)
+            .unwrap()
+            .as_deref(),
+        Some(native.as_str())
+    );
+    assert_eq!(
+        f.service
+            .task_control(&f.task, &f.conversation)
+            .unwrap()
+            .state,
+        "paused"
     );
     assert!(f.calls.lock().is_empty());
 }

@@ -124,6 +124,10 @@ original terminal and retry once after the UI acknowledges connection, without c
 
 Codex execution uses one runtime app-server per conversation and a separate metadata
 backend. Pause interrupts the turn before closing its executor and revoking access;
+Execution stop results are persisted separately from continuation intents, with bounded
+native confirmation and explicit stopFailed projection. User-confirmed force stop
+revokes scoped access and terminates only the owned executor Windows Job Object and
+retained TUI process handle; no process-name kill or automatic turn replay is permitted.
 TUI detachment alone preserves backend access. Reopen loads the original ID with new
 scoped credentials. Native preparation fails closed instead of starting a replacement
 conversation. Recovery backs up metadata and only rebinds a stopped conversation to a

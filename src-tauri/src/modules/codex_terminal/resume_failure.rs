@@ -5,7 +5,19 @@ use super::*;
 pub(super) fn rpc_error(method: &str, raw: &str) -> AppError {
     let value = serde_json::from_str::<serde_json::Value>(raw).unwrap_or_default();
     let message = value["message"].as_str().unwrap_or(raw).to_lowercase();
-    let (code, hint) = if message.contains("response exceeds the 128 mib limit") {
+    let (code, hint) = if method == "turn/interrupt"
+        && (message.contains("turn id mismatch")
+            || message.starts_with("expected active turn id ")
+            || message.contains("turn_id mismatch")
+            || message.contains("no active turn")
+            || message.contains("turn is not active")
+            || message.contains("turn not found"))
+    {
+        (
+            "codex_turn_changed",
+            "目标轮次已变化，正在重新核对执行状态。",
+        )
+    } else if message.contains("response exceeds the 128 mib limit") {
         (
             "codex_response_too_large",
             "Codex 会话响应超过 APP 的 128 MiB 接收上限。请在原生 Codex 客户端查看原会话，并联系开发者处理长会话兼容问题。",
@@ -40,6 +52,11 @@ pub(super) fn rpc_error(method: &str, raw: &str) -> AppError {
             "codex_native_request_failed",
             "Codex 拒绝了会话准备请求。请根据诊断信息检查原生客户端状态和执行环境。",
         )
+    };
+    let hint = if method == "turn/interrupt" && code == "codex_native_request_failed" {
+        "Codex 拒绝了中断请求，当前执行尚未确认停止。请重试或强制停止此会话。"
+    } else {
+        hint
     };
     AppError::new(
         code,

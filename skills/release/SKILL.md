@@ -1,5 +1,15 @@
 # Release Skill
 
+## Reliable pause/interruption (2026-10-20)
+Default/Validation builds use pause-interrupt-reliability-20261020, retaining workflow
+2.2.1 and all earlier fixes. Validate both 0.153.4 (incident version) and the locally
+installed Codex with isolated real_dual_connection_interrupt_pause_force_and_independent_runtime.
+Run owned Windows job/descendant and retained PTY handle tests, strict mock ID/race/error
+tests, frontend confirmation/failure tests, full checks and complete portable inventory.
+No original incident request/error body exists, so do not claim its exact native rejection
+was reproduced solely from a passing compatibility test. Record that limitation.
+Promote the complete verified package with rollback, preserving live apps and user data.
+
 ## Art implementation calibration (2026-10-20)
 Default/Validation packages use art-implementation-calibration-20261020 with workflow
 2.2.1. Ship the complete generic/game design references, JSON template and standalone

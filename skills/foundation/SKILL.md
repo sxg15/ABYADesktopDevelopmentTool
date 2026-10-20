@@ -1,5 +1,12 @@
 # Foundation Skill
 
+force_stop_codex_conversation(taskId, conversationId) is an APP-only adapter to the
+provider's ownership-checked force_stop; cancel scoped bridge operations and run blocking
+cleanup on spawn_blocking. stop_codex_terminal also uses spawn_blocking.
+TaskControlState.executionControl is additive, distinct from queue state, with sanitized
+operation/target/result metadata; stopFailed never means native execution has stopped.
+No CLI/MCP capability or credential exposure is introduced.
+
 interruptCodexTurn(taskId, conversationId) and terminalApi.interrupt route only Codex
 to the APP-only interrupt_codex_turn command. The adapter validates task binding,
 carries blocking native interruption on spawn_blocking to keep IPC responsive,
