@@ -1,5 +1,15 @@
 # Release Skill
 
+## Reference conversion and collage specimen (2026-10-20)
+Default/Validation packages use scrapbook-reference-workflow-20261020, workflow
+2.2.2. Include the optional template, original SVG/PNG assets, shared layout,
+native Lua emitter and bounded evidence. The isolated sample is not an approved
+case or multiplayer proof. Keep missing capabilities and visual differences explicit.
+Verify source-relative references, asset hashes, native evidence coverage, task
+deployment, personal Skill sync and pinned-version protection, then full checks,
+portable inventory, isolated native deployment and a relocated fresh checkout.
+Preserve the formal APP state during promotion and never replace its Player.
+
 ## Art implementation calibration (2026-10-20)
 Default/Validation packages use art-implementation-calibration-20261020 with workflow
 2.2.1. Ship the complete generic/game design references, JSON template and standalone

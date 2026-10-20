@@ -323,32 +323,32 @@ fn legacy_tasks_reject_new_mutations_until_explicit_upgrade() {
         .production_upgrade(&f.id, original.revision)
         .unwrap();
     let current = f.record();
-    assert_eq!(current.workflow_version, "2.2.1");
+    assert_eq!(current.workflow_version, "2.2.2");
     assert!(!current.art_design.sources.is_empty());
     assert!(current.art_design.requirements.is_empty());
 }
 
 #[test]
-fn calibration_update_is_offered_without_replacing_pinned_records() {
+fn reference_update_is_offered_without_replacing_pinned_records() {
     let f = enabled_fixture();
     f.service
         .production_commit(&f.id, f.record().revision, |r| {
-            r.workflow_version = "2.2.0".into();
-            r.policy["workflowVersion"] = json!("2.2.0");
+            r.workflow_version = "2.2.1".into();
+            r.policy["workflowVersion"] = json!("2.2.1");
             Ok(())
         })
         .unwrap();
     let before = f.record();
     let view = f.service.production_get(&f.id).unwrap();
     assert!(view.available_update);
-    assert_eq!(view.record.unwrap().workflow_version, "2.2.0");
+    assert_eq!(view.record.unwrap().workflow_version, "2.2.1");
     let updated = f
         .service
         .production_upgrade(&f.id, before.revision)
         .unwrap();
     assert!(!updated.available_update);
     let record = updated.record.unwrap();
-    assert_eq!(record.workflow_version, "2.2.1");
+    assert_eq!(record.workflow_version, "2.2.2");
     assert_eq!(record.approvals.len(), before.approvals.len());
     assert_eq!(record.current_stage, before.current_stage);
     assert_eq!(record.stages, before.stages);
