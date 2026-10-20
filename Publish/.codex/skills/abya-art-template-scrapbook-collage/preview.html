@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>手作纸艺／拼贴 · 实机对照</title>
+<style>
+body{margin:0;background:#f7f1e6;color:#293f38;font:16px/1.6 system-ui,sans-serif}
+main{max-width:1440px;margin:auto;padding:24px}h1{font-size:26px;margin:0 0 8px}
+p{margin:8px 0}nav{display:flex;flex-wrap:wrap;gap:16px;margin:20px 0}
+select{font:inherit;padding:6px;background:#fffbf1;border:1px solid #a7b4a0;border-radius:4px}
+img{display:block;width:100%;height:auto;border:1px solid #a7b4a0}a{color:#286454}
+video{width:100%;max-width:960px}details{margin:16px 0}
+</style><main>
+<h1>手作纸艺／拼贴</h1>
+<p>隔离实机小样：两种密度、五种状态。候选模板，尚有小字号字面差异，未获策划认可。</p>
+<nav>
+<label>视口 <select id="width"><option>1280</option><option>1920</option></select></label>
+<label>密度 <select id="mode"><option value="3">3×3</option><option value="4">4×4</option></select></label>
+<label>状态 <select id="state"><option value="default">默认</option><option value="selected">选中</option><option value="success">成功（反馈结束）</option><option value="error">错误（复位后）</option><option value="settlement">结算</option></select></label>
+<label>查看 <select id="kind"><option value="native">Player 实机</option><option value="reference">同配置基准</option><option value="difference">差异增强图</option></select></label>
+</nav>
+<img id="image" alt="所选条件的实机对照">
+<p id="caption"></p>
+<p>不是完整游戏或联机证明。数字与文字为原生独立组件；成功/错误瞬态请查看录屏。</p>
+<details><summary>查看原生反馈录屏（1920×1080）</summary>
+<video controls preload="none" src="evidence/feedback-1920.mp4"></video>
+<p>成功约在 13 秒和 40 秒附近，错误约在 18 秒和 45 秒附近。视频与事件时钟有采集启动偏移。</p></details>
+<p><a href="references/verification.md">验证范围与残余差异</a> · <a href="DESIGN.md">设计依据</a> · <a href="evidence/index.json">证据索引</a></p>
+</main><script>
+const controls=['width','mode','state','kind'].map(id=>document.getElementById(id));
+function render(){
+const [width,mode,state,kind]=controls.map(e=>e.value);
+document.getElementById('image').src=`evidence/${kind}/${width}-${mode}-${state}.png`;
+document.getElementById('caption').textContent=`${width}×${width*9/16} · ${mode}×${mode} · ${controls[2].selectedOptions[0].textContent} · ${controls[3].selectedOptions[0].textContent}`;
+}
+controls.forEach(c=>c.addEventListener('change',render));render();
+</script></html>

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "pause-interrupt-reliability-20261020",
-  "totalBytes": 315398413,
+  "releaseLabel": "scrapbook-reference-workflow-20261020",
+  "totalBytes": 333174539,
   "files": [
     {
       "path": ".codex/README.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": ".codex/skills/abya-art-template-comic-arcade-ui/SKILL.md",
-      "bytes": 3345,
-      "sha256": "11bc6e00b4d367123825275d4f060193bd8135ca36891dfa783c2e5c83bbae5b"
+      "bytes": 3445,
+      "sha256": "842bb004d6c9f00b858085663481e62bc84f36b00e6d120031baa85543db4ad8"
     },
     {
       "path": ".codex/skills/abya-art-template-comic-arcade-ui/abya-art-template.json",
@@ -199,9 +199,589 @@
       "sha256": "9e663298ac85f8ecf3cf2d32b933ad18d5b908ff434dec8ff752f41539356efd"
     },
     {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/DESIGN.md",
+      "bytes": 2239,
+      "sha256": "07a81a21441dbfd724bd44de7c996c475dac94ebf398dfeb9af256b529399cf4"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/SKILL.md",
+      "bytes": 2285,
+      "sha256": "1de60117b7a065398ae93278875480a610b7ccec476288af5196f41a878644a9"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/abya-art-template.json",
+      "bytes": 358,
+      "sha256": "3c9da17972f935f1fb09f569aa69803140405636230c0d7c60f0ae86855a6788"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/design-tokens.json",
+      "bytes": 824,
+      "sha256": "6abc2ae123bac865c17bb709ea1fab927183d8525cd62e0d558fa50a8224978b"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/png/hit.png",
+      "bytes": 108,
+      "sha256": "e304a634e5f14b69cce1a33c15ca75170c237904bc50cbd73929500b73cbe1ee"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/png/panel.png",
+      "bytes": 25686,
+      "sha256": "6744d437c8fc1921a10a1281c9bf5dd55bcee814a763b15fba88a4339b864520"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/png/paper.png",
+      "bytes": 28705,
+      "sha256": "16e09299be33d5b181a2877293497acdea7fab7ca200e42b29ed3f487da63538"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/png/solid.png",
+      "bytes": 109,
+      "sha256": "105f8e3b938821ba31292f629a130d0a05ba3c2e6412d5a39ef703954a3f1d39"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/png/star.png",
+      "bytes": 1676,
+      "sha256": "7e1928e5043434d343ff73c58861795ef8ec7a03dbbb776fcc5c2535ea19ad80"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/png/sticker.png",
+      "bytes": 2473,
+      "sha256": "bcb27a7d056a053ac1b24257f96ad90c80a2245b1a6e9f8e0e3ff4362bc86806"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/png/tape.png",
+      "bytes": 3139,
+      "sha256": "2d88c8082d3acc732876722ffc781cfe527966ffdf93ba3d1b8b0b7308378205"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/png/torn-paper.png",
+      "bytes": 11231,
+      "sha256": "cdddbcf3e82cd62d4cb0b3117920391bd161f206d7fcd95d8bbe5bd7ce3cb17b"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/source/hit.svg",
+      "bytes": 143,
+      "sha256": "12b12af29f03bb8d501e06ac402843ea745e62c684d1d8ae9676e8745fc9ac60"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/source/panel.svg",
+      "bytes": 33363,
+      "sha256": "7b6fdf0023a00325cc20d0067dad261bb857558cafe7e26598962e2ac2dbc7cd"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/source/paper.svg",
+      "bytes": 132232,
+      "sha256": "2860b820f6e39ca77fb04d27299206c1d49e11efbae937da88e3fc590a4a1f8a"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/source/solid.svg",
+      "bytes": 126,
+      "sha256": "07eb58c6b39bd648103f82f0a64839dfa5df284cb2e72ca8024fb5faa72b26fb"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/source/star.svg",
+      "bytes": 576,
+      "sha256": "541a7f9bfb488c566f5f53377a531d848a4963159fdf82900aa4a8eec664207c"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/source/sticker.svg",
+      "bytes": 374,
+      "sha256": "8181cf3c6e4062c1d7da414a5d66ba1448ced1642b1361a7d64780a1fff3e1ea"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/source/tape.svg",
+      "bytes": 8348,
+      "sha256": "ace81fcc62b3c72f8f2a5c05d288a14febef3c861c612bb96b435195e5bdc298"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/source/torn-paper.svg",
+      "bytes": 15191,
+      "sha256": "1342417a836368d663f646de65015d81e3c8d680d1a655d8540def274cc5b227"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/specimen-archive.zip",
+      "bytes": 106975,
+      "sha256": "8a908394e53de1e1ab4f9cbf5211767b8a02f5908f6dae483aef4cd0e97ab98e"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/assets/specimen.json",
+      "bytes": 2325,
+      "sha256": "9a45ad07f1ec08f425dcd02e0c5820269778ebedaf3fe4090043abdb785ecf37"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1280-3-default.png",
+      "bytes": 176668,
+      "sha256": "47705a83f17a8fa879f24a36947f10c7d37cd0ad2507a84dd57f7a264f515ad9"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1280-3-error.png",
+      "bytes": 175914,
+      "sha256": "338d0c1274e9c3de0009991014125a764fa42e8ca72bbf6397f9992281fb700a"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1280-3-selected.png",
+      "bytes": 176957,
+      "sha256": "7540e6565b9d9917d0fa6787b75507675ddd6442463598e69631524e697acd38"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1280-3-settlement.png",
+      "bytes": 182092,
+      "sha256": "705a1c3232f1b42260efa053a6c0337c20b62805eaa890c82b11e99d66e6396c"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1280-3-success.png",
+      "bytes": 176814,
+      "sha256": "51cd50cb153e0925e0973c59b20059169abce14d364feb569238faaafa8a2b17"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1280-4-default.png",
+      "bytes": 179961,
+      "sha256": "1c672218de0dd4e4c8323dd345e13e24dbdc709a2621fab900c0255ba3802957"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1280-4-error.png",
+      "bytes": 179327,
+      "sha256": "f47fc5d75eb679522faa7c76246b3441e47237e8255c952ccb81098cacedd723"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1280-4-selected.png",
+      "bytes": 180530,
+      "sha256": "6b527f2e65b29af01f5d6fa7cbee6e7c1e76f3874004b7ad29db6383a2a12b3d"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1280-4-settlement.png",
+      "bytes": 184147,
+      "sha256": "a6691f2613cd357088d54b75743e4aa88e142dc1c9e6d777de465b09a62165a1"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1280-4-success.png",
+      "bytes": 180091,
+      "sha256": "f4157c9a4994ac69840a46a704dd1b91ed8af13c0d9729debdc7a66cf6d053ce"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1920-3-default.png",
+      "bytes": 381060,
+      "sha256": "2c17743156bd28e4d2ab57a5cb092e34dfaeb886383a3d49e971d197ca878ed4"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1920-3-error.png",
+      "bytes": 380966,
+      "sha256": "4ee5adfb87e9c0a6e56e0fca121ae3ddd787bb70f3023f9cc67d0d23eeb6e46f"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1920-3-selected.png",
+      "bytes": 382011,
+      "sha256": "981183b6d68aa695c1870da3eea6dec0cdf165beeae69e6cc74707c71c22a8d6"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1920-3-settlement.png",
+      "bytes": 390113,
+      "sha256": "b5ef4cf0b586ab7f3ca297929fbde65afc5db6be5f374cac65f36ba08c265db0"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1920-3-success.png",
+      "bytes": 382291,
+      "sha256": "969f2393af923b708b53e2378839da53cbcc8af87915795c3c93f08d972bcdde"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1920-4-default.png",
+      "bytes": 387277,
+      "sha256": "9ccae032a01747183e270b25310729daf3a9c3685f36685a9c9c1c016bc68883"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1920-4-error.png",
+      "bytes": 386534,
+      "sha256": "51971fef9fdaf9eff491ff77015cdb3390d3deab1597a8dc94aa869ba4d70b6e"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1920-4-selected.png",
+      "bytes": 388025,
+      "sha256": "a8de141ca514641b8294e0ff760a171de2d01c59fa6f5929dbcd6f97edf3ba76"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1920-4-settlement.png",
+      "bytes": 396037,
+      "sha256": "69efbe4429b1a8cd18c86837a24b08987601164f43615c90938ec490bc1a82d1"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/difference/1920-4-success.png",
+      "bytes": 388148,
+      "sha256": "0d70076bcacd60c2b2fbaa7b1729d287f67b981ae60d6bc713eaa2413c7324c6"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/feedback-1280.mp4",
+      "bytes": 276890,
+      "sha256": "db832c4ee98be6bd7a24c2ba66cd3be4e93e2d8783c8fd88e644a5d5c559cc3c"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/feedback-1920.mp4",
+      "bytes": 432836,
+      "sha256": "5a4ba1bd0fcd6931fab59683c32a3ac2b672a8eea883edf25fdf819e0ae409bd"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/index.json",
+      "bytes": 31326,
+      "sha256": "533e979688ff8feb364a4bccfaf1cfb3f6288ae12bce72195f852959e04916ad"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1280-3-default.json",
+      "bytes": 43345,
+      "sha256": "c08085f6e30987c1e05bf46bf1ac3702a5c5aa65629dfe82793dc9abf12ae1b7"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1280-3-error.json",
+      "bytes": 43343,
+      "sha256": "5707862306ea860851e0167c9630e9e8db3347b6fc58eef71a6dd26f94846907"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1280-3-selected.json",
+      "bytes": 43346,
+      "sha256": "8b11f641941bffba3439e19ee054dd465bb58c5557764d0cce15340d48e378a7"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1280-3-settlement.json",
+      "bytes": 43342,
+      "sha256": "7b4ca7bc871c4ba78bd6a6f30181c4a1efb286b8a2bcd7acb6e7fd4bed4a0e84"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1280-3-success.json",
+      "bytes": 43345,
+      "sha256": "0df0f0a6d8e6c1882288a2742e076be96f5f41aaa8868fe62375521810dc3038"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1280-4-default.json",
+      "bytes": 56410,
+      "sha256": "3f8ff30b0bc4aaf8e8e340687641ddbcf9329e2fd4ea83c9883534c4b9cd5818"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1280-4-error.json",
+      "bytes": 56391,
+      "sha256": "409f0ec968c982835233610ca3ae2bb1a0f25334bf45db27291aadbbae7411fc"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1280-4-selected.json",
+      "bytes": 56394,
+      "sha256": "eaa3a21cdca00e413589f81301f16a8efcd0e6a9f325d39cee7acf2c410a6ba6"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1280-4-settlement.json",
+      "bytes": 56389,
+      "sha256": "4fe2cd65633abe371805c85aba52a59963f5285bc2c953b95e2520b9f33b2998"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1280-4-success.json",
+      "bytes": 56393,
+      "sha256": "f08d2dd7bd4bb783cb9938be9c205f6655f37c46a0cf4a5be62722caeeab4687"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1920-3-default.json",
+      "bytes": 43462,
+      "sha256": "47ef5ee7ae64dcf08c0360b613eff23498bc96320ddbad865e54f58fd36330d7"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1920-3-error.json",
+      "bytes": 43460,
+      "sha256": "66fab4d950293368f7f3ddad4c17be651ab840436b1ff649d60d676d36d21242"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1920-3-selected.json",
+      "bytes": 43463,
+      "sha256": "92acd2326553cc5a2a42ab0ad9a56d94b2ae9d9a392dec29cc79b9f40ffd5ada"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1920-3-settlement.json",
+      "bytes": 43493,
+      "sha256": "12d2477ec86ced9b78621fee511d5ab793c1c1410d89c3b85f3ec6a4986ebfc2"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1920-3-success.json",
+      "bytes": 43462,
+      "sha256": "f9aedcf262f03f6f5b3acd42f0fd84e201b7abc7adf2f80c63cee24c3c51650d"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1920-4-default.json",
+      "bytes": 56588,
+      "sha256": "8b6469f8fd5fd8bd06b80828d29fc23fa9190687bdb4523637171f38c4a2ad59"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1920-4-error.json",
+      "bytes": 56586,
+      "sha256": "d46d0073acdf1d698a4a49bcd7975c3a3da9a81b28b6a4eb07aadb74b4bd06db"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1920-4-selected.json",
+      "bytes": 56589,
+      "sha256": "9c625574f859f3770669e49381768a6afe375987adad8bc441e6b78e56c698f7"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1920-4-settlement.json",
+      "bytes": 56618,
+      "sha256": "7c0d51ee625d6af1bb335e7e388e528a29e17543e66bf423faaf68e4c41ded8b"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/measurements/1920-4-success.json",
+      "bytes": 56588,
+      "sha256": "507c7654a87e319fa5808164682617e2e95c21d9356178b489544f648aaf1e45"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native-bindings.json",
+      "bytes": 96650,
+      "sha256": "13feb0d040d91039f9ef43916853a4debc6cfb1c276fd1fed4d340bfbddacde4"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1280-3-default.png",
+      "bytes": 237330,
+      "sha256": "caff3fc552e56e987618412b560e19de8a6c1f635479c4120c67e2926f04b058"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1280-3-error.png",
+      "bytes": 236807,
+      "sha256": "0ee23691d18138e634ba06ed233f58a452885c423dd4e34211a6546bcd2d778c"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1280-3-selected.png",
+      "bytes": 237895,
+      "sha256": "13f6561539b4e0d3321edc13557b35a57ae552a0e3cf3b78e41045457aa9fb5e"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1280-3-settlement.png",
+      "bytes": 241329,
+      "sha256": "5bb19f01e12521866b377200a79fab319307ee3a215a6fb3cd12bbb31eef4ab4"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1280-3-success.png",
+      "bytes": 237944,
+      "sha256": "4f2696bbf8c6f7b313c69f99925f4d2e6299fa470686095fc2337f1ffdb24db2"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1280-4-default.png",
+      "bytes": 242599,
+      "sha256": "b621f3233cc3ebc87f3d5cf4e3a8969445f60656a2bd881d6edf92552b172eed"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1280-4-error.png",
+      "bytes": 242725,
+      "sha256": "0f9a9021f98aa2ffc0fea1981e93c2e766ec8062d9b5b2bd4d0ffb69d2617493"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1280-4-selected.png",
+      "bytes": 242544,
+      "sha256": "484f37a98c52ecc74b1fe9a4faf825914fc7cc838a84a850f5699cb8f1501ff7"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1280-4-settlement.png",
+      "bytes": 247584,
+      "sha256": "c165753d88fc7b289ae580235c7218c293b479a597b6c376c7e54ed1b44c78a0"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1280-4-success.png",
+      "bytes": 242464,
+      "sha256": "0516b90708ebe416aee04361555942989656d15183c6fcd389d5f0040e78ca78"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1920-3-default.png",
+      "bytes": 391818,
+      "sha256": "c8e1efd738f89c5369ee76fc24f022a4ff26eacf28344fc7bbabb3c59a663f4c"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1920-3-error.png",
+      "bytes": 391101,
+      "sha256": "52de63cd6471f2c52f53fafc05d092b89c4f548feabb9958f276f51a15aa131e"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1920-3-selected.png",
+      "bytes": 392784,
+      "sha256": "e880500b585e2364567e3bf95000fefa69617b5529a46c61f006389fe8604ea2"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1920-3-settlement.png",
+      "bytes": 399693,
+      "sha256": "3dd09bfc2517fa9a533b7557d3dbada362d75c36d1fe628ffa1e7a7c2aed0b96"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1920-3-success.png",
+      "bytes": 393427,
+      "sha256": "1c7e5d197dbccfcf3ed2baf828f3f677275caf18b06f8f710181c29f26ac7d16"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1920-4-default.png",
+      "bytes": 399812,
+      "sha256": "9cb3d8f270c86dc9877a6c5aa6c35634569a4ab4839cf3f55454d606ada37a3c"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1920-4-error.png",
+      "bytes": 397837,
+      "sha256": "719ee4a82a9a279fad7839daa62fc3d4774fca753f5d931fdec0fc811365ffba"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1920-4-selected.png",
+      "bytes": 400240,
+      "sha256": "d5ff933d8fea5a5fc772dcc4efca6f12da72f687611a9a6daf2d01974f2a1fd8"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1920-4-settlement.png",
+      "bytes": 406358,
+      "sha256": "35ca3006670a92b5571688c0d372d0720e1f8127bf1b04f45a85f57e334c9d0b"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/native/1920-4-success.png",
+      "bytes": 399557,
+      "sha256": "827b4c7e99f52ec5b9272606dc6a27761a30cb48da74888d4169636eea3e51c1"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/recording-1280.json",
+      "bytes": 654,
+      "sha256": "643c33aacd86e07bcf75b9000cc9bc736bc2ab1012c3f936946f83f840d8efe8"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/recording-1920.json",
+      "bytes": 654,
+      "sha256": "b8baaedad5e5c41001763fb4f69a1c7a1eb010097227fb29999ce7ddcbe13b3b"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1280-3-default.png",
+      "bytes": 129784,
+      "sha256": "84a14e0d5ec92dd40110d07acce7eb664022b8029bc0eff1a07edaf91c099d89"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1280-3-error.png",
+      "bytes": 128944,
+      "sha256": "5e6a9a9f65e56af2782b20c9a27c8941f76b98e03e328a94da1ebf9851fa01c0"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1280-3-selected.png",
+      "bytes": 129881,
+      "sha256": "88077f5f8d267e5b6e46838051ec8af4b8513e04085f2d28d0350db27893d2ff"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1280-3-settlement.png",
+      "bytes": 132595,
+      "sha256": "c566e32110387c4f56849e429266e5eaa40e1a472a41519625c25d388b3396aa"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1280-3-success.png",
+      "bytes": 129882,
+      "sha256": "692fde59a3ecc7bbc4380ceaba92079c40695a6aa4fa96d1a9a5245d986a3456"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1280-4-default.png",
+      "bytes": 130359,
+      "sha256": "84e6f5c1c12cf02d6eba1a865b653c6c2fd1af5b6d33d5c20c42a4f31037abd6"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1280-4-error.png",
+      "bytes": 129558,
+      "sha256": "7ae63c12c7b6b6fa3cbca53c80ab6f9a2bb4ffdcdf82d84b0fb71f4905f57d97"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1280-4-selected.png",
+      "bytes": 130488,
+      "sha256": "e14654d46de58a61d994e75d241770af9ed32413e4498a2f752c187165653731"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1280-4-settlement.png",
+      "bytes": 133448,
+      "sha256": "50021f7b8505cf2656a2a9db183edc3311eba98df9c2f3f644d1c5c596f0036f"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1280-4-success.png",
+      "bytes": 130488,
+      "sha256": "6a8ed81a546e7cd1c9c20c8bc81b4463f5d02adbd60456f352535866e0d19546"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1920-3-default.png",
+      "bytes": 239749,
+      "sha256": "6202004cb91b0c7692d43a8c37208cce936f93574f734365520e48a39bb77310"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1920-3-error.png",
+      "bytes": 238346,
+      "sha256": "f208e18fcdad7b28c20b17af37566e483d48ceb7eda527308c000b60acc74cbc"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1920-3-selected.png",
+      "bytes": 239871,
+      "sha256": "7d1d85fe9a4b48e335d772fe17ef186c34c27531f570373b0909a7753ab583ee"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1920-3-settlement.png",
+      "bytes": 244526,
+      "sha256": "557a2d63968ef973c68680e197f8251dfac527261e4ad624c88170ed54b647eb"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1920-3-success.png",
+      "bytes": 239873,
+      "sha256": "779523547fbc0d8375abb1c8b75debd4811bd166e193d64ee9b13decfa47769b"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1920-4-default.png",
+      "bytes": 242387,
+      "sha256": "ceda88fe41a398aa6d43d0c1f51ae033d66f077aea11c70a6ec0ec9e44ab548c"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1920-4-error.png",
+      "bytes": 241031,
+      "sha256": "e3b7f7c3e7a07237c6f3406c3eb40e5dee748732a1648155c68704210c96b082"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1920-4-selected.png",
+      "bytes": 242610,
+      "sha256": "a8e9234354e65f5d49bbc7256bc96fd8f5a40d725dfd227758baa01d1897452c"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1920-4-settlement.png",
+      "bytes": 247222,
+      "sha256": "8a99e8ed19b97c7c853b7803a31462fbdaaa05d152bc3fcdc5cf6671cc2236b3"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/evidence/reference/1920-4-success.png",
+      "bytes": 242610,
+      "sha256": "e3424cc75297ce745d670e37b4f48d94f16039340c1afd9c5e7cd43fd0f212b9"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/preview.html",
+      "bytes": 2701,
+      "sha256": "891bc6cf75388293fa6411e57be97e3fb02e8cb9c700b509bb4c1b2d9cea23d7"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/references/asset-guide.md",
+      "bytes": 2233,
+      "sha256": "e030aa9cb9aa521922ef8b2170a5272de9a073543d04bcf4604b4a7f0f7b1c38"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/references/behavior-checks.md",
+      "bytes": 1635,
+      "sha256": "a4b500c5a7afcc5729743df5c9cd7de81d3e8a5459b6f26ba0a31241c1f4b2c4"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/references/verification.md",
+      "bytes": 4017,
+      "sha256": "0a45beab62c2c2b86fd412d290b05357dd92b3ecf34eb2398909d9dc451c4db7"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/scripts/make-assets.mjs",
+      "bytes": 3117,
+      "sha256": "86a5c47c959702dfdc21400b90266736bf4161cbe8dec2793f7504a1b7c66f5a"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/scripts/measure-pixels.py",
+      "bytes": 2298,
+      "sha256": "da956956e645d3cf601eec88b21eb21692f663d9f118c3b122618375bb8d0e8b"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/scripts/specimen-lua.mjs",
+      "bytes": 5858,
+      "sha256": "dce8ef02cecd5282476ac2ef9d8d0b43150ce0fadea573335c984fa8c21a3481"
+    },
+    {
+      "path": ".codex/skills/abya-art-template-scrapbook-collage/scripts/specimen-model.mjs",
+      "bytes": 3722,
+      "sha256": "c9f92d3a6f44ba21acdef50b08802eb513cffffab8e6ebd2b62e841d805ff42f"
+    },
+    {
       "path": ".codex/skills/abya-game-development-task/SKILL.md",
-      "bytes": 6496,
-      "sha256": "d6e98239a8151d36844ea0052839d47aa326d33e3b6b0113cfbdffa2224aaaf1"
+      "bytes": 6968,
+      "sha256": "454545a82b5d9609c1fbb1deae1727bd9e5b57f3e3c080cf83cc3439c541907c"
     },
     {
       "path": ".codex/skills/abya-game-development-task/agents/openai.yaml",
@@ -235,8 +815,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/art-requirements.template.md",
-      "bytes": 6054,
-      "sha256": "55a7a36457abda5d1cd9fe71de30a246344618ab007590f29305a9b849eab197"
+      "bytes": 6467,
+      "sha256": "19f557ca2d751ee6cd6da1494245e9a45646e6fbdfe3d142dae3879ce8e2b7f5"
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/closeout.template.md",
@@ -250,8 +830,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/plan.template.md",
-      "bytes": 1938,
-      "sha256": "c283fb89b4be531cb21af75b311d96e68a3aa2dfdf455aeff272b22fbe741c55"
+      "bytes": 2168,
+      "sha256": "0dd6a30478eea8f3be34337344130f7dbde6c80b00e70b4978ec7fe9f0a0c26f"
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/requirements.template.md",
@@ -261,22 +841,22 @@
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/round.template.json",
       "bytes": 461,
-      "sha256": "74a4ae6be146af067cc7dc7083a581731821ff8d16bc4a1a4aeea22a20a976d0"
+      "sha256": "106574de1210230b4f6648875d86c515cb57bd7183ead8237a6d72b674b4a24e"
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/workflow-policy.json",
       "bytes": 5417,
-      "sha256": "0c67fa6df9a0fa5d13b62bc9d5c06198a47b8065144a16e7378d646f9804844a"
+      "sha256": "5504d7cf633441e6a5c40e3f0b41d5fde2f21b02f710fe0778a8937ef437552a"
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/workflow.template.json",
       "bytes": 1167,
-      "sha256": "dd726103c009ca55845fe192065993ef453f652208f4ee1cdb6c4ef65d262985"
+      "sha256": "39876c8ed767d8384f035fadaa48f05ce8aeb6da3c713620c598a29bcc6ccae7"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/art-design-records.md",
-      "bytes": 11782,
-      "sha256": "f429336d6cbf625c0b0fa00f56e91d61d3be4d438cc947c561e0ae89c5152328"
+      "bytes": 12137,
+      "sha256": "32452f8f9ab93477d42204e71b76054aa4f459f7fe8444efba82564028bfbfe1"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/bot-artifacts.md",
@@ -295,8 +875,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/SKILL.md",
-      "bytes": 9645,
-      "sha256": "d0fa04b8d260eab5fdd7c4a1f618169ba6e846510ffeef9845b5ac624fa63227"
+      "bytes": 10020,
+      "sha256": "dc113fff3cda077f294c7d6d14b8e2071bdf0c91716899971538c76fb54a35a0"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/agents/openai.yaml",
@@ -305,8 +885,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/SKILL.md",
-      "bytes": 11662,
-      "sha256": "4aa8aa47c333210ade09fedca58b74a591a5c8dc9956950e65630a595210f276"
+      "bytes": 11959,
+      "sha256": "d6282a18e3c639a4629555d2a193a3af7e54e774574a6f7f1d1fe92c01fbb115"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/agents/openai.yaml",
@@ -342,6 +922,11 @@
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/references/platform-and-input.md",
       "bytes": 1984,
       "sha256": "3400c13b7162f104ae5b4f45dbc99aa7fe94181c303de4fed1eebe96fa787783"
+    },
+    {
+      "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/references/reference-to-design.md",
+      "bytes": 3874,
+      "sha256": "fb684b61b106da69f83a02f16c596899deace089aba3e28aa3dac91749060f44"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/references/review.md",
@@ -425,8 +1010,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/production-stages.md",
-      "bytes": 8160,
-      "sha256": "c73a6189cb415364560ba026ae1d96f8907c0d22d6c47762b6e5890fe08bbfdc"
+      "bytes": 8502,
+      "sha256": "0edc3aa07e8e6daf0a5a82fb2e792773b6313608a3a3f5913508978f0ceac4e5"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/recording.md",
@@ -465,8 +1050,8 @@
     },
     {
       "path": ".codex/skills/abya-import-task-template/SKILL.md",
-      "bytes": 4025,
-      "sha256": "ed9aabe6f9630d6070174c50eece10c67abec44550e4442ceb42c73b3ffa49ad"
+      "bytes": 4147,
+      "sha256": "3d91296a09f61a6737229f0f13fe73d240c7d038abea118aebded7d33ef30519"
     },
     {
       "path": ".codex/skills/abya-import-task-template/scripts/import-template.mjs",
@@ -505,18 +1090,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 25079808,
-      "sha256": "b787dd460439d82d4036642cf0cbe87395dda29de1e2f73c9827324a3c2a7bae"
+      "bytes": 24846848,
+      "sha256": "284da49ce9fa240a9c5175d64b5914eab8bd742640883ecc60a0fbe1a5a90036"
     },
     {
       "path": "abya-desktop.exe",
       "bytes": 5995520,
-      "sha256": "f4d0773e0c93d97d42c7bac26f197cc4e5968dcac4acc331d3e7374d86596b2c"
+      "sha256": "ecef3501023b69981767713ca97ea3005be51cbb5ee1058d562e90ba5c7b49c1"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 661,
-      "sha256": "745e3909866b0be9d21ba896a39837a9fccdc5ee99cb632533e92859db0c62c2"
+      "bytes": 620,
+      "sha256": "3c0107613bc3e338447810eb47de9df298feec00acf0669d0aae28b2c792cb84"
     },
     {
       "path": "runtime/LICENSE.txt",
