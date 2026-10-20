@@ -1,5 +1,22 @@
 # Development Tasks Skill
 
+## Game UI design and candidate references (2026-10-20)
+Workflow 2.2.3 adds a scoped game-ui-design child to the pinned game-art-design tree.
+HUD/menu/inventory/level-select/results work loads that method and only relevant
+generic UI guidance. World/character-only tasks do not load an entire UI checklist.
+The offline candidate reference bank separates layout, style and state-feedback,
+filters actual UI kinds/input/density/borrow scope, preserves brand and planner
+sources, and never selects artTemplate or collects art_library_cases. Existing
+direction/resources/coverage/realization fields carry UI decisions and evidence;
+the section template is inserted into existing documents, not a new approval node.
+Catalogue projections expose game art, game UI and generic interface methods only
+when present in the task's pinned tree. No extra skillPins or task reads rewriting
+old 2.2.2 resources. Personal synchronization backs up all three entrypoints.
+Text sync tolerates native line endings; binary previews compare exact bytes so
+corruption cannot disappear through UTF-8 replacement decoding. Keep unrelated Skills.
+Test missing context, dense HUD vs material-only, brand/partial scope, input mismatch,
+literal untrusted sources, complete long-path deployment and unchanged approvals.
+
 ## Reference conversion and optional collage specimen (2026-10-20)
 Workflow 2.2.2 converts external references through applicability, visual rules and
 explicit borrow/adapt/reject/unverified decisions. Task DESIGN.md explains reasons

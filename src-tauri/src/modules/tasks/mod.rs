@@ -756,9 +756,15 @@ mod tests {
         "scripts/bot-evidence-checks.mjs",
     ];
 
-    const PRODUCTION_RESOURCES: [&str; 19] = [
+    const PRODUCTION_RESOURCES: [&str; 25] = [
         "references/art-design-records.md",
         "references/game-art-design/SKILL.md",
+        "references/game-art-design/references/game-ui-design/SKILL.md",
+        "references/game-art-design/references/game-ui-design/references/ui-design-handoff.md",
+        "references/game-art-design/references/game-ui-design/references/ui-reference-library.md",
+        "references/game-art-design/references/game-ui-design/assets/ui-design-section.template.md",
+        "references/game-art-design/references/game-ui-design/assets/ui-reference-library.json",
+        "references/game-art-design/references/game-ui-design/scripts/query-ui-references.mjs",
         "references/game-art-design/references/product-interface-design/SKILL.md",
         "references/game-art-design/references/product-interface-design/references/implementation-calibration.md",
         "references/game-art-design/references/product-interface-design/references/calibration-tools.md",

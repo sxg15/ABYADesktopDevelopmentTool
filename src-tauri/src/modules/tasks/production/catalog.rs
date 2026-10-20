@@ -126,6 +126,10 @@ impl TaskService {
                     "references/game-art-design/references/product-interface-design",
                     "product-interface-design",
                 ),
+                (
+                    "references/game-art-design/references/game-ui-design",
+                    "game-ui-design",
+                ),
             ] {
                 let skill_id = format!("abya-game-development-task/{suffix}");
                 let relative = format!(".{provider}/skills/{skill_id}");

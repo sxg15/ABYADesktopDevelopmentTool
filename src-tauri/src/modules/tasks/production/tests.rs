@@ -1124,7 +1124,7 @@ fn explicit_upgrade_preserves_approvals_and_round_history_without_inventing_self
     let old = f.record();
     let view = f.service.production_upgrade(&f.id, old.revision).unwrap();
     let r = view.record.unwrap();
-    assert_eq!(r.workflow_version, "2.2.2");
+    assert_eq!(r.workflow_version, "2.2.3");
     assert_eq!(r.cycle, old.cycle);
     assert_eq!(r.approvals.len(), old.approvals.len());
     assert_eq!(r.documents["plan"].sha256, old.documents["plan"].sha256);

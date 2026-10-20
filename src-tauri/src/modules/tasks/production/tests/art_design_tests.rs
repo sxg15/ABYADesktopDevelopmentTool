@@ -33,6 +33,7 @@ fn embedded_design_catalog_reads_pinned_resources_without_new_pins() {
         .filter(|entry| entry.kind == "design")
         .collect();
     assert_eq!(designs.len(), 2);
+    assert!(designs.iter().all(|entry| entry.name != "game-ui-design"));
     for entry in designs {
         assert_eq!(entry.sha256.len(), 64);
         assert!(
@@ -51,8 +52,104 @@ fn embedded_design_catalog_reads_pinned_resources_without_new_pins() {
     assert_eq!(serde_json::to_value(f.record()).unwrap(), before);
     assert!(
         f.service
+            .production_skill_text(
+                &f.id,
+                "codex",
+                "abya-game-development-task/references/game-art-design/references/game-ui-design",
+            )
+            .is_err()
+    );
+    assert!(
+        f.service
             .production_skill_text(&f.id, "codex", "../../outside")
             .is_err()
+    );
+}
+
+#[test]
+fn game_ui_catalog_hashes_nested_resources_without_mutating_records_or_pins() {
+    let f = Fixture::new();
+    let workflow_id = "abya-game-development-task";
+    let game_ui_id = format!("{workflow_id}/references/game-art-design/references/game-ui-design");
+    for suffix in [
+        "",
+        "/references/game-art-design",
+        "/references/game-art-design/references/product-interface-design",
+        "/references/game-art-design/references/game-ui-design",
+    ] {
+        files::write_file(
+            &f.workspace,
+            &format!(".codex/skills/{workflow_id}{suffix}/SKILL.md"),
+            b"---\ndescription: Pinned design fixture\n---\nOriginal task content.",
+        )
+        .unwrap();
+    }
+    let resources = [
+        "scripts/query-ui-references.mjs",
+        "assets/ui-reference-library.json",
+    ];
+    for resource in resources {
+        files::write_file(
+            &f.workspace,
+            &format!(".codex/skills/{game_ui_id}/{resource}"),
+            b"original candidate reference fixture",
+        )
+        .unwrap();
+    }
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.skill_pins = catalog::scan(&f.workspace)?;
+            Ok(())
+        })
+        .unwrap();
+    let before = serde_json::to_value(f.record()).unwrap();
+    let mut previous = f.service.production_catalog(&f.id).unwrap();
+    assert_eq!(
+        previous
+            .iter()
+            .filter(|entry| entry.kind == "design")
+            .count(),
+        3
+    );
+    let game_ui = previous
+        .iter()
+        .find(|entry| entry.id == game_ui_id)
+        .unwrap();
+    assert_eq!(game_ui.name, "game-ui-design");
+    assert_eq!(game_ui.kind, "design");
+    assert_eq!(game_ui.sha256.len(), 64);
+    assert!(
+        f.service
+            .production_skill_text(&f.id, "codex", &game_ui_id)
+            .unwrap()
+            .contains("Original task content.")
+    );
+    assert!(catalog::validate_choice(&f.workspace, "artTemplate", &game_ui_id).is_err());
+    for resource in resources {
+        files::write_file(
+            &f.workspace,
+            &format!(".codex/skills/{game_ui_id}/{resource}"),
+            b"changed candidate reference fixture",
+        )
+        .unwrap();
+        let changed = f.service.production_catalog(&f.id).unwrap();
+        for id in [workflow_id, game_ui_id.as_str()] {
+            let old = previous.iter().find(|entry| entry.id == id).unwrap();
+            let new = changed.iter().find(|entry| entry.id == id).unwrap();
+            assert_ne!(
+                old.sha256, new.sha256,
+                "nested resource omitted: {resource}"
+            );
+        }
+        assert_eq!(serde_json::to_value(f.record()).unwrap(), before);
+        previous = changed;
+    }
+    assert_eq!(f.record().skill_pins.len(), 1);
+    assert!(
+        catalog::scan(&f.workspace)
+            .unwrap()
+            .iter()
+            .all(|entry| entry.kind != "design")
     );
 }
 
@@ -323,7 +420,7 @@ fn legacy_tasks_reject_new_mutations_until_explicit_upgrade() {
         .production_upgrade(&f.id, original.revision)
         .unwrap();
     let current = f.record();
-    assert_eq!(current.workflow_version, "2.2.2");
+    assert_eq!(current.workflow_version, "2.2.3");
     assert!(!current.art_design.sources.is_empty());
     assert!(current.art_design.requirements.is_empty());
 }
@@ -333,22 +430,22 @@ fn reference_update_is_offered_without_replacing_pinned_records() {
     let f = enabled_fixture();
     f.service
         .production_commit(&f.id, f.record().revision, |r| {
-            r.workflow_version = "2.2.1".into();
-            r.policy["workflowVersion"] = json!("2.2.1");
+            r.workflow_version = "2.2.2".into();
+            r.policy["workflowVersion"] = json!("2.2.2");
             Ok(())
         })
         .unwrap();
     let before = f.record();
     let view = f.service.production_get(&f.id).unwrap();
     assert!(view.available_update);
-    assert_eq!(view.record.unwrap().workflow_version, "2.2.1");
+    assert_eq!(view.record.unwrap().workflow_version, "2.2.2");
     let updated = f
         .service
         .production_upgrade(&f.id, before.revision)
         .unwrap();
     assert!(!updated.available_update);
     let record = updated.record.unwrap();
-    assert_eq!(record.workflow_version, "2.2.2");
+    assert_eq!(record.workflow_version, "2.2.3");
     assert_eq!(record.approvals.len(), before.approvals.len());
     assert_eq!(record.current_stage, before.current_stage);
     assert_eq!(record.stages, before.stages);

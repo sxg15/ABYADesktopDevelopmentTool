@@ -26,12 +26,16 @@ function collect(from, to) {
     else if (entry.isFile()) {
       const bytes = fs.readFileSync(input);
       const normalize = body => body.toString('utf8').replaceAll('\r\n', '\n');
-      if (!fs.existsSync(output) || normalize(fs.readFileSync(output)) !== normalize(bytes)) writes.push({ output, bytes });
+      const textFile = /\.(?:md|json|mjs|c?js|py|ya?ml|txt|html?|css|svg)$/i.test(input);
+      const previous = fs.existsSync(output) ? fs.readFileSync(output) : undefined;
+      const matches = previous && (textFile ? normalize(previous) === normalize(bytes) : previous.equals(bytes));
+      if (!matches) writes.push({ output, bytes });
     } else throw new Error(`Unsupported source: ${input}`);
   }
 }
 collect(source, path.join(root, 'game-art-design'));
 collect(path.join(source, 'references/product-interface-design'), path.join(root, 'product-interface-design'));
+collect(path.join(source, 'references/game-ui-design'), path.join(root, 'game-ui-design'));
 if (mode === '--check') {
   console.log(JSON.stringify({ match: !writes.length, changedFiles: writes.map(x => path.relative(root, x.output)) }, null, 2));
   process.exitCode = writes.length ? 1 : 0;

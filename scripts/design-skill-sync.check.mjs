@@ -1,0 +1,33 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {spawnSync} from 'node:child_process';
+const script=path.resolve('scripts/sync-design-skills.mjs');
+test('personal sync preserves text portability, catches binary corruption and retains unrelated Skills',t=>{
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'abya-design-sync-'));
+  t.after(()=>{assert.equal(path.dirname(temp),path.resolve(os.tmpdir()));fs.rmSync(temp,{recursive:true});});
+  const skills=path.join(temp,'skills');fs.mkdirSync(skills);
+  const user=path.join(skills,'user-owned','SKILL.md');fs.mkdirSync(path.dirname(user));fs.writeFileSync(user,'user content');
+  const run=mode=>spawnSync(process.execPath,[script,mode,skills],{encoding:'utf8',windowsHide:true});
+  const initial=run('--write');assert.equal(initial.status,0,initial.stderr);
+  for(const entry of ['game-art-design','product-interface-design','game-ui-design'])assert.ok(fs.statSync(path.join(skills,entry,'SKILL.md')).size>0);
+  assert.equal(run('--check').status,0);
+  const text=path.join(skills,'game-ui-design','SKILL.md');
+  fs.writeFileSync(text,fs.readFileSync(text,'utf8').replaceAll('\r\n','\n').replaceAll('\n','\r\n'));
+  assert.equal(run('--check').status,0,'Native line endings alone must not trigger replacement');
+  const relative='game-ui-design/assets/reference-previews/hud-action-zones.png';
+  const image=path.join(skills,relative),original=fs.readFileSync(image),damaged=Buffer.from(original);
+  damaged[0]=0x8a; // Both signature bytes decode as the same UTF-8 replacement character.
+  assert.equal(original.toString('utf8'),damaged.toString('utf8'));
+  fs.writeFileSync(image,damaged);
+  const checked=run('--check');assert.equal(checked.status,1,checked.stderr);
+  assert.ok(JSON.parse(checked.stdout).changedFiles.map(s=>s.replaceAll('\\','/')).includes(relative));
+  const repaired=run('--write');assert.equal(repaired.status,0,repaired.stderr);
+  const report=JSON.parse(repaired.stdout);
+  assert.ok(path.resolve(report.backup).startsWith(temp+path.sep));
+  assert.deepEqual(fs.readFileSync(path.join(report.backup,relative)),damaged);
+  assert.deepEqual(fs.readFileSync(image),original);
+  assert.equal(fs.readFileSync(user,'utf8'),'user content');assert.equal(run('--check').status,0);
+});

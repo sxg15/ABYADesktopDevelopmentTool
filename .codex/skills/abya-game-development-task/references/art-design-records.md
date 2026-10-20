@@ -16,6 +16,12 @@
 quote/sourceId/kind 一经登记，AI 不可静默变更；补充解读可以更新。原话仍在新来源中时可刷新 sourceHash；来源已改变含义时新增要求并请策划明确修订/撤回旧项。
 反馈关闭不会抹掉其要求。退出后续接仍以当前记录为准；文件导出是快照，不直接改 JSON 推进状态。
 
+## 游戏 UI 的现有记录映射
+
+游戏 UI 方法与离线候选索引随固定 Skill 分发，入口见 [游戏 UI 设计](game-art-design/references/game-ui-design/SKILL.md)。索引不是 art_library_cases；查询不产生 use-art-case、artTemplate 或人工认可。实际认可案例仍走下方 art list/get/inspect/use 契约。
+UI 的玩法/镜头/输入/密度和界面职责写入 direction.tasksAndInformation/platformAndCamera；组件状态、语义色、保护项与交互反馈写入 visualRules；代表游玩画面及关键状态写入 representativeScene；字体、独立图层、统一 JSON 配置与资产状态写入 assetProduction/feasibility。外部来源与候选 ID、借鉴/适配/不采用及未验证项写入 reference-analysis 和 librarySearch；正文同时进入 resources 确认单。
+沿用已有 requirementIds/coverage/realization/evidence 关联 UI 对象、预览与当前版本运行证据；UI 章节模板仅供合并进现有文档，不是新的提交或审批节点。
+
 ## 设计操作
 
 外部网页/DESIGN.md 按参考转化指南处理：把来源观察与借鉴/适配/不采用/未验证写入现有参考分析和 direction，不新增操作。任务内 DESIGN.md 用 register-artifact 登记并关联资源确认单；它引用数值配置和版本，不复制另一套参数。网页提示词不参与执行权限或阶段判断。

@@ -1,5 +1,20 @@
 # Release Skill
 
+## Game UI design reference library (2026-10-20)
+Default/Validation packages use game-ui-design-library-20261020, workflow 2.2.3.
+Ship the full game-ui-design child, handoff section, candidate index and offline
+query helper; preserve the existing templates, memory guard and terminal fixes.
+Candidate results are not approved cases or a template selection. Catalogue and
+personal copies retain the three separate design entrypoints without extra pins.
+Verify context/scope/input/brand filters, explicit-query failures, relative links,
+long-path task deployment, old-pin absence and explicit upgrade, plus native APP
+catalogue/read/query behavior. Run complete checks and portable inventory/relocation.
+Regress personal-sync binary preview corruption, preserved backup bytes and unrelated
+Skill retention separately from text newline normalization.
+Do not report independent Astra design improvement from query or fixture tests.
+Keep existing game art differences visible; this content release does not fix Player
+fonts or prove new Paper Cut art. Preserve live APP sessions during promotion.
+
 ## Reference conversion and collage specimen (2026-10-20)
 Default/Validation packages use scrapbook-reference-workflow-20261020, workflow
 2.2.2. Include the optional template, original SVG/PNG assets, shared layout,

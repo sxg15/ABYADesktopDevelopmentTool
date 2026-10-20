@@ -39,9 +39,9 @@ if(action==='init'){
   assert.ok(path.resolve(task.workspacePath).toLowerCase().startsWith(path.join(root,'Workspaces').toLowerCase()+path.sep));
   let view;
   const update=async(operation,values)=>view=await invoke('update_task_production',{input:{taskId:task.id,expectedRevision:view?.record?.revision??0,operation,data:values}});
-  await update('initialize',{questionMode:'no-followup'});assert.equal(view.record.workflowVersion,'2.2.2');
+  await update('initialize',{questionMode:'no-followup'});assert.equal(view.record.workflowVersion,'2.2.3');
   const catalog=await invoke('get_task_skills',{taskId:task.id});
-  assert.equal(catalog.filter(skill=>skill.kind==='design').length,2);
+  assert.equal(catalog.filter(skill=>skill.kind==='design').length,3);
   assert.ok(catalog.every(skill=>skill.provider==='codex'));
   assert.equal(fs.existsSync(path.join(task.workspacePath,'.grok')),false);
   await assert.rejects(invoke('get_grok_terminal_availability'),/not found|unknown|未找到/i);
@@ -58,6 +58,26 @@ if(action==='init'){
   }
   assert.ok((await invoke('read_task_skill',{taskId:task.id,provider:'codex',skillId:interfaceSkill.id})).includes('从产品推导界面'));
   const source=view.record.artDesign.sources[0];
+  const gameUi=catalog.find(skill=>skill.provider==='codex'&&skill.name==='game-ui-design');
+  assert.ok(gameUi,'Game UI method is visible without selecting a template');
+  const uiRoot=path.join(task.workspacePath,'.codex/skills',gameUi.id);
+  for(const relative of ['SKILL.md','references/ui-design-handoff.md','references/ui-reference-library.md','assets/ui-design-section.template.md','assets/ui-reference-library.json','scripts/query-ui-references.mjs']){
+    assert.ok(fs.statSync(path.join(uiRoot,relative)).size>0,'Complete game UI resources must deploy');
+  }
+  assert.ok((await invoke('read_task_skill',{taskId:task.id,provider:'codex',skillId:gameUi.id})).includes('query-ui-references.mjs'));
+  const beforeQuery=JSON.stringify(view.record);
+  const lookup=spawnSync(process.execPath,[path.join(uiRoot,'scripts/query-ui-references.mjs')],{
+    input:JSON.stringify({uiKinds:['hud'],inputs:['pointer','keyboard'],density:'high',scope:'full',brandLocked:false}),encoding:'utf8',windowsHide:true});
+  assert.equal(lookup.status,0,lookup.stderr);
+  const lookupResult=JSON.parse(lookup.stdout);
+  assert.ok(lookupResult.candidates.some(c=>c.id==='authored-hud-action-zones'));
+  assert.ok(lookupResult.candidates.every(c=>!['paper-cut','scrapbook-collage'].includes(c.id)));
+  assert.ok(lookupResult.candidates.every(c=>c.humanApproved===false&&c.runtimeVerified===false));
+  for(const c of lookupResult.candidates.filter(c=>c.source.previewPath)){
+    const preview=path.resolve(uiRoot,c.source.previewPath);
+    assert.ok(preview.startsWith(uiRoot+path.sep));assert.ok(fs.statSync(preview).size>0);
+  }
+  assert.equal(JSON.stringify((await invoke('get_task_production',{taskId:task.id})).record),beforeQuery,'Reference lookup must not adopt or approve');
   const write=(file,text)=>{fs.mkdirSync(path.dirname(path.join(task.workspacePath,file)),{recursive:true});fs.writeFileSync(path.join(task.workspacePath,file),text);};
   for(const provider of ['codex']){
     const design=catalog.find(skill=>skill.provider===provider&&skill.name==='product-interface-design');
@@ -102,7 +122,7 @@ if(action==='init'){
   assert.equal(view.record.artDesign.caseUses.length,1);
   view=await invoke('submit_production_feedback',{input:{taskId:task.id,expectedRevision:view.record.revision,operation:'add-art-note',data:{text:'最后一个物品也要显示。'}}});
   assert.equal(view.record.stages.resources,'in-progress');
-  const report={nativeBridge:true,manifestVerified:true,codexOnlyCatalog:true,noRetiredProviderDeployment:true,retiredProviderCommandRejected:true,workflowVersion:'2.2.2',optionalCollageNotSelected:true,nestedDesignSkills:true,requestPersistedWithoutAdoption:true,downgradeRejected,omissionRejected,explicitCollection:true,conceptNotRuntimeVerified:true,exported:true,frozenCaseReference:true,newInputInvalidated:true,taskId:task.id};
+  const report={nativeBridge:true,manifestVerified:true,codexOnlyCatalog:true,noRetiredProviderDeployment:true,retiredProviderCommandRejected:true,workflowVersion:'2.2.3',optionalCollageNotSelected:true,gameUiResources:true,offlineCandidateQueryWithoutAdoption:true,nestedDesignSkills:true,requestPersistedWithoutAdoption:true,downgradeRejected,omissionRejected,explicitCollection:true,conceptNotRuntimeVerified:true,exported:true,frozenCaseReference:true,newInputInvalidated:true,taskId:task.id};
   fs.writeFileSync(path.join(root,'result.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
   await page.evaluate(taskId=>localStorage.setItem('abya.taskTerminalProviders',JSON.stringify({[taskId]:'grok'})),task.id);
   await page.reload();await page.waitForLoadState('domcontentloaded');
@@ -119,7 +139,14 @@ if(action==='init'){
   await page.getByRole('tab',{name:'Skill 库',exact:true}).click();
   await page.getByRole('heading',{name:'游戏美术设计',exact:true}).waitFor();
   await page.getByRole('heading',{name:'产品界面设计',exact:true}).waitFor();
+  await page.getByRole('heading',{name:'游戏 UI 设计',exact:true}).waitFor();
   await page.screenshot({path:path.join(root,'native-skills.png')});
+  const uiCard=page.locator('article.skill-card').filter({has:page.getByRole('heading',{name:'游戏 UI 设计',exact:true})});
+  await uiCard.getByRole('button',{name:'查看正文',exact:true}).click();
+  await page.locator('.skill-reading').getByRole('heading',{name:'游戏 UI 设计',exact:true}).waitFor();
+  await page.locator('.skill-reading .skill-design-note').filter({hasText:'本地 UI 候选参考索引'}).waitFor();
+  await page.screenshot({path:path.join(root,'native-game-ui-design.png')});
+  await page.locator('.skill-reading button').first().click();
   await page.getByRole('tab',{name:'美术设计库',exact:true}).click();
   await page.getByRole('button',{name:/原生隔离案例/}).click();
   await page.getByRole('button',{name:'让 AI 评估并参考',exact:true}).click();
