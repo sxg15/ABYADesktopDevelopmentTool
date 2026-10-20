@@ -1,0 +1,2530 @@
+[
+  {
+    "width": 1280,
+    "factor": 1,
+    "file": "1280-1.png",
+    "state": "Completed",
+    "checks": [
+      {
+        "id": "note-a",
+        "text": "把灵感",
+        "expected": [
+          78,
+          25
+        ],
+        "actual": [
+          78,
+          24
+        ],
+        "widthError": 0.0,
+        "heightError": 4.0
+      },
+      {
+        "id": "note-b",
+        "text": "留在纸上",
+        "expected": [
+          104,
+          25
+        ],
+        "actual": [
+          104,
+          24
+        ],
+        "widthError": 0.0,
+        "heightError": 4.0
+      },
+      {
+        "id": "note-c",
+        "text": "固定数据 · 验证小样",
+        "expected": [
+          125,
+          13
+        ],
+        "actual": [
+          121,
+          12
+        ],
+        "widthError": 3.2,
+        "heightError": 7.6923076923076925
+      },
+      {
+        "id": "title",
+        "text": "纸上练习 · 连线与数字",
+        "expected": [
+          198,
+          19
+        ],
+        "actual": [
+          198,
+          18
+        ],
+        "widthError": 0.0,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "target-label",
+        "text": "目标",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          36,
+          18
+        ],
+        "widthError": 2.857142857142857,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "timer-label",
+        "text": "剩余时间",
+        "expected": [
+          69,
+          17
+        ],
+        "actual": [
+          68,
+          16
+        ],
+        "widthError": 1.4492753623188406,
+        "heightError": 5.88235294117647
+      },
+      {
+        "id": "timer-unit",
+        "text": "秒",
+        "expected": [
+          18,
+          19
+        ],
+        "actual": [
+          17,
+          18
+        ],
+        "widthError": 5.555555555555555,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-0-name",
+        "text": "小禾",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          34,
+          17
+        ],
+        "widthError": 2.857142857142857,
+        "heightError": 10.526315789473683
+      },
+      {
+        "id": "row-0-score",
+        "text": "25",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          24,
+          19
+        ],
+        "widthError": 0.0,
+        "heightError": 5.0
+      },
+      {
+        "id": "row-1-name",
+        "text": "阿布",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          34,
+          18
+        ],
+        "widthError": 2.857142857142857,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-1-score",
+        "text": "20",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          24,
+          19
+        ],
+        "widthError": 0.0,
+        "heightError": 5.0
+      },
+      {
+        "id": "row-2-name",
+        "text": "长名字玩家",
+        "expected": [
+          95,
+          19
+        ],
+        "actual": [
+          94,
+          18
+        ],
+        "widthError": 1.0526315789473684,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-2-score",
+        "text": "15",
+        "expected": [
+          23,
+          20
+        ],
+        "actual": [
+          23,
+          19
+        ],
+        "widthError": 0.0,
+        "heightError": 5.0
+      },
+      {
+        "id": "row-3-name",
+        "text": "我",
+        "expected": [
+          15,
+          19
+        ],
+        "actual": [
+          15,
+          18
+        ],
+        "widthError": 0.0,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-3-score",
+        "text": "20",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          24,
+          19
+        ],
+        "widthError": 0.0,
+        "heightError": 5.0
+      },
+      {
+        "id": "control-mode3-label",
+        "text": "3×3",
+        "expected": [
+          32,
+          12
+        ],
+        "actual": [
+          32,
+          11
+        ],
+        "widthError": 0.0,
+        "heightError": 8.333333333333332
+      },
+      {
+        "id": "control-mode4-label",
+        "text": "4×4",
+        "expected": [
+          33,
+          12
+        ],
+        "actual": [
+          32,
+          11
+        ],
+        "widthError": 3.0303030303030303,
+        "heightError": 8.333333333333332
+      },
+      {
+        "id": "control-default-label",
+        "text": "默认",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          30,
+          14
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-selected-label",
+        "text": "选中",
+        "expected": [
+          29,
+          14
+        ],
+        "actual": [
+          29,
+          14
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-success-label",
+        "text": "成功",
+        "expected": [
+          30,
+          15
+        ],
+        "actual": [
+          30,
+          14
+        ],
+        "widthError": 0.0,
+        "heightError": 6.666666666666667
+      },
+      {
+        "id": "control-error-label",
+        "text": "错误",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          30,
+          14
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-settlement-label",
+        "text": "结算",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          30,
+          14
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "factor": 1.03,
+    "file": "1280-1.03.png",
+    "state": "Completed",
+    "checks": [
+      {
+        "id": "note-a",
+        "text": "把灵感",
+        "expected": [
+          78,
+          25
+        ],
+        "actual": [
+          80,
+          24
+        ],
+        "widthError": 2.564102564102564,
+        "heightError": 4.0
+      },
+      {
+        "id": "note-b",
+        "text": "留在纸上",
+        "expected": [
+          104,
+          25
+        ],
+        "actual": [
+          108,
+          24
+        ],
+        "widthError": 3.8461538461538463,
+        "heightError": 4.0
+      },
+      {
+        "id": "note-c",
+        "text": "固定数据 · 验证小样",
+        "expected": [
+          125,
+          13
+        ],
+        "actual": [
+          127,
+          12
+        ],
+        "widthError": 1.6,
+        "heightError": 7.6923076923076925
+      },
+      {
+        "id": "title",
+        "text": "纸上练习 · 连线与数字",
+        "expected": [
+          198,
+          19
+        ],
+        "actual": [
+          203,
+          18
+        ],
+        "widthError": 2.525252525252525,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "target-label",
+        "text": "目标",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          36,
+          18
+        ],
+        "widthError": 2.857142857142857,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "timer-label",
+        "text": "剩余时间",
+        "expected": [
+          69,
+          17
+        ],
+        "actual": [
+          71,
+          16
+        ],
+        "widthError": 2.898550724637681,
+        "heightError": 5.88235294117647
+      },
+      {
+        "id": "timer-unit",
+        "text": "秒",
+        "expected": [
+          18,
+          19
+        ],
+        "actual": [
+          19,
+          18
+        ],
+        "widthError": 5.555555555555555,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-0-name",
+        "text": "小禾",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          36,
+          18
+        ],
+        "widthError": 2.857142857142857,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-0-score",
+        "text": "25",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          25,
+          19
+        ],
+        "widthError": 4.166666666666666,
+        "heightError": 5.0
+      },
+      {
+        "id": "row-1-name",
+        "text": "阿布",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          35,
+          18
+        ],
+        "widthError": 0.0,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-1-score",
+        "text": "20",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          25,
+          19
+        ],
+        "widthError": 4.166666666666666,
+        "heightError": 5.0
+      },
+      {
+        "id": "row-2-name",
+        "text": "长名字玩家",
+        "expected": [
+          95,
+          19
+        ],
+        "actual": [
+          97,
+          18
+        ],
+        "widthError": 2.1052631578947367,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-2-score",
+        "text": "15",
+        "expected": [
+          23,
+          20
+        ],
+        "actual": [
+          24,
+          19
+        ],
+        "widthError": 4.3478260869565215,
+        "heightError": 5.0
+      },
+      {
+        "id": "row-3-name",
+        "text": "我",
+        "expected": [
+          15,
+          19
+        ],
+        "actual": [
+          15,
+          18
+        ],
+        "widthError": 0.0,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-3-score",
+        "text": "20",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          25,
+          19
+        ],
+        "widthError": 4.166666666666666,
+        "heightError": 5.0
+      },
+      {
+        "id": "control-mode3-label",
+        "text": "3×3",
+        "expected": [
+          32,
+          12
+        ],
+        "actual": [
+          32,
+          12
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-mode4-label",
+        "text": "4×4",
+        "expected": [
+          33,
+          12
+        ],
+        "actual": [
+          34,
+          11
+        ],
+        "widthError": 3.0303030303030303,
+        "heightError": 8.333333333333332
+      },
+      {
+        "id": "control-default-label",
+        "text": "默认",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          30,
+          14
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-selected-label",
+        "text": "选中",
+        "expected": [
+          29,
+          14
+        ],
+        "actual": [
+          29,
+          14
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-success-label",
+        "text": "成功",
+        "expected": [
+          30,
+          15
+        ],
+        "actual": [
+          30,
+          14
+        ],
+        "widthError": 0.0,
+        "heightError": 6.666666666666667
+      },
+      {
+        "id": "control-error-label",
+        "text": "错误",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          30,
+          14
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-settlement-label",
+        "text": "结算",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          30,
+          14
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "factor": 1.05,
+    "file": "1280-1.05.png",
+    "state": "Completed",
+    "checks": [
+      {
+        "id": "note-a",
+        "text": "把灵感",
+        "expected": [
+          78,
+          25
+        ],
+        "actual": [
+          82,
+          25
+        ],
+        "widthError": 5.128205128205128,
+        "heightError": 0.0
+      },
+      {
+        "id": "note-b",
+        "text": "留在纸上",
+        "expected": [
+          104,
+          25
+        ],
+        "actual": [
+          110,
+          24
+        ],
+        "widthError": 5.769230769230769,
+        "heightError": 4.0
+      },
+      {
+        "id": "note-c",
+        "text": "固定数据 · 验证小样",
+        "expected": [
+          125,
+          13
+        ],
+        "actual": [
+          129,
+          12
+        ],
+        "widthError": 3.2,
+        "heightError": 7.6923076923076925
+      },
+      {
+        "id": "title",
+        "text": "纸上练习 · 连线与数字",
+        "expected": [
+          198,
+          19
+        ],
+        "actual": [
+          207,
+          18
+        ],
+        "widthError": 4.545454545454546,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "target-label",
+        "text": "目标",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          37,
+          18
+        ],
+        "widthError": 5.714285714285714,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "timer-label",
+        "text": "剩余时间",
+        "expected": [
+          69,
+          17
+        ],
+        "actual": [
+          72,
+          16
+        ],
+        "widthError": 4.3478260869565215,
+        "heightError": 5.88235294117647
+      },
+      {
+        "id": "timer-unit",
+        "text": "秒",
+        "expected": [
+          18,
+          19
+        ],
+        "actual": [
+          19,
+          18
+        ],
+        "widthError": 5.555555555555555,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-0-name",
+        "text": "小禾",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          36,
+          18
+        ],
+        "widthError": 2.857142857142857,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-0-score",
+        "text": "25",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          25,
+          20
+        ],
+        "widthError": 4.166666666666666,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-1-name",
+        "text": "阿布",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          36,
+          18
+        ],
+        "widthError": 2.857142857142857,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-1-score",
+        "text": "20",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          25,
+          20
+        ],
+        "widthError": 4.166666666666666,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-2-name",
+        "text": "长名字玩家",
+        "expected": [
+          95,
+          19
+        ],
+        "actual": [
+          99,
+          18
+        ],
+        "widthError": 4.2105263157894735,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-2-score",
+        "text": "15",
+        "expected": [
+          23,
+          20
+        ],
+        "actual": [
+          24,
+          19
+        ],
+        "widthError": 4.3478260869565215,
+        "heightError": 5.0
+      },
+      {
+        "id": "row-3-name",
+        "text": "我",
+        "expected": [
+          15,
+          19
+        ],
+        "actual": [
+          16,
+          18
+        ],
+        "widthError": 6.666666666666667,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-3-score",
+        "text": "20",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          25,
+          20
+        ],
+        "widthError": 4.166666666666666,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-mode3-label",
+        "text": "3×3",
+        "expected": [
+          32,
+          12
+        ],
+        "actual": [
+          34,
+          12
+        ],
+        "widthError": 6.25,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-mode4-label",
+        "text": "4×4",
+        "expected": [
+          33,
+          12
+        ],
+        "actual": [
+          34,
+          12
+        ],
+        "widthError": 3.0303030303030303,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-default-label",
+        "text": "默认",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          31,
+          14
+        ],
+        "widthError": 3.3333333333333335,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-selected-label",
+        "text": "选中",
+        "expected": [
+          29,
+          14
+        ],
+        "actual": [
+          31,
+          14
+        ],
+        "widthError": 6.896551724137931,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-success-label",
+        "text": "成功",
+        "expected": [
+          30,
+          15
+        ],
+        "actual": [
+          31,
+          14
+        ],
+        "widthError": 3.3333333333333335,
+        "heightError": 6.666666666666667
+      },
+      {
+        "id": "control-error-label",
+        "text": "错误",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          32,
+          14
+        ],
+        "widthError": 6.666666666666667,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-settlement-label",
+        "text": "结算",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          31,
+          14
+        ],
+        "widthError": 3.3333333333333335,
+        "heightError": 0.0
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "factor": 1.07,
+    "file": "1280-1.07.png",
+    "state": "Completed",
+    "checks": [
+      {
+        "id": "note-a",
+        "text": "把灵感",
+        "expected": [
+          78,
+          25
+        ],
+        "actual": [
+          84,
+          26
+        ],
+        "widthError": 7.6923076923076925,
+        "heightError": 4.0
+      },
+      {
+        "id": "note-b",
+        "text": "留在纸上",
+        "expected": [
+          104,
+          25
+        ],
+        "actual": [
+          112,
+          26
+        ],
+        "widthError": 7.6923076923076925,
+        "heightError": 4.0
+      },
+      {
+        "id": "note-c",
+        "text": "固定数据 · 验证小样",
+        "expected": [
+          125,
+          13
+        ],
+        "actual": [
+          132,
+          12
+        ],
+        "widthError": 5.6000000000000005,
+        "heightError": 7.6923076923076925
+      },
+      {
+        "id": "title",
+        "text": "纸上练习 · 连线与数字",
+        "expected": [
+          198,
+          19
+        ],
+        "actual": [
+          211,
+          19
+        ],
+        "widthError": 6.565656565656567,
+        "heightError": 0.0
+      },
+      {
+        "id": "target-label",
+        "text": "目标",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          38,
+          18
+        ],
+        "widthError": 8.571428571428571,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "timer-label",
+        "text": "剩余时间",
+        "expected": [
+          69,
+          17
+        ],
+        "actual": [
+          74,
+          16
+        ],
+        "widthError": 7.246376811594203,
+        "heightError": 5.88235294117647
+      },
+      {
+        "id": "timer-unit",
+        "text": "秒",
+        "expected": [
+          18,
+          19
+        ],
+        "actual": [
+          19,
+          18
+        ],
+        "widthError": 5.555555555555555,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-0-name",
+        "text": "小禾",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          37,
+          18
+        ],
+        "widthError": 5.714285714285714,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-0-score",
+        "text": "25",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          26,
+          21
+        ],
+        "widthError": 8.333333333333332,
+        "heightError": 5.0
+      },
+      {
+        "id": "row-1-name",
+        "text": "阿布",
+        "expected": [
+          35,
+          19
+        ],
+        "actual": [
+          37,
+          18
+        ],
+        "widthError": 5.714285714285714,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-1-score",
+        "text": "20",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          26,
+          21
+        ],
+        "widthError": 8.333333333333332,
+        "heightError": 5.0
+      },
+      {
+        "id": "row-2-name",
+        "text": "长名字玩家",
+        "expected": [
+          95,
+          19
+        ],
+        "actual": [
+          101,
+          18
+        ],
+        "widthError": 6.315789473684211,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-2-score",
+        "text": "15",
+        "expected": [
+          23,
+          20
+        ],
+        "actual": [
+          25,
+          20
+        ],
+        "widthError": 8.695652173913043,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-3-name",
+        "text": "我",
+        "expected": [
+          15,
+          19
+        ],
+        "actual": [
+          16,
+          18
+        ],
+        "widthError": 6.666666666666667,
+        "heightError": 5.263157894736842
+      },
+      {
+        "id": "row-3-score",
+        "text": "20",
+        "expected": [
+          24,
+          20
+        ],
+        "actual": [
+          26,
+          21
+        ],
+        "widthError": 8.333333333333332,
+        "heightError": 5.0
+      },
+      {
+        "id": "control-mode3-label",
+        "text": "3×3",
+        "expected": [
+          32,
+          12
+        ],
+        "actual": [
+          34,
+          12
+        ],
+        "widthError": 6.25,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-mode4-label",
+        "text": "4×4",
+        "expected": [
+          33,
+          12
+        ],
+        "actual": [
+          35,
+          12
+        ],
+        "widthError": 6.0606060606060606,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-default-label",
+        "text": "默认",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          32,
+          14
+        ],
+        "widthError": 6.666666666666667,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-selected-label",
+        "text": "选中",
+        "expected": [
+          29,
+          14
+        ],
+        "actual": [
+          31,
+          14
+        ],
+        "widthError": 6.896551724137931,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-success-label",
+        "text": "成功",
+        "expected": [
+          30,
+          15
+        ],
+        "actual": [
+          32,
+          14
+        ],
+        "widthError": 6.666666666666667,
+        "heightError": 6.666666666666667
+      },
+      {
+        "id": "control-error-label",
+        "text": "错误",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          32,
+          14
+        ],
+        "widthError": 6.666666666666667,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-settlement-label",
+        "text": "结算",
+        "expected": [
+          30,
+          14
+        ],
+        "actual": [
+          32,
+          14
+        ],
+        "widthError": 6.666666666666667,
+        "heightError": 0.0
+      }
+    ]
+  },
+  {
+    "width": 1920,
+    "factor": 1,
+    "file": "1920-1.png",
+    "state": "Completed",
+    "checks": [
+      {
+        "id": "note-a",
+        "text": "把灵感",
+        "expected": [
+          118,
+          37
+        ],
+        "actual": [
+          117,
+          36
+        ],
+        "widthError": 0.847457627118644,
+        "heightError": 2.7027027027027026
+      },
+      {
+        "id": "note-b",
+        "text": "留在纸上",
+        "expected": [
+          158,
+          37
+        ],
+        "actual": [
+          156,
+          35
+        ],
+        "widthError": 1.2658227848101267,
+        "heightError": 5.405405405405405
+      },
+      {
+        "id": "note-c",
+        "text": "固定数据 · 验证小样",
+        "expected": [
+          186,
+          20
+        ],
+        "actual": [
+          186,
+          19
+        ],
+        "widthError": 0.0,
+        "heightError": 5.0
+      },
+      {
+        "id": "title",
+        "text": "纸上练习 · 连线与数字",
+        "expected": [
+          297,
+          28
+        ],
+        "actual": [
+          296,
+          27
+        ],
+        "widthError": 0.33670033670033667,
+        "heightError": 3.571428571428571
+      },
+      {
+        "id": "target-label",
+        "text": "目标",
+        "expected": [
+          54,
+          27
+        ],
+        "actual": [
+          53,
+          27
+        ],
+        "widthError": 1.8518518518518516,
+        "heightError": 0.0
+      },
+      {
+        "id": "timer-label",
+        "text": "剩余时间",
+        "expected": [
+          105,
+          24
+        ],
+        "actual": [
+          103,
+          24
+        ],
+        "widthError": 1.9047619047619049,
+        "heightError": 0.0
+      },
+      {
+        "id": "timer-unit",
+        "text": "秒",
+        "expected": [
+          28,
+          27
+        ],
+        "actual": [
+          27,
+          26
+        ],
+        "widthError": 3.571428571428571,
+        "heightError": 3.7037037037037033
+      },
+      {
+        "id": "row-0-name",
+        "text": "小禾",
+        "expected": [
+          53,
+          27
+        ],
+        "actual": [
+          52,
+          26
+        ],
+        "widthError": 1.8867924528301887,
+        "heightError": 3.7037037037037033
+      },
+      {
+        "id": "row-0-score",
+        "text": "25",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          36,
+          29
+        ],
+        "widthError": 2.7027027027027026,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-1-name",
+        "text": "阿布",
+        "expected": [
+          52,
+          28
+        ],
+        "actual": [
+          51,
+          26
+        ],
+        "widthError": 1.9230769230769231,
+        "heightError": 7.142857142857142
+      },
+      {
+        "id": "row-1-score",
+        "text": "20",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          36,
+          29
+        ],
+        "widthError": 2.7027027027027026,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-2-name",
+        "text": "长名字玩家",
+        "expected": [
+          142,
+          28
+        ],
+        "actual": [
+          141,
+          26
+        ],
+        "widthError": 0.7042253521126761,
+        "heightError": 7.142857142857142
+      },
+      {
+        "id": "row-2-score",
+        "text": "15",
+        "expected": [
+          35,
+          29
+        ],
+        "actual": [
+          34,
+          28
+        ],
+        "widthError": 2.857142857142857,
+        "heightError": 3.4482758620689653
+      },
+      {
+        "id": "row-3-name",
+        "text": "我",
+        "expected": [
+          23,
+          28
+        ],
+        "actual": [
+          22,
+          26
+        ],
+        "widthError": 4.3478260869565215,
+        "heightError": 7.142857142857142
+      },
+      {
+        "id": "row-3-score",
+        "text": "20",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          36,
+          29
+        ],
+        "widthError": 2.7027027027027026,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-mode3-label",
+        "text": "3×3",
+        "expected": [
+          49,
+          18
+        ],
+        "actual": [
+          48,
+          17
+        ],
+        "widthError": 2.0408163265306123,
+        "heightError": 5.555555555555555
+      },
+      {
+        "id": "control-mode4-label",
+        "text": "4×4",
+        "expected": [
+          50,
+          18
+        ],
+        "actual": [
+          49,
+          17
+        ],
+        "widthError": 2.0,
+        "heightError": 5.555555555555555
+      },
+      {
+        "id": "control-default-label",
+        "text": "默认",
+        "expected": [
+          45,
+          22
+        ],
+        "actual": [
+          45,
+          20
+        ],
+        "widthError": 0.0,
+        "heightError": 9.090909090909092
+      },
+      {
+        "id": "control-selected-label",
+        "text": "选中",
+        "expected": [
+          44,
+          22
+        ],
+        "actual": [
+          44,
+          20
+        ],
+        "widthError": 0.0,
+        "heightError": 9.090909090909092
+      },
+      {
+        "id": "control-success-label",
+        "text": "成功",
+        "expected": [
+          45,
+          22
+        ],
+        "actual": [
+          45,
+          21
+        ],
+        "widthError": 0.0,
+        "heightError": 4.545454545454546
+      },
+      {
+        "id": "control-error-label",
+        "text": "错误",
+        "expected": [
+          46,
+          22
+        ],
+        "actual": [
+          45,
+          20
+        ],
+        "widthError": 2.1739130434782608,
+        "heightError": 9.090909090909092
+      },
+      {
+        "id": "control-settlement-label",
+        "text": "结算",
+        "expected": [
+          46,
+          22
+        ],
+        "actual": [
+          45,
+          21
+        ],
+        "widthError": 2.1739130434782608,
+        "heightError": 4.545454545454546
+      }
+    ]
+  },
+  {
+    "width": 1920,
+    "factor": 1.03,
+    "file": "1920-1.03.png",
+    "state": "Completed",
+    "checks": [
+      {
+        "id": "note-a",
+        "text": "把灵感",
+        "expected": [
+          118,
+          37
+        ],
+        "actual": [
+          120,
+          37
+        ],
+        "widthError": 1.694915254237288,
+        "heightError": 0.0
+      },
+      {
+        "id": "note-b",
+        "text": "留在纸上",
+        "expected": [
+          158,
+          37
+        ],
+        "actual": [
+          162,
+          37
+        ],
+        "widthError": 2.5316455696202533,
+        "heightError": 0.0
+      },
+      {
+        "id": "note-c",
+        "text": "固定数据 · 验证小样",
+        "expected": [
+          186,
+          20
+        ],
+        "actual": [
+          191,
+          19
+        ],
+        "widthError": 2.6881720430107525,
+        "heightError": 5.0
+      },
+      {
+        "id": "title",
+        "text": "纸上练习 · 连线与数字",
+        "expected": [
+          297,
+          28
+        ],
+        "actual": [
+          305,
+          28
+        ],
+        "widthError": 2.6936026936026933,
+        "heightError": 0.0
+      },
+      {
+        "id": "target-label",
+        "text": "目标",
+        "expected": [
+          54,
+          27
+        ],
+        "actual": [
+          55,
+          27
+        ],
+        "widthError": 1.8518518518518516,
+        "heightError": 0.0
+      },
+      {
+        "id": "timer-label",
+        "text": "剩余时间",
+        "expected": [
+          105,
+          24
+        ],
+        "actual": [
+          106,
+          24
+        ],
+        "widthError": 0.9523809523809524,
+        "heightError": 0.0
+      },
+      {
+        "id": "timer-unit",
+        "text": "秒",
+        "expected": [
+          28,
+          27
+        ],
+        "actual": [
+          28,
+          27
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-0-name",
+        "text": "小禾",
+        "expected": [
+          53,
+          27
+        ],
+        "actual": [
+          54,
+          27
+        ],
+        "widthError": 1.8867924528301887,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-0-score",
+        "text": "25",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          37,
+          29
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-1-name",
+        "text": "阿布",
+        "expected": [
+          52,
+          28
+        ],
+        "actual": [
+          53,
+          28
+        ],
+        "widthError": 1.9230769230769231,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-1-score",
+        "text": "20",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          37,
+          29
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-2-name",
+        "text": "长名字玩家",
+        "expected": [
+          142,
+          28
+        ],
+        "actual": [
+          146,
+          28
+        ],
+        "widthError": 2.8169014084507045,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-2-score",
+        "text": "15",
+        "expected": [
+          35,
+          29
+        ],
+        "actual": [
+          36,
+          29
+        ],
+        "widthError": 2.857142857142857,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-3-name",
+        "text": "我",
+        "expected": [
+          23,
+          28
+        ],
+        "actual": [
+          23,
+          28
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-3-score",
+        "text": "20",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          37,
+          29
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-mode3-label",
+        "text": "3×3",
+        "expected": [
+          49,
+          18
+        ],
+        "actual": [
+          49,
+          18
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-mode4-label",
+        "text": "4×4",
+        "expected": [
+          50,
+          18
+        ],
+        "actual": [
+          51,
+          17
+        ],
+        "widthError": 2.0,
+        "heightError": 5.555555555555555
+      },
+      {
+        "id": "control-default-label",
+        "text": "默认",
+        "expected": [
+          45,
+          22
+        ],
+        "actual": [
+          46,
+          22
+        ],
+        "widthError": 2.2222222222222223,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-selected-label",
+        "text": "选中",
+        "expected": [
+          44,
+          22
+        ],
+        "actual": [
+          45,
+          22
+        ],
+        "widthError": 2.272727272727273,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-success-label",
+        "text": "成功",
+        "expected": [
+          45,
+          22
+        ],
+        "actual": [
+          46,
+          22
+        ],
+        "widthError": 2.2222222222222223,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-error-label",
+        "text": "错误",
+        "expected": [
+          46,
+          22
+        ],
+        "actual": [
+          47,
+          22
+        ],
+        "widthError": 2.1739130434782608,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-settlement-label",
+        "text": "结算",
+        "expected": [
+          46,
+          22
+        ],
+        "actual": [
+          46,
+          22
+        ],
+        "widthError": 0.0,
+        "heightError": 0.0
+      }
+    ]
+  },
+  {
+    "width": 1920,
+    "factor": 1.05,
+    "file": "1920-1.05.png",
+    "state": "Completed",
+    "checks": [
+      {
+        "id": "note-a",
+        "text": "把灵感",
+        "expected": [
+          118,
+          37
+        ],
+        "actual": [
+          123,
+          38
+        ],
+        "widthError": 4.23728813559322,
+        "heightError": 2.7027027027027026
+      },
+      {
+        "id": "note-b",
+        "text": "留在纸上",
+        "expected": [
+          158,
+          37
+        ],
+        "actual": [
+          164,
+          37
+        ],
+        "widthError": 3.79746835443038,
+        "heightError": 0.0
+      },
+      {
+        "id": "note-c",
+        "text": "固定数据 · 验证小样",
+        "expected": [
+          186,
+          20
+        ],
+        "actual": [
+          194,
+          19
+        ],
+        "widthError": 4.301075268817205,
+        "heightError": 5.0
+      },
+      {
+        "id": "title",
+        "text": "纸上练习 · 连线与数字",
+        "expected": [
+          297,
+          28
+        ],
+        "actual": [
+          311,
+          29
+        ],
+        "widthError": 4.713804713804714,
+        "heightError": 3.571428571428571
+      },
+      {
+        "id": "target-label",
+        "text": "目标",
+        "expected": [
+          54,
+          27
+        ],
+        "actual": [
+          56,
+          27
+        ],
+        "widthError": 3.7037037037037033,
+        "heightError": 0.0
+      },
+      {
+        "id": "timer-label",
+        "text": "剩余时间",
+        "expected": [
+          105,
+          24
+        ],
+        "actual": [
+          108,
+          24
+        ],
+        "widthError": 2.857142857142857,
+        "heightError": 0.0
+      },
+      {
+        "id": "timer-unit",
+        "text": "秒",
+        "expected": [
+          28,
+          27
+        ],
+        "actual": [
+          28,
+          28
+        ],
+        "widthError": 0.0,
+        "heightError": 3.7037037037037033
+      },
+      {
+        "id": "row-0-name",
+        "text": "小禾",
+        "expected": [
+          53,
+          27
+        ],
+        "actual": [
+          55,
+          27
+        ],
+        "widthError": 3.7735849056603774,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-0-score",
+        "text": "25",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          38,
+          31
+        ],
+        "widthError": 2.7027027027027026,
+        "heightError": 6.896551724137931
+      },
+      {
+        "id": "row-1-name",
+        "text": "阿布",
+        "expected": [
+          52,
+          28
+        ],
+        "actual": [
+          54,
+          28
+        ],
+        "widthError": 3.8461538461538463,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-1-score",
+        "text": "20",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          38,
+          31
+        ],
+        "widthError": 2.7027027027027026,
+        "heightError": 6.896551724137931
+      },
+      {
+        "id": "row-2-name",
+        "text": "长名字玩家",
+        "expected": [
+          142,
+          28
+        ],
+        "actual": [
+          149,
+          28
+        ],
+        "widthError": 4.929577464788732,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-2-score",
+        "text": "15",
+        "expected": [
+          35,
+          29
+        ],
+        "actual": [
+          37,
+          30
+        ],
+        "widthError": 5.714285714285714,
+        "heightError": 3.4482758620689653
+      },
+      {
+        "id": "row-3-name",
+        "text": "我",
+        "expected": [
+          23,
+          28
+        ],
+        "actual": [
+          24,
+          28
+        ],
+        "widthError": 4.3478260869565215,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-3-score",
+        "text": "20",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          38,
+          31
+        ],
+        "widthError": 2.7027027027027026,
+        "heightError": 6.896551724137931
+      },
+      {
+        "id": "control-mode3-label",
+        "text": "3×3",
+        "expected": [
+          49,
+          18
+        ],
+        "actual": [
+          51,
+          19
+        ],
+        "widthError": 4.081632653061225,
+        "heightError": 5.555555555555555
+      },
+      {
+        "id": "control-mode4-label",
+        "text": "4×4",
+        "expected": [
+          50,
+          18
+        ],
+        "actual": [
+          52,
+          18
+        ],
+        "widthError": 4.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-default-label",
+        "text": "默认",
+        "expected": [
+          45,
+          22
+        ],
+        "actual": [
+          47,
+          22
+        ],
+        "widthError": 4.444444444444445,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-selected-label",
+        "text": "选中",
+        "expected": [
+          44,
+          22
+        ],
+        "actual": [
+          46,
+          22
+        ],
+        "widthError": 4.545454545454546,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-success-label",
+        "text": "成功",
+        "expected": [
+          45,
+          22
+        ],
+        "actual": [
+          47,
+          22
+        ],
+        "widthError": 4.444444444444445,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-error-label",
+        "text": "错误",
+        "expected": [
+          46,
+          22
+        ],
+        "actual": [
+          47,
+          22
+        ],
+        "widthError": 2.1739130434782608,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-settlement-label",
+        "text": "结算",
+        "expected": [
+          46,
+          22
+        ],
+        "actual": [
+          47,
+          22
+        ],
+        "widthError": 2.1739130434782608,
+        "heightError": 0.0
+      }
+    ]
+  },
+  {
+    "width": 1920,
+    "factor": 1.07,
+    "file": "1920-1.07.png",
+    "state": "Completed",
+    "checks": [
+      {
+        "id": "note-a",
+        "text": "把灵感",
+        "expected": [
+          118,
+          37
+        ],
+        "actual": [
+          126,
+          39
+        ],
+        "widthError": 6.779661016949152,
+        "heightError": 5.405405405405405
+      },
+      {
+        "id": "note-b",
+        "text": "留在纸上",
+        "expected": [
+          158,
+          37
+        ],
+        "actual": [
+          168,
+          39
+        ],
+        "widthError": 6.329113924050633,
+        "heightError": 5.405405405405405
+      },
+      {
+        "id": "note-c",
+        "text": "固定数据 · 验证小样",
+        "expected": [
+          186,
+          20
+        ],
+        "actual": [
+          198,
+          19
+        ],
+        "widthError": 6.451612903225806,
+        "heightError": 5.0
+      },
+      {
+        "id": "title",
+        "text": "纸上练习 · 连线与数字",
+        "expected": [
+          297,
+          28
+        ],
+        "actual": [
+          317,
+          29
+        ],
+        "widthError": 6.7340067340067336,
+        "heightError": 3.571428571428571
+      },
+      {
+        "id": "target-label",
+        "text": "目标",
+        "expected": [
+          54,
+          27
+        ],
+        "actual": [
+          57,
+          29
+        ],
+        "widthError": 5.555555555555555,
+        "heightError": 7.4074074074074066
+      },
+      {
+        "id": "timer-label",
+        "text": "剩余时间",
+        "expected": [
+          105,
+          24
+        ],
+        "actual": [
+          111,
+          26
+        ],
+        "widthError": 5.714285714285714,
+        "heightError": 8.333333333333332
+      },
+      {
+        "id": "timer-unit",
+        "text": "秒",
+        "expected": [
+          28,
+          27
+        ],
+        "actual": [
+          29,
+          28
+        ],
+        "widthError": 3.571428571428571,
+        "heightError": 3.7037037037037033
+      },
+      {
+        "id": "row-0-name",
+        "text": "小禾",
+        "expected": [
+          53,
+          27
+        ],
+        "actual": [
+          56,
+          28
+        ],
+        "widthError": 5.660377358490567,
+        "heightError": 3.7037037037037033
+      },
+      {
+        "id": "row-0-score",
+        "text": "25",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          39,
+          31
+        ],
+        "widthError": 5.405405405405405,
+        "heightError": 6.896551724137931
+      },
+      {
+        "id": "row-1-name",
+        "text": "阿布",
+        "expected": [
+          52,
+          28
+        ],
+        "actual": [
+          56,
+          28
+        ],
+        "widthError": 7.6923076923076925,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-1-score",
+        "text": "20",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          39,
+          31
+        ],
+        "widthError": 5.405405405405405,
+        "heightError": 6.896551724137931
+      },
+      {
+        "id": "row-2-name",
+        "text": "长名字玩家",
+        "expected": [
+          142,
+          28
+        ],
+        "actual": [
+          152,
+          28
+        ],
+        "widthError": 7.042253521126761,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-2-score",
+        "text": "15",
+        "expected": [
+          35,
+          29
+        ],
+        "actual": [
+          37,
+          30
+        ],
+        "widthError": 5.714285714285714,
+        "heightError": 3.4482758620689653
+      },
+      {
+        "id": "row-3-name",
+        "text": "我",
+        "expected": [
+          23,
+          28
+        ],
+        "actual": [
+          25,
+          28
+        ],
+        "widthError": 8.695652173913043,
+        "heightError": 0.0
+      },
+      {
+        "id": "row-3-score",
+        "text": "20",
+        "expected": [
+          37,
+          29
+        ],
+        "actual": [
+          39,
+          31
+        ],
+        "widthError": 5.405405405405405,
+        "heightError": 6.896551724137931
+      },
+      {
+        "id": "control-mode3-label",
+        "text": "3×3",
+        "expected": [
+          49,
+          18
+        ],
+        "actual": [
+          51,
+          19
+        ],
+        "widthError": 4.081632653061225,
+        "heightError": 5.555555555555555
+      },
+      {
+        "id": "control-mode4-label",
+        "text": "4×4",
+        "expected": [
+          50,
+          18
+        ],
+        "actual": [
+          53,
+          18
+        ],
+        "widthError": 6.0,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-default-label",
+        "text": "默认",
+        "expected": [
+          45,
+          22
+        ],
+        "actual": [
+          48,
+          22
+        ],
+        "widthError": 6.666666666666667,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-selected-label",
+        "text": "选中",
+        "expected": [
+          44,
+          22
+        ],
+        "actual": [
+          46,
+          22
+        ],
+        "widthError": 4.545454545454546,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-success-label",
+        "text": "成功",
+        "expected": [
+          45,
+          22
+        ],
+        "actual": [
+          47,
+          22
+        ],
+        "widthError": 4.444444444444445,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-error-label",
+        "text": "错误",
+        "expected": [
+          46,
+          22
+        ],
+        "actual": [
+          49,
+          22
+        ],
+        "widthError": 6.521739130434782,
+        "heightError": 0.0
+      },
+      {
+        "id": "control-settlement-label",
+        "text": "结算",
+        "expected": [
+          46,
+          22
+        ],
+        "actual": [
+          47,
+          22
+        ],
+        "widthError": 2.1739130434782608,
+        "heightError": 0.0
+      }
+    ]
+  }
+]
