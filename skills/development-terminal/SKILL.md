@@ -1,5 +1,15 @@
 # Development Terminal Skill
 
+## Stop failure and explicit fallback (2026-10-20)
+Stop failure is distinct from a parked continuation queue: display stopFailed and
+the safe operation error without claiming execution ended. Offer Force stop this
+conversation after local failure or persisted stopFailed; confirm the exact conversation,
+scope, retained history and irreversible already-completed actions in the existing modal.
+Call forceStop only on confirmation, serialize actions, and mark the terminal exited only
+after backend success. Do not reconnect, replay input or start continuation implicitly.
+Disable Continue while stopFailed/pausing. Validate rejection, cancel/confirm, exact IDs,
+failed force-stop feedback and mounted-terminal preservation after ordinary interruption.
+
 ## Stop current execution (2026-10-19)
 The separate 中断执行（Stop）button calls interrupt_codex_turn for the exact task
 and conversation. Await native acknowledgement, then return to terminal view and

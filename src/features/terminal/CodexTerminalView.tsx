@@ -537,6 +537,8 @@ function ConversationTerminal({
   const actionBusyRef=useRef(false);
   const [actionBusy,setActionBusy]=useState(false);
   const [interrupting,setInterrupting]=useState(false);
+  const [stopFailed,setStopFailed]=useState(false);
+  const [confirmForceStop,setConfirmForceStop]=useState(false);
   const [actionNotice,setActionNotice]=useState("");
   useEffect(()=>setActionNotice(""),[control?.state]);
   async function continueTask() {
@@ -886,10 +888,11 @@ function ConversationTerminal({
     actionBusyRef.current=true;setActionBusy(true);setInterrupting(true);setError("");setActionNotice("");
     try {
       await terminalApi.interrupt(provider,taskId,conversation.id);
+      setStopFailed(false);
       setViewMode("terminal");
       setActionNotice("当前执行已中断，可直接输入新指令；终端和历史已保留。");
       if(visibleRef.current&&!document.querySelector('[aria-modal="true"]')) terminalRef.current?.focus();
-    } catch(value) {setError(errorMessage(value));}
+    } catch(value) {setStopFailed(true);setError(errorMessage(value));}
     finally {
       actionBusyRef.current=false;setActionBusy(false);setInterrupting(false);
       window.dispatchEvent(new Event("abya:control-changed"));
@@ -904,14 +907,28 @@ function ConversationTerminal({
     setError("");
     try {
       await terminalApi.stop(provider, conversation.id);
+      setStopFailed(false);
       setState((current) =>
         current
           ? { ...current, status: "exited", pid: undefined }
           : current,
       );
     } catch (value) {
-      setError(errorMessage(value));
+      setStopFailed(true);setError(errorMessage(value));
     } finally {actionBusyRef.current=false;setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
+  }
+
+  async function forceStop() {
+    if(actionBusyRef.current)return;
+    actionBusyRef.current=true;setActionBusy(true);setConfirmForceStop(false);setError("");setActionNotice("");
+    pendingContinue.current=undefined;
+    try {
+      await terminalApi.forceStop(provider,taskId,conversation.id);
+      setStopFailed(false);
+      setState(current=>current?{...current,status:"exited",pid:undefined}:current);
+      setActionNotice("此会话执行器已停止；历史已保留，继续前请核对已完成的操作。");
+    } catch(value) {setStopFailed(true);setError(errorMessage(value));}
+    finally {actionBusyRef.current=false;setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
   }
 
   const terminalEnded =
@@ -1006,7 +1023,9 @@ function ConversationTerminal({
             </button>
           )}
           {provider==="codex" && <button className="primary-button" onClick={()=>void continueTask()}
-            disabled={actionBusy||state?.status==="starting"||!control?.nativeSessionId||["running","waitingForResponse","queued","pausing","closed"].includes(control?.state??"")}>{actionBusy?"正在处理…":control?.state==="blocked"?"重新检查问题":"继续任务"}</button>}
+            disabled={actionBusy||state?.status==="starting"||!control?.nativeSessionId||["running","waitingForResponse","queued","pausing","stopFailed","closed"].includes(control?.state??"")}>{actionBusy?"正在处理…":control?.state==="blocked"?"重新检查问题":"继续任务"}</button>}
+          {(stopFailed||control?.state==="stopFailed") && <button className="secondary-button terminal-stop"
+            disabled={actionBusy} onClick={()=>setConfirmForceStop(true)}>强制停止此会话</button>}
           {terminalEnded && (
             <button
               className="secondary-button"
@@ -1020,6 +1039,12 @@ function ConversationTerminal({
           )}
         </div>
       </div>
+      {confirmForceStop && <Modal title="强制停止此会话" onClose={()=>setConfirmForceStop(false)}>
+        <p>将停止“{conversation.title}”的执行器和所属工具进程，关闭终端并撤销此会话的 APP 工具权限。其他会话不受影响。</p>
+        <p>历史会保留，但已完成的文件或外部操作不会撤销。再次继续前需要核对执行结果。</p>
+        <button className="secondary-button" onClick={()=>setConfirmForceStop(false)}>取消</button>
+        <button className="primary-button" onClick={()=>void forceStop()}>确认强制停止</button>
+      </Modal>}
       {provider==="codex" && <div className="terminal-task-notice" role="status">
         {startupWarning && <p className="terminal-startup-warning" role="alert">{startupWarning}</p>}
         {controlText(control)}{actionNotice&&` · ${actionNotice}`}

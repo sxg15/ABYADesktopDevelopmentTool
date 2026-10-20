@@ -45,6 +45,7 @@ const terminalApiMock = vi.hoisted(() => ({
   resize: vi.fn(async () => undefined),
   stop: vi.fn(async () => undefined),
   interrupt: vi.fn(async () => undefined),
+  forceStop: vi.fn(async () => undefined),
   executionSettings: vi.fn(async () => ({connected:true,running:false,models:[],settings:{model:'fixture'}})),
 }));
 
@@ -303,6 +304,36 @@ it("does not send a pending continuation when the terminal unmounts before attac
 });
 
 describe("Codex conversation list", () => {
+  it("canceling force stop sends nothing; rejected force stop keeps the session available",async()=>{
+    terminalApiMock.stop.mockRejectedValueOnce(new Error("暂停失败"));
+    terminalApiMock.forceStop.mockRejectedValueOnce(new Error("退出未确认"));
+    renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
+    await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByTitle("Pause task"));
+    fireEvent.click(await screen.findByRole("button",{name:"强制停止此会话"}));
+    fireEvent.click(screen.getByRole("button",{name:"取消"}));
+    expect(terminalApiMock.forceStop).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button",{name:"强制停止此会话"}));
+    fireEvent.click(screen.getByRole("button",{name:"确认强制停止"}));
+    await screen.findByText(/退出未确认/);
+    expect(screen.queryByText(/此会话执行器已停止/)).toBeNull();
+    expect(screen.getByRole("button",{name:"强制停止此会话"})).toBeTruthy();
+    expect(productionApiMock.continueTask).not.toHaveBeenCalled();
+  });
+  it("offers scoped force stop after rejection and waits for explicit confirmation",async()=>{
+    terminalApiMock.interrupt.mockRejectedValueOnce(new Error("中断被拒绝"));
+    renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
+    await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button",{name:"中断执行（Stop）"}));
+    fireEvent.click(await screen.findByRole("button",{name:"强制停止此会话"}));
+    expect(terminalApiMock.forceStop).not.toHaveBeenCalled();
+    expect(screen.getByText(/已完成的文件或外部操作不会撤销/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button",{name:"确认强制停止"}));
+    await waitFor(()=>expect(terminalApiMock.forceStop).toHaveBeenCalledExactlyOnceWith("codex","task-1","conversation-1"));
+    expect(terminalApiMock.stop).not.toHaveBeenCalled();
+    expect(productionApiMock.continueTask).not.toHaveBeenCalled();
+    expect(terminalApiMock.open).toHaveBeenCalledTimes(1);
+  });
   it("interrupts once, keeps the terminal mounted and focuses new input after native confirmation",async()=>{
     renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
     await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));

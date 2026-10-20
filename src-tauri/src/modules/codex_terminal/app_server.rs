@@ -1,11 +1,14 @@
+#[path = "native_interrupt.rs"]
+mod native_interrupt;
 use super::{CodexLaunchKind, ResolvedCodex};
 use crate::foundation::{AppError, AppResult};
+use process_wrap::std::{ChildWrapper, CommandWrap, CreationFlags, JobObject};
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::fs;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
@@ -29,6 +32,7 @@ enum BridgeCommand {
         method: String,
         params: Value,
         response: Sender<Result<Value, String>>,
+        expires: Instant,
     },
     Notification {
         method: String,
@@ -59,7 +63,8 @@ pub(super) struct AppServerHandle {
     pub endpoint: String,
     pub token: String,
     sender: Sender<BridgeCommand>,
-    child: Arc<parking_lot::Mutex<Option<Child>>>,
+    child: Arc<parking_lot::Mutex<Option<Box<dyn ChildWrapper>>>>,
+    observed_turns: Arc<parking_lot::Mutex<HashMap<String, (String, String)>>>,
     token_file: Arc<PathBuf>,
     executable_stamp: Option<ExecutableStamp>,
     #[cfg(test)]
@@ -67,48 +72,6 @@ pub(super) struct AppServerHandle {
 }
 
 impl AppServerHandle {
-    pub(super) fn interrupt_and_wait(&self, thread: &str) -> AppResult<()> {
-        let current = self.request(
-            "thread/read",
-            json!({"threadId":thread,"includeTurns":true}),
-        )?;
-        validate_interrupt_snapshot(&current, thread)?;
-        if let Some(turn) = current["thread"]["turns"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .find(|t| t["status"] == "inProgress")
-        {
-            self.request(
-                "turn/interrupt",
-                json!({"threadId":thread,"turnId":turn["id"]}),
-            )?;
-            let start = Instant::now();
-            loop {
-                let state = self.request(
-                    "thread/read",
-                    json!({"threadId":thread,"includeTurns":true}),
-                )?;
-                validate_interrupt_snapshot(&state, thread)?;
-                if !state["thread"]["turns"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .any(|t| t["status"] == "inProgress")
-                {
-                    break;
-                }
-                if start.elapsed() > Duration::from_secs(10) {
-                    return Err(AppError::validation(
-                        "Codex 尚未确认中断当前执行，会话和权限已保留，请核对终端后重试。",
-                    ));
-                }
-                std::thread::sleep(Duration::from_millis(100));
-            }
-        }
-        Ok(())
-    }
-
     pub(super) fn ensure_idle(&self, thread: &str) -> AppResult<()> {
         let state = self.request(
             "thread/read",
@@ -153,8 +116,18 @@ impl AppServerHandle {
         let (sender, receiver) = mpsc::channel();
         let thread_endpoint = endpoint.clone();
         let thread_token = token.clone();
+        let observed_turns = Arc::new(parking_lot::Mutex::new(HashMap::new()));
+        let observations = observed_turns.clone();
         std::thread::spawn(move || {
-            run_bridge(&thread_endpoint, &thread_token, receiver, on_notification);
+            run_bridge(
+                &thread_endpoint,
+                &thread_token,
+                receiver,
+                Arc::new(move |event| {
+                    native_interrupt::observe(&observations, &event);
+                    on_notification(event);
+                }),
+            );
         });
 
         let handle = Self {
@@ -162,6 +135,7 @@ impl AppServerHandle {
             token,
             sender,
             child,
+            observed_turns,
             token_file: Arc::new(token_file),
             executable_stamp: Some(executable_stamp),
             #[cfg(test)]
@@ -305,29 +279,60 @@ impl AppServerHandle {
     }
 
     pub(super) fn stop(&self) {
-        let _ = self.sender.send(BridgeCommand::Shutdown);
-        if let Some(mut child) = self.child.lock().take() {
-            let _ = child.kill();
-            let _ = child.wait();
+        let _ = self.stop_confirmed();
+    }
+
+    pub(super) fn stop_confirmed(&self) -> AppResult<()> {
+        // Kill through the owned job handle, never a process-name or recycled PID lookup.
+        let mut slot = self.child.lock();
+        if let Some(process) = slot.as_mut() {
+            process.start_kill().map_err(AppError::internal)?;
+            let deadline = Instant::now() + Duration::from_secs(3);
+            loop {
+                if process.try_wait().map_err(AppError::internal)?.is_some() {
+                    break;
+                }
+                if Instant::now() >= deadline {
+                    return Err(AppError::new(
+                        "codex_stop_timeout",
+                        "执行器尚未确认退出，请重试强制停止。",
+                        "",
+                    ));
+                }
+                std::thread::sleep(Duration::from_millis(50));
+            }
         }
+        slot.take();
+        let _ = self.sender.send(BridgeCommand::Shutdown);
         let _ = fs::remove_file(self.token_file.as_path());
+        Ok(())
     }
 
     pub(super) fn pid(&self) -> Option<u32> {
-        self.child.lock().as_ref().map(Child::id)
+        self.child.lock().as_ref().map(|child| child.id())
     }
 
     pub(super) fn request(&self, method: &str, params: Value) -> AppResult<Value> {
+        self.request_with_timeout(method, params, REQUEST_TIMEOUT)
+    }
+
+    fn request_with_timeout(
+        &self,
+        method: &str,
+        params: Value,
+        timeout: Duration,
+    ) -> AppResult<Value> {
         let (response, receiver) = mpsc::channel();
         self.sender
             .send(BridgeCommand::Request {
                 method: method.to_string(),
                 params,
                 response,
+                expires: Instant::now() + timeout,
             })
             .map_err(|_| super::resume_failure::rpc_error(method, "connection channel closed"))?;
         receiver
-            .recv_timeout(REQUEST_TIMEOUT)
+            .recv_timeout(timeout)
             .map_err(|error| {
                 super::resume_failure::rpc_error(
                     method,
@@ -354,6 +359,35 @@ impl AppServerHandle {
     }
 
     #[cfg(test)]
+    pub(super) fn second_connection_for_test(&self) -> Self {
+        let (sender, receiver) = mpsc::channel();
+        let mut handle = self.clone();
+        handle.sender = sender;
+        let endpoint = self.endpoint.clone();
+        let token = self.token.clone();
+        let observed = self.observed_turns.clone();
+        std::thread::spawn(move || {
+            run_bridge(
+                &endpoint,
+                &token,
+                receiver,
+                Arc::new(move |event| {
+                    native_interrupt::observe(&observed, &event);
+                }),
+            );
+        });
+        handle
+            .request(
+                "initialize",
+                json!({"clientInfo":{"name":"abya_stop_test","version":"1"},
+            "capabilities":{"experimentalApi":true}}),
+            )
+            .unwrap();
+        handle.notify("initialized", json!({})).unwrap();
+        handle
+    }
+
+    #[cfg(test)]
     pub(super) fn for_test(endpoint: &str, token: &str) -> Self {
         let (sender, _receiver) = mpsc::channel();
         Self {
@@ -361,6 +395,7 @@ impl AppServerHandle {
             token: token.to_string(),
             sender,
             child: Arc::new(parking_lot::Mutex::new(None)),
+            observed_turns: Default::default(),
             token_file: Arc::new(PathBuf::new()),
             executable_stamp: None,
             test_alive: false,
@@ -378,6 +413,7 @@ impl AppServerHandle {
                         method,
                         params,
                         response,
+                        ..
                     } => {
                         let _ = response.send(handler(&method, params));
                     }
@@ -391,6 +427,7 @@ impl AppServerHandle {
             token: String::new(),
             sender,
             child: Arc::new(parking_lot::Mutex::new(None)),
+            observed_turns: Default::default(),
             token_file: Arc::new(PathBuf::new()),
             executable_stamp: None,
             test_alive: true,
@@ -410,21 +447,11 @@ pub(super) fn supports_app_server(codex: &ResolvedCodex) -> bool {
     command.status().is_ok_and(|status| status.success())
 }
 
-fn validate_interrupt_snapshot(snapshot: &Value, thread: &str) -> AppResult<()> {
-    if snapshot["thread"]["id"].as_str() != Some(thread) || !snapshot["thread"]["turns"].is_array()
-    {
-        return Err(AppError::validation(
-            "无法核对原生会话执行状态，未确认中断。",
-        ));
-    }
-    Ok(())
-}
-
 fn spawn_app_server(
     codex: &ResolvedCodex,
     endpoint: &str,
     token_file: &PathBuf,
-) -> AppResult<Child> {
+) -> AppResult<Box<dyn ChildWrapper>> {
     let mut command = codex_process_command(codex);
     command
         .arg("app-server")
@@ -437,7 +464,12 @@ fn spawn_app_server(
         .stderr(Stdio::null());
     #[cfg(windows)]
     std::os::windows::process::CommandExt::creation_flags(&mut command, super::CREATE_NO_WINDOW);
-    command.spawn().map_err(AppError::internal)
+    let mut owned = CommandWrap::from(command);
+    owned.wrap(CreationFlags(
+        windows::Win32::System::Threading::PROCESS_CREATION_FLAGS(super::CREATE_NO_WINDOW),
+    ));
+    owned.wrap(JobObject);
+    owned.spawn().map_err(AppError::internal)
 }
 
 pub(super) fn codex_process_command(codex: &ResolvedCodex) -> Command {
@@ -565,7 +597,12 @@ fn run_bridge(
                     method,
                     params,
                     response,
+                    expires,
                 } => {
+                    if Instant::now() >= expires {
+                        let _ = response.send(Err("Codex request timeout before dispatch.".into()));
+                        continue;
+                    }
                     let id = next_id;
                     next_id += 1;
                     let message = json!({

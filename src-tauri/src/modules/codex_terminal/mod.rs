@@ -6,6 +6,7 @@ mod recovery;
 mod resume_failure;
 pub use recovery::RecoveryCandidate;
 mod continuation_queue;
+mod execution_control;
 mod interrupt;
 mod issue_repair;
 #[cfg(test)]
@@ -128,6 +129,8 @@ struct LiveTerminal {
     transcript: Arc<Mutex<File>>,
     killer: Arc<Mutex<Box<dyn ChildKiller + Send + Sync>>>,
     subscriber: Arc<Mutex<Option<Channel<CodexTerminalEvent>>>>,
+    #[cfg(windows)]
+    process: Option<Arc<std::os::windows::io::OwnedHandle>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -763,6 +766,8 @@ impl CodexTerminalService {
             transcript: Arc::new(Mutex::new(transcript)),
             killer: Arc::new(Mutex::new(killer)),
             subscriber: subscriber_ref.clone(),
+            #[cfg(windows)]
+            process: capture_owned_process(child.as_ref())?,
         };
         let transcript_ref = live.transcript.clone();
         self.sessions
@@ -799,11 +804,17 @@ impl CodexTerminalService {
     }
 
     pub fn write(&self, conversation_id: &str, data: &str) -> AppResult<()> {
+        if self.stopping.lock().contains(conversation_id) {
+            return Err(AppError::validation("正在停止此会话，请等待结果后再输入。"));
+        }
         if data.len() > MAX_INPUT_BYTES {
             return Err(AppError::validation("Terminal input is too large."));
         }
         let session = self.session(conversation_id)?;
         let mut writer = session.writer.lock();
+        if self.stopping.lock().contains(conversation_id) {
+            return Err(AppError::validation("正在停止此会话，请等待结果后再输入。"));
+        }
         writer.write_all(data.as_bytes())?;
         writer.flush()?;
         Ok(())
@@ -820,12 +831,26 @@ impl CodexTerminalService {
     }
 
     pub fn stop(&self, conversation_id: &str) -> AppResult<()> {
-        self.stopping.lock().insert(conversation_id.into());
-        self.cancelled.lock().insert(conversation_id.into());
-        let _guard = self.lifecycle_lock.lock();
-        let result = self.stop_locked(conversation_id);
-        self.stopping.lock().remove(conversation_id);
-        result
+        let task = self
+            .sessions
+            .lock()
+            .get(conversation_id)
+            .map(|s| s.task_id.clone())
+            .or_else(|| {
+                self.thread_conversations
+                    .lock()
+                    .values()
+                    .find(|(_, c)| c == conversation_id)
+                    .map(|(t, _)| t.clone())
+            });
+        if let Some(task) = task {
+            return self.control_execution(&task, conversation_id, "pause");
+        }
+        let _guard = self
+            .lifecycle_lock
+            .try_lock_for(Duration::from_secs(2))
+            .ok_or_else(|| AppError::validation("会话正在切换，请稍后重试。"))?;
+        self.stop_locked(conversation_id)
     }
 
     fn stop_locked(&self, conversation_id: &str) -> AppResult<()> {
@@ -843,13 +868,7 @@ impl CodexTerminalService {
         {
             server.interrupt_and_wait(native)?;
         }
-        if let Some(session) = self.sessions.lock().remove(conversation_id) {
-            disconnect_and_terminate(session)?;
-        }
-        if let Some(server) = self.runtime_servers.lock().remove(conversation_id) {
-            server.stop();
-        }
-        crate::foundation::cli_sessions::revoke("codex", conversation_id);
+        self.close_owned_executor(conversation_id)?;
         if let Some(native) = binding {
             let task_id = self
                 .thread_conversations
@@ -2007,6 +2026,33 @@ fn resolve_npm_native_codex(shim: &Path) -> Option<PathBuf> {
 fn disconnect_and_terminate(session: LiveTerminal) -> AppResult<()> {
     // Drop the UI channel before killing so PTY output cannot block on webview IPC.
     let subscriber = session.subscriber.lock().take();
+    #[cfg(windows)]
+    if let Some(process) = &session.process {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::System::Threading::{TerminateProcess, WaitForSingleObject};
+        let handle = process.as_raw_handle();
+        if unsafe { WaitForSingleObject(handle, 0) } != 0 {
+            if unsafe { TerminateProcess(handle, 1) } == 0
+                && unsafe { WaitForSingleObject(handle, 0) } != 0
+            {
+                return Err(AppError::new(
+                    "codex_terminal_stop_failed",
+                    "终端尚未停止，请重试。",
+                    "",
+                ));
+            }
+            if unsafe { WaitForSingleObject(handle, 2000) } != 0 {
+                return Err(AppError::new(
+                    "codex_terminal_stop_timeout",
+                    "终端退出确认超时，请重试。",
+                    "",
+                ));
+            }
+        }
+        session.state.lock().status = CodexTerminalStatus::Exited;
+        drop(subscriber);
+        return Ok(());
+    }
     let pid = {
         let mut state = session.state.lock();
         state.status = CodexTerminalStatus::Stopping;
@@ -2017,6 +2063,23 @@ fn disconnect_and_terminate(session: LiveTerminal) -> AppResult<()> {
     let result = terminate_process_tree(pid, &killer);
     drop(subscriber);
     result
+}
+
+#[cfg(windows)]
+fn capture_owned_process(
+    child: &dyn portable_pty::Child,
+) -> AppResult<Option<Arc<std::os::windows::io::OwnedHandle>>> {
+    use std::os::windows::io::BorrowedHandle;
+    child
+        .as_raw_handle()
+        .map(|raw| {
+            // The child keeps the borrowed handle alive while we duplicate it.
+            unsafe { BorrowedHandle::borrow_raw(raw) }
+                .try_clone_to_owned()
+                .map(Arc::new)
+                .map_err(AppError::internal)
+        })
+        .transpose()
 }
 
 fn terminate_process_tree(
@@ -2697,10 +2760,11 @@ mod tests {
             },
         );
         let sent = Arc::new(AtomicBool::new(false));
+        let conversation = service.create_conversation(&task.id, None).unwrap();
         insert_live_session(
             &service,
             &task.id,
-            "conversation-live",
+            &conversation.id,
             sent.clone(),
             &root.join("transcript.log"),
         );
@@ -2760,6 +2824,8 @@ mod tests {
                 writer: Arc::new(Mutex::new(writer)),
                 transcript: Arc::new(Mutex::new(transcript)),
                 killer: Arc::new(Mutex::new(child.clone_killer())),
+                #[cfg(windows)]
+                process: capture_owned_process(child.as_ref()).unwrap(),
                 subscriber: Arc::new(Mutex::new(Some(channel))),
             },
         );

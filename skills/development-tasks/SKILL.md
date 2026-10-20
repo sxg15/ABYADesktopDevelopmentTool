@@ -11,6 +11,10 @@ resources/plan confirmation nodes. No schema, CLI or approval-node changes.
 Keep pinned tasks unchanged until explicit upgrade; test old 2.2.1 content offers,
 complete nested references, template deployment and no implicit selection.
 
+Task guidance recognizes stopFailed as execution potentially still running and directs
+the user to the original terminal to retry or explicitly force stop. Preserve human gate
+priority, task history and approvals; queue paused is not proof of native cancellation.
+
 ## Concept-to-runtime calibration (2026-10-20)
 Workflow 2.2.1 adds executable typography/layout handoff and representative-scene
 calibration to existing resources/plan/implementation/delivery guidance. No new

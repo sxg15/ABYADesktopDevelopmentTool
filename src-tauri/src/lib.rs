@@ -586,12 +586,33 @@ async fn resize_codex_terminal(
         .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn stop_codex_terminal(conversation_id: String, state: State<'_, AppState>) -> AppResult<()> {
-    state
-        .runtime_bridge
-        .cancel_session(&format!("codex-{conversation_id}"));
-    state.codex_terminal.stop(&conversation_id)
+#[tauri::command]
+async fn stop_codex_terminal(conversation_id: String, state: State<'_, AppState>) -> AppResult<()> {
+    let terminal = state.codex_terminal.clone();
+    let bridge = state.runtime_bridge.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        bridge.cancel_session(&format!("codex-{conversation_id}"));
+        terminal.stop(&conversation_id)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
+}
+
+#[tauri::command]
+async fn force_stop_codex_conversation(
+    task_id: String,
+    conversation_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    let terminal = state.codex_terminal.clone();
+    let bridge = state.runtime_bridge.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        terminal.bind_conversation(&task_id, &conversation_id)?;
+        bridge.cancel_session(&format!("codex-{conversation_id}"));
+        terminal.force_stop(&task_id, &conversation_id)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command]
@@ -1124,6 +1145,7 @@ pub fn run() {
             resize_codex_terminal,
             stop_codex_terminal,
             interrupt_codex_turn,
+            force_stop_codex_conversation,
             list_codex_conversations,
             read_terminal_clipboard,
             copy_terminal_history,

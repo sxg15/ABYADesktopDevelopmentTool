@@ -111,6 +111,7 @@ export interface QuestionSubmission { production:ProductionView; continuation?:I
 export interface TaskControlState {
   taskId:string;conversationId:string;nativeSessionId?:string;state:string;connection:string;stage?:string;
   turnId?:string;turnStartedAt?:string;queued:boolean;requestId?:string;lastError?:string;updatedAt:string;lastEventAt?:string;sequence:number;
+  executionControl?: {requestId:string;operation:string;status:string;turnId?:string;error?:string;errorCode?:string};
 }
 
 export const continuationMessages: Record<IntakeContinuation["status"],string> = {
