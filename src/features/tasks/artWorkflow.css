@@ -23,4 +23,6 @@
 @container(max-width:850px){.art-proposal-layout.with-requirements{grid-template-columns:minmax(0,1fr)}.art-proposal-context{display:grid;grid-template-columns:1fr 1fr}.art-proposal-context>h5,.art-proposal-context>button{grid-column:1/-1}}
 @media(max-width:1000px){.art-proposal-layout.with-requirements{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){.art-navigation-focus{animation:none}}
+@media(max-width:1000px){.art-proposal-side{order:-1}}
+@container(max-width:850px){.art-proposal-side{order:-1}}
 .art-proposal-side{min-width:0;display:flex;flex-direction:column;gap:12px}.art-proposal-side .art-next-action{margin:0!important;flex-direction:column;align-items:stretch}.art-proposal-side .art-next-action button{width:100%;white-space:normal}.art-proposal-side .art-document-strip{flex-wrap:wrap;gap:8px}.art-proposal-side .art-document-strip>button{margin-left:auto}.art-proposal-side .art-proposal-context{width:100%}.art-proposal-main>h5{margin-top:0}.art-proposal-main .visual-card-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}.art-proposal-main .visual-thumbnail{height:260px}.art-proposal-main .visual-thumbnail img{max-height:260px}.art-proposal-main .visual-card p{font-size:12px!important}.art-proposal-layout{margin-top:0}

@@ -5,6 +5,7 @@ mod art_design_validation;
 mod art_library;
 mod art_library_package;
 mod art_library_requests;
+mod art_recovery;
 mod art_references;
 pub use acceptance::AcceptanceSpec;
 mod catalog;
@@ -304,6 +305,9 @@ impl TaskService {
             .map(|r| interaction::actions(r, root, active))
             .unwrap_or_else(|| json!({}));
         Ok(ProductionView {
+            approval_statuses: record.as_ref().map(|r| r.documents.keys().map(|kind| {
+                (kind.clone(), validation::accepted_document(r, root, kind).err().map(|e| e.message).unwrap_or_default())
+            }).collect()).unwrap_or_default(),
             art_design_status: record.as_ref().map(|r| json!({"enabled":art_design_sources::enabled(r),
                 "inputHash":art_design_sources::inputs_hash(r),"designHash":art_design_sources::design_hash(r)})).unwrap_or(Value::Null),
             actions,

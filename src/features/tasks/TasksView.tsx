@@ -74,6 +74,7 @@ export function TasksView({
   const onNotificationHandledRef = useRef(onNotificationHandled); onNotificationHandledRef.current = onNotificationHandled;
   const [guidancePending, setGuidancePending] = useState<GuidancePending>();
   const [requestedReview, setRequestedReview] = useState<{taskId:string;document:ProductionDocument}>();
+  const [requestedFeedback, setRequestedFeedback] = useState<{taskId:string;id:string}>();
   const currentPending = guidancePending?.taskId === selectedId ? guidancePending : undefined;
   const [showCreate, setShowCreate] = useState(false);
   const [showLaunch, setShowLaunch] = useState(false);
@@ -204,6 +205,7 @@ export function TasksView({
       }
       setShowCreate(false); setShowLaunch(false); setDetail(undefined);
       setRequestedReview(undefined); setRequestedQuestion(undefined);
+      setRequestedFeedback(undefined);
       setSelectedId(target.taskId);
       setPendingNavigation(activation);
     }).catch(error => {
@@ -250,6 +252,12 @@ export function TasksView({
         if (!group) { notify(t("notificationAlreadyHandled")); return; }
         showNotificationStage(target.taskId, group.stage ?? target.stage);
         setRequestedQuestion({taskId:target.taskId,requestId:activation.id,groupId:group.id});
+      } else if (target.action === "recheck") {
+        const feedback = view.record?.feedback?.find(f => f.id === target.feedbackId);
+        if (!feedback || feedback.status !== "awaiting-recheck" || feedback.candidateArtifactId !== target.candidateArtifactId
+          || view.actions?.recheck?.[feedback.id] !== "") { notify(t("notificationAlreadyHandled")); return; }
+        showNotificationStage(target.taskId, "resources");
+        setRequestedFeedback({taskId:target.taskId,id:feedback.id});
       } else if (target.action === "review") {
         const doc = view.record?.documents[target.stage];
         if (!doc || doc.revision !== target.documentRevision || doc.sha256 !== target.documentHash
@@ -694,7 +702,8 @@ export function TasksView({
               control={selectedControl} workflow={selectedTerminalContext?.workflow} en={settings?.locale === "en-US"}
               onPendingChange={setGuidancePending} onTerminal={target => void openAttentionTerminal(target)}
               onReview={document => { setRequestedReview({taskId:selected.id,document}); selectTab("production"); }}
-              onStage={stage => {
+              onStage={(stage, feedbackId) => {
+                if (feedbackId) setRequestedFeedback({taskId:selected.id,id:feedbackId});
                 try { sessionStorage.setItem(`abya:production-stage:${selected.id}`, stage); } catch { /* Navigation remains available. */ }
                 selectTab("production");
                 window.dispatchEvent(new CustomEvent("abya:show-stage", { detail: { taskId: selected.id, stage } }));
@@ -753,6 +762,7 @@ export function TasksView({
               {selectedTab === "production" && <ProductionPanel key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
                 onRepairIssue={selectedProvider === "codex" && selectedTerminalContext?.conversation ? repairSelectedIssue : undefined}
                 requestedReview={requestedReview?.taskId === selected.id ? requestedReview.document : undefined} onReviewOpened={() => setRequestedReview(undefined)}
+                requestedFeedback={requestedFeedback?.taskId === selected.id ? requestedFeedback : undefined} onFeedbackOpened={() => setRequestedFeedback(undefined)}
                 onContinue={async (message, _group, afterRevision) => continueSelectedTask(message, afterRevision)} />}
               <div className="skill-tab-panel" hidden={selectedTab !== "skills"}>
                 {openedSkillIds.includes(selected.id) && <SkillLibrary key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}

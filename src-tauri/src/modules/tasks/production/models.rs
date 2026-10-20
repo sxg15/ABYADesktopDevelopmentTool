@@ -177,6 +177,7 @@ pub struct SkillEntry {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProductionView {
+    pub approval_statuses: BTreeMap<String, String>,
     pub art_design_status: Value,
     pub actions: Value,
     pub stage_statuses: BTreeMap<String, String>,

@@ -12,7 +12,7 @@ import { isArtFeedback } from "./artWorkflow";
 
 export function TaskGuidance({ taskId, active, control, workflow, en = false, onStage, onTerminal, onReview, onPendingChange }: {
   taskId: string; active: boolean; control?: TaskControlState; workflow?: TerminalWorkflowSnapshot; en?: boolean;
-  onStage: (stage: string) => void; onTerminal: (target?: AttentionTarget) => void;
+  onStage: (stage: string, feedbackId?: string) => void; onTerminal: (target?: AttentionTarget) => void;
   onReview?: (document: ProductionDocument) => void; onPendingChange?: (pending: GuidancePending) => void;
 }) {
   const [view, setView] = useState<ProductionView>();
@@ -45,6 +45,7 @@ export function TaskGuidance({ taskId, active, control, workflow, en = false, on
     return () => window.clearTimeout(timer);
   }, [model.key, model.attention]);
   function act() {
+    if (model.action === "recheck") { onStage("resources", model.target?.feedbackId ?? undefined); return; }
     if (artPending) { onStage("resources"); return; }
     if (model.action === "question") window.dispatchEvent(new CustomEvent("abya:open-intake", {detail:{taskId,groupId:model.groupId}}));
     else if (model.action === "review") {

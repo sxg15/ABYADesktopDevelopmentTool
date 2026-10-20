@@ -10,6 +10,11 @@ pub(super) fn approved(r: &ProductionRecord, root: &Path, kind: &str) -> AppResu
     if r.stages.get(kind).map(String::as_str) != Some("passed") {
         return Err(AppError::validation(format!("{kind} 当前版本尚未确认。")));
     }
+    accepted_document(r, root, kind)
+}
+
+/// 核对当前文档的实际批准与文件，不将反馈处理中的阶段误当成批准丢失。
+pub(super) fn accepted_document(r: &ProductionRecord, root: &Path, kind: &str) -> AppResult<()> {
     let d = r
         .documents
         .get(kind)
@@ -27,6 +32,21 @@ pub(super) fn approved(r: &ProductionRecord, root: &Path, kind: &str) -> AppResu
     }
     if kind == "delivery" && d.game_version != r.current_version {
         return Err(AppError::validation("作品版本变化，原交付确认已失效。"));
+    }
+    if kind == "resources" {
+        let submitted = chrono::DateTime::parse_from_rfc3339(&d.submitted_at).ok();
+        let required = r
+            .documents
+            .get("requirements")
+            .and_then(|rules| chrono::DateTime::parse_from_rfc3339(&rules.submitted_at).ok());
+        if submitted
+            .zip(required)
+            .is_none_or(|(art, rules)| art < rules)
+        {
+            return Err(AppError::validation(
+                "需求已进入新周期，请提交本轮美术方案。",
+            ));
+        }
     }
     super::visuals::verify_bindings(d, root)?;
     super::interaction::current_art(r, root, d)?;

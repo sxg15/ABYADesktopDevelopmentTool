@@ -9,7 +9,7 @@ export interface GuidancePending { taskId: string; questions: number; reviews: n
 export interface GuidanceModel {
   key: string; tone: GuidanceTone; title: string; instruction: string; detail: string;
   destination: string; button: string; attention: boolean; stage: string; stageLabel: string;
-  action: "terminal" | "question" | "review" | "stage" | "none";
+  action: "terminal" | "question" | "review" | "recheck" | "stage" | "none";
   groupId?: string; reviewKind?: string; target?: AttentionTarget;
   pending: GuidancePending; additional: number;
 }
@@ -34,7 +34,7 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
     || !conversation || item.target.conversationId === conversation);
   const pending = {
     taskId, questions: all.filter(i => i.kind === "question").length,
-    reviews: all.filter(i => i.kind === "review").length,
+    reviews: all.filter(i => i.kind === "review" || i.kind === "recheck").length,
     terminal: all.filter(i => i.kind === "terminal").length,
   };
   const model: GuidanceModel = {

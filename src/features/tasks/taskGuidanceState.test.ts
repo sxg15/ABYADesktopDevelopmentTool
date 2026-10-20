@@ -44,3 +44,12 @@ it("directs a connected pending task to explicit continuation",()=>{
   expect(result.instruction).toContain('继续任务');
   expect(result.tone).toBe('neutral');
 });
+
+it("prioritizes native feedback verification independently of document review",()=>{
+  const attention=attentionFixture("review");
+  attention.items[0].kind="recheck";
+  attention.items[0].target={...attention.items[0].target,action:"recheck",stage:"resources",feedbackId:"old-feedback",candidateArtifactId:"current-image"};
+  const model=taskGuidanceState("task",true,view,{taskId:"task",state:"running"} as TaskControlState,undefined,false,attention);
+  expect(model.action).toBe("recheck");expect(model.target?.feedbackId).toBe("old-feedback");
+  expect(model.pending.reviews).toBe(1);expect(model.tone).toBe("human");
+});

@@ -306,6 +306,7 @@ fn projection_prioritizes_human_actions_and_keys_versions_not_timestamps() {
     let mut r = f.record("a", "q");
     r["documents"] = json!({"requirements":{"kind":"requirements","revision":2,"path":"a.md","sha256":"hash","content":"draft","submittedAt":"now"}});
     let mut view = ProductionView {
+        approval_statuses: Default::default(),
         art_design_status: serde_json::Value::Null,
         actions: json!({"review":{"requirements":""}}),
         stage_statuses: Default::default(),
@@ -356,6 +357,57 @@ fn projection_prioritizes_human_actions_and_keys_versions_not_timestamps() {
     let mut closed = task.clone();
     closed.status = TaskStatus::Archived;
     assert!(projection::project(&closed, &view, &[]).items.is_empty());
+}
+
+#[test]
+fn art_rechecks_project_without_document_review_and_bind_the_exact_candidate() {
+    let f = Fixture::new();
+    f.task("art");
+    let task = f.service.0.tasks.get_readonly("art").unwrap();
+    let mut r = f.record("art", "q");
+    r["questionGroups"] = json!([]);
+    r["currentStage"] = json!("resources");
+    r["feedback"] = json!([{"id":"old-feedback","stage":"resources","status":"awaiting-recheck",
+        "artifactId":"old-image","candidateArtifactId":"current-image","fix":"Updated row","recheck":"Compare the row"}]);
+    let mut view = ProductionView {
+        approval_statuses: Default::default(),
+        art_design_status: Value::Null,
+        actions: json!({"review":{"resources":"Not awaiting review"},"recheck":{"old-feedback":""}}),
+        stage_statuses: Default::default(),
+        artifacts: vec![],
+        policy: r["policy"].clone(),
+        record: Some(serde_json::from_value(r).unwrap()),
+        warnings: vec![],
+        report_paths: vec![],
+        available_update: false,
+    };
+    let first = projection::project(&task, &view, &[]);
+    assert_eq!(first.items.len(), 1);
+    assert_eq!(first.items[0].kind, "recheck");
+    assert_eq!(
+        first.items[0].target.feedback_id.as_deref(),
+        Some("old-feedback")
+    );
+    assert_eq!(
+        first.items[0].target.candidate_artifact_id.as_deref(),
+        Some("current-image")
+    );
+    view.record.as_mut().unwrap().feedback[0]["updatedAt"] = json!("Unrelated timestamp");
+    view.record.as_mut().unwrap().revision += 1;
+    assert_eq!(
+        first.items[0].key,
+        projection::project(&task, &view, &[]).items[0].key
+    );
+    view.record.as_mut().unwrap().feedback[0]["candidateArtifactId"] = json!("another-image");
+    assert_ne!(
+        first.items[0].key,
+        projection::project(&task, &view, &[]).items[0].key
+    );
+    view.actions["recheck"]["old-feedback"] = json!("Candidate is stale");
+    assert!(projection::project(&task, &view, &[]).items.is_empty());
+    view.actions["recheck"]["old-feedback"] = json!("");
+    view.record.as_mut().unwrap().feedback[0]["status"] = json!("resolved");
+    assert!(projection::project(&task, &view, &[]).items.is_empty());
 }
 
 #[test]

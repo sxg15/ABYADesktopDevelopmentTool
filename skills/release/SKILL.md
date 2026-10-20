@@ -1,5 +1,14 @@
 # Release Skill
 
+## Approved art recovery release (2026-10-20)
+Default and Validation packages identify art-feedback-recovery-20261020. Keep pinned
+task Skills and all user approval/feedback records unchanged by deployment. Validate
+the APP-only recovery gates, exact recheck routing, generic art reopen confirmation
+and continuation-failure retention through isolated tests/browser fixtures. Package
+validation does not constitute closing real feedback or accepting a game. Run the
+standard checks, validate complete portable inventory and a relocated checkout,
+then promote the validated package with the existing process/backup protections.
+
 ## Game UI design reference library (2026-10-20)
 Default/Validation packages use game-ui-design-library-20261020, workflow 2.2.3.
 Ship the full game-ui-design child, handoff section, candidate index and offline

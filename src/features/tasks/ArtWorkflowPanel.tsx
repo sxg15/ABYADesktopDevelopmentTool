@@ -12,10 +12,11 @@ import { VisualGallery } from "./VisualGallery";
 import { artDocument, artRecheckReason, artVisuals, isArtFeedback } from "./artWorkflow";
 import "./artWorkflow.css";
 
-export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, onReview, onContinue, feedbackRequest = 0 }: {
+export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, onReview, onContinue, feedbackRequest = 0, feedbackId }: {
   taskId: string; view: ProductionView; active: boolean; en?: boolean;
   onUpdated: (view: ProductionView) => void; onReview: (doc: ProductionDocument) => void;
   onContinue?: (message: string, revision: number) => Promise<void>; feedbackRequest?: number;
+  feedbackId?: string;
 }) {
   const r = view.record!;
   const [pane, setPane] = useState<"proposal"|"feedback"|"requirements">("proposal");
@@ -23,16 +24,18 @@ export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, 
   const [references, setReferences] = useState(false), [error, setError] = useState("");
   const [selectedArtifact, setSelectedArtifact] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const resumeLock = useRef(false);
   const feedbackArea = useRef<HTMLDivElement>(null);
   useEffect(() => { if (feedbackRequest) setPane("feedback"); }, [feedbackRequest]);
   useEffect(() => {
     if (pane !== "feedback") return;
-    const target = feedbackArea.current;
+    const target = (feedbackId ? [...(feedbackArea.current?.querySelectorAll<HTMLElement>("[data-feedback-id]") ?? [])].find(e => e.dataset.feedbackId === feedbackId) : undefined) ?? feedbackArea.current;
     target?.scrollIntoView?.({block:"nearest"}); target?.focus({preventScroll:true});
     target?.classList.add("art-navigation-focus");
     const timer = window.setTimeout(() => target?.classList.remove("art-navigation-focus"), 1100);
     return () => { window.clearTimeout(timer); target?.classList.remove("art-navigation-focus"); };
-  }, [pane, feedbackRequest]);
+  }, [pane, feedbackRequest, feedbackId]);
   const artifacts = view.artifacts ?? r.artifacts ?? [];
   const record = {...r, artifacts};
   const { current, history } = artVisuals(r, artifacts);
@@ -41,25 +44,46 @@ export function ArtWorkflowPanel({ taskId, view, active, en = false, onUpdated, 
   const ready = pending.filter(f => !artRecheckReason(record, f, view.actions?.recheck, en));
   const referenceCount = artifacts.filter(a => a.plannerReference && a.status !== "withdrawn").length;
   const submitted = !!document && current.every(a => document.artifactBindings?.[a.path] === a.sha256);
-  const approved = submitted && r.stages[document!.kind] === "passed" && r.approvals.some(a => a.kind === document!.kind && a.documentRevision === document!.revision && a.documentHash === document!.sha256 && a.decision === "accepted");
+  const approved = submitted && (view.approvalStatuses ? view.approvalStatuses[document!.kind] === ""
+    : r.stages[document!.kind] === "passed" && [...r.approvals].reverse().find(a => a.kind === document!.kind && a.documentRevision === document!.revision)?.decision === "accepted"
+      && r.approvals.some(a => a.kind === document!.kind && a.documentRevision === document!.revision && a.documentHash === document!.sha256 && a.decision === "accepted"));
+  const canResume = view.actions?.resume?.resources === "";
+  const resumeReason = approved && r.currentStage === "resources" ? view.actions?.resume?.resources : undefined;
+  const invalidApproval = !approved && document && r.approvals.some(a => a.kind === document.kind && a.documentRevision === document.revision && a.decision === "accepted")
+    ? view.approvalStatuses?.[document.kind] : undefined;
   const question = r.questionGroups?.find(g => g.stage === "resources" && g.status === "pending");
   const reviewReason = document ? view.actions?.review[document.kind] ?? (en ? "Checking review availability." : "正在核对审查条件。") : "";
   const approveReason = document ? view.actions?.approve[document.kind] ?? (en ? "Checking approval availability." : "正在核对批准条件。") : "";
   const canReview = !!document && !reviewReason;
   const title = !active ? (en ? "This task is read-only" : "任务已结束，当前仅供查阅") : question ? (en ? "Answer the art questions first" : "先回答本阶段的美术问题")
-    : pending.length ? ready.length ? (en ? `Recheck ${ready.length} fixes before approval` : `先复验 ${ready.length} 项修改，再确认方案`) : (en ? "Waiting for AI to update the fixes" : "等待 AI 补齐修改与复验结果")
+    : pending.length ? ready.length ? (approved ? (en ? `Proposal approved · recheck ${ready.length} fixes` : `方案已批准，请复验 ${ready.length} 项反馈`) : (en ? `Recheck ${ready.length} fixes before approval` : `先复验 ${ready.length} 项修改，再确认方案`)) : (en ? "Waiting for AI to update the fixes" : "等待 AI 补齐修改与复验结果")
+    : canResume ? (en ? "Feedback closed · restore the execution plan" : "反馈已关闭，可以恢复执行计划")
     : approved ? (en ? "This proposal is confirmed" : "本版方案已确认") : canReview ? (en ? "Review the current proposal" : "请审阅并确认本版方案") : (en ? "Waiting for AI to submit the proposal" : "等待 AI 提交完整方案");
-  const hint = pending.length ? (en ? `${pending.length} open feedback items; ${pending.length-ready.length} still need AI updates. Nothing is closed automatically.` : `还有 ${pending.length} 条反馈未关闭，其中 ${pending.length-ready.length} 条仍需 AI 更新。逐项复验后，才可确认本版方案。`)
-    : approved ? (en ? "The recorded decision is retained. Check task guidance for the next stage." : "确认结果已保存，请关注顶部任务引导中的后续阶段。")
+  const hint = pending.length ? (en ? `${pending.length} open feedback items; ${pending.length-ready.length} still need AI updates. ${approved ? "The existing approval is retained." : "Nothing is closed automatically."}` : `还有 ${pending.length} 条反馈未关闭，其中 ${pending.length-ready.length} 条仍需 AI 更新。${approved ? "当前文档批准仍有效，请逐项复验反馈。" : "逐项复验后，才可确认本版方案。"}`)
+    : canResume ? (en ? "The approved document and media are unchanged. Restore the plan without approving again." : "已核对原批准、正文和素材未变化，可恢复计划，无需重复批准。")
+    : approved ? (resumeReason || (en ? "The recorded decision is retained. Check task guidance for the next stage." : "确认结果已保存，请关注顶部任务引导中的后续阶段。"))
     : canReview ? (approveReason || (en ? "Read the document and images, then approve or request changes in the review dialog." : "先看确认单和本版图片，再进入审查窗口选择“通过”或“需要修改”。"))
-    : reviewReason || (en ? "You can add references now. No approval is needed until AI submits a reviewable proposal." : "现在可以补充参考图；AI 提交可审查的完整方案前，无需确认，也不能推进验收。");
+    : invalidApproval || reviewReason || (en ? "You can add references now. No approval is needed until AI submits a reviewable proposal." : "现在可以补充参考图；AI 提交可审查的完整方案前，无需确认，也不能推进验收。");
   async function reveal(path: string) { try { await productionApi.revealDocument(taskId, path); } catch(e) { setError(errorMessage(e)); } }
+  async function resume() {
+    if (resumeLock.current) return;
+    resumeLock.current = true;
+    setRestoring(true); setError("");
+    try {
+      const next = await productionApi.feedback(taskId, r.revision, "resume-art", {});
+      onUpdated(next);
+      try { await onContinue?.("美术原批准已核对并恢复，请读取最新记录，继续执行计划；不要重复批准文档。", next.record!.revision); }
+      catch(e) { setError((en ? "Plan restored. " : "计划已恢复。") + errorMessage(e)); }
+    } catch(e) { setError(errorMessage(e)); }
+    finally { resumeLock.current = false; setRestoring(false); }
+  }
   const drafts = artifacts.filter(a => a.stage === "resources" && !a.mediaType && a.path !== document?.path);
   const feedbackTarget = current.find(a => view.actions?.feedback[a.id] === "");
-  const nextAction = <div className={`art-next-action ${approved ? "is-complete" : ready.length || canReview || question ? "needs-action" : "is-waiting"}`} role="status">
+  const nextAction = <div className={`art-next-action ${ready.length || canResume || question || canReview && !approved ? "needs-action" : approved && !pending.length ? "is-complete" : "is-waiting"}`} role="status">
       <div><strong>{title}</strong><p>{hint}</p></div>
       {active && question ? <button className="primary-button" onClick={() => window.dispatchEvent(new CustomEvent("abya:open-intake",{detail:{taskId,groupId:question.id}}))}>{en ? "Answer questions" : "填写阶段问答"}<ArrowRight size={16}/></button>
         : active && pending.length ? <button className="primary-button" onClick={() => setPane("feedback")}>{ready.length ? (en ? "Recheck fixes" : "进入修改与复验") : (en ? "See what's missing" : "查看等待原因")}<ArrowRight size={16}/></button>
+        : active && canResume ? <button className="primary-button" disabled={restoring} onClick={() => void resume()}>{en ? "Restore execution plan" : "恢复执行计划"}<ArrowRight size={16}/></button>
         : document && <button className={active && canReview && !approved ? "primary-button" : "secondary-button"} onClick={() => onReview(document)}>{canReview && active && !approved ? (en ? "Review and confirm" : "审查并确认本版") : (en ? "Read recorded document" : "阅读已登记文档")}<ArrowRight size={16}/></button>}
     </div>;
   const documentStrip = document ? <div className="art-document-strip"><FileText size={21}/><div><strong>{en ? `Review document · v${document.revision}` : `本版确认单 · 第 ${document.revision} 版`}</strong>

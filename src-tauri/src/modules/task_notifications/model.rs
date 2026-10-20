@@ -12,6 +12,8 @@ pub struct AttentionTarget {
     pub group_id: Option<String>,
     pub document_revision: Option<u64>,
     pub document_hash: Option<String>,
+    pub feedback_id: Option<String>,
+    pub candidate_artifact_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -1,5 +1,18 @@
 # Task Notifications Skill
 
+## Exact art feedback rechecks (2026-10-20)
+Project actions.recheck independently of document review as kind/action recheck,
+after terminal input/questions and before document review. Require awaiting-recheck
+and an empty native eligibility reason. Target carries optional feedbackId and
+candidateArtifactId; older receipts deserialize without them. Identity binds cycle,
+feedback, candidate, fix/recheck text and explicit reopen count, never incidental
+timestamps or unrelated production revisions. Resolved/stale candidates withdraw.
+Guidance counts rechecks as human reviews; activation revalidates feedback status,
+candidate and native action before selecting Art / Changes and rechecks and focusing
+the row. Navigation never closes feedback, approves, resumes or starts a conversation.
+Regress available recheck with unavailable document review, exact/stale activation,
+stable polling keys, changed candidates, explicit reopen attempts and old receipts.
+
 ## Retired-provider compatibility (2026-10-19)
 Only Codex attention is scanned. Old task question groups still project questions
 with no supported provider target; never coerce their conversation IDs to Codex.

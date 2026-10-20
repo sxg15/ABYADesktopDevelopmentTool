@@ -1,6 +1,7 @@
 use super::*;
 mod art_design_tests;
 mod art_library_tests;
+mod art_recovery_tests;
 mod art_references_tests;
 mod issue_export_tests;
 use crate::foundation::{AppPaths, Database};

@@ -63,8 +63,9 @@ export interface ProductionRecord {
   skillPins: TaskSkill[]; legacyRecord?: string; updatedAt: string;
 }
 export interface ProductionView {
+  approvalStatuses?: Record<string, string>;
   artDesignStatus?: {enabled:boolean;inputHash:string;designHash:string};
-  actions?: { review: Record<string,string>; approve: Record<string,string>; feedback: Record<string,string>; recheck?: Record<string,string> };
+  actions?: { review: Record<string,string>; approve: Record<string,string>; feedback: Record<string,string>; recheck?: Record<string,string>; resume?: Record<string,string> };
   stageStatuses?: Record<string,string>;
   artifacts?: ProductionArtifact[];
   record?: ProductionRecord; policy: ProductionPolicy; warnings: string[];
@@ -147,5 +148,5 @@ export interface ProductionFeedback {
   id: string; description: string; status: string; version?: string; candidateVersion?: string;
   artifactId?: string; attachmentIds?: string[]; instanceIds?: string[]; stage: string;
   fix?: string; recheck?: string; createdAt: string; updatedAt: string;
-  history?: { actor: string; status: string; at: string; version?: string; fix?: string }[];
+  history?: { actor: string; status: string; at: string; version?: string; fix?: string; reason?: string }[];
 }

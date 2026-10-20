@@ -1,15 +1,15 @@
-{
-  "product": "ABYA Desktop Development Tool",
-  "version": "0.4.0",
-  "workflowVersion": "2.2.3",
-  "releaseLabel": "game-ui-design-library-20261020",
-  "sourceBuiltAtUtc": "2026-10-20T10:56:39.0779793Z",
-  "builtAtUtc": "2026-10-20T11:01:33.4254471Z",
-  "executable": "ABYA Desktop Development Tool.exe",
-  "sha256": "5EC318F48EE40C42C8DF97A993821B32D08655A42BB40178E5E6D49007F15284",
-  "cliExecutable": "abya-desktop.exe",
-  "cliSha256": "C9080FF7FE3F7C8B63850609619A5B37C9F4A48264F3BC373222839FB70EA870",
-  "runtimeCliVersion": "0.2.0",
-  "cliProtocolVersion": 1,
-  "nodeVersion": "v24.11.1"
+﻿{
+    "product":  "ABYA Desktop Development Tool",
+    "version":  "0.4.0",
+    "workflowVersion":  "2.2.3",
+    "releaseLabel":  "art-feedback-recovery-20261020",
+    "sourceBuiltAtUtc":  "2026-10-20T12:09:43.3514382Z",
+    "builtAtUtc":  "2026-10-20T12:16:32.2194058Z",
+    "executable":  "ABYA Desktop Development Tool.exe",
+    "sha256":  "21DE605DA04A08751A5391C2ACC8BCEC7B585218BE7AF315DB19F7DD2BC59176",
+    "cliExecutable":  "abya-desktop.exe",
+    "cliSha256":  "16C1BECEBB600C96D06D89AB4041A9CBF58EBA32F245A13683056E9D77C6C873",
+    "runtimeCliVersion":  "0.2.0",
+    "cliProtocolVersion":  1,
+    "nodeVersion":  "v24.11.1"
 }

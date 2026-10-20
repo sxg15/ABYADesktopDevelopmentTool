@@ -1,7 +1,7 @@
 import type { TaskAttention, TaskAttentionSnapshot } from "./notifications";
 
 export function attentionFixture(kind: TaskAttention["kind"] = "review", taskId = "task"): TaskAttentionSnapshot {
-  const action = kind === "question" ? "question" : kind === "review" ? "review" : kind === "playtest" || kind === "blocked" ? "stage" : "terminal";
+  const action = kind === "question" ? "question" : kind === "review" ? "review" : kind === "recheck" ? "recheck" : kind === "playtest" || kind === "blocked" ? "stage" : "terminal";
   const copy = kind === "question"
     ? {title:"需要你回答 1 个问题",instruction:"请回答本组问题。",button:"开始回答",destination:"处理位置：阶段问答",detail:"答案保存后由你继续。"}
     : kind === "review"

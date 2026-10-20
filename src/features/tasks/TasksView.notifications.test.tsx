@@ -17,7 +17,7 @@ vi.mock("../terminal/useTaskControl",()=>({useTaskControl:()=>undefined}));
 vi.mock("./TaskGuidance",()=>({TaskGuidance:()=>null}));
 vi.mock("./CodexWorkflowBar",()=>({CodexWorkflowBar:()=>null}));
 vi.mock("./TaskIntakeDialog",()=>({TaskIntakeDialog:({requestedGroup}:{requestedGroup?:{groupId:string}})=><div>{requestedGroup ? "question:"+requestedGroup.groupId : ""}</div>}));
-vi.mock("./ProductionPanel",()=>({ProductionPanel:({taskId,requestedReview}:{taskId:string;requestedReview?:{sha256:string}})=><div>{"stage:"+taskId}{requestedReview ? " review:"+requestedReview.sha256 : ""}</div>}));
+vi.mock("./ProductionPanel",()=>({ProductionPanel:({taskId,requestedReview,requestedFeedback}:{taskId:string;requestedReview?:{sha256:string};requestedFeedback?:{id:string}})=><div>{"stage:"+taskId}{requestedReview ? " review:"+requestedReview.sha256 : ""}{requestedFeedback ? " feedback:"+requestedFeedback.id : ""}</div>}));
 vi.mock("../terminal/CodexTerminalView",()=>({DevelopmentTerminalView:({connectionRequest}:{connectionRequest?:TerminalConnectionRequest})=>{
   useEffect(()=>{connectionRequest?.finish();},[connectionRequest?.id]);
   return <div>{connectionRequest ? "terminal:"+connectionRequest.provider+":"+connectionRequest.conversationId : ""}</div>;
@@ -55,4 +55,16 @@ it("discards stale version reads after a newer notification navigation",async()=
   await waitFor(()=>expect(productionApi.get).toHaveBeenCalled());
   page.rerender(<TasksView {...props} notificationNavigation={nav("question")}/>);await screen.findByText("question:q");
   await act(async()=>finish(view()));expect(screen.queryByText(/review:old/)).toBeNull();
+});
+
+it.each([false,true])("routes recheck notification to its exact candidate and rejects stale=%s",async(stale)=>{
+  const current=view();current.actions!.recheck={issue:""};
+  current.record!.feedback=[{id:"issue",stage:"resources",status:"awaiting-recheck",artifactId:"original",candidateArtifactId:stale?"changed":"current",description:"Check pins",createdAt:"now",updatedAt:"now"}];
+  vi.mocked(productionApi.get).mockResolvedValue(current);
+  const activation=nav("review");activation.id="recheck";
+  activation.target={...activation.target!,action:"recheck",feedbackId:"issue",candidateArtifactId:"current"};
+  const handled=vi.fn();render(<TasksView t={translator("en-US")} notify={vi.fn()} notificationNavigation={activation} onNotificationHandled={handled}/>);
+  await waitFor(()=>expect(handled).toHaveBeenCalledWith("recheck"));
+  expect(screen.queryByText("stage:target feedback:issue") !== null).toBe(!stale);
+  expect(productionApi.continueTask).not.toHaveBeenCalled();expect(productionApi.decide).not.toHaveBeenCalled();
 });

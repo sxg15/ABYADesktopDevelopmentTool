@@ -1,5 +1,31 @@
 # Development Tasks Skill
 
+## Approved art feedback recovery (2026-10-20)
+ProductionView.approvalStatuses projects exact-revision accepted document validity
+independently of stage progress; empty reason means the current approval is intact.
+Resources must also belong to the current requirements generation. Reads never
+restore stages or append decisions. APP-only resolve revalidates the current-cycle
+same-group candidate, closes only the selected feedback, then restores resources
+to passed and plan to in-progress only when all art feedback is closed, requirements
+and art documents/media/design hashes are intact and art questions/blockers are clear.
+Do not restore downstream implementations, self-tests or delivery. Existing approval
+and document revisions stay unchanged. APP-only resume-art uses the same gates for
+already stranded closed-feedback records, guarded by expectedRevision; agents cannot
+invoke it. actions.resume.resources explains eligibility. Scoped plan blockers remain.
+All art reopen entries require an impact/reason dialog and save the reason before
+continuation of the original conversation, including generic plan/review/delivery
+panels. Stale-material requests keep their explicit bounded reason. Continuation
+failure retains the saved operation; open feedback can explicitly retry continuation
+without reopening or duplicating a mutation. Human feedback closure remains separate
+from approval. Navigation only selects/focuses and never writes production records.
+Native recheck attention routes to the exact feedback/candidate and focuses its row,
+including when mounting ProductionPanel from another tab. Stale notifications only
+show current state. Narrow layouts put the next action before the preview images.
+Regress cross-cycle approved/reopen/recheck/resolve recovery, no duplicate approval,
+changed/missing media or documents, newer requirements/design inputs, multiple open
+feedback, blockers/questions, stale revisions, read-only polling, disconnected
+continuation, generic entry parity, exact-target navigation and legacy compatibility.
+
 ## Game UI design and candidate references (2026-10-20)
 Workflow 2.2.3 adds a scoped game-ui-design child to the pinned game-art-design tree.
 HUD/menu/inventory/level-select/results work loads that method and only relevant

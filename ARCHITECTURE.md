@@ -60,6 +60,13 @@ are exports, distinct from terminal workflow projections. Revision-checked mutat
 manage documents, evidence, issues, versions and rounds. Only a Tauri user action
 can decide document approvals (requirements/resources/plan/delivery in 2.1); CLI cannot approve or fabricate acceptance.
 
+Document approval validity is projected independently of stage progress. APP feedback
+closure may restore an unchanged current-cycle art approval and reopen only the plan
+entry after all art feedback/questions/blockers clear. Explicit APP-only recovery
+uses the same revision/file gates; reads and agents cannot restore stages. Native
+attention projects feedback rechecks independently of document review, with exact
+feedback/candidate navigation that never performs the decision itself.
+
 Workflow 2.2 adds defaulted artDesign records and version-bound design hashes.
 TaskService projects planner sources from task descriptions, submitted relevant answers,
 references and art feedback; terminal quotations remain explicitly AI-transcribed.

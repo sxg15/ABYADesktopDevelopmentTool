@@ -3,20 +3,22 @@ import type { TerminalProvider } from "./types";
 
 export interface AttentionTarget {
   taskId: string;
-  action: "question" | "review" | "terminal" | "stage";
+  action: "question" | "review" | "recheck" | "terminal" | "stage";
   stage: string;
   provider: TerminalProvider | null;
   conversationId: string | null;
   groupId: string | null;
   documentRevision: number | null;
   documentHash: string | null;
+  feedbackId?: string | null;
+  candidateArtifactId?: string | null;
 }
 export interface AttentionText {
   title: string; instruction: string; detail: string; destination: string; button: string;
 }
 export interface TaskAttention {
   key: string; taskId: string; taskTitle: string;
-  kind: "terminal" | "question" | "review" | "playtest" | "blocked" | "failed" | "disconnected" | "needsReview";
+  kind: "terminal" | "question" | "review" | "recheck" | "playtest" | "blocked" | "failed" | "disconnected" | "needsReview";
   tone: "human" | "terminal" | "error";
   stageName: string;
   target: AttentionTarget;

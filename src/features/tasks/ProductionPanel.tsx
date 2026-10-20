@@ -77,6 +77,8 @@ export function ProductionPanel({
   onContinue,
   requestedReview,
   onReviewOpened,
+  requestedFeedback,
+  onFeedbackOpened,
   onRepairIssue,
 }: {
   taskId: string;
@@ -84,6 +86,8 @@ export function ProductionPanel({
   locale?: string;
   requestedReview?: ProductionDocument;
   onReviewOpened?: () => void;
+  requestedFeedback?: {id:string};
+  onFeedbackOpened?: () => void;
   onRepairIssue?: (issueId: string, revision: number) => Promise<string>;
   onContinue?: (
     message: string,
@@ -106,6 +110,7 @@ export function ProductionPanel({
   const [selected, setSelected] = useState(() => remembered(taskId));
   const [visualFeedback, setVisualFeedback] = useState<string>();
   const [artFeedbackRequest, setArtFeedbackRequest] = useState(0);
+  const [focusedFeedback, setFocusedFeedback] = useState<string>();
   const sequence = useRef(0),
     alive = useRef(true),
     mutating = useRef(false);
@@ -145,6 +150,11 @@ export function ProductionPanel({
     try { sessionStorage.setItem(`abya:production-stage:${taskId}`, requestedReview.kind); } catch { /* Optional stage memory. */ }
     onReviewOpened?.();
   }, [taskId, requestedReview, onReviewOpened]);
+  useEffect(() => {
+    if (!requestedFeedback) return;
+    setSelected("resources"); setFocusedFeedback(requestedFeedback.id); setArtFeedbackRequest(v => v + 1);
+    onFeedbackOpened?.();
+  }, [taskId, requestedFeedback, onFeedbackOpened]);
   async function change(run: () => Promise<ProductionView>) {
     setBusy(true);
     mutating.current = true;
@@ -470,7 +480,7 @@ export function ProductionPanel({
             ))}
           {stage === "resources" && (
             <ArtWorkflowPanel key={`art-workflow:${taskId}`} taskId={taskId} view={view} active={active} en={en}
-              feedbackRequest={artFeedbackRequest} onUpdated={updateArt} onReview={d => { setError(""); setReviewDocument(d); }}
+              feedbackRequest={artFeedbackRequest} feedbackId={focusedFeedback} onUpdated={updateArt} onReview={d => { setError(""); setReviewDocument(d); }}
               onContinue={onContinue ? (message, revision) => onContinue(message, undefined, revision) : undefined} />
           )}
           {stage !== "resources" && <section className="production-card">

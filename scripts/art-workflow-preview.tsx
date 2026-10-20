@@ -25,6 +25,9 @@ for(const group of ["layout","states"])for(const version of [1,2,3,4]){
 }
 view.record!.feedback=[{id:"spacing",description:"游戏区与右侧计分栏需要分离",stage:"resources",artifactId:"layout-1",candidateArtifactId:"layout-4",status:"awaiting-recheck",fix:"已采用独立面板，并把得分与计时移至右侧。",recheck:"请对照最新布局图，确认分区与文字可读。",createdAt:"now",updatedAt:"now"}];
 function snapshot(){const result=structuredClone(view),r=result.record!;const pending=r.feedback!.filter(f=>f.status!=="resolved");
+  const accepted=r.approvals.some(a=>a.kind==="resources"&&a.documentRevision===4&&a.documentHash==="document-4"&&a.decision==="accepted");
+  result.approvalStatuses={resources:accepted?"":"当前文档尚未批准"};
+  result.actions!.resume={resources:accepted&&!pending.length&&r.stages.resources==="in-progress"?"":"尚未满足恢复条件"};
   result.actions!.review.resources=r.stages.resources==="awaiting-confirmation"?"":"此版本当前不处于待审查状态。";
   result.actions!.approve.resources=pending.length?"还有 1 条美术反馈未关闭，请先进入修改与复验。":"";
   for(const f of r.feedback!)result.actions!.recheck![f.id]=f.status==="open"?"AI 尚未提交修复结果，请等待修改。":f.candidateArtifactId!=="layout-4"?"这条反馈尚未关联最新视觉修订，请让 AI 更新复验结果后再处理。":"";
@@ -34,7 +37,13 @@ function snapshot(){const result=structuredClone(view),r=result.record!;const pe
 productionApi.get=async()=>snapshot();productionApi.media=async(_task,id)=>images.get(id)!;
 productionApi.feedback=async(_task,revision,operation,data)=>{
   if(revision!==view.record!.revision)throw new Error("请刷新隔离测试数据");const d=data as {id:string;description:string;artifactId:string;name:string;base64:string;summary:string;reason?:string};
-  if(operation==="resolve")view.record!.feedback!.find(f=>f.id===d.id)!.status="resolved";
+  if(operation==="resolve"||operation==="resume-art"){
+    if(operation==="resolve")view.record!.feedback!.find(f=>f.id===d.id)!.status="resolved";
+    if(view.record!.approvals.some(a=>a.kind==="resources"&&a.decision==="accepted")&&!view.record!.feedback!.some(f=>f.status!=="resolved")){
+      view.record!.stages.resources="passed";view.record!.stages.plan="in-progress";view.record!.currentStage="plan";
+      document.getElementById("fixture-result")!.textContent="隔离测试：计划已恢复，批准记录未增加";
+    }
+  }
   else if(operation==="reopen"){const f=view.record!.feedback!.find(f=>f.id===d.id)!;f.status="open";f.reopenReason=d.reason;view.record!.stages.resources="in-progress";}
   else if(operation==="attach-art-reference"){const id=crypto.randomUUID();images.set(id,`data:image/png;base64,${d.base64}`);view.record!.artifacts!.push({id,path:id+".png",title:d.name,summary:d.summary,stage:"resources",status:"reference",plannerReference:true,mediaType:"image/png"});}
   else if(operation==="remove-art-reference")view.record!.artifacts!.find(a=>a.id===d.id)!.status="withdrawn";
@@ -48,6 +57,11 @@ productionApi.decide=async(_task,revision,kind,hash,accepted,feedback)=>{
   view.record!.stages.resources=accepted?"passed":"in-progress";if(accepted){view.record!.currentStage="plan";view.record!.stages.plan="in-progress";}view.record!.revision++;document.getElementById("fixture-result")!.textContent=accepted?"测试：仅在明确确认后保存方案决定":"测试：已记录修改意见";return snapshot();
 };
 productionApi.revealDocument=async()=>{};productionApi.revealReport=async()=>{};
-function scenario(type:string){const f=view.record!.feedback![0];f.status=type==="ready"?"resolved":type==="ai"?"open":"awaiting-recheck";f.candidateArtifactId=type==="stale"?"layout-2":"layout-4";view.record!.revision++;window.dispatchEvent(new Event("focus"));}
-createRoot(document.getElementById("root")!).render(<main className="tasks-workspace" style={{display:"block",height:"100%"}}><header style={{padding:"8px 20px",height:45,display:"flex",alignItems:"center",gap:12}}><strong>美术协作 · 隔离测试</strong>{[["review","待复验"],["ai","待 AI 修改"],["stale","复验材料过期"],["ready","可确认"]].map(([id,label])=><button key={id} onClick={()=>scenario(id)}>{label}</button>)}<small id="fixture-result"/></header>
+function scenario(type:string){const r=view.record!,f=r.feedback![0];
+  f.status=type==="ready"||type==="stranded"?"resolved":type==="ai"?"open":"awaiting-recheck";
+  f.candidateArtifactId=type==="stale"?"layout-2":"layout-4";
+  r.currentStage="resources";r.stages.resources=["approved-reopen","stranded","ai"].includes(type)?"in-progress":"awaiting-confirmation";r.stages.plan="not-started";
+  r.approvals=["approved-reopen","stranded"].includes(type)?[{kind:"resources",documentRevision:4,documentHash:"document-4",decision:"accepted",feedback:"",decidedAt:new Date().toISOString()}]:[];
+  r.revision++;window.dispatchEvent(new Event("focus"));}
+createRoot(document.getElementById("root")!).render(<main className="tasks-workspace" style={{display:"block",height:"100%"}}><header style={{padding:"8px 20px",minHeight:45,display:"flex",alignItems:"center",flexWrap:"wrap",gap:12}}><strong>美术协作 · 隔离测试</strong>{[["review","待复验"],["ai","待 AI 修改"],["stale","复验材料过期"],["ready","可确认"],["approved-reopen","已批准后重开"],["stranded","旧记录恢复"]].map(([id,label])=><button key={id} onClick={()=>scenario(id)}>{label}</button>)}<small id="fixture-result"/></header>
   <div className="content-pane" style={{height:"calc(100% - 45px)"}}><ProductionPanel taskId="art-flow" active locale="zh-CN" onContinue={async()=>{}}/></div></main>);

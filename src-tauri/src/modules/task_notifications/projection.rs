@@ -27,6 +27,8 @@ pub fn project(
         group_id: None,
         document_revision: None,
         document_hash: None,
+        feedback_id: None,
+        candidate_artifact_id: None,
     };
     let mut add = |kind: &str, target: AttentionTarget, identity: Value, count: usize| {
         let key = format!(
@@ -99,6 +101,41 @@ pub fn project(
                     group.answers.last().map(|a| a.revision)
                 ]),
                 group.questions.len(),
+            );
+        }
+        for feedback in &r.feedback {
+            let Some(id) = feedback["id"].as_str() else {
+                continue;
+            };
+            if view.actions["recheck"][id].as_str() != Some("")
+                || feedback["status"] != "awaiting-recheck"
+            {
+                continue;
+            }
+            has_stage_action = true;
+            let mut t = target.clone();
+            t.action = "recheck".into();
+            t.stage = "resources".into();
+            t.feedback_id = Some(id.into());
+            t.candidate_artifact_id = feedback["candidateArtifactId"].as_str().map(str::to_owned);
+            let attempts = feedback["history"].as_array().map_or(0, |history| {
+                history
+                    .iter()
+                    .filter(|h| h["actor"] == "user" && h["status"] == "open")
+                    .count()
+            });
+            add(
+                "recheck",
+                t,
+                json!([
+                    r.cycle,
+                    id,
+                    feedback["candidateArtifactId"],
+                    feedback["fix"],
+                    feedback["recheck"],
+                    attempts
+                ]),
+                0,
             );
         }
         if let Some(stages) = view.policy["stages"].as_array() {
@@ -184,6 +221,22 @@ fn text(kind: &str, target: &AttentionTarget, count: usize, en: bool) -> Attenti
         }
     };
     let (title, instruction, detail, destination, button) = match kind {
+        "recheck" => (
+            pick("美术修改等待你复验", "Art fixes need your verification"),
+            pick(
+                "请对照当前候选方案，复验并处理这一条反馈。",
+                "Compare the current candidate and review this feedback item.",
+            ),
+            pick(
+                "文档批准与反馈处理分别记录；内容未变化时，无需重复批准。",
+                "Document approval and feedback are separate; unchanged approved content does not need another approval.",
+            ),
+            pick(
+                "处理位置：美术 · 修改与复验",
+                "Review in: Art · Changes and rechecks",
+            ),
+            pick("前往复验", "Review the fix"),
+        ),
         "terminal" => (
             pick("终端需要你处理", "Your input is needed in the terminal"),
             pick(

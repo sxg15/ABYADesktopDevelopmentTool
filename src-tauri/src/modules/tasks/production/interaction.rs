@@ -225,5 +225,6 @@ pub(super) fn actions(r: &ProductionRecord, root: &Path, active: bool) -> Value 
                 .map(|id| (id.to_owned(), reason(art_recheck(r, root, f))))
         })
         .collect();
-    json!({"review":review_actions,"approve":approve_actions,"feedback":feedback_actions,"recheck":recheck_actions})
+    json!({"review":review_actions,"approve":approve_actions,"feedback":feedback_actions,"recheck":recheck_actions,
+        "resume":{"resources":reason(super::art_recovery::check(r, root))}})
 }

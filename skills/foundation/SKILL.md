@@ -1,5 +1,15 @@
 # Foundation Skill
 
+## Art approval and recheck projections (2026-10-20)
+Shared ProductionView adds optional approvalStatuses reason map (empty = intact
+accepted current document) and actions.resume reasons. APP-only feedback operation
+resume-art delegates to TaskService with expectedRevision; it cannot add an approval
+or close feedback and has no agent/CLI equivalent. AttentionTarget adds optional
+feedbackId/candidateArtifactId and action recheck; TaskAttention kind recheck shares
+human review badges. Legacy views/receipts remain readable. Domain validation and
+restoration stay in tasks; notification projection/navigation stays in notifications
+and the tasks UI. No database migration, credential or new transport is introduced.
+
 force_stop_codex_conversation(taskId, conversationId) is an APP-only adapter to the
 provider's ownership-checked force_stop; cancel scoped bridge operations and run blocking
 cleanup on spawn_blocking. stop_codex_terminal also uses spawn_blocking.
@@ -48,7 +58,7 @@ Empty reason means the current candidate is eligible for user recheck; submissio
 still revalidates task revision and candidate/files in TaskService. No new command,
 table, credential or approval authority is added.
 ProductionFeedback optionally carries reopenReason. APP feedback reopen accepts an
-optional reason up to 2000 characters; task ownership and revision checks still apply.
+reason up to 2000 characters (required for art reopen); task ownership and revision checks still apply.
 
 productionApi.exportProgrammerIssues(taskId, expectedRevision, issueIds) invokes
 the APP-only export_programmer_issues adapter and returns the saved relative .md
