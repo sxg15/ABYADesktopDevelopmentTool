@@ -1,3 +1,5 @@
 # The portable inventory hashes exact release bytes, including bundled text files.
 /Publish/** binary
+# Specimen evidence hashes configuration bytes; emitted Lua must match native bindings.
+/.codex/skills/abya-art-template-scrapbook-collage/** -text
 "/ABYA 开发工具.cmd" text eol=crlf
