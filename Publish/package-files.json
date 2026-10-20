@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "terminal-interrupt-input-20261019",
-  "totalBytes": 320812657,
+  "releaseLabel": "art-implementation-calibration-20261020",
+  "totalBytes": 321065446,
   "files": [
     {
       "path": ".codex/README.md",
@@ -200,8 +200,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/SKILL.md",
-      "bytes": 6257,
-      "sha256": "3311425b4a48cc76925f31e7bd06519f976e0b13762d08d023ad07c2e6921486"
+      "bytes": 6496,
+      "sha256": "d6e98239a8151d36844ea0052839d47aa326d33e3b6b0113cfbdffa2224aaaf1"
     },
     {
       "path": ".codex/skills/abya-game-development-task/agents/openai.yaml",
@@ -235,8 +235,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/art-requirements.template.md",
-      "bytes": 5248,
-      "sha256": "a7dc12aeed9179be65281e53471d96cd82eb1c29a2244c3237415bcea2b66d00"
+      "bytes": 6054,
+      "sha256": "55a7a36457abda5d1cd9fe71de30a246344618ab007590f29305a9b849eab197"
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/closeout.template.md",
@@ -245,13 +245,13 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/delivery.template.md",
-      "bytes": 1124,
-      "sha256": "282783a89b72e4e7ebbfcd0770d91f23810f75f5a2bcb9162ed9e70a2079f855"
+      "bytes": 1711,
+      "sha256": "851fbf65ccb43c36f6f2a80f91ad0adf836228a892857cf81d9e7a58e72db662"
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/plan.template.md",
-      "bytes": 1398,
-      "sha256": "c2f3e42dd492d9338043a74e390d054891fcecb3d541f41ac58f9c4c41ffbf20"
+      "bytes": 1938,
+      "sha256": "c283fb89b4be531cb21af75b311d96e68a3aa2dfdf455aeff272b22fbe741c55"
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/requirements.template.md",
@@ -261,22 +261,22 @@
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/round.template.json",
       "bytes": 461,
-      "sha256": "15dc01e6ee9cf950b1cbc9f472229e96d1ddc8188619ce0857a88988231399db"
+      "sha256": "74a4ae6be146af067cc7dc7083a581731821ff8d16bc4a1a4aeea22a20a976d0"
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/workflow-policy.json",
       "bytes": 5417,
-      "sha256": "98a1bffe254e9044aab3b0a641e0238a55b0c8a03c6dfec6698f895699f036fa"
+      "sha256": "0c67fa6df9a0fa5d13b62bc9d5c06198a47b8065144a16e7378d646f9804844a"
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/workflow.template.json",
       "bytes": 1167,
-      "sha256": "1d3df513c860dc08a4631d41e6a5ab03f5caea6064859a25094edfe22aadb512"
+      "sha256": "dd726103c009ca55845fe192065993ef453f652208f4ee1cdb6c4ef65d262985"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/art-design-records.md",
-      "bytes": 9873,
-      "sha256": "f6d1389ef4a8278f493596752f45e36b4e016db8af62c6d76d39fdea316c8d6d"
+      "bytes": 11782,
+      "sha256": "f429336d6cbf625c0b0fa00f56e91d61d3be4d438cc947c561e0ae89c5152328"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/bot-artifacts.md",
@@ -295,8 +295,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/SKILL.md",
-      "bytes": 8692,
-      "sha256": "d9a78b969b1add9cb328e5768804c5ac1830fdb9589ca2c56aee47a83ce14827"
+      "bytes": 9645,
+      "sha256": "d0fa04b8d260eab5fdd7c4a1f618169ba6e846510ffeef9845b5ac624fa63227"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/agents/openai.yaml",
@@ -305,8 +305,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/SKILL.md",
-      "bytes": 11267,
-      "sha256": "da990dfaf7ae5425cbbc526f66892cbae71de3e1214b5906ef7940002a094d59"
+      "bytes": 11662,
+      "sha256": "4aa8aa47c333210ade09fedca58b74a591a5c8dc9956950e65630a595210f276"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/agents/openai.yaml",
@@ -314,14 +314,29 @@
       "sha256": "5987173ecb93f643b3db75d881369298302204d678ff88f5af843a2aaa03be1c"
     },
     {
+      "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/assets/calibration.template.json",
+      "bytes": 1778,
+      "sha256": "e31594c2a23ca6b99e48f566af37d50f4e8f7d011ef83667cbb85f0853b73eb5"
+    },
+    {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/references/anti-default-audit.md",
       "bytes": 4928,
       "sha256": "8983974cc0cb925fd826c96f00041aa5f8381e7d315dbaea67935803c2fbd468"
     },
     {
+      "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/references/calibration-tools.md",
+      "bytes": 3588,
+      "sha256": "add758cfb8b2f6689ad2a1e35d471a7012373d85dd5130014ff41bc84c247a23"
+    },
+    {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/references/design-record.md",
       "bytes": 3223,
       "sha256": "3fdf72991d4377ed4429c36ab705d71ef899e2ef5c5bbad5037351b49593365f"
+    },
+    {
+      "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/references/implementation-calibration.md",
+      "bytes": 6871,
+      "sha256": "ec6394cb46efa8acd8e3603d09de0d56305dfc9f52b73bdab0780da75245ca77"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/references/platform-and-input.md",
@@ -330,8 +345,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/references/review.md",
-      "bytes": 3637,
-      "sha256": "d6b411fd996ecf3a7c7e01b7fcbe6ece209953dc3b6a0cccb2db53beb2faf04a"
+      "bytes": 4018,
+      "sha256": "c43f4ccba90c38fe81cce817f292f30c55c55b32f552b260b931aeece0756b85"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/references/source-prompt.zh-CN.txt",
@@ -380,8 +395,13 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/references/workflow-integration.md",
-      "bytes": 2893,
-      "sha256": "27b24a37ace919727499cf149464b51dfb174f68e8b287d3eca76d93373fd29d"
+      "bytes": 3248,
+      "sha256": "dc22853386d600d7bf455af29e0aead3e87bddc25ef6f27a5c4c646f534c5bc8"
+    },
+    {
+      "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/scripts/compare-calibration.mjs",
+      "bytes": 8241,
+      "sha256": "c0c35a31f2199400d40434504f1fb816dcf20997894aef8ea91886836a282898"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/references/product-interface-design/scripts/visual-tools.mjs",
@@ -405,8 +425,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/production-stages.md",
-      "bytes": 7300,
-      "sha256": "34eb2d267d1d79aa2344ae68851bb10d271905d674dbced2546812154b37e49a"
+      "bytes": 8160,
+      "sha256": "c73a6189cb415364560ba026ae1d96f8907c0d22d6c47762b6e5890fe08bbfdc"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/recording.md",
@@ -485,18 +505,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 30524928,
-      "sha256": "d0cec695cebe1015c9299ef8c47e7d95e792a108e310f39a4571d0c9f8cccff1"
+      "bytes": 30750208,
+      "sha256": "a83125ba0b0806beaafe1e6b61fd202ffb76c9cf13264a6e66e2da5c6ee95233"
     },
     {
       "path": "abya-desktop.exe",
       "bytes": 5993984,
-      "sha256": "119a7bf70fe9d92f539b2ac8102d7fd15ea3623e500ca5cccebb59e7ffc204c9"
+      "sha256": "dd845c7a7ba4c09f797a3c23ceaf4f94492e3001269264bd8575e33dcacd8d35"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 616,
-      "sha256": "de9ae8119ebe462e521d2bd95ac0a1863ff152b51b1de17144b45e1a3ecb3d6f"
+      "bytes": 622,
+      "sha256": "b916506d9c11c912f5b0252f478660fe03153438c1e5f507287beb7ba7fb498d"
     },
     {
       "path": "runtime/LICENSE.txt",

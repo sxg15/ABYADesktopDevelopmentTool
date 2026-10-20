@@ -18,6 +18,18 @@ quote/sourceId/kind 一经登记，AI 不可静默变更；补充解读可以更
 
 ## 设计操作
 
+### 概念到实现标定（2.2.1）
+
+使用 [标定指南](game-art-design/references/product-interface-design/references/implementation-calibration.md)，沿用现有字段，不新增 approval 或假定后端会判断像素相似。
+- direction.visualRules：真实字体身份/字重/样字和尺度关系；代表画面的关键边界、净间隙与密度模式。
+- direction.assetProduction：可复用数值配置及版本/摘要、字体和资产实际规格、背景/前景/文字分层；标出实现读取位置及保护项。
+- direction.feasibility：当前 Player 中实际字体、自动字号、锚点/缩放能力的验证与待确认替代，区分运行检查和仅源码推断。
+- direction.representativeScene / acceptance：最小标定片段、状态/分辨率矩阵、同内容对照方法、阈值来源与适用范围；未约定阈值明确标为候选。
+规格/测量配置/差异报告作为任务内版本化文件保存，用 register-artifact 登记，路径与摘要写入当前资源确认单/方向记录。不要直接编辑 workflow.json 或把这些本地文件当成新增 production 操作。
+代表片段在计划授权后实施；字体接口等关键修复后更新对应实际版本和证据。visual 自测 observations 分别记录功能、外观与还原；realization.comparison 关联具体对象、测量与实际截图，differences 写残余差异。数字检查不是视觉证据，不可单凭工具结果写 matched。
+图像内容/状态不同或未配准时只记录定性观察，不能写全画面还原率。保留实际原图与排除区域说明，动态效果以相同触发/时序另验。
+案例 draft.production 保存真实字体、规格来源、代表片段、修正方法和复验范围；limitations 保留概念/实机差异及未测模式。试玩认可不得扩大成字体、几何和完整人数验证均已通过。
+
 ### 视觉细化的三个接入点
 
 方向明确后按通用 Skill 的 visual-refinement 模块细化，不新增操作、字段、审批或固定轮次。

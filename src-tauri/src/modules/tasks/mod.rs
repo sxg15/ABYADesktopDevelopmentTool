@@ -756,10 +756,14 @@ mod tests {
         "scripts/bot-evidence-checks.mjs",
     ];
 
-    const PRODUCTION_RESOURCES: [&str; 15] = [
+    const PRODUCTION_RESOURCES: [&str; 19] = [
         "references/art-design-records.md",
         "references/game-art-design/SKILL.md",
         "references/game-art-design/references/product-interface-design/SKILL.md",
+        "references/game-art-design/references/product-interface-design/references/implementation-calibration.md",
+        "references/game-art-design/references/product-interface-design/references/calibration-tools.md",
+        "references/game-art-design/references/product-interface-design/assets/calibration.template.json",
+        "references/game-art-design/references/product-interface-design/scripts/compare-calibration.mjs",
         "references/production-stages.md",
         "references/production-records.md",
         "references/runtime-authoring.md",

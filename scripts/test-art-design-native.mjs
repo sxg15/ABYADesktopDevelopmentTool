@@ -39,13 +39,17 @@ if(action==='init'){
   assert.ok(path.resolve(task.workspacePath).toLowerCase().startsWith(path.join(root,'Workspaces').toLowerCase()+path.sep));
   let view;
   const update=async(operation,values)=>view=await invoke('update_task_production',{input:{taskId:task.id,expectedRevision:view?.record?.revision??0,operation,data:values}});
-  await update('initialize',{questionMode:'no-followup'});assert.equal(view.record.workflowVersion,'2.2.0');
+  await update('initialize',{questionMode:'no-followup'});assert.equal(view.record.workflowVersion,'2.2.1');
   const catalog=await invoke('get_task_skills',{taskId:task.id});
   assert.equal(catalog.filter(skill=>skill.kind==='design').length,2);
   assert.ok(catalog.every(skill=>skill.provider==='codex'));
   assert.equal(fs.existsSync(path.join(task.workspacePath,'.grok')),false);
   await assert.rejects(invoke('get_grok_terminal_availability'),/not found|unknown|未找到/i);
   const interfaceSkill=catalog.find(skill=>skill.provider==='codex'&&skill.name==='product-interface-design');
+  const calibrationRoot=path.join(task.workspacePath,'.codex/skills',interfaceSkill.id);
+  for(const relative of ['references/implementation-calibration.md','references/calibration-tools.md','assets/calibration.template.json','scripts/compare-calibration.mjs']) {
+    assert.ok(fs.statSync(path.join(calibrationRoot,relative)).size>0,'Calibration resources must reach the task workspace');
+  }
   assert.ok((await invoke('read_task_skill',{taskId:task.id,provider:'codex',skillId:interfaceSkill.id})).includes('从产品推导界面'));
   const source=view.record.artDesign.sources[0];
   const write=(file,text)=>{fs.mkdirSync(path.dirname(path.join(task.workspacePath,file)),{recursive:true});fs.writeFileSync(path.join(task.workspacePath,file),text);};
@@ -92,7 +96,7 @@ if(action==='init'){
   assert.equal(view.record.artDesign.caseUses.length,1);
   view=await invoke('submit_production_feedback',{input:{taskId:task.id,expectedRevision:view.record.revision,operation:'add-art-note',data:{text:'最后一个物品也要显示。'}}});
   assert.equal(view.record.stages.resources,'in-progress');
-  const report={nativeBridge:true,manifestVerified:true,codexOnlyCatalog:true,noRetiredProviderDeployment:true,retiredProviderCommandRejected:true,workflowVersion:'2.2.0',nestedDesignSkills:true,requestPersistedWithoutAdoption:true,downgradeRejected,omissionRejected,explicitCollection:true,conceptNotRuntimeVerified:true,exported:true,frozenCaseReference:true,newInputInvalidated:true,taskId:task.id};
+  const report={nativeBridge:true,manifestVerified:true,codexOnlyCatalog:true,noRetiredProviderDeployment:true,retiredProviderCommandRejected:true,workflowVersion:'2.2.1',nestedDesignSkills:true,requestPersistedWithoutAdoption:true,downgradeRejected,omissionRejected,explicitCollection:true,conceptNotRuntimeVerified:true,exported:true,frozenCaseReference:true,newInputInvalidated:true,taskId:task.id};
   fs.writeFileSync(path.join(root,'result.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
   await page.evaluate(taskId=>localStorage.setItem('abya.taskTerminalProviders',JSON.stringify({[taskId]:'grok'})),task.id);
   await page.reload();await page.waitForLoadState('domcontentloaded');

@@ -1,5 +1,16 @@
 # Release Skill
 
+## Art implementation calibration (2026-10-20)
+Default/Validation packages use art-implementation-calibration-20261020 with workflow
+2.2.1. Ship the complete generic/game design references, JSON template and standalone
+Node comparator. Validate scaling/crop math, font/sample mismatch, missing context,
+provisional thresholds, capture identity, evidence overwrite rejection and portable links.
+Run normal checks and isolated native deployment, then verify the complete package
+and relocated checkout. Sync personal Skills through sync-design-skills.mjs with backup.
+Preserve pinned user tasks; the update offer requires their explicit upgrade. The
+source report is evidence of a workflow gap, not a new gameplay edit or acceptance.
+Keep the formal APP's current state; do not interrupt active sessions for promotion.
+
 ## Current-turn interruption (2026-10-19)
 Default/Validation packages use terminal-interrupt-input-20261019. Retain one-click
 continuation and memory protections. Verify native RPC interruption without TUI or

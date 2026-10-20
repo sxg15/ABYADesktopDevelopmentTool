@@ -1,6 +1,6 @@
 {
   "schema": "abya.game-development-policy/v1",
-  "workflowVersion": "2.2.0",
+  "workflowVersion": "2.2.1",
   "artDesignVersion": 1,
   "scope": "完整玩法、较大改动；独立阶段仅执行明确范围",
   "questionModes": [

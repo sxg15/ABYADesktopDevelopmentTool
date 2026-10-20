@@ -1,5 +1,23 @@
 # Development Tasks Skill
 
+## Concept-to-runtime calibration (2026-10-20)
+Workflow 2.2.1 adds executable typography/layout handoff and representative-scene
+calibration to existing resources/plan/implementation/delivery guidance. No new
+record fields, approval stage, aesthetic score or automatic acceptance is introduced.
+Resources store font samples, shared layout configuration, asset layers and conditional
+layout modes. Existing direction fields carry specification path/version/hash;
+versioned measurement files use register-artifact, actual screenshots remain required.
+The portable product-interface-design adds an optional measurement comparator and
+template. It compares explicit measurements, normalized registered frames, font
+metadata and capture hashes; it cannot identify pixels or prove visual acceptance.
+Provisional thresholds and missing/different context remain unverified. Preserve
+functional, visual, realization and human approval boundaries, and case limitations.
+New tasks deploy the complete bundle. Pinned 2.2.0 tasks only receive an update offer;
+explicit upgrade backs up Skills and preserves compatible approvals/stages/history.
+Test the update offer and explicit deployment; no ordinary read rewrites pinned Skills.
+Upgrade confirmation distinguishes compatible content updates from structural workflow
+migration and requires Pause task, since interrupting a turn retains the active session.
+
 Task guidance maps connected awaitingInput to a direct original-terminal input action,
 separately from paused/Continue. Existing human questions, approval and programmer
 issue priority are unchanged; interruption never edits production records or approvals.
