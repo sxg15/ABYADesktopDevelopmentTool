@@ -44,6 +44,24 @@ pub(super) fn apply(
         | "save-art-coverage"
         | "save-art-realization"
         | "save-art-case-draft" => super::art_design::apply(r, root, operation, data, false),
+        "update-workbench-request" => {
+            let id = text(data, "id")?;
+            let status = text(data, "status")?;
+            let summary = text(data, "summary")?;
+            if !["in-progress", "completed"].contains(&status) || summary.len() > 4000 {
+                return Err(AppError::validation("无效的目标进展。"));
+            }
+            let request = r
+                .workbench
+                .requests
+                .iter_mut()
+                .find(|v| v["id"] == id)
+                .ok_or_else(|| AppError::validation("目标不存在。"))?;
+            request["status"] = json!(status);
+            request["summary"] = json!(summary);
+            request["updatedAt"] = json!(now());
+            Ok(())
+        }
         "configure-acceptance" => super::acceptance::configure(r, data),
         "register-visual" => super::visuals::register(r, root, data),
         "save-self-test" => super::iteration::save_test(r, root, data),

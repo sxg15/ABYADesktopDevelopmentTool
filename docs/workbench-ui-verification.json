@@ -1,0 +1,31 @@
+{
+  "results": [
+    "Seven stages",
+    "Four task tabs",
+    "Guide remains visible",
+    "No approval preselected",
+    "Review draft survives tab switch",
+    "History cannot approve",
+    "Review draft survives history",
+    "Task picker reachable",
+    "Task picker releases result space",
+    "Feedback composes inline",
+    "Feedback draft survives interaction mode",
+    "No horizontal page overflow 1440",
+    "Interaction reachable 1440",
+    "No horizontal page overflow 1280",
+    "Interaction reachable 1280",
+    "No horizontal page overflow 960",
+    "Interaction reachable 960",
+    "No horizontal page overflow 640",
+    "Interaction reachable 640",
+    "Original tools remain reachable",
+    "Skill 库 selection",
+    "游戏实例 selection",
+    "终端 selection",
+    "Charcoal shell",
+    "No page errors"
+  ],
+  "errors": [],
+  "scope": "Synthetic adapter data; real components; no native AI or Player"
+}

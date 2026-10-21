@@ -1,5 +1,8 @@
 # Foundation Skill
 
+## Workbench adapters (2026-10-21)
+APP-only mutate_production_workbench, read_production_snapshot and export_developer_package delegate to TaskService. Shared record adds optional workbench goals/drafts/requests/deferrals. No schema migration or raw shell input. Legacy records default safely; read-only snapshot access validates the task and revision.
+
 ## Art approval and recheck projections (2026-10-20)
 Shared ProductionView adds optional approvalStatuses reason map (empty = intact
 accepted current document) and actions.resume reasons. APP-only feedback operation

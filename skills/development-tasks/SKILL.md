@@ -1,5 +1,8 @@
 # Development Tasks Skill
 
+## v5 workbench (2026-10-21)
+ProductionRecord.workbench is additive and serde-defaulted. APP owns drafts, idempotent user requests, optional-suggestion deferrals/restoration and bounded input attachments. Read-only legacy projection never rewrites pins or database records. Goals reference immutable production-history revisions; internal polling and draft writes do not create new goals. Goal progress cannot approve documents or resolve issues. Word imports preserve original, body XML, image relationship data and omitted-file manifest; Markdown ZIP paths and expanded bytes are bounded. Developer ZIP exports only selected programmer issues and referenced hash-verified evidence, with explicit omissions; no external sending.
+
 ## Approved art feedback recovery (2026-10-20)
 ProductionView.approvalStatuses projects exact-revision accepted document validity
 independently of stage progress; empty reason means the current approval is intact.

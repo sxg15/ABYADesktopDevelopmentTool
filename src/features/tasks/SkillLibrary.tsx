@@ -63,6 +63,8 @@ export function SkillLibrary({ taskId, active, visible = true, initialSection = 
     ["game-art-design", ["游戏美术设计", "Game art design"]],
     ["product-interface-design", ["产品界面设计", "Product interface design"]],
     ["game-ui-design", ["游戏 UI 设计", "Game UI design"]],
+    ["impeccable", ["Impeccable 界面精修", "Impeccable interface craft"]],
+    ["impeccable-art-workflow", ["Impeccable 美术流程适配", "Impeccable art workflow"]],
   ]);
   const title = (skill: TaskSkill) => {
     const localized = skill.kind === "design" ? designTitles.get(skill.name) : undefined;

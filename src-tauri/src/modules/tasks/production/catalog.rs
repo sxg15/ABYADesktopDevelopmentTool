@@ -123,6 +123,14 @@ impl TaskService {
             for (suffix, name) in [
                 ("references/game-art-design", "game-art-design"),
                 (
+                    "references/game-art-design/references/impeccable",
+                    "impeccable",
+                ),
+                (
+                    "references/game-art-design/references/impeccable-art-workflow",
+                    "impeccable-art-workflow",
+                ),
+                (
                     "references/game-art-design/references/product-interface-design",
                     "product-interface-design",
                 ),

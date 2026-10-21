@@ -1,0 +1,43 @@
+/* Approved v5 visual system. Keep navigation and guidance discoverable. */
+:root{--surface:#fffcf5;--surface-alt:#f4efe3;--line:#d8d3c6;--line-strong:#b4ac9a;--muted:#625e54;--accent:#a3431d;--accent-hover:#843313;--accent-soft:#f9e6d6;color:#252429;background:#f9f6ed}
+body{background:#f9f6ed;color:#252429;caret-color:#a3431d}
+::selection{background:#f9d5b7;color:#160a0a}
+*{scrollbar-color:#a59e8e #f4efe3;scrollbar-width:thin}
+.app-shell{grid-template-columns:176px minmax(0,1fr)}
+.app-sidebar{background:#1f2120;border-right:1px solid #3d403b;color:#eff4eb}
+.app-sidebar .brand{border-bottom-color:#3d403b}.app-sidebar .brand-mark{background:#f9823e;color:#160a0a;border:0;box-shadow:none}
+.app-sidebar nav button{color:#c3c6bf;background:transparent}.app-sidebar nav button:hover{background:#32352f;color:#eff4eb}
+.app-sidebar nav button.active,.app-sidebar nav button.selected{background:#454239;color:#fff5e5;box-shadow:none;border-color:transparent}
+.app-sidebar .sidebar-footer{border-color:#3d403b;color:#c3c6bf}
+.tasks-workspace{grid-template-columns:180px minmax(0,1fr);background:#f9f6ed}
+.tasks-workspace .task-list-pane{background:#f0ecdf;border-right-color:#d8d3c6}
+.tasks-workspace .pane-header{background:transparent}.tasks-workspace .task-row.selected{background:#e4ddcc;color:#252429;border-color:#c5bda9;box-shadow:none}
+.tasks-workspace .task-row:hover{background:#eae4d6}.tasks-workspace .task-row-copy small{color:#625e54}
+.content-pane,.content-pane>.content-header.task-content-header{background:#f9f6ed;color:#252429}
+.task-title-icon{color:#a3431d;background:#f9e6d6}.task-heading-title .eyebrow{color:#625e54}
+.tasks-workspace .task-tabs{background:#f9f6ed;border-bottom-color:#d8d3c6}
+.tasks-workspace .task-tabs button{background:transparent;color:#625e54;border-color:transparent;box-shadow:none}
+.tasks-workspace .task-tabs button.selected{background:#fffcf5;color:#a3431d;border-color:#c9b59e;box-shadow:none}
+.tasks-workspace .task-tab-badge{color:#144bb0;background:#e5ebf7}
+.app-shell .primary-button,.app-shell .primary-icon{background:#f9823e;color:#160a0a;border-color:#da6a2c;box-shadow:none}
+.app-shell .primary-button:hover:not(:disabled){background:#ed8a50;color:#160a0a}
+.app-shell .secondary-button{background:#fffcf5;color:#454139;border-color:#b4ac9a;box-shadow:none}
+.app-shell .text-button{color:#a3431d}.app-shell .inline-error{color:#a33131}
+.app-shell button:disabled{opacity:.6;cursor:not-allowed}
+.app-shell :is(button,a,input,textarea,select):focus-visible{outline:2px solid #144bb0;outline-offset:3px;box-shadow:none}
+.tasks-workspace .task-guidance{--guide-line:#ccc3b1;--guide-accent:#a3431d;--guide-bg:#f5ead8;background:#f5ead8;border-color:#ccc3b1;box-shadow:none}
+.tasks-workspace .guidance-main,.tasks-workspace .guidance-action{background:transparent}.tasks-workspace .guidance-copy h2{color:#252429}.tasks-workspace .guidance-copy p{color:#625e54}
+.tasks-workspace .guidance-primary{background:#f9823e;color:#160a0a;border-color:#da6a2c;box-shadow:none}
+.tasks-workspace .production-panel{background:#f9f6ed}.tasks-workspace .production-card{background:#fffcf5;border-color:#d8d3c6;box-shadow:none}
+.tasks-workspace .terminal-tab-panel{background:#f9f6ed}.tasks-workspace .terminal-provider-bar{background:#f4efe3;color:#454139}
+.tasks-workspace .terminal-task-notice{background:#f4efe3;border-color:#d8d3c6}
+@media(max-width:1100px){.app-shell{grid-template-columns:68px minmax(0,1fr)}.tasks-workspace{grid-template-columns:150px minmax(0,1fr)}}
+@media(max-width:760px){.tasks-workspace{grid-template-columns:1fr}.tasks-workspace>.task-list-pane{max-height:110px;border-bottom:1px solid #d8d3c6}.tasks-workspace .task-list{display:flex;overflow:auto}.tasks-workspace .task-row{min-width:160px}.tasks-workspace .pane-header{min-height:36px;padding:6px 12px}}
+
+.tasks-workspace.task-list-collapsed{grid-template-columns:minmax(0,1fr)}
+.tasks-workspace>.task-list-pane[hidden]{display:none}
+.tasks-workspace .task-description-toggle{background:#fffcf5;border-color:#d8d3c6;color:#454139}
+.tasks-workspace .task-description-toggle svg,.tasks-workspace .task-tabs button.selected>svg{color:#a3431d}
+.wb-document .readable-text h1,.wb-document .readable-text h2,.wb-interaction h3{color:#252429;border-color:#d8d3c6}
+.wb-attachment{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:#625e54}
+.wb-issues{margin-top:20px;border-top:1px solid #d8d3c6;padding-top:12px}.wb-issues details{margin:10px 0}.wb-issues summary{cursor:pointer;color:#a3431d}

@@ -1,5 +1,8 @@
 # Codex Terminal Skill
 
+## v5 workbench (2026-10-21)
+The fixed continuation prompt now reads workbench.requests by id/revision and optional-suggestion deferrals. It never treats a request or deferral as approval. Existing queued/sending/needsReview receipts, original conversation binding and pause controls remain authoritative.
+
 ## Reliable stop control (2026-10-20)
 Pause/interrupt/explicit forceStop share an exact-task/conversation controller.
 Stop duplicate operations and PTY input while controlling; cancel automatic queue work

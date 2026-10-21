@@ -3,7 +3,8 @@ import { productionApi, type IntakeQuestionGroup, type ProductionView, type Inta
 import { errorMessage } from "../../shared/api";
 import { decodeAnswers, encodeAnswers, otherOption, type AnswerField } from "./intakeDraft";
 
-export function IntakeQuestions({ taskId, group, revision, active, onSaved, onEnsureConnection, onContinuation, onSubmit, onDefer }: {
+export function IntakeQuestions({ taskId, group, revision, active, onSaved, onEnsureConnection, onContinuation, onSubmit, onDefer, submittingAllowed = true }: {
+  submittingAllowed?: boolean;
   taskId: string; group: IntakeQuestionGroup; revision: number; active: boolean;
   onSaved: (view: ProductionView) => void;
   onContinue?: (message: string, group: IntakeQuestionGroup) => Promise<void>;
@@ -70,7 +71,7 @@ export function IntakeQuestions({ taskId, group, revision, active, onSaved, onEn
     return () => window.clearTimeout(timer);
   }, [fields, pending, active, busy, saving, saveError]);
   async function submit() {
-    if (submitting.current) return;
+    if (submitting.current || !submittingAllowed) return;
     const missing = group.questions.findIndex(q => !q.optional && !latest.current[q.id]?.trim());
     if (missing >= 0) { setIndex(missing); setError(`请先回答第 ${missing + 1} 题，再提交本组答案。`); return; }
     if (Object.values(latest.current).some(a => new TextEncoder().encode(a).length > 8000)) {
@@ -94,7 +95,7 @@ export function IntakeQuestions({ taskId, group, revision, active, onSaved, onEn
     finally { submitting.current = false; if (alive.current) setBusy(false); }
   }
   async function resume() {
-    if (submitting.current) return;
+    if (submitting.current || !submittingAllowed) return;
     submitting.current = true; setBusy(true); setError("");
     try {
       if (group.provider === "codex") {
@@ -145,7 +146,7 @@ export function IntakeQuestions({ taskId, group, revision, active, onSaved, onEn
       {onDefer && <button className="secondary-button intake-defer" onClick={onDefer}>稍后回答 / 关闭</button>}
       <button className="secondary-button" disabled={index === 0 || busy} onClick={() => setIndex(i => i - 1)}>上一题</button>
       {index < group.questions.length - 1 && <button className="secondary-button" disabled={busy} onClick={() => setIndex(i => i + 1)}>下一题</button>}
-      {pending && (complete || index === group.questions.length - 1) && <button className="primary-button" disabled={busy || !active} onClick={() => void submit()}>{busy ? "正在提交…" : group.provider === "codex" ? "提交并继续" : "保存答案"}</button>}
+      {pending && (complete || index === group.questions.length - 1) && <button className="primary-button" disabled={busy || !active || !submittingAllowed} onClick={() => void submit()}>{busy ? "正在提交…" : group.provider === "codex" ? "提交并继续" : "保存答案"}</button>}
       {group.status === "submitted" && group.provider === "codex" && <button className="primary-button" disabled={busy || !active} onClick={() => void resume()}>继续任务</button>}
     </div>
     {group.answers.length > 0 && <details><summary>已提交答案历史（{group.answers.length} 版）</summary>

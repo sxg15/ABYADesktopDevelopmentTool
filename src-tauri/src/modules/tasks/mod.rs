@@ -9,8 +9,8 @@ use uuid::Uuid;
 
 mod production;
 pub use production::{
-    AcceptanceSpec, IssueRepairSpec, ProductionDecision, ProductionMutation, ProductionView,
-    SkillEntry, VersionSources,
+    AcceptanceSpec, IssueRepairSpec, ProductionDecision, ProductionMutation, ProductionRecord,
+    ProductionView, SkillEntry, VersionSources,
 };
 
 const MANAGED_SKILL_NAME: &str = "abya-game-development-task";

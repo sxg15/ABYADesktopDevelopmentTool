@@ -47,7 +47,7 @@ export function TaskGuidance({ taskId, active, control, workflow, en = false, on
   function act() {
     if (model.action === "recheck") { onStage("resources", model.target?.feedbackId ?? undefined); return; }
     if (artPending) { onStage("resources"); return; }
-    if (model.action === "question") window.dispatchEvent(new CustomEvent("abya:open-intake", {detail:{taskId,groupId:model.groupId}}));
+    if (model.action === "question") { onStage(model.stage); window.dispatchEvent(new CustomEvent("abya:open-intake", {detail:{taskId,groupId:model.groupId}})); }
     else if (model.action === "review") {
       const document = view?.record?.documents[model.reviewKind!];
       if (document && document.revision === model.target?.documentRevision

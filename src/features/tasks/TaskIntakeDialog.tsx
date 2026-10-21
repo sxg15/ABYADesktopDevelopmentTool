@@ -6,7 +6,8 @@ import { IntakeQuestions } from "./IntakeQuestions";
 import { useTaskControl, controlText } from "../terminal/useTaskControl";
 import "./production.css";
 
-export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnection, requestedGroup }: {
+export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnection, requestedGroup, embedded = false, executionBusy = false }: {
+  embedded?: boolean; executionBusy?: boolean;
   taskId: string; active: boolean;
   onContinue?: (message: string, group?: IntakeQuestionGroup) => Promise<void>;
   onEnsureConnection?: (group: IntakeQuestionGroup) => Promise<void>;
@@ -70,7 +71,7 @@ export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnectio
     try { if (sessionStorage.getItem(`abya-intake-later:${pendingKey}`)) return; } catch { /* Optional dismissal memory. */ }
     autoOpened.current = true; setSelected(pending.id);
   }, [pendingKey, active]);
-  const group = groups.find(g => g.id === selected);
+  const group = groups.find(g => g.id === selected) ?? (embedded ? pending : undefined);
   const trackedGroup = group ?? retryGroup;
   const control = useTaskControl(taskId, trackedGroup?.provider === "codex" ? trackedGroup.conversationId : undefined, "codex");
   function acceptView(next:ProductionView) {
@@ -123,13 +124,14 @@ export function TaskIntakeDialog({ taskId, active, onContinue, onEnsureConnectio
     {pending && <button className="primary-button intake-pending-button"
       onClick={() => setSelected(pending.id)}>有待回答问题 · 继续填写</button>}
   </>;
-  return <Modal wide title="阶段问答" onClose={close}>
+  const content = <>
     <p className="intake-dialog-hint">可返回修改，内容自动保存。稍后回答会保留当前填写内容。</p>
     {error && <p role="alert">{error}</p>}
     {feedback && <p role="status">{feedback === continuationMessages.queued && control ? controlText(control) : feedback}</p>}
     <IntakeQuestions key={`${taskId}:${group.id}`} taskId={taskId} group={group}
-      revision={view.record.revision} active={active} onContinue={onContinue}
+      revision={view.record.revision} active={active} submittingAllowed={!executionBusy} onContinue={onContinue}
       onEnsureConnection={onEnsureConnection} onContinuation={continueResult}
       onSaved={acceptView} onSubmit={submit} onDefer={close} />
-  </Modal>;
+  </>;
+  return embedded ? <section className="workbench-questions">{content}</section> : <Modal wide title="阶段问答" onClose={close}>{content}</Modal>;
 }

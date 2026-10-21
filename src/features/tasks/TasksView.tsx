@@ -26,8 +26,8 @@ import { InstanceDetailsModal } from "../instances/InstanceDetailsModal";
 import { DevelopmentTerminalView } from "../terminal/CodexTerminalView";
 import { TerminalContextPanel } from "../terminal/TerminalContextPanel";
 import { CodexWorkflowBar } from "./CodexWorkflowBar";
-import { ProductionPanel } from "./ProductionPanel";
-import { TaskIntakeDialog } from "./TaskIntakeDialog";
+import { ProductionWorkbench } from "./ProductionWorkbench";
+
 import { TaskGuidance } from "./TaskGuidance";
 import { TaskDescription } from "./TaskDescription";
 import type { GuidancePending } from "./taskGuidanceState";
@@ -155,7 +155,8 @@ export function TasksView({
   }
 
   const selected = tasks.find((task) => task.id === selectedId);
-  const selectedTab = selected ? (taskTabs[selected.id] ?? "instances") : "instances";
+  const [taskListOpen, setTaskListOpen] = useState(false);
+  const selectedTab = selected ? (taskTabs[selected.id] ?? "production") : "instances";
   useEffect(() => {
     const area = tabContentRef.current;
     if (!terminalContextOpen || selectedTab !== "terminal" || !area) return;
@@ -628,8 +629,8 @@ export function TasksView({
   }
 
   return (
-    <div className={`workspace tasks-workspace ${terminalFocus && selectedTab === "terminal" ? "terminal-focus" : ""}`}>
-      <aside className="task-list-pane">
+    <div className={`workspace tasks-workspace ${selected && !taskListOpen ? "task-list-collapsed" : ""} ${terminalFocus && selectedTab === "terminal" ? "terminal-focus" : ""}`}>
+      <aside className="task-list-pane" hidden={!!selected && !taskListOpen}>
         <div className="pane-header">
           <h1>{t("tasks")}</h1>
           <button
@@ -645,7 +646,7 @@ export function TasksView({
             <button
               key={task.id}
               className={`task-row ${task.id === selectedId ? "selected" : ""}`}
-              onClick={() => setSelectedId(task.id)}
+              onClick={() => { setSelectedId(task.id); setTaskListOpen(false); }}
             >
               <span className={`status-dot status-${task.status}`} />
               <span className="task-row-copy">
@@ -673,6 +674,7 @@ export function TasksView({
                 </div>
               </div>
               <div className="header-actions">
+                <button className="secondary-button" aria-expanded={taskListOpen} onClick={() => setTaskListOpen(v => !v)}>{settings?.locale === "en-US" ? "Switch task" : "切换任务"}</button>
                 {selected.status === "active" && (
                   <button className="secondary-button" onClick={() => setStatus("completed")}>
                     <Check size={16} />
@@ -708,14 +710,14 @@ export function TasksView({
                 selectTab("production");
                 window.dispatchEvent(new CustomEvent("abya:show-stage", { detail: { taskId: selected.id, stage } }));
               }} />
-            <CodexWorkflowBar
+            <div hidden={selectedTab !== "terminal"}><CodexWorkflowBar
               control={selectedControl}
               provider={selectedProvider}
               conversation={selectedTerminalContext?.conversation}
               workflow={selectedTerminalContext?.workflow}
               loading={selectedTerminalContext?.loading}
               t={t}
-            />
+            /></div>
 
             <div className="task-tabs" role="tablist">
               <button role="tab" className={selectedTab === "production" ? "selected" : ""} aria-selected={selectedTab === "production"} onClick={() => selectTab("production")}>
@@ -747,23 +749,14 @@ export function TasksView({
             </div>
 
             <div className="task-tab-content" ref={tabContentRef}>
-              <div className="task-inline-notices">
-              <TaskIntakeDialog key={`intake:${selected.id}`} taskId={selected.id} active={selected.status === "active"}
-                onEnsureConnection={ensureIntakeConnection}
-                requestedGroup={requestedQuestion?.taskId === selected.id ? requestedQuestion : undefined}
-                onContinue={async (message, group) => {
-                  const conversation = selectedTerminalContext?.conversation;
-                  if (!conversation || group?.provider !== selectedProvider || group.conversationId !== conversation.id) {
-                    throw new Error("请先打开发布这组问题的原会话，答案已保存。");
-                  }
-                  await terminalApi.write(selectedProvider, conversation.id, `\x1b[200~${message}\x1b[201~\r`);
-                }} />
-              </div>
-              {selectedTab === "production" && <ProductionPanel key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
+              <div className="workbench-tab-panel" hidden={selectedTab !== "production"}>
+              <ProductionWorkbench key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
+                visible={selectedTab === "production"} control={selectedControl} onTerminal={() => selectTab("terminal")}
+                onEnsureConnection={ensureIntakeConnection} requestedGroup={requestedQuestion?.taskId === selected.id ? requestedQuestion : undefined}
                 onRepairIssue={selectedProvider === "codex" && selectedTerminalContext?.conversation ? repairSelectedIssue : undefined}
                 requestedReview={requestedReview?.taskId === selected.id ? requestedReview.document : undefined} onReviewOpened={() => setRequestedReview(undefined)}
                 requestedFeedback={requestedFeedback?.taskId === selected.id ? requestedFeedback : undefined} onFeedbackOpened={() => setRequestedFeedback(undefined)}
-                onContinue={async (message, _group, afterRevision) => continueSelectedTask(message, afterRevision)} />}
+                onContinue={async (message, _group, afterRevision) => continueSelectedTask(message, afterRevision)} /></div>
               <div className="skill-tab-panel" hidden={selectedTab !== "skills"}>
                 {openedSkillIds.includes(selected.id) && <SkillLibrary key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
                   visible={selectedTab === "skills"} initialSection={skillSections[selected.id] ?? "skills"} onContinue={continueSelectedTask} />}

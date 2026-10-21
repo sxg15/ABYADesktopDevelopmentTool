@@ -1,0 +1,48 @@
+// Native IPC smoke in an explicitly owned empty fixture; no AI or Player process.
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const root=path.resolve(process.argv[2]);
+assert.equal(JSON.parse(fs.readFileSync(path.join(root,'art-design-native-fixture.json'),'utf8')).schema,'abya-art-design-native/v1');
+const {chromium}=createRequire(import.meta.url)(process.env.ABYA_TEST_PLAYWRIGHT||'playwright');
+const browser=await chromium.connectOverCDP('http://127.0.0.1:9248');
+try{
+  const page=browser.contexts()[0].pages()[0];await page.waitForFunction(()=>!!window.__TAURI_INTERNALS__?.invoke);
+  const invoke=async(command,args={})=>{const result=await page.evaluate(async({command,args})=>{try{return {ok:true,value:await window.__TAURI_INTERNALS__.invoke(command,args)};}catch(e){return {ok:false,error:{code:e?.code,message:e?.message??String(e)}};}},{command,args});if(!result.ok)throw new Error(`${command}: ${JSON.stringify(result.error)}`);return result.value;};
+  const paths=await invoke('get_app_paths');assert.equal(path.resolve(paths.dataDir).toLowerCase(),path.join(root,'Local','ABYA Desktop Development Tool','Data').toLowerCase());
+  assert.equal((await invoke('get_build_info')).testEnvironment,true);
+  assert.equal((await invoke('list_tasks')).length,0);
+  const task=await invoke('create_task',{input:{title:'工作台原生隔离验证',description:'Synthetic IPC validation. No AI inference or gameplay acceptance.'}});
+  let view=await invoke('update_task_production',{input:{taskId:task.id,expectedRevision:0,operation:'initialize',data:{questionMode:'no-followup'}}});
+  assert.equal(view.record.workflowVersion,'2.3.0');
+  const base=view.record.revision;
+  const action=async(operation,data)=>view=await invoke('mutate_production_workbench',{input:{taskId:task.id,expectedRevision:view.record.revision,operation,data}});
+  await action('save-draft',{key:'current',text:'草稿不会创建新目标'});
+  const old=await invoke('read_production_snapshot',{taskId:task.id,revision:base});assert.equal(old.workbench.drafts.current,undefined);
+  await action('request',{id:'native-goal',text:'整理目标与成果，保持原有确认门禁'});
+  await action('request',{id:'native-goal',text:'整理目标与成果，保持原有确认门禁'});
+  assert.equal(view.record.workbench.requests.length,1);
+  await action('attach',{name:'原始需求.md',base64:Buffer.from('# 策划要求\n保留完整功能入口。').toString('base64')});
+  const source=view.record.artifacts.find(a=>a.plannerInput);assert.ok(source);
+  assert.ok(fs.existsSync(path.join(task.workspacePath,source.path)));
+  await assert.rejects(invoke('mutate_production_workbench',{input:{taskId:task.id,expectedRevision:base,operation:'save-draft',data:{key:'current',text:'stale'}}}),/conflict|变化/);
+  const update=async(operation,data)=>view=await invoke('update_task_production',{input:{taskId:task.id,expectedRevision:view.record.revision,operation,data}});
+  await update('update-workbench-request',{id:'native-goal',status:'completed',summary:'合成目标记录测试；不是游戏完成。'});
+  await update('save-issue',{id:'optional',stage:'requirements',kind:'suggestion',status:'open',description:'可选表现细节'});
+  await action('defer',{id:'optional',reason:'下一轮调整',impact:'本轮保留当前表现'});
+  assert.equal(view.record.issues[0].status,'open');
+  await action('restore',{id:'optional'});
+  await update('save-issue',{id:'source',stage:'requirements',kind:'blocker',status:'open',description:'合成程序问题',repairTarget:'abya-source',resumeWhen:'等待修复与复验'});
+  await assert.rejects(action('defer',{id:'source',reason:'测试',impact:'测试'}),/必要|阻塞/);
+  const zip=await invoke('export_developer_package',{taskId:task.id,expectedRevision:view.record.revision,issueIds:['source']});assert.ok(fs.statSync(path.join(task.workspacePath,zip)).size>0);
+  assert.equal(view.record.approvals.length,0);
+  const catalog=await invoke('get_task_skills',{taskId:task.id});
+  assert.ok(catalog.some(s=>s.name==='impeccable'));assert.ok(catalog.some(s=>s.name==='impeccable-art-workflow'));
+  await page.reload();await page.locator('.production-workbench').waitFor();
+  assert.equal(await page.locator('.wb-stages button').count(),7);
+  assert.equal(await page.locator('.task-guidance').isVisible(),true);
+  await page.screenshot({path:path.join(root,'native-workbench.png')});
+  fs.writeFileSync(path.join(root,'workbench-result.json'),JSON.stringify({passed:true,taskId:task.id,revision:view.record.revision,package:zip,scope:'Native Tauri IPC and UI; isolated data; no AI or game execution'},null,2));
+  console.log(JSON.stringify({passed:true,root}));
+}finally{await browser.close();}

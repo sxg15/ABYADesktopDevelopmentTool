@@ -311,6 +311,33 @@ fn mutate_art_library(
 }
 
 #[tauri::command(async)]
+fn export_developer_package(
+    task_id: String,
+    expected_revision: u64,
+    issue_ids: Vec<String>,
+    state: State<'_, AppState>,
+) -> AppResult<String> {
+    state
+        .tasks
+        .export_developer_package(&task_id, expected_revision, &issue_ids)
+}
+#[tauri::command(async)]
+fn mutate_production_workbench(
+    input: ProductionMutation,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    state.tasks.production_workbench(input)
+}
+#[tauri::command(async)]
+fn read_production_snapshot(
+    task_id: String,
+    revision: u64,
+    state: State<'_, AppState>,
+) -> AppResult<modules::tasks::ProductionRecord> {
+    state.tasks.production_snapshot(&task_id, revision)
+}
+
+#[tauri::command(async)]
 fn submit_production_feedback(
     input: ProductionMutation,
     state: State<'_, AppState>,
@@ -1101,6 +1128,9 @@ pub fn run() {
             get_task_acceptance,
             read_production_media,
             submit_production_feedback,
+            mutate_production_workbench,
+            export_developer_package,
+            read_production_snapshot,
             list_art_cases,
             read_art_case,
             read_art_case_media,

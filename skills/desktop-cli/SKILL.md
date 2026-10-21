@@ -1,5 +1,8 @@
 # Desktop CLI
 
+## v5 workbench (2026-10-21)
+production update adds update-workbench-request {id,status,summary}, status in-progress/completed. It updates only an existing user goal. Request creation, draft editing, deferral/restoration, attachments and exports are APP-only; no new agent approval route.
+
 game_instance_get 追加只读 memory 投影，包含最近样本、峰值、压力状态和异常报告路径。
 没有增加代理可调用的阈值修改或自动停止授权接口。runtimeInstanceBusy 与
 instanceMemoryPressure 的 not_executed 说明操作未派发；outcome_unknown 仍须核对原请求，

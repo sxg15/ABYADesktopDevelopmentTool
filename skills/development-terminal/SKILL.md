@@ -1,5 +1,8 @@
 # Development Terminal Skill
 
+## v5 workbench (2026-10-21)
+Production defaults to the unified workbench. Existing exact-version DocumentReview and durable IntakeQuestions are reused inline. History is read only, and technical records remain in development details. Original conversation execution controls stay reachable. Saved requests resume through the existing afterRevision receipt; connection failure must not cause duplicate user submission.
+
 ## Stop failure and explicit fallback (2026-10-20)
 Stop failure is distinct from a parked continuation queue: display stopFailed and
 the safe operation error without claiming execution ended. Offer Force stop this

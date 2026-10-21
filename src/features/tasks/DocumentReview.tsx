@@ -1,18 +1,22 @@
-import { useId, useState } from "react";
+import { useId, useState, useEffect, type ReactNode } from "react";
 import { Modal } from "../../app/Modal";
 import type { ProductionDocument, ProductionView } from "../../shared/production";
 import { VisualGallery } from "./VisualGallery";
 import { ReadableText } from "./ReadableText";
 import { isArtFeedback } from "./artWorkflow";
 
-export function DocumentReview({ taskId, document: initial, view, active, busy, error, en = false, onClose, onDecide, onArtFeedback }: {
+export function DocumentReview({ taskId, document: initial, view, active, busy, error, en = false, onClose, onDecide, onArtFeedback, embedded = false }: {
+  embedded?: boolean;
   taskId: string; document: ProductionDocument; view: ProductionView; active: boolean; busy: boolean; error: string; en?: boolean;
   onClose: () => void; onDecide: (document: ProductionDocument, accepted: boolean, feedback: string) => Promise<void>;
   onArtFeedback?: () => void;
 }) {
   const [snapshot, setSnapshot] = useState(initial);
+  const draftKey = `abya:review:${taskId}:${initial.kind}:${initial.revision}`;
+  const [notesOpen,setNotesOpen]=useState(false);
   const [decision, setDecision] = useState("");
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState(() => {try{return embedded ? JSON.parse(localStorage.getItem(draftKey)??"{}").feedback??"" : "";}catch{return "";}});
+  useEffect(()=>{if(embedded)try{localStorage.setItem(draftKey,JSON.stringify({feedback}));}catch{/* Submission does not depend on local storage. */}},[draftKey,feedback,embedded]);
   const current = view.record?.documents[snapshot.kind];
   const stale = !current || current.sha256 !== snapshot.sha256 || current.revision !== snapshot.revision;
   const reason = stale ? (en ? "A new version is available. Read it before submitting." : "成果已更新，请阅读新版本后再提交。")
@@ -25,7 +29,8 @@ export function DocumentReview({ taskId, document: initial, view, active, busy, 
   const reasonId = useId();
   const artifacts = (view.artifacts ?? view.record?.artifacts ?? []).filter(a => snapshot.artifactBindings?.[a.path] === a.sha256);
   const approval = view.policy.stages.some(s => s.id === snapshot.kind && s.approval);
-  return <Modal wide title={`${en ? "Review document" : "成果审查"} · ${en ? "Version" : "第"} ${snapshot.revision}${en ? "" : " 版"}`} onClose={onClose}>
+  return <ReviewFrame embedded={embedded} en={en} onClose={onClose}>
+    <h3>{en ? "Review version" : "审阅成果"} · {snapshot.revision}</h3>
     <p className="review-context">{view.record?.taskId} · {view.policy.stages.find(s => s.id === snapshot.kind)?.name} · {snapshot.path}</p>
     <div className="review-layout">
       <div className="review-content">
@@ -51,8 +56,9 @@ export function DocumentReview({ taskId, document: initial, view, active, busy, 
             <label><input type="radio" name="review-decision" checked={decision === "accept"} onChange={() => setDecision("accept")} />{en ? "Approve this version" : "通过此版本"}</label>
             <label><input type="radio" name="review-decision" checked={decision === "reject"} onChange={() => setDecision("reject")} />{en ? "Request changes" : "需要修改"}</label>
           </fieldset>
-          <label className="field">{decision === "reject" ? (en ? "Required changes (required)" : "修改意见（必填）") : (en ? "Notes (optional)" : "审查意见（可选）")}
-            <textarea rows={6} value={feedback} disabled={busy} maxLength={4000} onChange={e => setFeedback(e.target.value)} /></label>
+          {embedded && decision !== "reject" && !feedback && <button className="text-button" onClick={()=>setNotesOpen(v=>!v)}>{en ? "Add a note" : "添加审查意见"}</button>}
+          {(!embedded || notesOpen || decision === "reject" || !!feedback) && <label className="field">{decision === "reject" ? (en ? "Required changes (required)" : "修改意见（必填）") : (en ? "Notes (optional)" : "审查意见（可选）")}
+            <textarea rows={6} value={feedback} disabled={busy} maxLength={4000} onChange={e => setFeedback(e.target.value)} /></label>}
           {!pendingArt.length && !reason && approveReason && <p className="art-blocker-note">{approveReason}</p>}
           {error && <p role="alert" className="inline-error">{error}</p>}
         </>}
@@ -64,5 +70,9 @@ export function DocumentReview({ taskId, document: initial, view, active, busy, 
       {approval && <button className="primary-button" aria-describedby={reasonId} disabled={!!submitReason}
         onClick={() => { if (!submitReason) void onDecide(snapshot, decision === "accept", feedback); }}>{busy ? (en ? "Saving…" : "正在提交…") : decision === "reject" ? (en ? "Submit changes" : "提交修改意见") : (en ? "Confirm this version and continue" : "确认此版本并继续")}</button>}
     </div>
-  </Modal>;
+  </ReviewFrame>;
+}
+
+function ReviewFrame({embedded,en,onClose,children}:{embedded:boolean;en:boolean;onClose:()=>void;children:ReactNode}) {
+  return embedded ? <section className="workbench-review">{children}</section> : <Modal wide title={en?"Review document":"成果审查"} onClose={onClose}>{children}</Modal>;
 }

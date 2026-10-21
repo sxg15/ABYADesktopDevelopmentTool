@@ -6,6 +6,8 @@ use std::collections::BTreeMap;
 #[serde(rename_all = "camelCase")]
 pub struct ProductionRecord {
     #[serde(default)]
+    pub workbench: WorkbenchState,
+    #[serde(default)]
     pub art_design: ArtDesign,
     #[serde(default)]
     pub acceptance_config: Value,
@@ -50,6 +52,34 @@ pub struct ProductionRecord {
     pub skill_pins: Vec<SkillEntry>,
     pub legacy_record: Option<String>,
     pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WorkbenchState {
+    pub goals: Vec<WorkbenchGoal>,
+    pub active_goal_id: Option<String>,
+    pub drafts: BTreeMap<String, Value>,
+    pub requests: Vec<Value>,
+    pub deferrals: Vec<Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkbenchGoal {
+    pub id: String,
+    pub stage: String,
+    pub number: u32,
+    pub title: String,
+    pub source_type: String,
+    pub source_id: String,
+    pub status: String,
+    pub summary: String,
+    pub decision: Option<String>,
+    pub record_revision: u64,
+    pub created_at: String,
+    pub updated_at: String,
+    pub cycle: u32,
 }
 
 fn unspecified() -> String {

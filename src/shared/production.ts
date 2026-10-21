@@ -42,7 +42,17 @@ export interface ProductionRound {
   checks?: ProductionCheck[]; questions?: { questionId: string; status: string; conclusion: string; counterexample: string; problem: string; change: string; recheck: string }[];
   evidenceIds?: string[]; startedAt?: string; closedAt?: string;
 }
+export interface WorkbenchGoal {
+  id:string; stage:string; number:number; title:string; sourceType:string; sourceId:string;
+  status:string; summary:string; decision?:string; recordRevision:number; createdAt:string; updatedAt:string; cycle:number;
+}
+export interface WorkbenchState {
+  goals:WorkbenchGoal[]; activeGoalId?:string; drafts:Record<string,string>;
+  requests:{id:string;text:string;stage:string;status:string;revision:number}[];
+  deferrals:{id:string;stage?:string;affectedStages?:string[];blockedOperations?:string[];description:string;reason:string;impact:string;status:string}[];
+}
 export interface ProductionRecord {
+  workbench?:WorkbenchState;
   artDesign?: ArtDesign;
   acceptanceConfig?: { version: string; seats: number; requireUi: boolean; requiredTools: string[] } | null;
   acceptanceSessions?: AcceptanceSession[];
@@ -72,6 +82,9 @@ export interface ProductionView {
   reportPaths: string[]; availableUpdate: boolean;
 }
 export const productionApi = {
+  exportDeveloperPackage:(taskId:string,expectedRevision:number,issueIds:string[])=>invoke<string>("export_developer_package",{taskId,expectedRevision,issueIds}),
+  workbench: (taskId:string,expectedRevision:number,operation:string,data:unknown) => invoke<ProductionView>("mutate_production_workbench",{input:{taskId,expectedRevision,operation,data}}),
+  snapshot: (taskId:string,revision:number) => invoke<ProductionRecord>("read_production_snapshot",{taskId,revision}),
   media: (taskId: string, artifactId: string) => invoke<string>("read_production_media", { taskId, artifactId }),
   feedback: (taskId: string, expectedRevision: number, operation: string, data: unknown) =>
     invoke<ProductionView>("submit_production_feedback", { input: { taskId, expectedRevision, operation, data } }),
@@ -134,6 +147,7 @@ export interface IntakeQuestionGroup {
 }
 
 export interface ProductionArtifact {
+  plannerInput?:boolean;
   libraryReference?: boolean;
   plannerReference?: boolean;
   mediaType?: string; sourceType?: string; roles?: string[]; visualVersion?: string; groupId?: string;

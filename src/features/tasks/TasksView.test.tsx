@@ -164,7 +164,7 @@ afterEach(() => {
 });
 
 describe("development task tabs", () => {
-  it("defaults to game instances and keeps task terminals mounted across tabs", async () => {
+  it("defaults to production and keeps task terminals mounted across tabs", async () => {
     render(
       <TasksView
         t={translator("en-US")}
@@ -176,8 +176,9 @@ describe("development task tabs", () => {
       name: "Game instances",
     });
     const terminalTab = screen.getByRole("tab", { name: "Terminal" });
-    expect(instancesTab.getAttribute("aria-selected")).toBe("true");
-    expect(await within(screen.getByRole("region", { name: translator("en-US")("workflowPlan") })).findByText("Inspect files")).toBeTruthy();
+    expect(instancesTab.getAttribute("aria-selected")).toBe("false");
+    expect(screen.getByRole("tab", {name:"制作流程"}).getAttribute("aria-selected")).toBe("true");
+    expect(await within(screen.getByRole("region", { name: translator("en-US")("workflowPlan"), hidden:true })).findByText("Inspect files")).toBeTruthy();
 
     fireEvent.click(terminalTab);
     const activeTerminal = await screen.findByTestId(
@@ -187,8 +188,9 @@ describe("development task tabs", () => {
 
     fireEvent.click(instancesTab);
     expect(activeTerminal.getAttribute("data-visible")).toBe("false");
-    expect(within(screen.getByRole("region", { name: translator("en-US")("workflowPlan") })).getByText("Inspect files")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: translator("en-US")("workflowPlan"), hidden:true })).getByText("Inspect files")).toBeTruthy();
 
+    fireEvent.click(screen.getByRole("button", { name: /切换任务|Switch task/ }));
     fireEvent.click(screen.getByRole("button", { name: /Archived task/ }));
     fireEvent.click(screen.getByRole("tab", { name: "Terminal" }));
     const archivedTerminal = await screen.findByTestId(
@@ -196,6 +198,7 @@ describe("development task tabs", () => {
     );
     expect(archivedTerminal.getAttribute("data-visible")).toBe("true");
 
+    fireEvent.click(screen.getByRole("button", { name: /切换任务|Switch task/ }));
     fireEvent.click(screen.getByRole("button", { name: /Active task/ }));
     await waitFor(() => {
       expect(activeTerminal.getAttribute("data-visible")).toBe("false");
@@ -229,13 +232,15 @@ describe("development task tabs", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Select alternate conversation" }),
     );
-    expect(await within(screen.getByRole("region", { name: translator("en-US")("workflowPlan") })).findByText("Run gameplay test")).toBeTruthy();
+    expect(await within(screen.getByRole("region", { name: translator("en-US")("workflowPlan"), hidden:true })).findByText("Run gameplay test")).toBeTruthy();
 
+    fireEvent.click(screen.getByRole("button", { name: /切换任务|Switch task/ }));
     fireEvent.click(screen.getByRole("button", { name: /Archived task/ }));
+    fireEvent.click(screen.getByRole("button", { name: /切换任务|Switch task/ }));
     fireEvent.click(screen.getByRole("button", { name: /Active task/ }));
 
     await waitFor(() => {
-      const workflow = within(screen.getByRole("region", { name: translator("en-US")("workflowPlan") }));
+      const workflow = within(screen.getByRole("region", { name: translator("en-US")("workflowPlan"), hidden:true }));
       expect(workflow.getByText("Run gameplay test")).toBeTruthy();
       expect(workflow.queryByText("Inspect files")).toBeNull();
     });

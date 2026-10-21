@@ -1,5 +1,8 @@
 # App Shell Skill
 
+## v5 workbench (2026-10-21)
+The approved v5 workbench supersedes the historical teal/two-column card presentation. Preserve all five global destinations and four task tabs. Use charcoal navigation, cream canvas and warm orange actions; blue remains informational. Task switching can disclose the list. Guidance remains above the workbench. Keep native terminal components mounted and IME behavior intact.
+
 ## Compact task guidance (2026-10-19)
 workspaceRefinement.css keeps the status label and title on one wrapping row,
 with the instruction below. Use an 18px title, 13px instruction, 32px icon and

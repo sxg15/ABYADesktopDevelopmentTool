@@ -1,5 +1,8 @@
 # Release Skill
 
+## v5 workbench (2026-10-21)
+Workflow 2.3.0 includes the v5 workbench, journal and input/export contracts plus the pinned Impeccable 4.7.0 sources and platform adaptation under the canonical art method. Existing tasks retain pins until explicit upgrade. Package checks must include original licenses and nested method resources.
+
 ## Approved art recovery release (2026-10-20)
 Default and Validation packages identify art-feedback-recovery-20261020. Keep pinned
 task Skills and all user approval/feedback records unchanged by deployment. Validate

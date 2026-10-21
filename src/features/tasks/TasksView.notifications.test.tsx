@@ -18,6 +18,7 @@ vi.mock("./TaskGuidance",()=>({TaskGuidance:()=>null}));
 vi.mock("./CodexWorkflowBar",()=>({CodexWorkflowBar:()=>null}));
 vi.mock("./TaskIntakeDialog",()=>({TaskIntakeDialog:({requestedGroup}:{requestedGroup?:{groupId:string}})=><div>{requestedGroup ? "question:"+requestedGroup.groupId : ""}</div>}));
 vi.mock("./ProductionPanel",()=>({ProductionPanel:({taskId,requestedReview,requestedFeedback}:{taskId:string;requestedReview?:{sha256:string};requestedFeedback?:{id:string}})=><div>{"stage:"+taskId}{requestedReview ? " review:"+requestedReview.sha256 : ""}{requestedFeedback ? " feedback:"+requestedFeedback.id : ""}</div>}));
+vi.mock("./ProductionWorkbench",()=>({ProductionWorkbench:({taskId,requestedReview,requestedFeedback,requestedGroup}:{taskId:string;requestedReview?:{sha256:string};requestedFeedback?:{id:string};requestedGroup?:{groupId:string}})=><div><div>{"stage:"+taskId}{requestedReview ? " review:"+requestedReview.sha256 : ""}{requestedFeedback ? " feedback:"+requestedFeedback.id : ""}</div>{requestedGroup ? "question:"+requestedGroup.groupId : ""}</div>}));
 vi.mock("../terminal/CodexTerminalView",()=>({DevelopmentTerminalView:({connectionRequest}:{connectionRequest?:TerminalConnectionRequest})=>{
   useEffect(()=>{connectionRequest?.finish();},[connectionRequest?.id]);
   return <div>{connectionRequest ? "terminal:"+connectionRequest.provider+":"+connectionRequest.conversationId : ""}</div>;

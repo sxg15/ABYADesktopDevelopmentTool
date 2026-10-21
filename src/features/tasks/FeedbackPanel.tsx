@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { productionApi, type ProductionRecord, type ProductionView, type ProductionFeedback } from "../../shared/production";
 import { errorMessage } from "../../shared/api";
 import { Modal } from "../../app/Modal";
@@ -6,13 +6,18 @@ import { ArtifactMedia } from "./ArtifactPreview";
 import { VisualGallery } from "./VisualGallery";
 import { artRecheckReason, artVisuals, isArtFeedback } from "./artWorkflow";
 
-export function FeedbackPanel({ taskId, record, active, en = false, selectedArtifact, onUpdated, onContinue, actions = {}, onDismiss, scope, recheckActions, onRequestRevision }: {
+export function FeedbackPanel({ taskId, record, active, en = false, selectedArtifact, onUpdated, onContinue, actions = {}, onDismiss, scope, recheckActions, onRequestRevision, focusedId, embedded = false, executionBusy = false }: {
+  embedded?:boolean; executionBusy?:boolean;
+  focusedId?:string;
   taskId: string; record: ProductionRecord; active: boolean; en?: boolean; selectedArtifact?: string;
   onUpdated: (view: ProductionView) => void; onContinue?: (message: string, afterRevision: number) => Promise<void>;
   actions?: Record<string,string>; onDismiss?: () => void;
   scope?: "art"; recheckActions?: Record<string,string>; onRequestRevision?: () => void;
 }) {
-  const [draft, setDraft] = useState("");
+  const rootRef=useRef<HTMLElement>(null);
+  useEffect(()=>{if(!focusedId)return;const target=[...(rootRef.current?.querySelectorAll<HTMLElement>("[data-feedback-id]")??[])].find(e=>e.dataset.feedbackId===focusedId);target?.scrollIntoView?.({block:"nearest"});target?.focus({preventScroll:true});},[focusedId]);
+  const [draft, setDraft] = useState(()=>{try{return embedded?localStorage.getItem(`abya:feedback:${taskId}`)??"":"";}catch{return "";}});
+  useEffect(()=>{if(embedded)try{localStorage.setItem(`abya:feedback:${taskId}`,draft);}catch{/* Keep the in-memory draft. */}},[draft,embedded,taskId]);
   const [artifact, setArtifact] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -50,9 +55,9 @@ export function FeedbackPanel({ taskId, record, active, en = false, selectedArti
     } catch (reason) { if (current === generation.current) setError(errorMessage(reason)); } finally { locked.current = false; if (current === generation.current) setBusy(false); }
   }
   useEffect(() => { if (selectedArtifact) { setArtifact(selectedArtifact); setTargetVersion(record.artifacts?.find(a => a.id === selectedArtifact)?.sha256 ?? ""); setOpen(true); } }, [selectedArtifact]);
-  useEffect(() => { setDraft(""); setError(""); setArtifact(selectedArtifact ?? ""); setAttachments([]); }, [taskId]);
+  useEffect(() => { setDraft(embedded ? localStorage.getItem(`abya:feedback:${taskId}`)??"" : ""); setError(""); setArtifact(selectedArtifact ?? ""); setAttachments([]); }, [taskId]);
   async function run(operation: string, data: unknown) {
-    if (locked.current || operation === "add" && reason) return;
+    if (locked.current || executionBusy || operation === "add" && reason) return;
     locked.current = true;
     const current = generation.current;
     const related = record.feedback?.find(f => f.id === (data as {id?:string}).id);
@@ -105,7 +110,7 @@ export function FeedbackPanel({ taskId, record, active, en = false, selectedArti
   const scopedFeedback = (record.feedback ?? []).filter(f => scope !== "art" || isArtFeedback(f));
   const visibleFeedback = scopedFeedback.filter(f => scope !== "art" || showResolved || f.status !== "resolved");
   const selectable = scope === "art" ? artVisuals(record).current : record.artifacts ?? [];
-  return <section className="production-card" id="production-feedback">
+  return <section ref={rootRef} className="production-card" id="production-feedback">
     <h4>{scope === "art" ? (en ? "Changes and rechecks" : "修改与复验") : (en ? "Feedback and rechecks" : "反馈与修改记录")}</h4>
     {scope !== "art" && <>
     <button className="secondary-button" disabled={!active || actions.gameplay !== ""} onClick={() => { setArtifact(""); setTargetVersion(record.currentVersion ?? ""); setOpen(true); }}>{en ? "Review playable version / feedback" : "查看试玩版本并反馈"}</button>
@@ -115,7 +120,7 @@ export function FeedbackPanel({ taskId, record, active, en = false, selectedArti
     {scope === "art" && scopedFeedback.some(f => f.status === "resolved") && <button className="text-button" onClick={() => setShowResolved(v => !v)}>{showResolved ? (en ? "Hide closed feedback" : "收起已关闭反馈") : (en ? "Show closed feedback" : "查看已关闭反馈")}</button>}
     {error && !open && <p role="alert">{error}</p>}
     {notice && <p className="task-action-notice" role="status">{notice}</p>}
-    {open && <Modal wide title={en ? "Review and feedback" : "成果查看与反馈"} onClose={close}>
+    {open && <FeedbackFrame embedded={embedded} en={en} onClose={close}>
     <p>{selected ? `${selected.title} · ${selected.visualVersion}` : `${en ? "Playable version" : "试玩版本"} ${targetVersion}`}</p>
     {selected && <div className="feedback-preview"><ArtifactMedia taskId={taskId} artifact={selected} en={en} /></div>}
     <label className="field">{en ? "Related visual (optional)" : "关联视觉产物（可选）"}
@@ -132,11 +137,11 @@ export function FeedbackPanel({ taskId, record, active, en = false, selectedArti
     {attachments.length > 0 && <p>{en ? "Attached files: " : "已添加附件："}{attachments.length}</p>}
     {reason && <p role="status">{reason}</p>}
     <div className="modal-actions review-footer"><button className="secondary-button" onClick={close}>{en ? "Close" : "关闭"}</button>
-    <button className="primary-button" disabled={!active || busy || !!reason || !draft.trim()} onClick={() => void run("add", { description: draft, artifactId: artifact || undefined, attachmentIds: attachments })}>
+    <button className="primary-button" disabled={!active || busy || executionBusy || !!reason || !draft.trim()} onClick={() => void run("add", { description: draft, artifactId: artifact || undefined, attachmentIds: attachments })}>
       {en ? "Submit and continue" : "提交反馈并继续"}
     </button></div>
     {error && <p role="alert">{error}</p>}
-    </Modal>}
+    </FeedbackFrame>}
     {visibleFeedback.map(f => <article className="production-issue-card" key={f.id} data-feedback-id={f.id} tabIndex={-1}>
       <div className="production-card-heading"><strong>{f.description}</strong><span>{scope === "art" && f.status === "awaiting-recheck" && !canResolve(f) ? (en ? "Recheck material needs updating" : "复验材料待更新") : en ? f.status : names[f.status]}</span></div>
       <small>{f.artifactId ? (record.artifacts?.find(a => a.id === f.artifactId)?.visualVersion ?? (en ? "Original proposal" : "原方案")) : f.version ?? (en ? "Playable version" : "作品版本")} → {f.artifactId ? (record.artifacts?.find(a => a.id === f.candidateArtifactId)?.visualVersion ?? (en ? "Awaiting AI revision" : "等待 AI 提交修订")) : f.candidateVersion ?? "—"}</small>
@@ -144,12 +149,12 @@ export function FeedbackPanel({ taskId, record, active, en = false, selectedArti
       {f.reopenReason && f.status === "open" && <p>{en ? "Requested follow-up: " : "追加处理要求："}{f.reopenReason}</p>}
       {f.status !== "resolved" ? <button className="secondary-button" disabled={!active || busy || !canResolve(f)}
         onClick={() => setRechecking(f)}>{en ? "Review fix" : "查看复验结果"}</button>
-        : <button className="secondary-button" disabled={!active || busy} onClick={() => { if (isArtFeedback(f)) { setReopening(f); setReopenReason(""); } else void run("reopen", { id: f.id }); }}>{en ? "Reopen" : "重新打开"}</button>}
+        : <button className="secondary-button" disabled={!active || busy || executionBusy} onClick={() => { if (isArtFeedback(f)) { setReopening(f); setReopenReason(""); } else void run("reopen", { id: f.id }); }}>{en ? "Reopen" : "重新打开"}</button>}
       {isArtFeedback(f) && f.status !== "resolved" && !canResolve(f) && <div className="art-blocker-note" role="status">
         <p>{artRecheckReason(record, f, recheckActions, en)}</p>
-        {f.status === "awaiting-recheck" ? <button className="secondary-button" disabled={!active || busy} onClick={() => void run("reopen",{id:f.id,reason:"当前反馈的复验材料不可用或已过期。请核对本轮最新视觉方案，将这条反馈重新关联到当前最新版方案，补齐修改说明和复验方法后交回策划；不要关闭反馈或批准文档。"})}>{en ? "Ask AI to update recheck material" : "让 AI 补齐复验材料"}</button>
-          : onRequestRevision && <button className="text-button" disabled={!active || busy} onClick={onRequestRevision}>{en ? "Read document / request changes" : "查看确认单并要求修改"}</button>}
-        {f.status !== "awaiting-recheck" && onContinue && <button className="secondary-button" disabled={!active || busy} onClick={() => void continueFeedback(f.id)}>{en ? "Ask AI to continue this feedback" : "让 AI 继续处理此反馈"}</button>}
+        {f.status === "awaiting-recheck" ? <button className="secondary-button" disabled={!active || busy || executionBusy} onClick={() => void run("reopen",{id:f.id,reason:"当前反馈的复验材料不可用或已过期。请核对本轮最新视觉方案，将这条反馈重新关联到当前最新版方案，补齐修改说明和复验方法后交回策划；不要关闭反馈或批准文档。"})}>{en ? "Ask AI to update recheck material" : "让 AI 补齐复验材料"}</button>
+          : onRequestRevision && <button className="text-button" disabled={!active || busy || executionBusy} onClick={onRequestRevision}>{en ? "Read document / request changes" : "查看确认单并要求修改"}</button>}
+        {f.status !== "awaiting-recheck" && onContinue && <button className="secondary-button" disabled={!active || busy || executionBusy} onClick={() => void continueFeedback(f.id)}>{en ? "Ask AI to continue this feedback" : "让 AI 继续处理此反馈"}</button>}
       </div>}
       {scope === "art" && canResolve(f) && <p className="art-recheck-hint">{en ? "Open the fix, compare the images, then explicitly confirm this issue is resolved." : "先查看修改结果并对照图片；确认符合要求后，再关闭这一条反馈。"}</p>}
       <details><summary>{en ? "History" : "处理历史"}</summary>{f.history?.map((h, i) => <p key={i}>{new Date(h.at).toLocaleString()} · {h.actor} · {en ? h.status : names[h.status]} {h.fix} {h.reason}</p>)}</details>
@@ -164,7 +169,7 @@ export function FeedbackPanel({ taskId, record, active, en = false, selectedArti
       {staleReopen && <p role="alert">{en ? "This feedback changed. Close this dialog and read the latest record." : "反馈状态已变化，请关闭窗口后查看最新记录。"}</p>}
       {error && <p role="alert">{error}</p>}
       <div className="modal-actions"><button className="secondary-button" onClick={() => setReopening(undefined)}>{en ? "Cancel" : "取消"}</button>
-        <button className="primary-button" disabled={!active || busy || !reopenReason.trim() || staleReopen} onClick={() => void run("reopen", {id:reopening.id, reason:reopenReason.trim()})}>{en ? "Reopen and ask AI to revise" : "重新打开并交给 AI 修改"}</button></div>
+        <button className="primary-button" disabled={!active || busy || executionBusy || !reopenReason.trim() || staleReopen} onClick={() => void run("reopen", {id:reopening.id, reason:reopenReason.trim()})}>{en ? "Reopen and ask AI to revise" : "重新打开并交给 AI 修改"}</button></div>
     </Modal>}
     {rechecking && <Modal wide title={en ? "Review fix" : "复验修改结果"} onClose={() => setRechecking(undefined)}>
       <h3>{rechecking.description}</h3><p>{rechecking.fix}</p><p>{rechecking.recheck}</p>
@@ -173,7 +178,11 @@ export function FeedbackPanel({ taskId, record, active, en = false, selectedArti
       {staleRecheck && <p role="alert">{en ? "The candidate changed. Reopen and review the latest result." : "候选版本或处理状态已变化，请重新查看最新结果。"}</p>}
       {error && <p role="alert">{error}</p>}
       <div className="modal-actions review-footer"><button className="secondary-button" onClick={() => setRechecking(undefined)}>{en ? "Close" : "关闭"}</button>
-        <button className="primary-button" disabled={!active || busy || staleRecheck} onClick={() => void run("resolve",{id:rechecking.id})}>{en ? "Verified, close this issue" : "确认已复验并关闭此问题"}</button></div>
+        <button className="primary-button" disabled={!active || busy || executionBusy || staleRecheck} onClick={() => void run("resolve",{id:rechecking.id})}>{en ? "Verified, close this issue" : "确认已复验并关闭此问题"}</button></div>
     </Modal>}
   </section>;
+}
+
+function FeedbackFrame({embedded,en,onClose,children}:{embedded:boolean;en:boolean;onClose:()=>void;children:ReactNode}) {
+  return embedded ? <section className="workbench-feedback-compose">{children}</section> : <Modal wide title={en?"Review and feedback":"成果查看与反馈"} onClose={onClose}>{children}</Modal>;
 }

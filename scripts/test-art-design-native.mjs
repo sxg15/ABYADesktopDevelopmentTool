@@ -39,9 +39,9 @@ if(action==='init'){
   assert.ok(path.resolve(task.workspacePath).toLowerCase().startsWith(path.join(root,'Workspaces').toLowerCase()+path.sep));
   let view;
   const update=async(operation,values)=>view=await invoke('update_task_production',{input:{taskId:task.id,expectedRevision:view?.record?.revision??0,operation,data:values}});
-  await update('initialize',{questionMode:'no-followup'});assert.equal(view.record.workflowVersion,'2.2.3');
+  await update('initialize',{questionMode:'no-followup'});assert.equal(view.record.workflowVersion,'2.3.0');
   const catalog=await invoke('get_task_skills',{taskId:task.id});
-  assert.equal(catalog.filter(skill=>skill.kind==='design').length,3);
+  assert.equal(catalog.filter(skill=>skill.kind==='design').length,5);
   assert.ok(catalog.every(skill=>skill.provider==='codex'));
   assert.equal(fs.existsSync(path.join(task.workspacePath,'.grok')),false);
   await assert.rejects(invoke('get_grok_terminal_availability'),/not found|unknown|未找到/i);

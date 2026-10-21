@@ -22,6 +22,10 @@ mod report;
 mod validation;
 mod versions;
 mod visuals;
+mod workbench;
+mod workbench_actions;
+mod workbench_import;
+mod workbench_package;
 mod workspace;
 pub use versions::VersionSources;
 #[cfg(test)]
@@ -92,6 +96,7 @@ impl TaskService {
         }
         stages.insert("requirements".into(), "in-progress".into());
         let mut record = ProductionRecord {
+            workbench: WorkbenchState::default(),
             art_design: ArtDesign::default(),
             schema: "abya.game-development-workflow/v1".into(),
             task_id: task.id.clone(),
@@ -133,6 +138,7 @@ impl TaskService {
             updated_at: now(),
         };
         art_design_sources::refresh(&mut record, &task);
+        workbench::observe(&mut record, None);
         self.database.with_connection(|c| {
             if load(c, &task.id)?.is_some() {
                 return Err(conflict());
@@ -264,6 +270,9 @@ impl TaskService {
         let task = self.database.with_connection(|c| read_task(c, id))?;
         if let Some(r) = &mut record {
             art_design_sources::refresh(r, &task);
+            if r.workbench.goals.is_empty() {
+                workbench::observe(r, None);
+            }
         }
         let warnings = record
             .as_ref()
@@ -389,6 +398,7 @@ impl TaskService {
                 }
             }
             workspace::record_transition(&mut record, &previous)?;
+            workbench::observe(&mut record, Some(&serde_json::from_str(&previous)?));
             record.revision += 1;
             record.updated_at = now();
             let body = serde_json::to_string(&record)?;
