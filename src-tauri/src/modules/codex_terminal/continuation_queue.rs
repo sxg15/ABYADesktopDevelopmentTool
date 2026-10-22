@@ -15,6 +15,8 @@ pub(super) struct ContinueRequest {
     pub answer_revision: u64,
     #[serde(default)]
     pub after_revision: Option<u64>,
+    #[serde(default)]
+    pub automatic_after: Option<String>,
     pub status: String,
     pub owner: String,
     pub revision: u64,
@@ -195,6 +197,7 @@ impl CodexTerminalService {
                     previous.as_ref().map_or(0, |q| q.answer_revision)
                 },
                 after_revision,
+                automatic_after: None,
                 status: "queued".into(),
                 owner: self.process_epoch.clone(),
                 revision: previous.as_ref().map_or(0, |q| q.revision),
@@ -205,6 +208,7 @@ impl CodexTerminalService {
             }
         };
         self.cancelled.lock().remove(conversation);
+        self.auto_progress.lock().remove(conversation);
         save(&directory, &mut request)?;
         self.dispatch_or_record(&directory, &mut request)
     }
@@ -364,6 +368,18 @@ impl CodexTerminalService {
         if snapshot["thread"]["id"].as_str() != Some(&request.native_id) {
             return Err(AppError::validation("无法核对原生会话身份。"));
         }
+        if let Some(expected) = &request.automatic_after {
+            let latest = snapshot["thread"]["turns"]
+                .as_array()
+                .and_then(|turns| turns.last());
+            if !super::auto_progress::eligible(&production)
+                || latest.is_none_or(|t| t["id"] != *expected || t["status"] != "completed")
+            {
+                request.status = "superseded".into();
+                save(directory, request)?;
+                return Ok(request.response(S::Superseded));
+            }
+        }
         if let Some(group) = request.group_id.as_ref() {
             let path = directory.join(format!("intake-{}-{}.json", group, request.answer_revision));
             if path.exists() {
@@ -422,7 +438,7 @@ impl CodexTerminalService {
             let receipt = directory.join(format!("task-continue-{}.json", request.id));
             let mut attempt = intake_receipt::start_attempt(&receipt, None, &request.native_id)?;
             let result=server.request("turn/start",json!({"threadId":request.native_id,"clientUserMessageId":attempt["messageId"],
-                "input":[{"type":"text","text":repair_spec.as_ref().map(|s|s.prompt.as_str()).unwrap_or("用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。若 workbench.requests 有用户请求，按 id 和 revision 核对已有执行记录，处理尚未执行的请求，开始/完成时用 update-workbench-request 记录 status 与 summary，禁止重复执行；workbench.deferrals 是本任务持续略过的可选建议，保留影响说明，不重复打断，不能把略过当成修复或批准。若 artDesign.caseRequests 有本任务本轮 APP 案例请求，先按 selection 的具体版本与 prompt 核对已有处理记录，再查看候选图像、评估参考或整理草稿；请求不等于已采用或已认可，不重复执行已完成请求，不绕过人工确认。若 artifacts 中存在 plannerReference=true 且 status 不是 withdrawn 的策划参考图片，读取其路径、说明并查看图片后用于美术需求；它们不是验收成果，变更方案仍需修订文档并请求人工确认。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。") }]}));
+                "input":[{"type":"text","text":repair_spec.as_ref().map(|s|s.prompt.as_str()).unwrap_or(if request.automatic_after.is_some() { "当前目标尚未完成且没有人工待办，自动推进下一子阶段。读取最新制作记录和已有成果，直接继续实现、检查与验证；不把一次回复结束当作需要用户点击继续。更新具体目标与进展；仅在需要审核、用户回答/复验、实际阻塞、执行失败或任务完成时停下。不得重复已完成操作，不得替用户批准。" } else { "用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。若 workbench.requests 有用户请求，按 id 和 revision 核对已有执行记录，处理尚未执行的请求，开始/完成时用 update-workbench-request 记录 status 与 summary，禁止重复执行；workbench.deferrals 是本任务持续略过的可选建议，保留影响说明，不重复打断，不能把略过当成修复或批准。若 artDesign.caseRequests 有本任务本轮 APP 案例请求，先按 selection 的具体版本与 prompt 核对已有处理记录，再查看候选图像、评估参考或整理草稿；请求不等于已采用或已认可，不重复执行已完成请求，不绕过人工确认。若 artifacts 中存在 plannerReference=true 且 status 不是 withdrawn 的策划参考图片，读取其路径、说明并查看图片后用于美术需求；它们不是验收成果，变更方案仍需修订文档并请求人工确认。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。" }) }]}));
             result.and_then(|v| {
                 let id = v["turn"]["id"]
                     .as_str()
@@ -469,21 +485,20 @@ impl CodexTerminalService {
                 return;
             };
             let directory = conversation_directory(Path::new(&task.workspace_path), &conversation);
-            let Ok(Some(mut request)) = read(&directory) else {
-                return;
-            };
-            if request.owner != service.process_epoch
-                || request.status != "queued"
-                || request.after_turn.as_deref() != Some(&turn)
+            if let Ok(Some(mut request)) = read(&directory)
+                && request.owner == service.process_epoch
+                && request.status == "queued"
+                && request.after_turn.as_deref() == Some(&turn)
             {
+                if completed {
+                    let _ = service.dispatch_or_record(&directory, &mut request);
+                } else {
+                    request.status = "paused".into();
+                    let _ = save(&directory, &mut request);
+                }
                 return;
             }
-            if completed {
-                let _ = service.dispatch_or_record(&directory, &mut request);
-            } else {
-                request.status = "paused".into();
-                let _ = save(&directory, &mut request);
-            }
+            let _ = service.auto_complete_locked(&task.id, &conversation, &turn, completed);
         });
     }
 

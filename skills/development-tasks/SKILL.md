@@ -196,9 +196,11 @@ It never closes feedback, changes candidate identity or approves a document. A f
 continuation retains the saved request and reports the connection prerequisite.
 
 ## Readable workspace presentation (2026-10-16)
-ReadableText renders only authored text: Markdown headings/bold, numbered/bulleted
-lines and short leading colon labels. Other HTML/links/media remain literal text;
-fenced code is never interpreted. No source mutation, AI summarization or inferred
+2026-10-22: ReadableText uses react-markdown and remark-gfm for CommonMark/GFM
+headings, nested lists, tables, task lists, quotations, emphasis and fenced code.
+Raw HTML stays inert; external HTTP(S) links/images require a user click. Registered
+task images use the existing media adapter; unregistered local paths are not opened.
+Code remains literal, and rendered task checkboxes do not change acceptance. No source mutation, AI summarization or inferred
 requirements. Use it for task descriptions and document review. Preserve stored
 description disclosure state, exact review snapshot and explicit user decisions.
 Stage nodes add domain icons, step/check markers and semantic status badges. Keep a

@@ -1,5 +1,18 @@
 # Codex Terminal Skill
 
+## Non-human automatic progress (2026-10-22)
+Observe turn/started in the current process; successful turn/completed can enqueue
+one automatic continuation for ongoing production work. Existing manual intents win.
+Use the lifecycle lock, original native identity, process epoch and pause/cancel flags.
+Recheck human questions, document approval, feedback recheck, stopped/passed/blocked
+stages and latest native predecessor immediately before dispatch. Never auto-reconnect
+old history or replay uncertain sends. Automatic receipts identify their predecessor;
+duplicate completion events are consumed once. Compare semantic progress (stages,
+version/hash, goals, plan and summary) without timestamps/revisions/drafts. Repeating
+progress parks as needsResume with an explanation, allowing explicit retry; it is not
+an uncertain send. Startup/polling alone never schedules inference.
+
+
 ## v5 workbench (2026-10-21)
 The fixed continuation prompt now reads workbench.requests by id/revision and optional-suggestion deferrals. It never treats a request or deferral as approval. Existing queued/sending/needsReview receipts, original conversation binding and pause controls remain authoritative.
 

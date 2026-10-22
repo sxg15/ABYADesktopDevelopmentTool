@@ -33,12 +33,12 @@ export function DocumentReview({ taskId, document: initial, view, active, busy, 
     <h3>{en ? "Review version" : "审阅成果"} · {snapshot.revision}</h3>
     <p className="review-context">{view.record?.taskId} · {view.policy.stages.find(s => s.id === snapshot.kind)?.name} · {snapshot.path}</p>
     <div className="review-layout">
-      <div className="review-content">
+      {!embedded && <div className="review-content">
         <article className="document-preview" aria-label={en ? "Document contents" : "文档内容"}>
-          <ReadableText text={snapshot.content} />
+          <ReadableText text={snapshot.content} taskId={taskId} basePath={snapshot.path} artifacts={artifacts} />
         </article>
         <VisualGallery taskId={taskId} artifacts={artifacts} bindings={snapshot.artifactBindings} en={en} />
-      </div>
+      </div>}
       <aside className="review-decision">
         <h3>{en ? "Review decision" : "审查结论"}</h3>
         {!!pendingArt.length && <div className="review-blockers">

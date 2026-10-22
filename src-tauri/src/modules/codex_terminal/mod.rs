@@ -5,6 +5,7 @@ mod preflight;
 mod recovery;
 mod resume_failure;
 pub use recovery::RecoveryCandidate;
+mod auto_progress;
 mod continuation_queue;
 mod execution_control;
 mod interrupt;
@@ -162,6 +163,7 @@ pub struct CodexTerminalService {
     cancelled: Arc<Mutex<HashSet<String>>>,
     stopping: Arc<Mutex<HashSet<String>>>,
     queue_tasks: Arc<Mutex<HashMap<String, String>>>,
+    auto_progress: Arc<Mutex<HashMap<String, auto_progress::AutoProgress>>>,
     shutting_down: Arc<std::sync::atomic::AtomicBool>,
 }
 
@@ -213,6 +215,7 @@ impl CodexTerminalService {
             cancelled: Default::default(),
             stopping: Default::default(),
             queue_tasks: Default::default(),
+            auto_progress: Default::default(),
             shutting_down: Default::default(),
         })
     }
@@ -464,6 +467,7 @@ impl CodexTerminalService {
             std::fs::remove_dir_all(directory)?;
         }
         self.queue_tasks.lock().remove(conversation_id);
+        self.auto_progress.lock().remove(conversation_id);
         self.cancelled.lock().remove(conversation_id);
         self.stopping.lock().remove(conversation_id);
         Ok(())
@@ -1029,6 +1033,14 @@ impl CodexTerminalService {
                     &writes,
                     event.clone(),
                 );
+                if event["method"] == "turn/started"
+                    && let (Some(native), Some(turn)) = (
+                        event["params"]["threadId"].as_str(),
+                        event["params"]["turn"]["id"].as_str(),
+                    )
+                {
+                    service.auto_turn_started(native, turn);
+                }
                 if event["method"] == "turn/completed"
                     && let (Some(native), Some(turn)) = (
                         event["params"]["threadId"].as_str(),
@@ -1158,6 +1170,7 @@ impl CodexTerminalService {
             cancelled: Default::default(),
             stopping: Default::default(),
             queue_tasks: Default::default(),
+            auto_progress: Default::default(),
             shutting_down: Default::default(),
             tasks,
             sessions: Default::default(),
@@ -1338,7 +1351,7 @@ fn build_command(
 
 fn managed_developer_instructions(task_id: &str, conversation_id: &str) -> String {
     format!(
-        "You are working in ABYA task {task_id}, conversation {conversation_id}. Publish and maintain a plan for multi-step work. If no native plan tool is available, use conversation report with plan:[{{step,status}}], where status is pending/inProgress/completed/failed. Use this for the top conversation steps and keep production stages separate. Explain progress in plain Chinese: outcome, reason, next action. Put technical identifiers in details. Avoid repeating unchanged scope disclaimers. Use only the executable in ABYA_DESKTOP_CLI for ABYA operations. Run doctor and capabilities first. CLI commands inherit the task, provider and conversation context. Report semantic milestones with conversation report. Do not use MCP or start unmanaged game processes. Open returned screenshot paths for visual acceptance. Never include credentials, raw commands, outputs or patches in activity details."
+        "You are working in ABYA task {task_id}, conversation {conversation_id}. Publish and maintain a plan for multi-step work. Continue all non-human production substages without asking the user to click Continue after each reply. Stop for actual blockers, user answers, document approval, feedback recheck, failure, pause or completion. Persist concrete progress with production update-stage or update-workbench-request; internal retries do not create goals. If no native plan tool is available, use conversation report with plan:[{{step,status}}], where status is pending/inProgress/completed/failed. Use this for the top conversation steps and keep production stages separate. Explain progress in plain Chinese: outcome, reason, next action. Put technical identifiers in details. Avoid repeating unchanged scope disclaimers. Use only the executable in ABYA_DESKTOP_CLI for ABYA operations. Run doctor and capabilities first. CLI commands inherit the task, provider and conversation context. Report semantic milestones with conversation report. Do not use MCP or start unmanaged game processes. Open returned screenshot paths for visual acceptance. Never include credentials, raw commands, outputs or patches in activity details."
     )
 }
 

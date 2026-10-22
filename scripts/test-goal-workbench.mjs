@@ -14,10 +14,12 @@ const check=(name,value)=>{assert.ok(value,name);results.push(name);};
 try{
   await page.goto('http://127.0.0.1:48732/scripts/workspace-refinement-preview.html',{waitUntil:'domcontentloaded'});
   await page.locator('.production-workbench').waitFor();
+  check('Markdown table',await page.locator('.wb-document table').count()===1);
+  check('Lua code block',await page.locator('.wb-document pre code.language-lua').count()===1);
   check('Seven stages',await page.locator('.wb-stages button').count()===7);
   check('Four task tabs',await page.getByRole('tab').count()===4);
   check('Guide remains visible',await page.locator('.task-guidance').isVisible());
-  check('No approval preselected',await page.locator('.workbench-review input:checked').count()===0);
+  check('No approval preselected',await page.locator('.workbench-review input[type=radio]:checked').count()===0);
   await page.getByRole('button',{name:'添加审查意见',exact:true}).click();
   await page.locator('.workbench-review textarea').fill('保留底部操作，调整成果区域');
   await page.getByRole('tab',{name:'Skill 库',exact:true}).click();

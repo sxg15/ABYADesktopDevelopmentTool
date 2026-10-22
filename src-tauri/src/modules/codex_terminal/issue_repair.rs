@@ -137,6 +137,7 @@ impl CodexTerminalService {
             group_id: None,
             answer_revision: 0,
             after_revision: None,
+            automatic_after: None,
             status: "queued".into(),
             owner: self.process_epoch.clone(),
             revision: previous.as_ref().map_or(0, |q| q.revision),

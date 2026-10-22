@@ -985,3 +985,162 @@ fn failed_attach_releases_only_its_executor_and_logs_safe_correlated_diagnostics
         Some(f.native.clone())
     );
 }
+
+fn finish_auto_fixture(f: &Fixture, turn: &str, observe: bool) {
+    if observe {
+        f.service.auto_turn_started(&f.native, turn);
+    }
+    let task = f.service.tasks.get(&f.task).unwrap();
+    let dir = conversation_directory(Path::new(&task.workspace_path), &f.conversation);
+    let mut workflow = load_workflow(&dir, &f.task, &f.conversation).unwrap();
+    workflow.begin_turn(turn);
+    workflow.complete_turn(turn, CodexWorkflowTurnStatus::Completed);
+    save_workflow(&dir, &workflow, "fixtureCompleted").unwrap();
+    let mut turns = f.turns.lock();
+    if let Some(existing) = turns.iter_mut().find(|t| t["id"] == turn) {
+        existing["status"] = json!("completed");
+    } else {
+        turns.push(json!({"id":turn,"status":"completed"}));
+    }
+}
+#[test]
+fn successful_nonhuman_substages_advance_and_duplicate_events_do_not_replay() {
+    let f = Fixture::new();
+    finish_auto_fixture(&f, "first", true);
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, "first", true)
+        .unwrap();
+    assert_eq!(f.calls.lock().len(), 1);
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, "first", true)
+        .unwrap();
+    assert_eq!(f.calls.lock().len(), 1);
+    let turn = f.turns.lock().last().unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    finish_auto_fixture(&f, &turn, true);
+    f.mutate(
+        "update-stage",
+        json!({"stage":"requirements","summary":"需求拆解已完成，正在形成确认单"}),
+    );
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, &turn, true)
+        .unwrap();
+    assert_eq!(f.calls.lock().len(), 2);
+}
+#[test]
+fn automatic_progress_stops_for_human_questions_failure_pause_and_unobserved_history() {
+    for mode in ["question", "failure", "pause", "history", "blocker"] {
+        let f = Fixture::new();
+        finish_auto_fixture(&f, "first", mode != "history");
+        if mode == "question" {
+            f.question("q");
+        }
+        if mode == "pause" {
+            f.service.cancelled.lock().insert(f.conversation.clone());
+        }
+        if mode == "blocker" {
+            f.mutate("save-issue",json!({"id":"blocked","stage":"requirements","kind":"blocker","status":"open","description":"需要用户输入","resumeWhen":"提供资料"}));
+        }
+        f.service
+            .auto_complete_locked(&f.task, &f.conversation, "first", mode != "failure")
+            .unwrap();
+        assert!(f.calls.lock().is_empty(), "{mode}");
+    }
+}
+#[test]
+fn repeated_progress_and_draft_only_changes_do_not_create_endless_turns() {
+    let f = Fixture::new();
+    finish_auto_fixture(&f, "first", true);
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, "first", true)
+        .unwrap();
+    let turn = f.turns.lock().last().unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    finish_auto_fixture(&f, &turn, true);
+    f.service
+        .tasks
+        .production_workbench(ProductionMutation {
+            task_id: f.task.clone(),
+            expected_revision: f.revision(),
+            operation: "save-draft".into(),
+            data: json!({"key":"current","text":"仍在编辑"}),
+        })
+        .unwrap();
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, &turn, true)
+        .unwrap();
+    assert_eq!(f.calls.lock().len(), 1);
+    let task = f.service.tasks.get(&f.task).unwrap();
+    let q = continuation_queue::read(&conversation_directory(
+        Path::new(&task.workspace_path),
+        &f.conversation,
+    ))
+    .unwrap()
+    .unwrap();
+    assert_eq!(q.status, "needsResume");
+    assert_eq!(
+        f.service
+            .continue_after_revision(&f.task, &f.conversation, None)
+            .unwrap()
+            .status,
+        S::Started
+    );
+    assert_eq!(f.calls.lock().len(), 2);
+}
+#[test]
+fn all_stage_types_share_automatic_rules_and_human_waits_remain_gates() {
+    let f = Fixture::new();
+    let mut view = f.service.tasks.production_get(&f.task).unwrap();
+    for stage in [
+        "requirements",
+        "resources",
+        "plan",
+        "implementation",
+        "review",
+        "delivery",
+        "closeout",
+    ] {
+        for status in [
+            "in-progress",
+            "awaiting-confirmation",
+            "awaiting-feedback",
+            "blocked",
+            "stopped",
+            "passed",
+        ] {
+            let r = view.record.as_mut().unwrap();
+            r.current_stage = stage.into();
+            r.stages.clear();
+            r.stages.insert(stage.into(), status.into());
+            view.stage_statuses.clear();
+            assert_eq!(
+                auto_progress::eligible(&view),
+                status == "in-progress",
+                "{stage}/{status}"
+            );
+        }
+    }
+}
+
+#[test]
+fn automatic_dispatch_does_not_queue_behind_a_newer_manual_turn() {
+    let f = Fixture::new();
+    finish_auto_fixture(&f, "first", true);
+    f.busy("newer-manual-turn");
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, "first", true)
+        .unwrap();
+    assert!(f.calls.lock().is_empty());
+    let task = f.service.tasks.get(&f.task).unwrap();
+    let q = continuation_queue::read(&conversation_directory(
+        Path::new(&task.workspace_path),
+        &f.conversation,
+    ))
+    .unwrap()
+    .unwrap();
+    assert_eq!(q.status, "superseded");
+}

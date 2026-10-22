@@ -1,5 +1,8 @@
 # Release Skill
 
+## Automatic progress and Markdown (2026-10-22)
+Release auto-progress-markdown-20261022 includes react-markdown/remark-gfm runtime dependencies. Validate stage/human gates, duplicate events, no-progress and Markdown hostile content; run standard checks and portable inventory.
+
 ## Memory warning release (2026-10-22)
 Publish memory-warning-20261022 after memory sampling/regression and complete checks. System headroom must no longer reject launch or mark instances pressured; preserve per-game protections and old task issue records.
 
