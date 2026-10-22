@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "task-isolation-goal-resume-20261022",
-  "totalBytes": 340747421,
+  "releaseLabel": "workbench-resize-20261022",
+  "totalBytes": 341046461,
   "files": [
     {
       "path": ".codex/README.md",
@@ -1485,18 +1485,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 29948928,
-      "sha256": "4c2a3b01585f1d47f96096ddd1a9e10c191b2eef37395f1a8edfe880ffce4ae3"
+      "bytes": 30247936,
+      "sha256": "5d2241e49b546ce2f781f0602f2f8018eb2ef788711465905c54a9fa45342538"
     },
     {
       "path": "abya-desktop.exe",
       "bytes": 5994496,
-      "sha256": "bcd95ca337d3b869b0885a6824a6e4ac701f5e8b951286d10fd23e55ba875b6d"
+      "sha256": "9d6ad1bba41000c30564825fd620eb39cfe36ff7145ebff0725689e96c9f5693"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 618,
-      "sha256": "2d5143ff14059b75e36042fcb3e79e5e4ec9c8a2249323316264c2ff960de748"
+      "bytes": 650,
+      "sha256": "8a7650991185c5ae4debb4a9c69feeb41fb8a298a8b11e11a40750ae57f3c0a2"
     },
     {
       "path": "runtime/LICENSE.txt",

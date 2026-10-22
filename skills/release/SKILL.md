@@ -553,3 +553,9 @@ also join non-inheritable Windows lifetime jobs with KILL_ON_JOB_CLOSE. APP deat
 therefore closes its jobs and terminates its own descendants, without process-name
 cleanup or touching unrelated sessions. Failure to establish ownership aborts startup.
 Validate nested job compatibility and actual APP crash/reopen/same-goal resume.
+
+## Workbench pane sizing (2026-10-22)
+Publish workbench-resize-20261022 after the real-component long-question drag, draft
+retention, persistence, keyboard and short/narrow-window checks, plus normal checks
+and complete package validation. This release changes presentation only; preserve
+live tasks while preparing the candidate and never terminate the user's APP to promote.

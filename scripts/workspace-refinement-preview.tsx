@@ -51,4 +51,13 @@ terminalApi.open=async(_p,taskId,conversationId,_cols,_rows,channel)=>{queueMicr
 terminalApi.write=async()=>{};terminalApi.resize=async()=>{};terminalApi.stop=async()=>{};terminalApi.copyHistory=async()=>true;
 terminalApi.executionSettings=async()=>({settings:{model:"fixture-model",effort:"medium"},models:[],running:false,connected:true});
 function Preview(){const[notice,setNotice]=useState("");return <div className="app-shell"><aside className="app-sidebar"><div className="brand"><div className="brand-mark">A</div><div><strong>ABYA</strong><span>Development Tool</span></div></div><nav>{[[ClipboardList,"开发任务"],[Send,"传输存档"],[CloudDownload,"游戏客户端管理"],[ScrollText,"游戏日志"],[Settings,"设置"]].map(([Icon,label],i)=>{const Symbol=Icon as typeof ClipboardList;return <button key={String(label)} className={i===0?"active":""}><Symbol size={19}/><span>{String(label)}</span></button>;})}</nav><div className="sidebar-footer"><strong>真实组件 · 隔离验证</strong><span>无原生服务、AI 或游戏进程</span></div></aside><main className="app-main"><div className="app-view active"><TasksView t={translator("zh-CN")} settings={{locale:"zh-CN"} as AppSettings} notify={setNotice}/></div></main>{notice&&<div className="notification" role="status">{notice}</div>}</div>;}
+// Long-question mode exercises the real embedded form without touching any task.
+if (new URLSearchParams(location.search).has("questions")) {
+  view.record!.questionGroups=[{id:"split-test",title:"《大小记忆》首版需求：集中决定 3 项",provider:"codex",conversationId:"original",status:"pending",draft:{},answers:[],publishedAt:"fixture",updatedAt:"fixture",
+    questions:[{id:"rules",text:"是否采用首版补全方案：首数记忆 1 秒且计入 30 秒；左键卡内起手，纵向位移 ≥ 卡高 10% 且大于横向位移；答对 +5，答错和无效操作不加分；反馈 0.5 秒；公共题序、各自推进；1–99，相邻不相等；高分胜、同分并列；返回后真人重新准备、机器人保持准备；背景柔和且不显示历史数字。",options:["采用上述首版方案","调整部分规则后再确认"],optional:false},
+      {id:"art",text:"美术参考需要怎样适配到数字记忆玩法？",options:["按文档手工 UI 与蜡笔背景执行","先看方案再选择"],optional:false},
+      {id:"note",text:"还有其他需要补充的要求吗？",options:[],optional:true}]}];
+  productionApi.answer=async(_task,_revision,operation,data)=>{if(operation!=="save-draft")throw new Error("This fixture only saves drafts");view.record!.questionGroups![0].draft=data.answers as Record<string,string>;view.record!.revision++;return structuredClone(view);};
+  attentionApi.get=async()=>({...attentionFixture("question","task"),items:[]});
+}
 createRoot(document.getElementById("root")!).render(<Preview/>);

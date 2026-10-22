@@ -581,3 +581,15 @@ The workbench shows interrupted/paused/reconciling/review states, original goal 
 attempt history. Continue this subprocess uses a durable idempotency key; bare continue
 text directs users to that control rather than creating another same-title goal.
 Unknown legacy bindings require explicit review; history/results remain intact.
+
+## Resizable workbench panes (2026-10-22)
+WorkbenchSplit owns presentation-only sizing of the result and interaction panes.
+A 24px pointer-capturing separator adjusts their relative heights, bounded to keep
+both panes usable; ResizeObserver adapts limits to short/hidden/restored windows.
+Arrow keys adjust, Shift uses a larger step, Home/End reach bounds, Enter/double-click
+reset, Escape/pointer cancellation cancel a drag. Expose separator semantics and values.
+Persist only the ratio in localStorage (abya:workbench:split-ratio:v1); storage failure
+must not disable resizing. Question components stay mounted; no task/answer/approval
+mutation comes from a resize. Both panes scroll independently and the divider stays visible.
+Validate real long-question drafts, question/tab switching, reload, drag cancellation,
+keyboard bounds and small-window overflow with scripts/test-workbench-split.mjs.

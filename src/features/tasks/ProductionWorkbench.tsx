@@ -1,3 +1,4 @@
+import { WorkbenchSplit } from "./WorkbenchSplit";
 import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { ChevronRight, FileText, History, Maximize2, X } from "lucide-react";
 import { productionApi, type ProductionView, type ProductionRecord, type TaskControlState } from "../../shared/production";
@@ -88,7 +89,7 @@ export function ProductionWorkbench(props:Props) {
       {goals.length===0?<p>{en?"Starts when this stage begins.":"进入本阶段后按目标建立。"}</p>:goals.map(g=><button key={g.id} className={(goalId||r.workbench?.activeGoalId)===g.id?"selected":""} onClick={()=>setGoalId(g.id)}><span>{g.number}</span><div><strong>{g.title}</strong><small>{en?goalExecutionStatus(r,g,reconciling):executionLabels[goalExecutionStatus(r,g,reconciling)]??statusName(g.status,locale)}</small></div><ChevronRight size={14}/></button>)}
       <button className="text-button" onClick={()=>{setStage(r.currentStage);setGoalId("");}}>{en?"Return to current work":"返回当前工作"}</button>
       <button className="text-button" onClick={()=>setDetails(true)}>{en?"All documents & development details":"全部资料与开发详情"}</button>
-    </aside><div className="wb-main"><section className="wb-outcome">{outcome}{!historical&&<WorkbenchIssues taskId={taskId} record={r} stage={currentStage} en={en} active={active&&!running} onUpdated={accept}/>}</section>
+    </aside><WorkbenchSplit en={en}><section className="wb-outcome">{outcome}{!historical&&<WorkbenchIssues taskId={taskId} record={r} stage={currentStage} en={en} active={active&&!running} onUpdated={accept}/>}</section>
     <section className="wb-interaction" aria-label={en?"Task interaction":"任务交互"}>
       {goal&&["work","request","feedback"].includes(goal.sourceType)&&<GoalExecutionPanel key={goal.id} record={r} goal={goal} active={active} checking={reconciling} en={en} onResume={props.onResumeGoal?async(...args)=>{const result=await props.onResumeGoal!(...args);await refresh();return result;}:undefined}/>}
       <div hidden={historical||mode!=="current"}><TaskIntakeDialog key={taskId} taskId={taskId} active={active} embedded executionBusy={running} requestedGroup={props.requestedGroup} onEnsureConnection={props.onEnsureConnection} onContinue={onContinue}/></div>
@@ -104,7 +105,7 @@ export function ProductionWorkbench(props:Props) {
       </>}
       {!!r.artifacts?.some(a=>a.plannerInput||a.plannerReference)&&<details className="wb-input-files"><summary>{en?"Attached source material":"已添加的需求资料与参考图"}</summary>{r.artifacts.filter(a=>(a.plannerInput||a.plannerReference)&&a.status!=="withdrawn").map(a=><p key={a.id}>{a.title} <button className="text-button" onClick={()=>void productionApi.open(taskId,a.path).catch(e=>setError(errorMessage(e)))}>{en?"View source / import manifest":"查看原图或导入清单"}</button></p>)}</details>}
       {notice&&<p role="status">{notice}</p>}{error&&<p role="alert" className="inline-error">{error}<button className="text-button" onClick={()=>void refresh()}>{en?"Refresh":"刷新"}</button></p>}
-    </section></div></div>
+    </section></WorkbenchSplit></div>
     {details&&<Modal wide title={en?"Documents & development details":"全部资料与开发详情"} onClose={()=>setDetails(false)}><ProductionPanel {...props}/></Modal>}
     {expanded&&<Modal wide title={en?"Result":"当前成果"} onClose={()=>setExpanded(false)}>{outcome}<button className="secondary-button" onClick={()=>setExpanded(false)}><X size={16}/>{en?"Close":"关闭"}</button></Modal>}
   </div>;

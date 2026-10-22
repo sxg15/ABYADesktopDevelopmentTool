@@ -43,3 +43,15 @@
 .wb-interaction>#production-feedback{background:transparent;border:0;padding:0;box-shadow:none}
 
 .goal-execution{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}.goal-execution>strong{display:inline-block;margin-right:16px}.goal-execution details{margin-top:10px}.goal-execution p{overflow-wrap:anywhere}
+
+/* Both panes keep their own scrolling; the divider never scrolls out of reach. */
+.wb-main.wb-split{display:grid;gap:0}
+.wb-split>.wb-outcome,.wb-split>.wb-interaction{min-height:0;max-height:none;min-width:0}
+.wb-split>.wb-interaction{border-top:0}
+.wb-divider{position:relative;display:flex;align-items:center;justify-content:center;cursor:row-resize;touch-action:none;user-select:none;background:#f4efe3;outline:none}
+.wb-divider::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:#c5bdac}
+.wb-divider-grip{position:relative;width:48px;height:5px;border-radius:3px;background:#837966;box-shadow:0 0 0 5px #f4efe3}
+.wb-divider:hover .wb-divider-grip,.wb-divider:focus-visible .wb-divider-grip,.wb-split.is-resizing .wb-divider-grip{background:#a3431d}
+.wb-divider:focus-visible{outline:2px solid #a3431d;outline-offset:-2px}
+.wb-divider-help{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.wb-split.is-resizing,.wb-split.is-resizing *{cursor:row-resize!important;user-select:none!important}
