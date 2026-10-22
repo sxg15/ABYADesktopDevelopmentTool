@@ -111,6 +111,7 @@ impl Fixture {
                 task_id: task.id.clone(),
                 session_id: Uuid::new_v4().to_string(),
                 state: Arc::new(Mutex::new(CodexTerminalState {
+                    input_session_id: None,
                     task_id: task.id.clone(),
                     conversation_id: c.id.clone(),
                     status: CodexTerminalStatus::Running,
@@ -120,7 +121,7 @@ impl Fixture {
                     last_error: String::new(),
                 })),
                 master: Arc::new(Mutex::new(pair.master)),
-                writer: Arc::new(Mutex::new(Box::new(std::io::sink()))),
+                input: terminal_input::TerminalInput::new(Box::new(std::io::sink())),
                 transcript: Arc::new(Mutex::new(
                     OpenOptions::new()
                         .create(true)
@@ -701,14 +702,14 @@ fn interrupt_turn_keeps_terminal_and_cancels_queued_continuation() {
         .continue_after_revision(&f.task, &f.conversation, Some(f.revision()))
         .unwrap();
     assert_eq!(request.status, S::Queued);
-    let writer = f.service.session(&f.conversation).unwrap().writer;
+    let session_id = f.service.session(&f.conversation).unwrap().session_id;
     let revision = f.revision();
     f.service.interrupt_turn(&f.task, &f.conversation).unwrap();
     assert_eq!(f.turns.lock()[0]["status"], "interrupted");
-    assert!(Arc::ptr_eq(
-        &writer,
-        &f.service.session(&f.conversation).unwrap().writer
-    ));
+    assert_eq!(
+        session_id,
+        f.service.session(&f.conversation).unwrap().session_id
+    );
     assert!(f.service.runtime_servers.lock()[&f.conversation].is_alive());
     assert_eq!(
         f.service
@@ -1143,4 +1144,112 @@ fn automatic_dispatch_does_not_queue_behind_a_newer_manual_turn() {
     .unwrap()
     .unwrap();
     assert_eq!(q.status, "superseded");
+}
+
+#[test]
+fn stale_historical_running_turn_does_not_block_current_idle_continuation() {
+    let f = Fixture::new();
+    f.busy("old-unclosed");
+    f.busy("new-completed");
+    f.complete();
+    let result = f
+        .service
+        .continue_after_revision(&f.task, &f.conversation, None)
+        .unwrap();
+    assert_eq!(result.status, S::Started);
+    assert_eq!(f.calls.lock().len(), 1);
+}
+#[test]
+fn rebuild_refuses_live_execution_without_replaying_or_closing_it() {
+    let f = Fixture::new();
+    f.busy("active");
+    assert!(
+        f.service
+            .rebuild_idle_terminal(&f.task, &f.conversation)
+            .is_err()
+    );
+    assert!(f.service.sessions.lock().contains_key(&f.conversation));
+    assert!(f.calls.lock().is_empty());
+}
+
+#[test]
+fn idle_terminal_rebuild_preserves_native_identity_and_never_starts_inference() {
+    let f = Fixture::new();
+    f.busy("old-unclosed");
+    f.busy("current");
+    f.complete();
+    let revision = f.revision();
+    f.service
+        .rebuild_idle_terminal(&f.task, &f.conversation)
+        .unwrap();
+    assert!(!f.service.sessions.lock().contains_key(&f.conversation));
+    assert_eq!(
+        f.service
+            .conversation(&f.task, &f.conversation)
+            .unwrap()
+            .native_session_id
+            .as_deref(),
+        Some(f.native.as_str())
+    );
+    assert_eq!(f.revision(), revision);
+    assert!(f.calls.lock().is_empty());
+}
+#[test]
+fn automatic_continuation_waits_for_late_tool_results_then_runs_once() {
+    let f = Fixture::new();
+    finish_auto_fixture(&f, "current", true);
+    let task = f.service.tasks.get(&f.task).unwrap();
+    let dir = conversation_directory(Path::new(&task.workspace_path), &f.conversation);
+    let mut workflow = load_workflow(&dir, &f.task, &f.conversation).unwrap();
+    workflow.record_activity(
+        "current",
+        Some("late-write"),
+        CodexActivityKind::Command,
+        CodexActivityStatus::Started,
+        "Pending operation",
+        "",
+        "fixture",
+    );
+    save_workflow(&dir, &workflow, "fixture").unwrap();
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, "current", true)
+        .unwrap();
+    assert!(f.calls.lock().is_empty());
+    assert!(
+        f.service
+            .rebuild_idle_terminal(&f.task, &f.conversation)
+            .is_err()
+    );
+    workflow.record_activity(
+        "current",
+        Some("late-write"),
+        CodexActivityKind::Command,
+        CodexActivityStatus::Completed,
+        "Finished operation",
+        "",
+        "fixture",
+    );
+    save_workflow(&dir, &workflow, "fixture").unwrap();
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, "current", true)
+        .unwrap();
+    assert_eq!(f.calls.lock().len(), 1);
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, "current", true)
+        .unwrap();
+    assert_eq!(f.calls.lock().len(), 1);
+}
+
+#[test]
+fn stale_input_session_cannot_write_into_a_replacement_terminal() {
+    let f = Fixture::new();
+    let current = f.service.session(&f.conversation).unwrap().session_id;
+    assert!(
+        f.service
+            .write_bound(&f.conversation, "previous-session", "must-not-send")
+            .is_err()
+    );
+    f.service
+        .write_bound(&f.conversation, &current, "valid")
+        .unwrap();
 }

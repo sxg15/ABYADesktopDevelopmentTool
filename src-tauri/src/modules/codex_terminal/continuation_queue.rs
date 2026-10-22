@@ -408,9 +408,8 @@ impl CodexTerminalService {
         }
         if let Some(turn) = snapshot["thread"]["turns"]
             .as_array()
-            .into_iter()
-            .flatten()
-            .find(|t| t["status"] == "inProgress")
+            .and_then(|turns| turns.last())
+            .filter(|t| t["status"] == "inProgress")
         {
             if request.group_id.is_none()
                 && request.after_revision.is_none()

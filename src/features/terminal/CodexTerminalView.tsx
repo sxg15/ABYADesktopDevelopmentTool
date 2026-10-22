@@ -524,6 +524,7 @@ function ConversationTerminal({
   const onWorkflowChangeRef = useRef(onWorkflowChange);
   const [viewMode, setViewMode] = useState<"terminal" | "history">("terminal");
   const [state, setState] = useState<CodexTerminalState>();
+  const [terminalEpoch,setTerminalEpoch]=useState(0);
   const [startupWarning, setStartupWarning] = useState("");
   const [error, setError] = useState("");
   const [atBottom, setAtBottom] = useState(true);
@@ -749,6 +750,11 @@ function ConversationTerminal({
         )
         .then(next => {
           if (disposed||generation!==attachment) return;
+          if(next.inputSessionId && boundInputSession!==next.inputSessionId){
+            sendInput.dispose();boundInputSession=next.inputSessionId;
+            const inputSessionId=next.inputSessionId;
+            sendInput=terminalInputQueue(data=>terminalApi.write(provider,conversation.id,data,inputSessionId),value=>setError(errorMessage(value)));
+          }
           opening = false;
           if (resetAfterAttach) { terminal.reset(); clearHistory(); }
           attaching = false;
@@ -794,10 +800,8 @@ function ConversationTerminal({
     const observer = new ResizeObserver(resize);
     observer.observe(hostRef.current);
 
-    const sendInput = terminalInputQueue(
-      data => terminalApi.write(provider, conversation.id, data),
-      value => setError(errorMessage(value)),
-    );
+    let boundInputSession:string|undefined;
+    let sendInput=Object.assign((_data:string)=>Promise.resolve(),{dispose:()=>{}});
     const removeClipboard = installTerminalClipboard(hostRef.current!, terminal,
       () => { void sendInput("\x16"); },
       () => setError(t("clipboardUnavailable")),
@@ -848,6 +852,7 @@ function ConversationTerminal({
       window.cancelAnimationFrame(frame);
       window.cancelAnimationFrame(startFrame);
       observer.disconnect();
+      sendInput.dispose();
       input.dispose();
       removeClipboard();
       terminalResize.dispose();
@@ -857,7 +862,7 @@ function ConversationTerminal({
       terminalRef.current = undefined;
       fitRef.current = undefined;
     };
-  }, [availability.workingDirectory, conversation.id, provider, taskId]);
+  }, [availability.workingDirectory, conversation.id, provider, taskId, terminalEpoch]);
 
   useEffect(() => {
     if (connectionRequest && state?.status !== "starting") startRef.current(true);
@@ -918,6 +923,13 @@ function ConversationTerminal({
     } finally {actionBusyRef.current=false;setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
   }
 
+  async function rebuildTerminal() {
+    if(actionBusyRef.current)return;
+    actionBusyRef.current=true;setActionBusy(true);setError("");
+    try{await terminalApi.rebuild(taskId,conversation.id);setTerminalEpoch(v=>v+1);setActionNotice("已重建连接；历史保留，未重发输入或继续任务。");}
+    catch(value){setError(errorMessage(value));}
+    finally{actionBusyRef.current=false;setActionBusy(false);}
+  }
   async function forceStop() {
     if(actionBusyRef.current)return;
     actionBusyRef.current=true;setActionBusy(true);setConfirmForceStop(false);setError("");setActionNotice("");
@@ -1011,6 +1023,7 @@ function ConversationTerminal({
             disabled={actionBusy||state?.status!=="running"||!control?.nativeSessionId}>
             <OctagonX size={15}/>{interrupting?"正在中断…":"中断执行（Stop）"}
           </button>}
+          {provider==="codex"&&<button className="secondary-button" disabled={actionBusy||state?.status==="starting"} onClick={()=>void rebuildTerminal()}>重建终端连接</button>}
           {canStop && (
             <button
               className="secondary-button terminal-stop"

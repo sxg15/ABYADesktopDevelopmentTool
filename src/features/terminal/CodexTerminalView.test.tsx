@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { translator } from "../../i18n";
-import type { CodexConversation } from "../../shared/types";
+import type { CodexConversation, CodexTerminalState } from "../../shared/types";
 import { DevelopmentTerminalView } from "./CodexTerminalView";
 
 const conversation: CodexConversation = {
@@ -33,7 +33,8 @@ const terminalApiMock = vi.hoisted(() => ({
     turns: [],
     updatedAt: "2026-08-31T01:00:00Z",
   })),
-  open: vi.fn(async () => ({
+  open: vi.fn(async ():Promise<CodexTerminalState> => ({
+    inputSessionId:"input-session-test",
     taskId: "task-1",
     conversationId: "conversation-1",
     status: "running",
@@ -46,6 +47,7 @@ const terminalApiMock = vi.hoisted(() => ({
   stop: vi.fn(async () => undefined),
   interrupt: vi.fn(async () => undefined),
   forceStop: vi.fn(async () => undefined),
+  rebuild: vi.fn(async () => undefined),
   executionSettings: vi.fn(async () => ({connected:true,running:false,models:[],settings:{model:'fixture'}})),
 }));
 
@@ -63,7 +65,7 @@ beforeEach(()=>{
   productionApiMock.continueTask.mockResolvedValue({status:"needsConnection",requestId:"request-1",conversationId:"conversation-1",nativeSessionId:"native-1"});
   productionApiMock.flushContinuation.mockResolvedValue({status:"started",turnId:"turn-2",conversationId:"conversation-1",nativeSessionId:"native-1"});
 });
-const terminalEvents = vi.hoisted(() => ({ resize: undefined as undefined | ((size:{cols:number;rows:number})=>void), focus:vi.fn() }));
+const terminalEvents = vi.hoisted(() => ({ data:undefined as undefined|((data:string)=>void), resize: undefined as undefined | ((size:{cols:number;rows:number})=>void), focus:vi.fn() }));
 const resizeObservers = vi.hoisted(() => ({
   callbacks: [] as ResizeObserverCallback[],
 }));
@@ -105,8 +107,8 @@ vi.mock("@xterm/xterm", () => ({
     }
     loadAddon() {}
     open() {}
-    onData() {
-      return { dispose() {} };
+    onData(callback:(data:string)=>void) { terminalEvents.data=callback;
+      return { dispose() {terminalEvents.data=undefined;} };
     }
     onResize(callback:(size:{cols:number;rows:number})=>void) {
       terminalEvents.resize=callback;
@@ -324,6 +326,7 @@ describe("Codex conversation list", () => {
     terminalApiMock.interrupt.mockRejectedValueOnce(new Error("中断被拒绝"));
     renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
     await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+    await waitFor(()=>expect((screen.getByRole("button",{name:"中断执行（Stop）"}) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button",{name:"中断执行（Stop）"}));
     fireEvent.click(await screen.findByRole("button",{name:"强制停止此会话"}));
     expect(terminalApiMock.forceStop).not.toHaveBeenCalled();
@@ -341,6 +344,7 @@ describe("Codex conversation list", () => {
     let confirmInterrupt!:()=>void;
     terminalApiMock.interrupt.mockImplementationOnce(()=>new Promise(resolve=>{confirmInterrupt=()=>resolve(undefined);}));
     const button=screen.getByRole("button",{name:"中断执行（Stop）"});
+    await waitFor(()=>expect((button as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(button);fireEvent.click(button);
     expect(terminalApiMock.interrupt).toHaveBeenCalledExactlyOnceWith("codex","task-1","conversation-1");
     expect(screen.queryByText(/当前执行已中断，可直接输入/)).toBeNull();
@@ -359,6 +363,7 @@ describe("Codex conversation list", () => {
     terminalApiMock.interrupt.mockRejectedValueOnce(new Error("Codex 尚未确认中断"));
     renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
     await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+    await waitFor(()=>expect((screen.getByRole("button",{name:"中断执行（Stop）"}) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button",{name:"中断执行（Stop）"}));
     await screen.findByText(/Codex 尚未确认中断/);
     expect(screen.queryByText(/当前执行已中断，可直接输入/)).toBeNull();
@@ -665,4 +670,20 @@ describe("terminal output history", () => {
     expect(history?.textContent).toContain("-recent");
     expect(history?.textContent?.length).toBeLessThan(2 * 1024 * 1024 + 100);
   });
+});
+
+it("rebuilds the same idle terminal without replaying input or continuing inference",async()=>{
+ renderView();await screen.findAllByText("Original title");giveHostLayout();notifyResize();
+ await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+ fireEvent.click(screen.getByRole("button",{name:"重建终端连接"}));
+ await waitFor(()=>expect(terminalApiMock.rebuild).toHaveBeenCalledWith("task-1","conversation-1"));
+ await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(2));
+ expect(terminalApiMock.write).not.toHaveBeenCalled();expect(productionApiMock.continueTask).not.toHaveBeenCalled();
+});
+
+it("binds typed input to the exact attached PTY session",async()=>{
+ renderView();await screen.findAllByText("Original title");giveHostLayout();notifyResize();
+ await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+ await act(async()=>{terminalEvents.data?.("中文输入");});
+ expect(terminalApiMock.write).toHaveBeenCalledWith("codex","conversation-1","中文输入","input-session-test");
 });

@@ -45,17 +45,27 @@ export function installTerminalClipboard(
 }
 
 // Each IPC write stays below the backend's 64 KiB UTF-8 bound; preserve order and surrogate pairs.
-export function terminalInputQueue(write: (data: string) => Promise<void>, onError: (error: unknown) => void) {
-  let queue = Promise.resolve();
-  return (data: string) => {
-    const chunks: string[] = [];
-    for (let index = 0; index < data.length;) {
-      let end = Math.min(index + 8192, data.length);
-      const last = data.charCodeAt(end - 1);
-      if (end < data.length && last >= 0xd800 && last <= 0xdbff) end--;
-      chunks.push(data.slice(index, end)); index = end;
-    }
-    queue = queue.then(async () => { for (const chunk of chunks) await write(chunk); }).catch(onError);
+export function terminalInputQueue(write: (data: string) => Promise<void>, onError: (error: unknown) => void, timeoutMs=4000) {
+  let queue=Promise.resolve(), halted=false, pendingBytes=0;
+  const fail=(error:unknown)=>{if(!halted){halted=true;onError(error);}};
+  const send=(data:string)=>{
+    if(halted)return Promise.resolve();
+    const bytes=new TextEncoder().encode(data).length;
+    if(pendingBytes+bytes>1024*1024){fail(new Error("终端待发送输入过多，已停止后续输入。请重建终端连接，不会自动重发。"));return Promise.resolve();}
+    pendingBytes+=bytes;
+    queue=queue.then(async()=>{
+      try {
+        for(let index=0;index<data.length&&!halted;){
+          let end=Math.min(index+8192,data.length);
+          const last=data.charCodeAt(end-1);if(end<data.length&&last>=0xd800&&last<=0xdbff)end--;
+          let timer:ReturnType<typeof setTimeout>|undefined;
+          try {await Promise.race([write(data.slice(index,end)),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error("终端输入未确认，已停止后续输入且不会自动重发。请核对执行结果后重建终端连接。")),timeoutMs);})]);}
+          finally {if(timer)clearTimeout(timer);}
+          index=end;
+        }
+      } catch(error){fail(error);} finally{pendingBytes-=bytes;}
+    });
     return queue;
   };
+  return Object.assign(send,{dispose:()=>{halted=true;}});
 }

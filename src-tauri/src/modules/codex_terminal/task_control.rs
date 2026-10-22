@@ -75,7 +75,16 @@ impl CodexTerminalService {
         task_id: &str,
         conversation_id: &str,
     ) -> AppResult<TaskControlState> {
-        let _guard = self.lifecycle_lock.lock();
+        let _guard = self
+            .lifecycle_lock
+            .try_lock_for(std::time::Duration::from_millis(250))
+            .ok_or_else(|| {
+                AppError::new(
+                    "codex_control_busy",
+                    "会话控制正在处理，状态稍后刷新。",
+                    "not_executed",
+                )
+            })?;
         let task = self.tasks.get(task_id)?;
         let metadata = self.conversation(task_id, conversation_id)?;
         let workflow = self.workflow(task_id, conversation_id)?;

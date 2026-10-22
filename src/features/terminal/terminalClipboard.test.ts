@@ -54,3 +54,17 @@ describe("terminal paste routing", () => {
     expect(received.every(chunk => !/^[\udc00-\udfff]|[\ud800-\udbff]$/.test(chunk))).toBe(true);
   });
 });
+
+it("halts a stalled input queue and never replays queued text after late completion",async()=>{
+ vi.useFakeTimers();let finish!:()=>void;
+ const write=vi.fn(()=>new Promise<void>(resolve=>{finish=resolve;})),error=vi.fn();
+ const send=terminalInputQueue(write,error,50);const first=send("first");const later=send("must not send");
+ await vi.advanceTimersByTimeAsync(51);await Promise.all([first,later]);
+ expect(error).toHaveBeenCalledTimes(1);expect(write).toHaveBeenCalledTimes(1);
+ finish();await send("still halted");expect(write).toHaveBeenCalledTimes(1);vi.useRealTimers();
+});
+it("disposal drops queued input before a rebuilt session can receive it",async()=>{
+ let finish!:()=>void;const write=vi.fn(()=>new Promise<void>(resolve=>{finish=resolve;}));
+ const send=terminalInputQueue(write,vi.fn());const first=send("one"),second=send("two");
+ await Promise.resolve();send.dispose();finish();await Promise.all([first,second]);expect(write).toHaveBeenCalledTimes(1);
+});

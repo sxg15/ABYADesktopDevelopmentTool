@@ -77,11 +77,18 @@ impl AppServerHandle {
             "thread/read",
             json!({"threadId":thread,"includeTurns":true}),
         )?;
+        if state["thread"]["id"] != thread || !state["thread"]["turns"].is_array() {
+            return Err(AppError::validation("无法核对原会话状态，未重建连接。"));
+        }
         if state["thread"]["turns"]
             .as_array()
-            .into_iter()
-            .flatten()
-            .any(|t| t["status"] == "inProgress")
+            .and_then(|turns| turns.last())
+            .is_some_and(|t| {
+                !matches!(
+                    t["status"].as_str(),
+                    Some("completed" | "interrupted" | "failed")
+                )
+            })
         {
             return Err(AppError::validation(
                 "原会话仍在后台执行，请先暂停 AI 再修复连接。",
@@ -119,14 +126,12 @@ impl AppServerHandle {
         let observed_turns = Arc::new(parking_lot::Mutex::new(HashMap::new()));
         let observations = observed_turns.clone();
         std::thread::spawn(move || {
-            run_bridge(
+            run_bridge_observed(
                 &thread_endpoint,
                 &thread_token,
                 receiver,
-                Arc::new(move |event| {
-                    native_interrupt::observe(&observations, &event);
-                    on_notification(event);
-                }),
+                Arc::new(move |event| native_interrupt::observe(&observations, event)),
+                on_notification,
             );
         });
 
@@ -560,10 +565,21 @@ fn wait_until_ready(port: u16) -> AppResult<()> {
     ))
 }
 
+#[cfg(test)]
 fn run_bridge(
     endpoint: &str,
     token: &str,
     receiver: Receiver<BridgeCommand>,
+    on_notification: NotificationHandler,
+) {
+    run_bridge_observed(endpoint, token, receiver, Arc::new(|_| {}), on_notification);
+}
+
+fn run_bridge_observed(
+    endpoint: &str,
+    token: &str,
+    receiver: Receiver<BridgeCommand>,
+    observe: Arc<dyn Fn(&Value) + Send + Sync>,
     on_notification: NotificationHandler,
 ) {
     let Ok(mut request) = endpoint.into_client_request() else {
@@ -585,8 +601,19 @@ fn run_bridge(
     };
     if let MaybeTlsStream::Plain(stream) = socket.get_mut() {
         let _ = stream.set_read_timeout(Some(Duration::from_millis(100)));
+        let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
     }
 
+    // A slow projection or disk write must never occupy the RPC receive thread.
+    let (notifications, notification_rx) = mpsc::sync_channel::<(Value, usize)>(256);
+    let queued_bytes = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let worker_bytes = queued_bytes.clone();
+    std::thread::spawn(move || {
+        while let Ok((event, size)) = notification_rx.recv() {
+            worker_bytes.fetch_sub(size, std::sync::atomic::Ordering::SeqCst);
+            on_notification(event);
+        }
+    });
     let mut next_id = 1_u64;
     let mut pending = HashMap::<u64, Sender<Result<Value, String>>>::new();
     let mut failure = "Codex app-server connection was closed.";
@@ -651,7 +678,36 @@ fn run_bridge(
                             response.send(Ok(value.get("result").cloned().unwrap_or(Value::Null)));
                     }
                 } else if value.get("method").is_some() {
-                    on_notification(value);
+                    observe(&value);
+                    if !matches!(
+                        value["method"].as_str(),
+                        Some(
+                            "thread/status/changed"
+                                | "thread/settings/updated"
+                                | "thread/tokenUsage/updated"
+                                | "turn/started"
+                                | "turn/completed"
+                                | "turn/plan/updated"
+                                | "item/started"
+                                | "item/completed"
+                        )
+                    ) {
+                        continue;
+                    }
+
+                    let size = text.len();
+                    if size > 32 * 1024 * 1024
+                        || queued_bytes.fetch_add(size, std::sync::atomic::Ordering::SeqCst)
+                            > 32 * 1024 * 1024 - size
+                    {
+                        failure = "Codex notification queue is full; reconnect and reconcile current state.";
+                        break;
+                    }
+                    if notifications.try_send((value, size)).is_err() {
+                        queued_bytes.fetch_sub(size, std::sync::atomic::Ordering::SeqCst);
+                        failure = "Codex notification queue is full; reconnect and reconcile current state.";
+                        break;
+                    }
                 }
             }
             Ok(Message::Close(_)) => break,

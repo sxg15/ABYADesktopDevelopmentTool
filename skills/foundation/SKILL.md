@@ -1,5 +1,9 @@
 # Foundation Skill
 
+## Terminal freeze recovery (2026-10-22)
+CodexTerminalState exposes an ephemeral inputSessionId. write_codex_terminal requires that exact PTY session identity, rejecting delayed calls after replacement before writing bytes.
+rebuild_codex_terminal is an APP-only spawn_blocking adapter to the Codex service. It preserves the task/native binding and cannot replay input or resume inference. terminalApi.rebuild uses the existing command boundary; no credentials or raw terminal input are logged.
+
 ## System memory warning (2026-10-22)
 MemoryStatus adds defaulted warning text. System RAM/commit headroom now warns independently of pressured; per-game protection remains intact.
 

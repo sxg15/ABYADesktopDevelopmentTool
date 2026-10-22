@@ -87,8 +87,8 @@ export const api = {
       rows,
       onEvent,
     }),
-  writeCodexTerminal: (conversationId: string, data: string) =>
-    invoke<void>("write_codex_terminal", { conversationId, data }),
+  writeCodexTerminal: (conversationId: string, data: string, inputSessionId?:string) =>
+    invoke<void>("write_codex_terminal", { conversationId, data, inputSessionId }),
   resizeCodexTerminal: (conversationId: string, columns: number, rows: number) =>
     invoke<void>("resize_codex_terminal", { conversationId, columns, rows }),
   stopCodexTerminal: (conversationId: string) =>
@@ -190,6 +190,7 @@ export const api = {
 };
 
 export const terminalApi = {
+  rebuild:(taskId:string,conversationId:string)=>invoke<void>("rebuild_codex_terminal",{taskId,conversationId}),
   executionSettings: (taskId:string,conversationId:string) => invoke<import("./types").ExecutionSettingsView>("get_codex_execution_settings",{taskId,conversationId}),
   updateExecutionSettings: (taskId:string,conversationId:string,input:Record<string,unknown>) => invoke<import("./types").ExecutionSettingsView>("update_codex_execution_settings",{taskId,conversationId,input}),
   conversationMetrics: (taskId: string, conversationId: string) => invoke<Record<string, unknown>>("codex_conversation_metrics", { taskId, conversationId }),
@@ -219,8 +220,8 @@ export const terminalApi = {
           rows,
           onEvent,
         )),
-  write: (provider: TerminalProvider, conversationId: string, data: string) =>
-    withCodex(provider, () => api.writeCodexTerminal(conversationId, data)),
+  write: (provider: TerminalProvider, conversationId: string, data: string, inputSessionId?:string) =>
+    withCodex(provider, () => api.writeCodexTerminal(conversationId, data, inputSessionId)),
   resize: (
     provider: TerminalProvider,
     conversationId: string,

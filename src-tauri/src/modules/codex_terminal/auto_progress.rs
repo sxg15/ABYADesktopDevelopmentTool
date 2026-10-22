@@ -6,6 +6,7 @@ use crate::modules::tasks::ProductionView;
 pub(super) struct AutoProgress {
     pub turn: String,
     pub handled: bool,
+    pub completion_seen: bool,
     pub last_progress: Option<String>,
 }
 
@@ -86,7 +87,33 @@ impl CodexTerminalService {
         if run.turn != turn {
             run.turn = turn.into();
             run.handled = false;
+            run.completion_seen = false;
         }
+    }
+
+    pub(super) fn auto_completion_seen(
+        &self,
+        native: &str,
+        turn: &str,
+        mark: Option<bool>,
+    ) -> bool {
+        let conversation = {
+            self.thread_conversations
+                .lock()
+                .get(native)
+                .map(|(_, c)| c.clone())
+        };
+        let Some(conversation) = conversation else {
+            return false;
+        };
+        let mut runs = self.auto_progress.lock();
+        let Some(run) = runs.get_mut(&conversation).filter(|r| r.turn == turn) else {
+            return false;
+        };
+        if let Some(value) = mark {
+            run.completion_seen = value;
+        }
+        run.completion_seen
     }
 
     /// Called under the lifecycle lock, only for native events observed in this process.
@@ -111,7 +138,7 @@ impl CodexTerminalService {
             else {
                 return Ok(());
             };
-            run.handled = true;
+            run.handled = !completed;
         }
         if !completed {
             return Ok(());
@@ -139,7 +166,8 @@ impl CodexTerminalService {
             return Ok(());
         }
         let workflow = self.workflow(task, conversation)?;
-        if workflow.terminal_interaction
+        if pending_tools(&workflow)
+            || workflow.terminal_interaction
             || workflow.current_turn_id.as_deref() != Some(turn)
             || workflow
                 .turns
@@ -159,6 +187,10 @@ impl CodexTerminalService {
             let Some(run) = runs.get_mut(conversation) else {
                 return Ok(());
             };
+            if run.turn != turn || run.handled {
+                return Ok(());
+            }
+            run.handled = true;
             let stalled = run.last_progress.as_ref() == Some(&fingerprint);
             run.last_progress = Some(fingerprint);
             stalled
@@ -192,4 +224,19 @@ impl CodexTerminalService {
         }
         Ok(())
     }
+}
+
+pub(super) fn pending_tools(workflow: &CodexWorkflowSnapshot) -> bool {
+    workflow
+        .turns
+        .iter()
+        .find(|t| Some(&t.id) == workflow.current_turn_id.as_ref())
+        .is_some_and(|t| {
+            t.activities.iter().any(|a| {
+                matches!(
+                    a.status,
+                    CodexActivityStatus::Started | CodexActivityStatus::Progress
+                )
+            })
+        })
 }

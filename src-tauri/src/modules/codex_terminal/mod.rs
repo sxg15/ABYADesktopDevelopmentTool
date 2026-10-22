@@ -13,6 +13,7 @@ mod issue_repair;
 #[cfg(test)]
 mod queue_tests;
 mod task_control;
+mod terminal_input;
 pub use task_control::{QuestionSubmission, TaskControlState};
 mod intake;
 mod intake_receipt;
@@ -85,6 +86,7 @@ pub enum CodexTerminalStatus {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexTerminalState {
+    pub input_session_id: Option<String>,
     pub task_id: String,
     pub conversation_id: String,
     pub status: CodexTerminalStatus,
@@ -126,7 +128,7 @@ struct LiveTerminal {
     session_id: String,
     state: Arc<Mutex<CodexTerminalState>>,
     master: Arc<Mutex<Box<dyn MasterPty + Send>>>,
-    writer: Arc<Mutex<Box<dyn Write + Send>>>,
+    input: terminal_input::TerminalInput,
     transcript: Arc<Mutex<File>>,
     killer: Arc<Mutex<Box<dyn ChildKiller + Send + Sync>>>,
     subscriber: Arc<Mutex<Option<Channel<CodexTerminalEvent>>>>,
@@ -488,7 +490,8 @@ impl CodexTerminalService {
                 "Restore this archived conversation before opening its terminal.",
             ));
         }
-        if let Some(existing) = self.sessions.lock().get(conversation_id).cloned() {
+        let existing = { self.sessions.lock().get(conversation_id).cloned() };
+        if let Some(existing) = existing {
             // Keep live output behind the transcript snapshot, then atomically
             // attach the new subscriber so replay and live bytes cannot race.
             let transcript_guard = existing.transcript.lock();
@@ -714,6 +717,7 @@ impl CodexTerminalService {
             .append(true)
             .open(conversation_directory.join(CONVERSATION_TRANSCRIPT_FILE))?;
         let starting = CodexTerminalState {
+            input_session_id: None,
             task_id: task_id.to_string(),
             conversation_id: conversation_id.to_string(),
             status: CodexTerminalStatus::Starting,
@@ -749,7 +753,9 @@ impl CodexTerminalService {
 
         let pid = child.process_id();
         let killer = child.clone_killer();
+        let session_id = Uuid::new_v4().to_string();
         let state = CodexTerminalState {
+            input_session_id: Some(session_id.clone()),
             task_id: task_id.to_string(),
             conversation_id: conversation_id.to_string(),
             status: CodexTerminalStatus::Running,
@@ -760,13 +766,12 @@ impl CodexTerminalService {
         };
         let state_ref = Arc::new(Mutex::new(state.clone()));
         let subscriber_ref = Arc::new(Mutex::new(Some(subscriber.clone())));
-        let session_id = Uuid::new_v4().to_string();
         let live = LiveTerminal {
             task_id: task_id.to_string(),
             session_id: session_id.clone(),
             state: state_ref.clone(),
             master: Arc::new(Mutex::new(pair.master)),
-            writer: Arc::new(Mutex::new(writer)),
+            input: terminal_input::TerminalInput::new(writer),
             transcript: Arc::new(Mutex::new(transcript)),
             killer: Arc::new(Mutex::new(killer)),
             subscriber: subscriber_ref.clone(),
@@ -807,7 +812,70 @@ impl CodexTerminalService {
         Ok(state)
     }
 
+    pub fn rebuild_idle_terminal(&self, task: &str, conversation: &str) -> AppResult<()> {
+        let _guard = self
+            .lifecycle_lock
+            .try_lock_for(Duration::from_secs(2))
+            .ok_or_else(|| {
+                AppError::new(
+                    "codex_control_busy",
+                    "会话控制正在处理，请稍后重试重建连接。",
+                    "not_executed",
+                )
+            })?;
+        let metadata = self.conversation(task, conversation)?;
+        if auto_progress::pending_tools(&self.workflow(task, conversation)?) {
+            return Err(AppError::validation(
+                "后台操作尚未返回，请先核对结果或暂停任务，再重建连接。",
+            ));
+        }
+        if let Some(server) = self
+            .runtime_servers
+            .lock()
+            .get(conversation)
+            .cloned()
+            .filter(|s| s.is_alive())
+        {
+            let native = metadata
+                .native_session_id
+                .as_deref()
+                .ok_or_else(|| AppError::validation("原生会话关联缺失，请先修复关联。"))?;
+            server.ensure_idle(native)?;
+        }
+        self.cancelled.lock().insert(conversation.into());
+        self.queue_tasks
+            .lock()
+            .insert(conversation.into(), task.into());
+        self.pause_queued_locked(conversation)?;
+        self.close_owned_executor(conversation)?;
+        let record = self.tasks.get(task)?;
+        diagnostics::record(
+            Path::new(&record.workspace_path),
+            conversation,
+            "terminal-rebuilt-no-replay",
+            metadata.native_session_id.as_deref(),
+        );
+        Ok(())
+    }
+
+    #[cfg(test)]
     pub fn write(&self, conversation_id: &str, data: &str) -> AppResult<()> {
+        self.write_internal(conversation_id, None, data)
+    }
+    pub fn write_bound(
+        &self,
+        conversation_id: &str,
+        input_session_id: &str,
+        data: &str,
+    ) -> AppResult<()> {
+        self.write_internal(conversation_id, Some(input_session_id), data)
+    }
+    fn write_internal(
+        &self,
+        conversation_id: &str,
+        expected: Option<&str>,
+        data: &str,
+    ) -> AppResult<()> {
         if self.stopping.lock().contains(conversation_id) {
             return Err(AppError::validation("正在停止此会话，请等待结果后再输入。"));
         }
@@ -815,13 +883,19 @@ impl CodexTerminalService {
             return Err(AppError::validation("Terminal input is too large."));
         }
         let session = self.session(conversation_id)?;
-        let mut writer = session.writer.lock();
-        if self.stopping.lock().contains(conversation_id) {
-            return Err(AppError::validation("正在停止此会话，请等待结果后再输入。"));
+        if expected.is_some_and(|id| id != session.session_id) {
+            return Err(AppError::new(
+                "codex_input_session_changed",
+                "终端连接已更新，旧输入未发送。",
+                "not_executed",
+            ));
         }
-        writer.write_all(data.as_bytes())?;
-        writer.flush()?;
-        Ok(())
+        let result = session.input.write(data.as_bytes());
+        if let Err(error) = &result {
+            self.cancelled.lock().insert(conversation_id.into());
+            session.state.lock().last_error = error.message.clone();
+        }
+        result
     }
 
     pub fn resize(&self, conversation_id: &str, columns: u16, rows: u16) -> AppResult<()> {
@@ -1041,12 +1115,26 @@ impl CodexTerminalService {
                 {
                     service.auto_turn_started(native, turn);
                 }
+                if event["method"] == "item/completed"
+                    && let (Some(native), Some(turn)) = (
+                        event["params"]["threadId"].as_str(),
+                        event["params"]["turnId"].as_str(),
+                    )
+                    && service.auto_completion_seen(native, turn, None)
+                {
+                    service.queue_event(native, turn, true);
+                }
                 if event["method"] == "turn/completed"
                     && let (Some(native), Some(turn)) = (
                         event["params"]["threadId"].as_str(),
                         event["params"]["turn"]["id"].as_str(),
                     )
                 {
+                    service.auto_completion_seen(
+                        native,
+                        turn,
+                        Some(event["params"]["turn"]["status"] == "completed"),
+                    );
                     service.queue_event(
                         native,
                         turn,
@@ -1106,6 +1194,23 @@ impl CodexTerminalService {
         workflow.record_activity(turn_id, activity_id, kind, status, summary, detail, source);
         save_workflow(&directory, &workflow, "activity")?;
         send_workflow_to_live_session(&self.sessions, conversation_id, &workflow);
+        let native_for_wake = {
+            self.thread_conversations
+                .lock()
+                .iter()
+                .find(|(_, (_, c))| c == conversation_id)
+                .map(|(n, _)| n.clone())
+        };
+        if status == CodexActivityStatus::Completed
+            && !auto_progress::pending_tools(&workflow)
+            && let Some(turn) = workflow.turns.iter().find(|t| {
+                Some(&t.id) == workflow.current_turn_id.as_ref()
+                    && t.status == CodexWorkflowTurnStatus::Completed
+            })
+            && let Some(native) = native_for_wake
+        {
+            self.queue_event(&native, &turn.id, true);
+        }
         Ok(workflow)
     }
 
@@ -1366,6 +1471,19 @@ fn handle_app_server_notification(
         .get("method")
         .and_then(serde_json::Value::as_str)
         .unwrap_or_default();
+    if !matches!(
+        method,
+        "thread/status/changed"
+            | "thread/settings/updated"
+            | "thread/tokenUsage/updated"
+            | "turn/started"
+            | "turn/completed"
+            | "turn/plan/updated"
+            | "item/started"
+            | "item/completed"
+    ) {
+        return;
+    }
     let params = notification
         .get("params")
         .cloned()
@@ -2825,6 +2943,7 @@ mod tests {
                 task_id: task_id.to_string(),
                 session_id: Uuid::new_v4().to_string(),
                 state: Arc::new(Mutex::new(CodexTerminalState {
+                    input_session_id: None,
                     task_id: task_id.to_string(),
                     conversation_id: conversation_id.to_string(),
                     status: CodexTerminalStatus::Running,
@@ -2834,7 +2953,7 @@ mod tests {
                     last_error: String::new(),
                 })),
                 master: Arc::new(Mutex::new(pair.master)),
-                writer: Arc::new(Mutex::new(writer)),
+                input: terminal_input::TerminalInput::new(writer),
                 transcript: Arc::new(Mutex::new(transcript)),
                 killer: Arc::new(Mutex::new(child.clone_killer())),
                 #[cfg(windows)]

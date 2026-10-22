@@ -1,5 +1,8 @@
 # Codex Terminal Skill
 
+## Terminal freeze recovery (2026-10-22)
+TerminalInput owns one bounded worker per PTY. Every UI write binds the returned inputSessionId; delayed IPC for a replaced PTY fails not_executed. Input acknowledgement times out after two seconds, poisons that channel and rejects all later input until actual connection rebuild; never replay unknown writes. Native bridge observation remains inline, but ordered notification projection uses a 256-entry/32-MiB bounded lane; overload explicitly fails the bridge, never silently drops lifecycle state. Ignore unsupported token/output delta projections before DB/file I/O. Status polling has a 250ms lifecycle-lock bound. Reattach releases the session-map guard before replay. Idle checks and continuation examine the latest native turn, not stale historical inProgress entries. APP-only rebuild_idle_terminal validates task ownership, native idle and no pending tool results, cancels queues, closes owned handles and keeps native identity/history; subsequent open does not infer or replay work. Late tool results gate automatic continuation and can wake it after settling.
+
 ## Non-human automatic progress (2026-10-22)
 Observe turn/started in the current process; successful turn/completed can enqueue
 one automatic continuation for ongoing production work. Existing manual intents win.

@@ -1,5 +1,8 @@
 # Development Terminal Skill
 
+## Terminal freeze recovery (2026-10-22)
+Input queue is capped at 1 MiB and has a four-second acknowledgement watchdog. Any uncertain/error write halts the queue; timeout is not cancellation or permission to send the next chunk. Disposal drops unsent chunks before a rebuilt terminal opens. Explicit 重建终端连接 calls the APP-only idle-checked endpoint and recreates xterm/queue only on success, with no automatic input or inference. Existing Pause/Force stop remain available for active or unconfirmed execution.
+
 ## v5 workbench (2026-10-21)
 Production defaults to the unified workbench. Existing exact-version DocumentReview and durable IntakeQuestions are reused inline. History is read only, and technical records remain in development details. Original conversation execution controls stay reachable. Saved requests resume through the existing afterRevision receipt; connection failure must not cause duplicate user submission.
 

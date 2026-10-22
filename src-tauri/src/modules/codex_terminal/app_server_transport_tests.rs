@@ -17,6 +17,12 @@ fn validate_auth(
 fn bridge_fixture(
     serve: impl FnOnce(WebSocket<TcpStream>) + Send + 'static,
 ) -> (AppServerHandle, JoinHandle<()>, JoinHandle<()>) {
+    bridge_fixture_with_handler(serve, Arc::new(|_| {}))
+}
+fn bridge_fixture_with_handler(
+    serve: impl FnOnce(WebSocket<TcpStream>) + Send + 'static,
+    handler: NotificationHandler,
+) -> (AppServerHandle, JoinHandle<()>, JoinHandle<()>) {
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
     let endpoint = format!("ws://{}", listener.local_addr().unwrap());
     let server = std::thread::spawn(move || {
@@ -30,7 +36,7 @@ fn bridge_fixture(
     let mut handle = AppServerHandle::for_test(&endpoint, "test-token");
     handle.sender = sender;
     let bridge = std::thread::spawn(move || {
-        run_bridge(&endpoint, "test-token", receiver, Arc::new(|_| {}));
+        run_bridge(&endpoint, "test-token", receiver, handler);
     });
     (handle, bridge, server)
 }
@@ -156,4 +162,42 @@ fn oversized_native_frame_returns_safe_capacity_error_before_reading_payload() {
     handle.stop();
     bridge.join().unwrap();
     server.join().unwrap();
+}
+
+#[test]
+fn stalled_notification_projection_does_not_block_rpc_responses() {
+    let (release, wait) = mpsc::channel();
+    let wait = Arc::new(std::sync::Mutex::new(wait));
+    let (handle, bridge, server) = bridge_fixture_with_handler(
+        |mut socket| {
+            let request = read_request(&mut socket, "thread/read");
+            socket
+                .send(Message::Text(
+                    json!({"method":"turn/completed","params":{"threadId":"test"}})
+                        .to_string()
+                        .into(),
+                ))
+                .unwrap();
+            socket
+                .send(Message::Text(
+                    json!({"id":request["id"],"result":{"ok":true}})
+                        .to_string()
+                        .into(),
+                ))
+                .unwrap();
+            let _ = socket.read();
+        },
+        Arc::new(move |_| {
+            let _ = wait.lock().unwrap().recv_timeout(Duration::from_secs(5));
+        }),
+    );
+    let started = Instant::now();
+    let result = handle.request("thread/read", json!({}));
+    let elapsed = started.elapsed();
+    let _ = release.send(());
+    let _ = handle.sender.send(BridgeCommand::Shutdown);
+    bridge.join().unwrap();
+    server.join().unwrap();
+    assert_eq!(result.unwrap()["ok"], true);
+    assert!(elapsed < Duration::from_secs(2));
 }

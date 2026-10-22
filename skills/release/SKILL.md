@@ -1,5 +1,8 @@
 # Release Skill
 
+## Terminal freeze recovery (2026-10-22)
+Publish terminal-freeze-fix-20261022 after blocked-writer, delayed-notification RPC, stale historical turn, late tool result and explicit rebuild regressions plus standard checks. The supplied diagnostic package shows completed turns and late writes, not a proven thread-stack deadlock. Preserve this evidence distinction and do not ship user diagnostic archives or task data.
+
 ## Automatic progress and Markdown (2026-10-22)
 Release auto-progress-markdown-20261022 includes react-markdown/remark-gfm runtime dependencies. Validate stage/human gates, duplicate events, no-progress and Markdown hostile content; run standard checks and portable inventory.
 

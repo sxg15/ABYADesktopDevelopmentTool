@@ -97,6 +97,7 @@ export interface CodexTerminalAvailability {
 export type TerminalAvailability = CodexTerminalAvailability;
 
 export interface CodexTerminalState {
+  inputSessionId?:string;
   taskId: string;
   conversationId: string;
   status: CodexTerminalStatus;

@@ -589,15 +589,34 @@ fn open_codex_terminal(
 }
 
 #[tauri::command]
-async fn write_codex_terminal(
+async fn rebuild_codex_terminal(
+    task_id: String,
     conversation_id: String,
-    data: String,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
     let service = state.codex_terminal.clone();
-    tauri::async_runtime::spawn_blocking(move || service.write(&conversation_id, &data))
-        .await
-        .map_err(foundation::AppError::internal)?
+    tauri::async_runtime::spawn_blocking(move || {
+        service.rebuild_idle_terminal(&task_id, &conversation_id)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
+}
+
+#[tauri::command]
+async fn write_codex_terminal(
+    conversation_id: String,
+    data: String,
+    input_session_id: Option<String>,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    let input_session_id = input_session_id
+        .ok_or_else(|| foundation::AppError::validation("终端输入缺少连接标识，请重建连接。"))?;
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.write_bound(&conversation_id, &input_session_id, &data)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command]
@@ -1172,6 +1191,7 @@ pub fn run() {
             get_codex_terminal_availability,
             open_codex_terminal,
             write_codex_terminal,
+            rebuild_codex_terminal,
             resize_codex_terminal,
             stop_codex_terminal,
             interrupt_codex_turn,
