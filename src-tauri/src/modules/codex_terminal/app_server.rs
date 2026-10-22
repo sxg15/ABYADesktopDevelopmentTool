@@ -67,6 +67,7 @@ pub(super) struct AppServerHandle {
     observed_turns: Arc<parking_lot::Mutex<HashMap<String, (String, String)>>>,
     token_file: Arc<PathBuf>,
     executable_stamp: Option<ExecutableStamp>,
+    _crash_job: Option<Arc<std::os::windows::io::OwnedHandle>>,
     #[cfg(test)]
     test_alive: bool,
 }
@@ -109,7 +110,20 @@ impl AppServerHandle {
             std::env::temp_dir().join(format!("abya-codex-app-server-{}.token", Uuid::new_v4()));
         fs::write(&token_file, &token)?;
 
-        let child = spawn_app_server(codex, &endpoint, &token_file)?;
+        let mut child = spawn_app_server(codex, &endpoint, &token_file)?;
+        let crash_job = child
+            .process_handle()
+            .ok_or_else(|| AppError::internal("Missing owned process handle"))
+            .and_then(super::crash_job::attach);
+        let crash_job = match crash_job {
+            Ok(job) => job,
+            Err(error) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = fs::remove_file(&token_file);
+                return Err(error);
+            }
+        };
         let child = Arc::new(parking_lot::Mutex::new(Some(child)));
         if let Err(error) = wait_until_ready(port) {
             if let Some(mut process) = child.lock().take() {
@@ -143,6 +157,7 @@ impl AppServerHandle {
             observed_turns,
             token_file: Arc::new(token_file),
             executable_stamp: Some(executable_stamp),
+            _crash_job: Some(crash_job),
             #[cfg(test)]
             test_alive: false,
         };
@@ -313,6 +328,10 @@ impl AppServerHandle {
         Ok(())
     }
 
+    pub(super) fn same_instance(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.child, &other.child)
+    }
+
     pub(super) fn pid(&self) -> Option<u32> {
         self.child.lock().as_ref().map(|child| child.id())
     }
@@ -403,6 +422,7 @@ impl AppServerHandle {
             observed_turns: Default::default(),
             token_file: Arc::new(PathBuf::new()),
             executable_stamp: None,
+            _crash_job: None,
             test_alive: false,
         }
     }
@@ -435,6 +455,7 @@ impl AppServerHandle {
             observed_turns: Default::default(),
             token_file: Arc::new(PathBuf::new()),
             executable_stamp: None,
+            _crash_job: None,
             test_alive: true,
         }
     }

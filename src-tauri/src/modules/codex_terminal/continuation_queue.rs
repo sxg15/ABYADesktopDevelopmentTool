@@ -17,6 +17,10 @@ pub(super) struct ContinueRequest {
     pub after_revision: Option<u64>,
     #[serde(default)]
     pub automatic_after: Option<String>,
+    #[serde(default)]
+    pub goal_id: Option<String>,
+    #[serde(default)]
+    pub attempt_id: Option<String>,
     pub status: String,
     pub owner: String,
     pub revision: u64,
@@ -99,7 +103,18 @@ impl CodexTerminalService {
         revision: u64,
         after_revision: Option<u64>,
     ) -> AppResult<IntakeContinuation> {
-        let _guard = self.lifecycle_lock.lock();
+        let gate = self.gate(conversation);
+        let _guard = gate
+            .normal
+            .try_lock_for(Duration::from_secs(2))
+            .ok_or_else(|| {
+                AppError::new(
+                    "codex_control_busy",
+                    "当前会话正在处理，请稍后重试；其他任务可继续使用。",
+                    "not_executed",
+                )
+            })?;
+        let generation = gate.epoch();
         if self.stopping.lock().contains(conversation) {
             return Err(AppError::validation("正在暂停，请等待暂停完成。"));
         }
@@ -198,6 +213,18 @@ impl CodexTerminalService {
                 },
                 after_revision,
                 automatic_after: None,
+                goal_id: self.tasks.production_get(task)?.record.and_then(|r| {
+                    r.workbench
+                        .requests
+                        .iter()
+                        .rev()
+                        .find(|v| {
+                            v["revision"].as_u64() == after_revision && after_revision.is_some()
+                        })
+                        .map(|v| format!("request:{}", v["id"].as_str().unwrap_or("")))
+                        .or(r.workbench.active_goal_id)
+                }),
+                attempt_id: None,
                 status: "queued".into(),
                 owner: self.process_epoch.clone(),
                 revision: previous.as_ref().map_or(0, |q| q.revision),
@@ -207,7 +234,11 @@ impl CodexTerminalService {
                 error: None,
             }
         };
-        self.cancelled.lock().remove(conversation);
+        {
+            let _publication = gate.publication.lock();
+            gate.check(generation)?;
+            self.cancelled.lock().remove(conversation);
+        }
         self.auto_progress.lock().remove(conversation);
         save(&directory, &mut request)?;
         self.dispatch_or_record(&directory, &mut request)
@@ -219,7 +250,17 @@ impl CodexTerminalService {
         conversation: &str,
         request_id: &str,
     ) -> AppResult<IntakeContinuation> {
-        let _guard = self.lifecycle_lock.lock();
+        let gate = self.gate(conversation);
+        let _guard = gate
+            .normal
+            .try_lock_for(Duration::from_secs(2))
+            .ok_or_else(|| {
+                AppError::new(
+                    "codex_control_busy",
+                    "当前会话正在处理，请稍后重试；其他任务可继续使用。",
+                    "not_executed",
+                )
+            })?;
         let t = self.tasks.get(task)?;
         self.conversation(task, conversation)?;
         let directory = conversation_directory(Path::new(&t.workspace_path), conversation);
@@ -258,6 +299,8 @@ impl CodexTerminalService {
         request: &mut ContinueRequest,
     ) -> AppResult<IntakeContinuation> {
         use IntakeContinueStatus as S;
+        let gate = self.gate(&request.conversation_id);
+        let generation = gate.epoch();
         Uuid::parse_str(&request.id)
             .map_err(|_| AppError::validation("继续请求标识无效，请核对记录。"))?;
         if self.shutting_down.load(Ordering::SeqCst)
@@ -351,11 +394,7 @@ impl CodexTerminalService {
                 return Ok(request.response(S::Superseded));
             }
         }
-        let runtime = self
-            .runtime_servers
-            .lock()
-            .get(&request.conversation_id)
-            .cloned();
+        let runtime = self.runtime_handle(&request.conversation_id);
         let Some(server) = runtime.filter(|s| s.is_alive()) else {
             request.status = "needsConnection".into();
             save(directory, request)?;
@@ -368,6 +407,12 @@ impl CodexTerminalService {
         if snapshot["thread"]["id"].as_str() != Some(&request.native_id) {
             return Err(AppError::validation("无法核对原生会话身份。"));
         }
+        self.reconcile_snapshot(
+            &request.task_id,
+            &request.conversation_id,
+            &request.native_id,
+            &snapshot,
+        )?;
         if let Some(expected) = &request.automatic_after {
             let latest = snapshot["thread"]["turns"]
                 .as_array()
@@ -429,15 +474,47 @@ impl CodexTerminalService {
             save(directory, request)?;
             return Ok(request.response(S::NeedsConnection));
         }
+        gate.check(generation)?;
+        if self.cancelled.lock().contains(&request.conversation_id) {
+            return Ok(request.response(S::Paused));
+        }
+        let selected_goal = request.goal_id.clone().or_else(|| {
+            production
+                .record
+                .as_ref()
+                .and_then(|r| r.workbench.active_goal_id.clone())
+        });
+        if let Some(goal) = selected_goal {
+            let template = self.attempt_template(
+                &request.id,
+                &goal,
+                &request.conversation_id,
+                &request.native_id,
+            );
+            self.tasks
+                .production_begin_attempt(&request.task_id, None, template.clone())?;
+            self.tasks
+                .production_attempt_runtime(&request.task_id, &request.id, &template)?;
+            self.tasks.production_attempt_status(
+                &request.task_id,
+                &request.id,
+                "sending",
+                None,
+                "",
+            )?;
+            request.attempt_id = Some(request.id.clone());
+            request.goal_id = Some(goal);
+        }
         request.status = "sending".into();
         save(directory, request)?;
+        let goal_prompt=request.goal_id.as_ref().map(|goal|format!("继续唯一子流程 {goal}（原ID保留）。先读取该子流程与执行尝试 {}，核对已有成果和结果未知的写入，只推进本目标剩余工作，不重新创建‘继续’目标，不遍历重放其他请求。正常无人工待办时自动推进；审核、回答、复验、阻塞或暂停仍需遵守。",request.id));
         let sent = if let Some(group) = request.group_id.as_ref() {
             self.continue_questions_locked(&request.task_id, group, request.answer_revision)
         } else {
             let receipt = directory.join(format!("task-continue-{}.json", request.id));
             let mut attempt = intake_receipt::start_attempt(&receipt, None, &request.native_id)?;
             let result=server.request("turn/start",json!({"threadId":request.native_id,"clientUserMessageId":attempt["messageId"],
-                "input":[{"type":"text","text":repair_spec.as_ref().map(|s|s.prompt.as_str()).unwrap_or(if request.automatic_after.is_some() { "当前目标尚未完成且没有人工待办，自动推进下一子阶段。读取最新制作记录和已有成果，直接继续实现、检查与验证；不把一次回复结束当作需要用户点击继续。更新具体目标与进展；仅在需要审核、用户回答/复验、实际阻塞、执行失败或任务完成时停下。不得重复已完成操作，不得替用户批准。" } else { "用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。若 workbench.requests 有用户请求，按 id 和 revision 核对已有执行记录，处理尚未执行的请求，开始/完成时用 update-workbench-request 记录 status 与 summary，禁止重复执行；workbench.deferrals 是本任务持续略过的可选建议，保留影响说明，不重复打断，不能把略过当成修复或批准。若 artDesign.caseRequests 有本任务本轮 APP 案例请求，先按 selection 的具体版本与 prompt 核对已有处理记录，再查看候选图像、评估参考或整理草稿；请求不等于已采用或已认可，不重复执行已完成请求，不绕过人工确认。若 artifacts 中存在 plannerReference=true 且 status 不是 withdrawn 的策划参考图片，读取其路径、说明并查看图片后用于美术需求；它们不是验收成果，变更方案仍需修订文档并请求人工确认。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。" }) }]}));
+                "input":[{"type":"text","text":repair_spec.as_ref().map(|s|s.prompt.as_str()).or(goal_prompt.as_deref()).unwrap_or(if request.automatic_after.is_some() { "当前目标尚未完成且没有人工待办，自动推进下一子阶段。读取最新制作记录和已有成果，直接继续实现、检查与验证；不把一次回复结束当作需要用户点击继续。更新具体目标与进展；仅在需要审核、用户回答/复验、实际阻塞、执行失败或任务完成时停下。不得重复已完成操作，不得替用户批准。" } else { "用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。若 workbench.requests 有用户请求，按 id 和 revision 核对已有执行记录，处理尚未执行的请求，开始/完成时用 update-workbench-request 记录 status 与 summary，禁止重复执行；workbench.deferrals 是本任务持续略过的可选建议，保留影响说明，不重复打断，不能把略过当成修复或批准。若 artDesign.caseRequests 有本任务本轮 APP 案例请求，先按 selection 的具体版本与 prompt 核对已有处理记录，再查看候选图像、评估参考或整理草稿；请求不等于已采用或已认可，不重复执行已完成请求，不绕过人工确认。若 artifacts 中存在 plannerReference=true 且 status 不是 withdrawn 的策划参考图片，读取其路径、说明并查看图片后用于美术需求；它们不是验收成果，变更方案仍需修订文档并请求人工确认。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。" }) }]}));
             result.and_then(|v| {
                 let id = v["turn"]["id"]
                     .as_str()
@@ -449,6 +526,9 @@ impl CodexTerminalService {
                 Ok(request.response(S::Started))
             })
         };
+        if gate.epoch() != generation {
+            return Ok(request.response(S::Paused));
+        }
         match sent {
             Ok(mut response) => {
                 request.status = match response.status {
@@ -458,6 +538,15 @@ impl CodexTerminalService {
                 }
                 .into();
                 request.turn_id = response.turn_id.clone();
+                if let Some(id) = &request.attempt_id {
+                    self.tasks.production_attempt_status(
+                        &request.task_id,
+                        id,
+                        "running",
+                        response.turn_id.as_deref(),
+                        "",
+                    )?;
+                }
                 save(directory, request)?;
                 response.request_id = Some(request.id.clone());
                 Ok(response)
@@ -465,6 +554,15 @@ impl CodexTerminalService {
             Err(error) => {
                 request.status = "needsReview".into();
                 request.error = Some(error.message.clone());
+                if let Some(id) = &request.attempt_id {
+                    let _ = self.tasks.production_attempt_status(
+                        &request.task_id,
+                        id,
+                        "needsReview",
+                        None,
+                        "派发结果未确认，不自动重发。",
+                    );
+                }
                 save(directory, request)?;
                 Err(error)
             }
@@ -479,7 +577,8 @@ impl CodexTerminalService {
         let service = self.clone();
         let turn = turn.to_string();
         std::thread::spawn(move || {
-            let _guard = service.lifecycle_lock.lock();
+            let gate = service.gate(&conversation);
+            let _guard = gate.normal.lock();
             let Ok(task) = service.tasks.get(&task) else {
                 return;
             };
@@ -504,7 +603,7 @@ impl CodexTerminalService {
     pub(super) fn pause_queued_locked(&self, conversation: &str) -> AppResult<()> {
         let task_id = self.queue_tasks.lock().get(conversation).cloned();
         if let Some(task_id) = task_id {
-            let task = self.tasks.get(&task_id)?;
+            let task = self.tasks.get_readonly(&task_id)?;
             let directory = conversation_directory(Path::new(&task.workspace_path), conversation);
             if let Some(mut q) = read(&directory)? {
                 if q.status != "sending" && q.status != "needsReview" {

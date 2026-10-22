@@ -238,9 +238,50 @@ fn create_task(input: TaskInput, state: State<'_, AppState>) -> AppResult<Develo
     state.tasks.create(input)
 }
 
-#[tauri::command(async)]
-fn get_task_production(task_id: String, state: State<'_, AppState>) -> AppResult<ProductionView> {
-    state.tasks.production_get(&task_id)
+#[tauri::command]
+async fn reconcile_task_execution(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.reconcile_task_execution(&task_id))
+        .await
+        .map_err(foundation::AppError::internal)?
+}
+#[tauri::command]
+async fn resume_workbench_goal(
+    task_id: String,
+    goal_id: String,
+    conversation_id: String,
+    expected_revision: u64,
+    resume_intent_id: String,
+    reconciliation_note: Option<String>,
+    state: State<'_, AppState>,
+) -> AppResult<modules::codex_terminal::IntakeContinuation> {
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.resume_goal(
+            &task_id,
+            &goal_id,
+            &conversation_id,
+            expected_revision,
+            &resume_intent_id,
+            reconciliation_note.as_deref(),
+        )
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
+}
+
+#[tauri::command]
+async fn get_task_production(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    let service = state.tasks.clone();
+    tauri::async_runtime::spawn_blocking(move || service.production_get(&task_id))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command]
@@ -361,91 +402,119 @@ fn answer_task_questions(
     state.tasks.production_answer(input)
 }
 
-#[tauri::command(async)]
-fn continue_intake_questions(
+#[tauri::command]
+async fn continue_intake_questions(
     task_id: String,
     group_id: String,
     revision: u64,
     state: State<'_, AppState>,
 ) -> AppResult<modules::codex_terminal::IntakeContinuation> {
-    state
-        .codex_terminal
-        .continue_questions(&task_id, &group_id, revision)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.continue_questions(&task_id, &group_id, revision)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn submit_intake_answers(
+#[tauri::command]
+async fn submit_intake_answers(
     input: ProductionMutation,
     state: State<'_, AppState>,
 ) -> AppResult<modules::codex_terminal::QuestionSubmission> {
-    state.codex_terminal.submit_questions(input)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.submit_questions(input))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
-#[tauri::command(async)]
-fn continue_codex_task(
+#[tauri::command]
+async fn continue_codex_task(
     task_id: String,
     conversation_id: String,
     after_revision: Option<u64>,
+    resume_intent_id: Option<String>,
     state: State<'_, AppState>,
 ) -> AppResult<modules::codex_terminal::IntakeContinuation> {
-    state
-        .codex_terminal
-        .continue_after_revision(&task_id, &conversation_id, after_revision)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.continue_app(
+            &task_id,
+            &conversation_id,
+            after_revision,
+            resume_intent_id.as_deref(),
+        )
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
-#[tauri::command(async)]
-fn flush_codex_continuation(
+#[tauri::command]
+async fn flush_codex_continuation(
     task_id: String,
     conversation_id: String,
     request_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<modules::codex_terminal::IntakeContinuation> {
-    state
-        .codex_terminal
-        .flush_continuation(&task_id, &conversation_id, &request_id)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.flush_continuation(&task_id, &conversation_id, &request_id)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn repair_codex_issue(
+#[tauri::command]
+async fn repair_codex_issue(
     task_id: String,
     conversation_id: String,
     issue_id: String,
     expected_revision: u64,
     state: State<'_, AppState>,
 ) -> AppResult<modules::codex_terminal::IntakeContinuation> {
-    state
-        .codex_terminal
-        .repair_issue(&task_id, &conversation_id, &issue_id, expected_revision)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.repair_issue(&task_id, &conversation_id, &issue_id, expected_revision)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
-#[tauri::command(async)]
-fn get_codex_task_control(
+#[tauri::command]
+async fn get_codex_task_control(
     task_id: String,
     conversation_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<modules::codex_terminal::TaskControlState> {
-    state
-        .codex_terminal
-        .task_control(&task_id, &conversation_id)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.task_control(&task_id, &conversation_id))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn get_codex_execution_settings(
+#[tauri::command]
+async fn get_codex_execution_settings(
     task_id: String,
     conversation_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<serde_json::Value> {
-    state
-        .codex_terminal
-        .execution_settings(&task_id, &conversation_id)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.execution_settings(&task_id, &conversation_id)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
-#[tauri::command(async)]
-fn update_codex_execution_settings(
+#[tauri::command]
+async fn update_codex_execution_settings(
     task_id: String,
     conversation_id: String,
     input: serde_json::Value,
     state: State<'_, AppState>,
 ) -> AppResult<serde_json::Value> {
-    state
-        .codex_terminal
-        .update_execution_settings(&task_id, &conversation_id, input)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.update_execution_settings(&task_id, &conversation_id, input)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command(async)]
@@ -456,12 +525,17 @@ fn decide_task_production(
     state.tasks.production_decide(input)
 }
 
-#[tauri::command(async)]
-fn get_production_timing(
+#[tauri::command]
+async fn get_production_timing(
     task_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<serde_json::Value> {
-    modules::development_terminal::timing::task_timing(&state.tasks, &task_id)
+    let service = state.tasks.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        modules::development_terminal::timing::task_timing(&service, &task_id)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command(async)]
@@ -473,9 +547,15 @@ fn upgrade_task_production(
     state.tasks.production_upgrade(&task_id, expected_revision)
 }
 
-#[tauri::command(async)]
-fn get_task_skills(task_id: String, state: State<'_, AppState>) -> AppResult<Vec<SkillEntry>> {
-    state.tasks.production_catalog(&task_id)
+#[tauri::command]
+async fn get_task_skills(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<Vec<SkillEntry>> {
+    let service = state.tasks.clone();
+    tauri::async_runtime::spawn_blocking(move || service.production_catalog(&task_id))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command(async)]
@@ -575,7 +655,7 @@ fn get_codex_terminal_availability(state: State<'_, AppState>) -> CodexTerminalA
 }
 
 #[tauri::command]
-fn open_codex_terminal(
+async fn open_codex_terminal(
     task_id: String,
     conversation_id: String,
     columns: u16,
@@ -583,9 +663,12 @@ fn open_codex_terminal(
     on_event: Channel<CodexTerminalEvent>,
     state: State<'_, AppState>,
 ) -> AppResult<CodexTerminalState> {
-    state
-        .codex_terminal
-        .open(&task_id, &conversation_id, columns, rows, on_event)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.open(&task_id, &conversation_id, columns, rows, on_event)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command]
@@ -648,14 +731,16 @@ async fn stop_codex_terminal(conversation_id: String, state: State<'_, AppState>
 async fn force_stop_codex_conversation(
     task_id: String,
     conversation_id: String,
+    expected_generation: u64,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
     let terminal = state.codex_terminal.clone();
     let bridge = state.runtime_bridge.clone();
     tauri::async_runtime::spawn_blocking(move || {
         terminal.bind_conversation(&task_id, &conversation_id)?;
-        bridge.cancel_session(&format!("codex-{conversation_id}"));
-        terminal.force_stop(&task_id, &conversation_id)
+        terminal.force_stop_with_cancel(&task_id, &conversation_id, expected_generation, &|| {
+            bridge.cancel_session(&format!("codex-{conversation_id}"));
+        })
     })
     .await
     .map_err(foundation::AppError::internal)?
@@ -678,12 +763,15 @@ async fn interrupt_codex_turn(
     .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn list_codex_conversations(
+#[tauri::command]
+async fn list_codex_conversations(
     task_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<Vec<CodexConversation>> {
-    state.codex_terminal.list_conversations(&task_id)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.list_conversations(&task_id))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command(async)]
@@ -713,91 +801,121 @@ fn copy_terminal_history(
     Ok(true)
 }
 
-#[tauri::command(async)]
-fn get_codex_project_workspace(task_id: String, state: State<'_, AppState>) -> AppResult<String> {
-    state.codex_terminal.project_workspace(&task_id)
+#[tauri::command]
+async fn get_codex_project_workspace(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<String> {
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.project_workspace(&task_id))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn codex_conversation_metrics(
+#[tauri::command]
+async fn codex_conversation_metrics(
     task_id: String,
     conversation_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<serde_json::Value> {
-    state.codex_terminal.metrics(&task_id, &conversation_id)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.metrics(&task_id, &conversation_id))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn codex_recovery_candidates(
+#[tauri::command]
+async fn codex_recovery_candidates(
     task_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<Vec<modules::codex_terminal::RecoveryCandidate>> {
-    state.codex_terminal.recovery_candidates(&task_id)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.recovery_candidates(&task_id))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn repair_codex_binding(
+#[tauri::command]
+async fn repair_codex_binding(
     task_id: String,
     conversation_id: String,
     native_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<CodexConversation> {
-    state
-        .codex_terminal
-        .repair_binding(&task_id, &conversation_id, &native_id)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.repair_binding(&task_id, &conversation_id, &native_id)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn set_codex_conversation_archived(
+#[tauri::command]
+async fn set_codex_conversation_archived(
     task_id: String,
     conversation_id: String,
     archived: bool,
     state: State<'_, AppState>,
 ) -> AppResult<CodexConversation> {
-    state
-        .codex_terminal
-        .set_conversation_archived(&task_id, &conversation_id, archived)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.set_conversation_archived(&task_id, &conversation_id, archived)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command]
-fn create_codex_conversation(
+async fn create_codex_conversation(
     task_id: String,
     title: Option<String>,
     state: State<'_, AppState>,
 ) -> AppResult<CodexConversation> {
-    state.codex_terminal.create_conversation(&task_id, title)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.create_conversation(&task_id, title))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn rename_codex_conversation(
+#[tauri::command]
+async fn rename_codex_conversation(
     task_id: String,
     conversation_id: String,
     title: String,
     state: State<'_, AppState>,
 ) -> AppResult<CodexConversation> {
-    state
-        .codex_terminal
-        .rename_conversation(&task_id, &conversation_id, &title)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.rename_conversation(&task_id, &conversation_id, &title)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command]
-fn get_codex_workflow(
+async fn get_codex_workflow(
     task_id: String,
     conversation_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<CodexWorkflowSnapshot> {
-    state.codex_terminal.workflow(&task_id, &conversation_id)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || service.workflow(&task_id, &conversation_id))
+        .await
+        .map_err(foundation::AppError::internal)?
 }
 
-#[tauri::command(async)]
-fn delete_codex_conversation(
+#[tauri::command]
+async fn delete_codex_conversation(
     task_id: String,
     conversation_id: String,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    state
-        .codex_terminal
-        .delete_conversation(&task_id, &conversation_id)
+    let service = state.codex_terminal.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.delete_conversation(&task_id, &conversation_id)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command]
@@ -1143,6 +1261,8 @@ pub fn run() {
             take_task_notification_activations,
             acknowledge_task_notification_activations,
             get_task_production,
+            reconcile_task_execution,
+            resume_workbench_goal,
             start_task_acceptance,
             get_task_acceptance,
             read_production_media,

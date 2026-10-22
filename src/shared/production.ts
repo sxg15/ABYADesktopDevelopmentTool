@@ -46,7 +46,9 @@ export interface WorkbenchGoal {
   id:string; stage:string; number:number; title:string; sourceType:string; sourceId:string;
   status:string; summary:string; decision?:string; recordRevision:number; createdAt:string; updatedAt:string; cycle:number;
 }
+export interface WorkbenchAttempt { id:string;goalId:string;requestId?:string;conversationId:string;nativeId:string;turnId?:string;status:string;reason:string;startedAt:string;updatedAt:string;predecessorId?:string;processEpoch:string;generation:number }
 export interface WorkbenchState {
+  attempts?:WorkbenchAttempt[];
   goals:WorkbenchGoal[]; activeGoalId?:string; drafts:Record<string,string>;
   requests:{id:string;text:string;stage:string;status:string;revision:number}[];
   deferrals:{id:string;stage?:string;affectedStages?:string[];blockedOperations?:string[];description:string;reason:string;impact:string;status:string}[];
@@ -82,6 +84,8 @@ export interface ProductionView {
   reportPaths: string[]; availableUpdate: boolean;
 }
 export const productionApi = {
+  reconcile:(taskId:string)=>invoke<ProductionView>("reconcile_task_execution",{taskId}),
+  resumeGoal:(taskId:string,goalId:string,conversationId:string,expectedRevision:number,resumeIntentId:string,reconciliationNote?:string)=>invoke<IntakeContinuation>("resume_workbench_goal",{taskId,goalId,conversationId,expectedRevision,resumeIntentId,reconciliationNote}),
   exportDeveloperPackage:(taskId:string,expectedRevision:number,issueIds:string[])=>invoke<string>("export_developer_package",{taskId,expectedRevision,issueIds}),
   workbench: (taskId:string,expectedRevision:number,operation:string,data:unknown) => invoke<ProductionView>("mutate_production_workbench",{input:{taskId,expectedRevision,operation,data}}),
   snapshot: (taskId:string,revision:number) => invoke<ProductionRecord>("read_production_snapshot",{taskId,revision}),
@@ -93,7 +97,7 @@ export const productionApi = {
   timing: (taskId:string)=>invoke<{elapsedMs:number|null;firstPlayableMs:number|null;humanWaitMs:number|null;blockedMs:number|null;feedbackReworkMs:number|null;activeWorkMs:number|null;executionMs:number|null;toolMs:number|null;answerWaitMs:number|null;approvalWaitMs:number|null;pauseMs:number|null;connectionMs:number|null;unfinishedTurns:number;note:string}>("get_production_timing",{taskId}),
   submitAnswers: (taskId:string,expectedRevision:number,id:string,answers:Record<string,string>) =>
     invoke<QuestionSubmission>("submit_intake_answers",{input:{taskId,expectedRevision,operation:"submit-answers",data:{id,answers}}}),
-  continueTask: (taskId:string,conversationId:string,afterRevision?:number) => invoke<IntakeContinuation>("continue_codex_task",{taskId,conversationId,afterRevision}),
+  continueTask: (taskId:string,conversationId:string,afterRevision?:number,resumeIntentId?:string) => invoke<IntakeContinuation>("continue_codex_task",{taskId,conversationId,afterRevision,resumeIntentId}),
   repairIssue: (taskId:string,conversationId:string,issueId:string,expectedRevision:number) => invoke<IntakeContinuation>("repair_codex_issue",{taskId,conversationId,issueId,expectedRevision}),
   flushContinuation: (taskId:string,conversationId:string,requestId:string) => invoke<IntakeContinuation>("flush_codex_continuation",{taskId,conversationId,requestId}),
   control: (taskId:string,conversationId:string) => invoke<TaskControlState>("get_codex_task_control",{taskId,conversationId}),
@@ -123,6 +127,8 @@ export interface IntakeContinuation {
 }
 export interface QuestionSubmission { production:ProductionView; continuation?:IntakeContinuation; warning?:string }
 export interface TaskControlState {
+  activeGoalId?:string;
+  generation?:number;
   taskId:string;conversationId:string;nativeSessionId?:string;state:string;connection:string;stage?:string;
   turnId?:string;turnStartedAt?:string;queued:boolean;requestId?:string;lastError?:string;updatedAt:string;lastEventAt?:string;sequence:number;
   executionControl?: {requestId:string;operation:string;status:string;turnId?:string;error?:string;errorCode?:string};

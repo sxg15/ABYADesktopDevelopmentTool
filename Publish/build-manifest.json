@@ -1,15 +1,15 @@
-﻿{
-    "product":  "ABYA Desktop Development Tool",
-    "version":  "0.4.0",
-    "workflowVersion":  "2.3.0",
-    "releaseLabel":  "terminal-freeze-fix-20261022",
-    "sourceBuiltAtUtc":  "2026-10-22T06:27:14.5210184Z",
-    "builtAtUtc":  "2026-10-22T06:34:14.4912282Z",
-    "executable":  "ABYA Desktop Development Tool.exe",
-    "sha256":  "66CB5A28837F159743E0DD8C19FBEAE5C3DE64D1C3D23EF57C8050C05A332BED",
-    "cliExecutable":  "abya-desktop.exe",
-    "cliSha256":  "0F3DEC66AEFB07C26EF0D8ED1F978668E56EEEBC1C5D2713915F8B65BFF44443",
-    "runtimeCliVersion":  "0.2.0",
-    "cliProtocolVersion":  1,
-    "nodeVersion":  "v24.11.1"
+{
+  "product": "ABYA Desktop Development Tool",
+  "version": "0.4.0",
+  "workflowVersion": "2.3.0",
+  "releaseLabel": "task-isolation-goal-resume-20261022",
+  "sourceBuiltAtUtc": "2026-10-22T08:04:11.2340659Z",
+  "builtAtUtc": "2026-10-22T08:19:55.8892819Z",
+  "executable": "ABYA Desktop Development Tool.exe",
+  "sha256": "4C2A3B01585F1D47F96096DDD1A9E10C191B2EEF37395F1A8EDFE880FFCE4AE3",
+  "cliExecutable": "abya-desktop.exe",
+  "cliSha256": "BCD95CA337D3B869B0885A6824A6E4AC701F5E8B951286D10FD23E55BA875B6D",
+  "runtimeCliVersion": "0.2.0",
+  "cliProtocolVersion": 1,
+  "nodeVersion": "v24.11.1"
 }

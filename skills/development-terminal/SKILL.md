@@ -224,3 +224,11 @@ they do not disable permission controls or claim that tools have executed succes
 ## Background task notifications (2026-10-14)
 
 ConversationAttention is a public readonly provider-neutral DTO (task/provider/conversation/state/turn/request/interaction). Workflow interactionId is optional with serde defaults for old records; begin/end clear it and snapshot writes signal changes. Codex sets it only on entering a native wait. Original terminal connectionRequest remains attachment-only and never creates a replacement conversation.
+
+## Isolated control and recovery UI (2026-10-22)
+Control polling is single-flight per task/conversation across remounts; pending task A
+cannot multiply requests or overwrite task B. Force stop is reachable while normal
+pause is pending, with independent deduplication and confirmation-time generation.
+Late pause responses cannot override newer force results. Continue carries a stable
+resume intent; interrupted execution navigates to the existing subprocess.
+Regression: useTaskControl.test.tsx, CodexTerminalView.test.tsx and goal execution tests.

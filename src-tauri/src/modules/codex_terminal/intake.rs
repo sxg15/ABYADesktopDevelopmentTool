@@ -76,11 +76,7 @@ impl CodexTerminalService {
         } else {
             None
         };
-        let runtime = self
-            .runtime_servers
-            .lock()
-            .get(&group.conversation_id)
-            .cloned();
+        let runtime = self.runtime_handle(&group.conversation_id);
         let response = |status, turn_id| IntakeContinuation {
             request_id: None,
             status,

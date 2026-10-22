@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "terminal-freeze-fix-20261022",
-  "totalBytes": 339425472,
+  "releaseLabel": "task-isolation-goal-resume-20261022",
+  "totalBytes": 340747421,
   "files": [
     {
       "path": ".codex/README.md",
@@ -1485,18 +1485,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 28626432,
-      "sha256": "66cb5a28837f159743e0dd8c19fbeae5c3de64d1c3d23ef57c8050c05a332bed"
+      "bytes": 29948928,
+      "sha256": "4c2a3b01585f1d47f96096ddd1a9e10c191b2eef37395f1a8edfe880ffce4ae3"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 5995008,
-      "sha256": "0f3dec66aefb07c26ef0d8ed1f978668e56eeebc1c5d2713915f8b65bff44443"
+      "bytes": 5994496,
+      "sha256": "bcd95ca337d3b869b0885a6824a6e4ac701f5e8b951286d10fd23e55ba875b6d"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 653,
-      "sha256": "b59ec49386dfae6df36b35bfabd15290693cd4ed0c3f27364af32c502619c414"
+      "bytes": 618,
+      "sha256": "2d5143ff14059b75e36042fcb3e79e5e4ec9c8a2249323316264c2ff960de748"
     },
     {
       "path": "runtime/LICENSE.txt",

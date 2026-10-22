@@ -66,7 +66,7 @@ impl CodexTerminalService {
         let conversation = self.conversation(task_id, conversation_id)?;
         let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);
         let settings = read(&directory)?;
-        let server = self.runtime_servers.lock().get(conversation_id).cloned();
+        let server = self.runtime_handle(conversation_id);
         let metadata = match &server {
             Some(s) if s.is_alive() => s.clone(),
             _ => self.ensure_app_server(&codex)?,
@@ -101,7 +101,17 @@ impl CodexTerminalService {
         conversation_id: &str,
         input: Value,
     ) -> AppResult<Value> {
-        let _guard = self.lifecycle_lock.lock();
+        let gate = self.gate(conversation_id);
+        let _guard = gate
+            .normal
+            .try_lock_for(Duration::from_secs(2))
+            .ok_or_else(|| {
+                AppError::new(
+                    "codex_control_busy",
+                    "当前会话正在处理，请稍后重试；其他任务可继续使用。",
+                    "not_executed",
+                )
+            })?;
         let (_, task) = self.validate_open_request(task_id, conversation_id)?;
         let conversation = self.conversation(task_id, conversation_id)?;
         if conversation.archived {
@@ -112,10 +122,7 @@ impl CodexTerminalService {
             .as_deref()
             .ok_or_else(|| AppError::validation("请先打开终端。"))?;
         let server = self
-            .runtime_servers
-            .lock()
-            .get(conversation_id)
-            .cloned()
+            .runtime_handle(conversation_id)
             .filter(|s| s.is_alive())
             .ok_or_else(|| AppError::validation("请先连接终端，再修改执行设置。"))?;
         let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);

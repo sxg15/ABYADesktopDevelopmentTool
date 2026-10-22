@@ -114,7 +114,17 @@ impl CodexTerminalService {
         conversation_id: &str,
         archived: bool,
     ) -> AppResult<CodexConversation> {
-        let _guard = self.lifecycle_lock.lock();
+        let gate = self.gate(conversation_id);
+        let _guard = gate
+            .normal
+            .try_lock_for(Duration::from_secs(2))
+            .ok_or_else(|| {
+                AppError::new(
+                    "codex_control_busy",
+                    "当前会话正在处理，请稍后重试；其他任务可继续使用。",
+                    "not_executed",
+                )
+            })?;
         self.set_conversation_archived_locked(task_id, conversation_id, archived)
     }
 
@@ -177,7 +187,7 @@ impl CodexTerminalService {
         if !conversations.iter().any(|c| c.native_session_id.is_some()) {
             return Ok(());
         }
-        let _guard = self.lifecycle_lock.lock();
+
         let codex =
             (self.resolver)().ok_or_else(|| AppError::validation("Codex is unavailable."))?;
         let server = self.ensure_app_server(&codex)?;
@@ -188,6 +198,10 @@ impl CodexTerminalService {
             }
         }
         for conversation in conversations {
+            let gate = self.gate(&conversation.id);
+            let Some(_guard) = gate.normal.try_lock() else {
+                continue;
+            };
             let native_archived = match &conversation.native_session_id {
                 Some(id) => server.is_archived(id)?,
                 None => conversation.archived,

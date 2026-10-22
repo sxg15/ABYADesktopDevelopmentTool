@@ -1,16 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { productionApi, type TaskControlState } from "../../shared/production";
+const pendingControls=new Map<string,Promise<TaskControlState>>();
+function readControl(task:string,conversation:string){const key=task+":"+conversation;let pending=pendingControls.get(key);if(pending)return pending;
+  pending=productionApi.control(task,conversation);pendingControls.set(key,pending);const clear=()=>{if(pendingControls.get(key)===pending)pendingControls.delete(key);};pending.then(clear,clear);return pending;}
 export function useTaskControl(taskId:string,conversationId:string|undefined,provider:string) {
   const [state,setState]=useState<TaskControlState>();
   const sequence=useRef(0);
   useEffect(()=>{
-    setState(undefined); let alive=true;
+    setState(undefined); let alive=true, pending=false;
     async function refresh(){
-      if(!conversationId||provider!=="codex")return;
+      if(!alive||pending||!conversationId||provider!=="codex")return;
+      pending=true;
       const request=++sequence.current;
-      try{const next=await productionApi.control(taskId,conversationId);
+      try{const next=await readControl(taskId,conversationId);
         if(alive&&request===sequence.current)setState(next);
       }catch{if(alive&&request===sequence.current)setState(undefined);}
+      finally{pending=false;}
     }
     void refresh();const timer=window.setInterval(()=>void refresh(),1500);
     window.addEventListener("abya:control-changed",refresh);
@@ -20,7 +25,7 @@ export function useTaskControl(taskId:string,conversationId:string|undefined,pro
 }
 export function controlText(state:TaskControlState|undefined) {
   if(!state)return "正在核对任务状态";
-  const text:Record<string,string>={queued:"操作已保存，当前回复结束后继续，无需重复提交",running:"AI 正在处理当前任务，当前无需操作",waitingForResponse:"正在等待 AI 输出，当前无需操作",
+  const text:Record<string,string>={interrupted:"子流程被中断，可继续原子流程；ID、成果和历史已保留",queued:"操作已保存，当前回复结束后继续，无需重复提交",running:"AI 正在处理当前任务，当前无需操作",waitingForResponse:"正在等待 AI 输出，当前无需操作",
     stopFailed:state.lastError||"自动续接已禁止，但当前执行尚未确认停止；请重试或强制停止此会话",
     awaitingInput:"当前执行已中断，终端保持连接，可直接输入新指令",
     waitingForTerminal:"终端需要你输入或确认，请前往终端处理",pausing:"正在暂停任务",paused:"任务已暂停，答案和历史已保存",waitingForAnswers:"等待你回答阶段问题",blocked:"当前阶段遇到问题，可查看处理方案或重新检查",
@@ -30,7 +35,7 @@ export function controlText(state:TaskControlState|undefined) {
   return (text[state.state]??"正在核对任务状态")+(["running","waitingForResponse","queued"].includes(state.state)&&elapsed>=30?` · 上次进展 ${elapsed} 秒前`:"");
 }
 export function controlLabel(state:TaskControlState|undefined) {
-  const labels:Record<string,string>={waitingForTerminal:"终端待处理",running:"运行中",waitingForResponse:"等待响应",queued:"已排队",paused:"已暂停",pausing:"暂停中",
+  const labels:Record<string,string>={interrupted:"被中断",waitingForTerminal:"终端待处理",running:"运行中",waitingForResponse:"等待响应",queued:"已排队",paused:"已暂停",pausing:"暂停中",
     stopFailed:"停止失败",
     awaitingInput:"等待新指令",
     awaitingContinue:"等待继续",blocked:"遇到问题",waitingForAnswers:"等待回答",waitingForApproval:"等待确认",needsReview:"需要核对",failed:"执行失败",disconnected:"待接回原对话",ready:"可继续",notStarted:"待开始",closed:"任务已结束"};

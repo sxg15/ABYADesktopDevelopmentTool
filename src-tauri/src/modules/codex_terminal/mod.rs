@@ -1,4 +1,6 @@
 mod app_server;
+#[cfg(windows)]
+mod crash_job;
 mod diagnostics;
 mod memory_context;
 mod preflight;
@@ -7,9 +9,12 @@ mod resume_failure;
 pub use recovery::RecoveryCandidate;
 mod auto_progress;
 mod continuation_queue;
+mod control_gate;
 mod execution_control;
+mod goal_execution;
 mod interrupt;
 mod issue_repair;
+mod process_identity;
 #[cfg(test)]
 mod queue_tests;
 mod task_control;
@@ -86,6 +91,7 @@ pub enum CodexTerminalStatus {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexTerminalState {
+    pub generation: u64,
     pub input_session_id: Option<String>,
     pub task_id: String,
     pub conversation_id: String,
@@ -134,6 +140,7 @@ struct LiveTerminal {
     subscriber: Arc<Mutex<Option<Channel<CodexTerminalEvent>>>>,
     #[cfg(windows)]
     process: Option<Arc<std::os::windows::io::OwnedHandle>>,
+    _crash_job: Option<Arc<std::os::windows::io::OwnedHandle>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -159,11 +166,14 @@ pub struct CodexTerminalService {
     runtime_servers: Arc<Mutex<HashMap<String, AppServerHandle>>>,
     thread_conversations: Arc<Mutex<HashMap<String, (String, String)>>>,
     workflow_write_lock: Arc<Mutex<()>>,
-    lifecycle_lock: Arc<Mutex<()>>,
+    gates: Arc<Mutex<HashMap<String, Arc<control_gate::ConversationGate>>>>,
+    #[cfg(not(test))]
+    metadata_refreshing: Arc<Mutex<HashSet<String>>>,
     process_epoch: String,
     control_sequence: Arc<std::sync::atomic::AtomicU64>,
     cancelled: Arc<Mutex<HashSet<String>>>,
     stopping: Arc<Mutex<HashSet<String>>>,
+    forcing: Arc<Mutex<HashSet<String>>>,
     queue_tasks: Arc<Mutex<HashMap<String, String>>>,
     auto_progress: Arc<Mutex<HashMap<String, auto_progress::AutoProgress>>>,
     shutting_down: Arc<std::sync::atomic::AtomicBool>,
@@ -211,11 +221,14 @@ impl CodexTerminalService {
             runtime_servers: Default::default(),
             thread_conversations: Default::default(),
             workflow_write_lock: Default::default(),
-            lifecycle_lock: Default::default(),
+            gates: Default::default(),
+            #[cfg(not(test))]
+            metadata_refreshing: Default::default(),
             process_epoch: Uuid::new_v4().to_string(),
             control_sequence: Default::default(),
             cancelled: Default::default(),
             stopping: Default::default(),
+            forcing: Default::default(),
             queue_tasks: Default::default(),
             auto_progress: Default::default(),
             shutting_down: Default::default(),
@@ -246,8 +259,7 @@ impl CodexTerminalService {
     }
 
     pub fn list_conversations(&self, task_id: &str) -> AppResult<Vec<CodexConversation>> {
-        let guard = self.lifecycle_lock.lock();
-        let task = self.tasks.get(task_id)?;
+        let task = self.tasks.get_readonly(task_id)?;
         let root = conversations_root(Path::new(&task.workspace_path));
         if !root.is_dir() {
             return Ok(Vec::new());
@@ -269,13 +281,15 @@ impl CodexTerminalService {
             }
         }
         conversations.sort_by(|left, right| right.updated_at.cmp(&left.updated_at));
-        backfill_native_session_ids(Path::new(&task.workspace_path), &mut conversations)?;
-        drop(guard);
         #[cfg(not(test))]
-        if let Err(error) = self.refresh_native_conversations(&task, &mut conversations) {
-            for conversation in &mut conversations {
-                conversation.native_sync_error = Some(error.message.clone());
-            }
+        if self.metadata_refreshing.lock().insert(task_id.into()) {
+            let service = self.clone();
+            let mut snapshot = conversations.clone();
+            std::thread::spawn(move || {
+                let _ = backfill_native_session_ids(Path::new(&task.workspace_path), &mut snapshot);
+                let _ = service.refresh_native_conversations(&task, &mut snapshot);
+                service.metadata_refreshing.lock().remove(&task.id);
+            });
         }
         Ok(conversations)
     }
@@ -322,7 +336,17 @@ impl CodexTerminalService {
         conversation_id: &str,
         title: &str,
     ) -> AppResult<CodexConversation> {
-        let _guard = self.lifecycle_lock.lock();
+        let gate = self.gate(conversation_id);
+        let _guard = gate
+            .normal
+            .try_lock_for(Duration::from_secs(2))
+            .ok_or_else(|| {
+                AppError::new(
+                    "codex_control_busy",
+                    "当前会话正在处理，请稍后重试；其他任务可继续使用。",
+                    "not_executed",
+                )
+            })?;
         let title = validate_conversation_title(title)?;
         let task = self.tasks.get(task_id)?;
         let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);
@@ -354,7 +378,7 @@ impl CodexTerminalService {
         task_id: &str,
         conversation_id: &str,
     ) -> AppResult<CodexWorkflowSnapshot> {
-        let task = self.tasks.get(task_id)?;
+        let task = self.tasks.get_readonly(task_id)?;
         self.conversation(task_id, conversation_id)?;
         load_workflow(
             &conversation_directory(Path::new(&task.workspace_path), conversation_id),
@@ -456,7 +480,17 @@ impl CodexTerminalService {
     }
 
     pub fn delete_conversation(&self, task_id: &str, conversation_id: &str) -> AppResult<()> {
-        let _guard = self.lifecycle_lock.lock();
+        let gate = self.gate(conversation_id);
+        let _guard = gate
+            .normal
+            .try_lock_for(Duration::from_secs(2))
+            .ok_or_else(|| {
+                AppError::new(
+                    "codex_control_busy",
+                    "当前会话正在处理，请稍后重试；其他任务可继续使用。",
+                    "not_executed",
+                )
+            })?;
         self.set_conversation_archived_locked(task_id, conversation_id, true)?;
         let conversation = self.conversation(task_id, conversation_id)?;
         self.stop_locked(conversation_id)?;
@@ -483,7 +517,21 @@ impl CodexTerminalService {
         rows: u16,
         subscriber: Channel<CodexTerminalEvent>,
     ) -> AppResult<CodexTerminalState> {
-        let _lifecycle_guard = self.lifecycle_lock.lock();
+        let gate = self.gate(conversation_id);
+        let _lifecycle_guard = gate
+            .normal
+            .try_lock_for(Duration::from_secs(2))
+            .ok_or_else(|| {
+                AppError::new(
+                    "codex_control_busy",
+                    "当前会话连接正在收尾，请稍后重试。",
+                    "not_executed",
+                )
+            })?;
+        let generation = gate.epoch();
+        if self.stopping.lock().contains(conversation_id) {
+            return Err(AppError::validation("会话正在停止，请稍后连接。"));
+        }
         validate_size(columns, rows)?;
         if self.conversation(task_id, conversation_id)?.archived {
             return Err(AppError::validation(
@@ -508,6 +556,23 @@ impl CodexTerminalService {
             return Ok(state);
         }
 
+        // A rejected attachment must not invalidate the still-running executor's notifications.
+        if let Some(server) = self
+            .runtime_handle(conversation_id)
+            .filter(|s| s.is_alive())
+            && let Some(native) = self
+                .conversation(task_id, conversation_id)?
+                .native_session_id
+        {
+            server.ensure_idle(&native)?;
+        }
+        let generation = {
+            let _publication = gate.publication.lock();
+            gate.check(generation)?;
+            let generation = gate.invalidate();
+            crate::foundation::cli_sessions::allow_new_session("codex", conversation_id);
+            generation
+        };
         let mut attempt = resume_failure::OpenAttempt::new();
         let result = self.open_new(
             task_id,
@@ -516,6 +581,7 @@ impl CodexTerminalService {
             rows,
             subscriber,
             &mut attempt,
+            generation,
         );
         if let (Ok(task), Ok(conversation)) = (
             self.tasks.get(task_id),
@@ -548,6 +614,7 @@ impl CodexTerminalService {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn open_new(
         &self,
         task_id: &str,
@@ -556,12 +623,14 @@ impl CodexTerminalService {
         rows: u16,
         subscriber: Channel<CodexTerminalEvent>,
         attempt: &mut resume_failure::OpenAttempt,
+        generation: u64,
     ) -> AppResult<CodexTerminalState> {
         let (codex, task) = self.validate_open_request(task_id, conversation_id)?;
         let task = self.tasks.prepare_terminal_workspace(&task.id)?;
         let working_directory = PathBuf::from(&task.workspace_path);
         // Do not rotate/revoke scoped credentials of a detached running executor.
-        if let Some(server) = self.runtime_servers.lock().get(conversation_id).cloned()
+        let existing_server = { self.runtime_handle(conversation_id) };
+        if let Some(server) = existing_server
             && server.is_alive()
             && let Some(native) = self
                 .conversation(task_id, conversation_id)?
@@ -610,7 +679,7 @@ impl CodexTerminalService {
         let observability = if supports_app_server(&codex) {
             {
                 attempt.stage = "backend-start";
-                let server = self.runtime_server(&codex, conversation_id)?;
+                let server = self.runtime_server(&codex, conversation_id, generation)?;
                 attempt.server = Some(server.clone());
                 attempt.stage = "project-registration";
                 let project = server.ensure_project(&task)?;
@@ -704,6 +773,7 @@ impl CodexTerminalService {
                 "当前 Codex 缺少可验证的会话接口，请更新 CLI 后重试；历史已保留。",
             ));
         };
+        self.gate(conversation_id).check(generation)?;
         attempt.stage = "terminal-attach";
         let conversation_directory = conversation_directory(&working_directory, conversation_id);
         std::fs::create_dir_all(&conversation_directory)?;
@@ -717,6 +787,7 @@ impl CodexTerminalService {
             .append(true)
             .open(conversation_directory.join(CONVERSATION_TRANSCRIPT_FILE))?;
         let starting = CodexTerminalState {
+            generation,
             input_session_id: None,
             task_id: task_id.to_string(),
             conversation_id: conversation_id.to_string(),
@@ -745,16 +816,31 @@ impl CodexTerminalService {
             native_session_id.as_deref(),
             remote.as_ref(),
         );
-        let child = pair
+        let mut child = pair
             .slave
             .spawn_command(command)
             .map_err(AppError::internal)?;
         drop(pair.slave);
 
+        let crash_job = child
+            .as_raw_handle()
+            .ok_or_else(|| AppError::internal("Missing owned terminal process handle"))
+            .and_then(|raw| {
+                crash_job::attach(unsafe { std::os::windows::io::BorrowedHandle::borrow_raw(raw) })
+            });
+        let crash_job = match crash_job {
+            Ok(job) => job,
+            Err(error) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(error);
+            }
+        };
         let pid = child.process_id();
         let killer = child.clone_killer();
         let session_id = Uuid::new_v4().to_string();
         let state = CodexTerminalState {
+            generation,
             input_session_id: Some(session_id.clone()),
             task_id: task_id.to_string(),
             conversation_id: conversation_id.to_string(),
@@ -777,11 +863,21 @@ impl CodexTerminalService {
             subscriber: subscriber_ref.clone(),
             #[cfg(windows)]
             process: capture_owned_process(child.as_ref())?,
+            _crash_job: Some(crash_job),
         };
         let transcript_ref = live.transcript.clone();
-        self.sessions
-            .lock()
-            .insert(conversation_id.to_string(), live);
+        {
+            let gate = self.gate(conversation_id);
+            let _publication = gate.publication.lock();
+            if let Err(error) = gate.check(generation) {
+                drop(_publication);
+                let _ = disconnect_and_terminate(live);
+                return Err(error);
+            }
+            self.sessions
+                .lock()
+                .insert(conversation_id.to_string(), live);
+        }
         let _ = subscriber.send(CodexTerminalEvent::State {
             state: state.clone(),
         });
@@ -813,8 +909,9 @@ impl CodexTerminalService {
     }
 
     pub fn rebuild_idle_terminal(&self, task: &str, conversation: &str) -> AppResult<()> {
-        let _guard = self
-            .lifecycle_lock
+        let gate = self.gate(conversation);
+        let _guard = gate
+            .normal
             .try_lock_for(Duration::from_secs(2))
             .ok_or_else(|| {
                 AppError::new(
@@ -829,13 +926,7 @@ impl CodexTerminalService {
                 "后台操作尚未返回，请先核对结果或暂停任务，再重建连接。",
             ));
         }
-        if let Some(server) = self
-            .runtime_servers
-            .lock()
-            .get(conversation)
-            .cloned()
-            .filter(|s| s.is_alive())
-        {
+        if let Some(server) = self.runtime_handle(conversation).filter(|s| s.is_alive()) {
             let native = metadata
                 .native_session_id
                 .as_deref()
@@ -924,8 +1015,9 @@ impl CodexTerminalService {
         if let Some(task) = task {
             return self.control_execution(&task, conversation_id, "pause");
         }
-        let _guard = self
-            .lifecycle_lock
+        let gate = self.gate(conversation_id);
+        let _guard = gate
+            .normal
             .try_lock_for(Duration::from_secs(2))
             .ok_or_else(|| AppError::validation("会话正在切换，请稍后重试。"))?;
         self.stop_locked(conversation_id)
@@ -940,7 +1032,7 @@ impl CodexTerminalService {
             .iter()
             .find(|(_, (_, id))| id == conversation_id)
             .map(|(native, _)| native.clone());
-        let server = self.runtime_servers.lock().get(conversation_id).cloned();
+        let server = self.runtime_handle(conversation_id);
         if let (Some(server), Some(native)) = (&server, &binding)
             && server.is_alive()
         {
@@ -1023,6 +1115,10 @@ impl CodexTerminalService {
         }
     }
 
+    fn runtime_handle(&self, conversation: &str) -> Option<AppServerHandle> {
+        self.runtime_servers.lock().get(conversation).cloned()
+    }
+
     fn session(&self, conversation_id: &str) -> AppResult<LiveTerminal> {
         self.sessions
             .lock()
@@ -1077,10 +1173,12 @@ impl CodexTerminalService {
         &self,
         codex: &ResolvedCodex,
         conversation: &str,
+        generation: u64,
     ) -> AppResult<AppServerHandle> {
         // Fresh per-conversation executor prevents a loaded thread retaining revoked credentials.
         // The metadata server never owns model turns. Other tasks remain independent.
-        if let Some(old) = self.runtime_servers.lock().get(conversation).cloned() {
+        let existing = { self.runtime_handle(conversation) };
+        if let Some(old) = existing {
             let native = self
                 .thread_conversations
                 .lock()
@@ -1097,9 +1195,13 @@ impl CodexTerminalService {
         let bindings = self.thread_conversations.clone();
         let writes = self.workflow_write_lock.clone();
         let service = self.clone();
+        let notification_gate = self.gate(conversation);
         let server = AppServerHandle::start(
             codex,
             Arc::new(move |event| {
+                if notification_gate.epoch() != generation {
+                    return;
+                }
                 handle_app_server_notification(
                     &tasks,
                     &sessions,
@@ -1114,6 +1216,7 @@ impl CodexTerminalService {
                     )
                 {
                     service.auto_turn_started(native, turn);
+                    service.observe_goal_turn(native, turn, "running");
                 }
                 if event["method"] == "item/completed"
                     && let (Some(native), Some(turn)) = (
@@ -1130,6 +1233,15 @@ impl CodexTerminalService {
                         event["params"]["turn"]["id"].as_str(),
                     )
                 {
+                    service.observe_goal_turn(
+                        native,
+                        turn,
+                        if event["params"]["turn"]["status"] == "completed" {
+                            "finished"
+                        } else {
+                            "interrupted"
+                        },
+                    );
                     service.auto_completion_seen(
                         native,
                         turn,
@@ -1143,14 +1255,23 @@ impl CodexTerminalService {
                 }
             }),
         )?;
-        self.runtime_servers
-            .lock()
-            .insert(conversation.into(), server.clone());
+        let gate = self.gate(conversation);
+        {
+            let _publication = gate.publication.lock();
+            if let Err(error) = gate.check(generation) {
+                drop(_publication);
+                server.stop();
+                return Err(error);
+            }
+            self.runtime_servers
+                .lock()
+                .insert(conversation.into(), server.clone());
+        }
         Ok(server)
     }
 
     fn conversation(&self, task_id: &str, conversation_id: &str) -> AppResult<CodexConversation> {
-        let task = self.tasks.get(task_id)?;
+        let task = self.tasks.get_readonly(task_id)?;
         let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);
         if !directory.is_dir() {
             return Err(AppError::not_found("Codex conversation"));
@@ -1269,11 +1390,14 @@ impl CodexTerminalService {
     #[cfg(test)]
     fn for_test(tasks: TaskService, _working_directory: PathBuf, codex: ResolvedCodex) -> Self {
         Self {
-            lifecycle_lock: Default::default(),
+            gates: Default::default(),
+            #[cfg(not(test))]
+            metadata_refreshing: Default::default(),
             process_epoch: Uuid::new_v4().to_string(),
             control_sequence: Default::default(),
             cancelled: Default::default(),
             stopping: Default::default(),
+            forcing: Default::default(),
             queue_tasks: Default::default(),
             auto_progress: Default::default(),
             shutting_down: Default::default(),
@@ -1874,6 +1998,7 @@ fn find_native_session_id_in(
     candidates.next().is_none().then_some(candidate.id)
 }
 
+#[cfg(not(test))]
 fn backfill_native_session_ids(
     working_directory: &Path,
     conversations: &mut [CodexConversation],
@@ -2943,6 +3068,7 @@ mod tests {
                 task_id: task_id.to_string(),
                 session_id: Uuid::new_v4().to_string(),
                 state: Arc::new(Mutex::new(CodexTerminalState {
+                    generation: 0,
                     input_session_id: None,
                     task_id: task_id.to_string(),
                     conversation_id: conversation_id.to_string(),
@@ -2958,6 +3084,7 @@ mod tests {
                 killer: Arc::new(Mutex::new(child.clone_killer())),
                 #[cfg(windows)]
                 process: capture_owned_process(child.as_ref()).unwrap(),
+                _crash_job: None,
                 subscriber: Arc::new(Mutex::new(Some(channel))),
             },
         );

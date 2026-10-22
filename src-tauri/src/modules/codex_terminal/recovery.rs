@@ -29,7 +29,17 @@ impl CodexTerminalService {
         conversation_id: &str,
         native_id: &str,
     ) -> AppResult<CodexConversation> {
-        let _guard = self.lifecycle_lock.lock();
+        let gate = self.gate(conversation_id);
+        let _guard = gate
+            .normal
+            .try_lock_for(Duration::from_secs(2))
+            .ok_or_else(|| {
+                AppError::new(
+                    "codex_control_busy",
+                    "当前会话正在处理，请稍后重试；其他任务可继续使用。",
+                    "not_executed",
+                )
+            })?;
         if self.sessions.lock().contains_key(conversation_id)
             || self.runtime_servers.lock().contains_key(conversation_id)
         {

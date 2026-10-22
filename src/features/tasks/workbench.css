@@ -41,3 +41,5 @@
 
 .workbench-feedback-compose .review-footer{position:static;background:transparent}
 .wb-interaction>#production-feedback{background:transparent;border:0;padding:0;box-shadow:none}
+
+.goal-execution{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}.goal-execution>strong{display:inline-block;margin-right:16px}.goal-execution details{margin-top:10px}.goal-execution p{overflow-wrap:anywhere}

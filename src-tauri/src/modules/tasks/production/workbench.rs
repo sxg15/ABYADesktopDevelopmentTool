@@ -144,7 +144,7 @@ pub(super) fn observe(r: &mut ProductionRecord, before: Option<&ProductionRecord
             current = Some(id);
         }
     }
-    for request in r.workbench.requests.clone() {
+    for request in r.workbench.requests.clone().into_iter().rev() {
         let stage = request["stage"].as_str().unwrap_or("requirements");
         let id = upsert(
             r,
@@ -163,6 +163,9 @@ pub(super) fn observe(r: &mut ProductionRecord, before: Option<&ProductionRecord
         if current.is_none() && stage == r.current_stage && request["status"] != "completed" {
             current = Some(id);
         }
+    }
+    if let Some(goal) = execution_goal(r) {
+        current = Some(goal);
     }
     if current.is_none() {
         let existing = r
@@ -238,4 +241,32 @@ pub(super) fn stage_label(stage: &str) -> &str {
         "closeout" => "收尾复盘",
         _ => stage,
     }
+}
+
+fn execution_goal(r: &ProductionRecord) -> Option<String> {
+    if r.stages
+        .get(&r.current_stage)
+        .is_some_and(|s| s == "awaiting-confirmation")
+        || r.question_groups
+            .iter()
+            .any(|g| g.stage == r.current_stage && g.status == "pending")
+    {
+        return None;
+    }
+    r.workbench
+        .attempts
+        .iter()
+        .rev()
+        .find(|a| {
+            matches!(
+                a.status.as_str(),
+                "running" | "sending" | "queued" | "interrupted" | "paused"
+            ) && r.workbench.goals.iter().any(|g| {
+                g.id == a.goal_id
+                    && g.stage == r.current_stage
+                    && g.cycle == r.cycle
+                    && !matches!(g.status.as_str(), "completed" | "accepted" | "resolved")
+            })
+        })
+        .map(|a| a.goal_id.clone())
 }

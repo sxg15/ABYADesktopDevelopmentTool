@@ -63,8 +63,34 @@ fn save(
 }
 
 impl CodexTerminalService {
+    #[cfg(test)]
     pub fn force_stop(&self, task: &str, conversation: &str) -> AppResult<()> {
-        self.control_execution(task, conversation, "forceStop")
+        self.control_checked(task, conversation, "forceStop", None, None)
+    }
+    #[cfg(test)]
+    pub fn force_stop_generation(
+        &self,
+        task: &str,
+        conversation: &str,
+        generation: u64,
+    ) -> AppResult<()> {
+        self.control_checked(task, conversation, "forceStop", Some(generation), None)
+    }
+
+    pub fn force_stop_with_cancel(
+        &self,
+        task: &str,
+        conversation: &str,
+        generation: u64,
+        cancel: &dyn Fn(),
+    ) -> AppResult<()> {
+        self.control_checked(
+            task,
+            conversation,
+            "forceStop",
+            Some(generation),
+            Some(cancel),
+        )
     }
 
     pub(super) fn control_execution(
@@ -73,13 +99,48 @@ impl CodexTerminalService {
         conversation_id: &str,
         operation: &str,
     ) -> AppResult<()> {
+        self.control_checked(task_id, conversation_id, operation, None, None)
+    }
+    fn control_checked(
+        &self,
+        task_id: &str,
+        conversation_id: &str,
+        operation: &str,
+        expected: Option<u64>,
+        cancel: Option<&dyn Fn()>,
+    ) -> AppResult<()> {
         self.conversation(task_id, conversation_id)?;
-        if !self.stopping.lock().insert(conversation_id.into()) {
-            return Err(AppError::validation("此会话正在停止，请等待结果。"));
-        }
+        let gate = self.gate(conversation_id);
+        let generation = {
+            let _publication = gate.publication.lock();
+            if let Some(expected) = expected {
+                gate.check(expected)?;
+            }
+            if operation == "forceStop" {
+                if !self.forcing.lock().insert(conversation_id.into()) {
+                    return Err(AppError::validation("此会话正在强制停止。"));
+                }
+                self.stopping.lock().insert(conversation_id.into());
+                let generation = gate.invalidate();
+                if let Some(cancel) = cancel {
+                    cancel();
+                }
+                generation
+            } else {
+                if !self.stopping.lock().insert(conversation_id.into()) {
+                    return Err(AppError::validation("此会话正在停止，请等待结果。"));
+                }
+                gate.epoch()
+            }
+        };
         self.cancelled.lock().insert(conversation_id.into());
-        let result = self.control_owned(task_id, conversation_id, operation);
-        self.stopping.lock().remove(conversation_id);
+        let result = self.control_owned(task_id, conversation_id, operation, generation);
+        if operation == "forceStop" {
+            self.forcing.lock().remove(conversation_id);
+        }
+        if gate.epoch() == generation && !self.forcing.lock().contains(conversation_id) {
+            self.stopping.lock().remove(conversation_id);
+        }
         result
     }
 
@@ -88,8 +149,9 @@ impl CodexTerminalService {
         task_id: &str,
         conversation_id: &str,
         operation: &str,
+        generation: u64,
     ) -> AppResult<()> {
-        let task = self.tasks.get(task_id)?;
+        let task = self.tasks.get_readonly(task_id)?;
         let directory = conversation_directory(Path::new(&task.workspace_path), conversation_id);
         let conversation = self.conversation(task_id, conversation_id)?;
         let mut record = ExecutionControl {
@@ -98,9 +160,8 @@ impl CodexTerminalService {
             status: "stopping".into(),
             native_id: conversation.native_session_id.clone(),
             backend_pid: self
-                .runtime_servers
-                .lock()
-                .get(conversation_id)
+                .runtime_handle(conversation_id)
+                .as_ref()
                 .and_then(AppServerHandle::pid),
             terminal_pid: self
                 .sessions
@@ -129,15 +190,26 @@ impl CodexTerminalService {
             "execution-stop-requested",
         )?;
         let started = Instant::now();
-        let result = (|| {
-            let _guard = self
-                .lifecycle_lock
-                .try_lock_for(Duration::from_secs(2))
-                .ok_or_else(|| {
-                    AppError::new("codex_control_busy", "会话正在切换，尚未停止；请重试。", "")
-                })?;
-            self.control_locked(task_id, conversation_id, operation, &directory, &mut record)
-        })();
+        let gate = self.gate(conversation_id);
+        let result = if operation == "forceStop" {
+            self.force_close_owned(conversation_id, generation)
+        } else {
+            (|| {
+                let _guard = gate
+                    .normal
+                    .try_lock_for(Duration::from_secs(2))
+                    .ok_or_else(|| {
+                        AppError::new(
+                            "codex_control_busy",
+                            "当前会话控制繁忙，可使用强制停止。",
+                            "",
+                        )
+                    })?;
+                gate.check(generation)?;
+                self.control_locked(task_id, conversation_id, operation, &directory, &mut record)
+            })()
+        };
+        gate.check(generation)?;
         record.status = if result.is_err() {
             "failed"
         } else if operation == "interrupt" {
@@ -159,6 +231,17 @@ impl CodexTerminalService {
             let detail: serde_json::Value = serde_json::from_str(&error.detail).unwrap_or_default();
             record.native_code = detail["nativeCode"].as_i64();
             record.method = detail["method"].as_str().map(str::to_owned);
+        }
+        if result.is_ok() {
+            self.mark_goal_stopped(
+                task_id,
+                conversation_id,
+                if operation == "pause" {
+                    "paused"
+                } else {
+                    "interrupted"
+                },
+            );
         }
         record.elapsed_ms = started.elapsed().as_millis() as u64;
         save(
@@ -194,7 +277,7 @@ impl CodexTerminalService {
         record: &mut ExecutionControl,
     ) -> AppResult<()> {
         self.conversation(task, conversation)?;
-        let server = self.runtime_servers.lock().get(conversation).cloned();
+        let server = self.runtime_handle(conversation);
         record.backend_pid = server.as_ref().and_then(AppServerHandle::pid);
         if let Some(server) = &server {
             let native = record
@@ -249,8 +332,55 @@ impl CodexTerminalService {
         Ok(())
     }
 
+    fn force_close_owned(&self, conversation: &str, generation: u64) -> AppResult<()> {
+        let gate = self.gate(conversation);
+        let (server, session) = {
+            let _publication = gate.publication.lock();
+            gate.check(generation)?;
+            crate::foundation::cli_sessions::revoke("codex", conversation);
+            (
+                self.runtime_handle(conversation),
+                self.sessions.lock().get(conversation).cloned(),
+            )
+        };
+        let server_result = server
+            .as_ref()
+            .map_or(Ok(()), AppServerHandle::stop_confirmed);
+        let terminal_result = session
+            .as_ref()
+            .map_or(Ok(()), |s| disconnect_and_terminate(s.clone()));
+        {
+            let _publication = gate.publication.lock();
+            gate.check(generation)?;
+            if server_result.is_ok()
+                && server.as_ref().is_some_and(|old| {
+                    self.runtime_servers
+                        .lock()
+                        .get(conversation)
+                        .is_some_and(|current| current.same_instance(old))
+                })
+            {
+                self.runtime_servers.lock().remove(conversation);
+            }
+            if terminal_result.is_ok()
+                && session.as_ref().is_some_and(|old| {
+                    self.sessions
+                        .lock()
+                        .get(conversation)
+                        .is_some_and(|current| current.session_id == old.session_id)
+                })
+            {
+                self.sessions.lock().remove(conversation);
+            }
+        }
+        server_result?;
+        terminal_result?;
+        self.pause_queued_locked(conversation)?;
+        Ok(())
+    }
+
     pub(super) fn close_owned_executor(&self, conversation: &str) -> AppResult<()> {
-        let server = self.runtime_servers.lock().get(conversation).cloned();
+        let server = self.runtime_handle(conversation);
         if let Some(server) = &server {
             server.stop_confirmed()?;
         }

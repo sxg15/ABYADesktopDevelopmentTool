@@ -751,6 +751,12 @@ export function TasksView({
             <div className="task-tab-content" ref={tabContentRef}>
               <div className="workbench-tab-panel" hidden={selectedTab !== "production"}>
               <ProductionWorkbench key={selected.id} taskId={selected.id} active={selected.status === "active"} locale={settings?.locale}
+                onResumeGoal={async(goal,revision,intent,note)=>{
+                  const conversation=selectedTerminalContext?.conversation;
+                  let result=await productionApi.resumeGoal(selected.id,goal,conversation?.id??"",revision,intent,note);
+                  if(result.status==="needsConnection"&&result.requestId){await ensureIntakeConnection({provider:"codex",conversationId:result.conversationId});result=await productionApi.flushContinuation(selected.id,result.conversationId,result.requestId);}
+                  window.dispatchEvent(new Event("abya:control-changed"));return result;
+                }}
                 visible={selectedTab === "production"} control={selectedControl} onTerminal={() => selectTab("terminal")}
                 onEnsureConnection={ensureIntakeConnection} requestedGroup={requestedQuestion?.taskId === selected.id ? requestedQuestion : undefined}
                 onRepairIssue={selectedProvider === "codex" && selectedTerminalContext?.conversation ? repairSelectedIssue : undefined}

@@ -32,7 +32,7 @@ const image=canvas.toDataURL("image/png"), entry=artCaseFixture();entry.title="�
 const methods=["game-art-design","product-interface-design"].map((name,index)=>({id:index?"abya-game-development-task/references/game-art-design/references/product-interface-design":"abya-game-development-task/references/game-art-design",provider:"codex",name,kind:"design",description:index?"从用户任务、平台和输入方式推导界面结构、视觉与实现。":"保留策划原话，拆解风格参考，对照设计和运行画面复验。",path:`.codex/skills/${name}`,sha256:"fixture-design-hash"}));
 api.listTasks=async()=>[{id:"task",title:"见缝插针 · 多人竞速",description:"制作四人竞速游戏，保留纸质桌游质感。不要用数字显示库存，直接显示剩余物品。\n保留玩家身份颜色，最后一枚物品也要清楚。\n这是隔离验证数据，不代表真实策划或游戏成果。",workspacePath:"D:/Fixture/见缝插针",status:"active",createdAt:"2026-10-17T09:00:00Z",updatedAt:"2026-10-17T09:00:00Z"}];
 api.listInstances=async()=>[];
-productionApi.get=async()=>structuredClone(view);productionApi.media=async()=>image;
+productionApi.get=async()=>structuredClone(view);productionApi.reconcile=async()=>structuredClone(view);productionApi.media=async()=>image;
 productionApi.skills=async()=>structuredClone(methods);productionApi.readSkill=async(_task,_provider,id)=>`# ${id.split('/').pop()}\n\n隔离测试正文。实际发布包从任务固定版本中读取内容。`;
 productionApi.revealDocument=async()=>{};productionApi.revealReport=async()=>{};
 productionApi.acceptanceStatus=async()=>({status:"not-started"});productionApi.timing=async()=>({note:"隔离测试，无实际执行时间"}) as Awaited<ReturnType<typeof productionApi.timing>>;

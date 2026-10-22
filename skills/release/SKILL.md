@@ -538,3 +538,18 @@ Default/Validation use issue-auto-repair-20261013. Verify issue/native binding,
 queued/deduplicated delivery, stale/programmer/resolved rejection and UI feedback.
 The button uses the selected Codex conversation and never auto-resolves a defect.
 Keep the complete portable distribution and earlier startup/IME/programmer alerts.
+
+## Task isolation and subprocess resume release (2026-10-22)
+Release label: task-isolation-goal-resume-20261022. Validate lock isolation, forced
+cancellation during pending dispatch, original-goal idempotency, process-identity
+reconciliation, unchanged human gates and frontend single-flight polling. Native
+validation uses owned isolated data; never crash the user's active APP or kill
+historical diagnostic PIDs. Promote the complete validated portable directory with
+backup only when its destination is not running; verify all manifest hashes.
+
+Native crash injection exposed surviving app-server processes: process-wrap's std
+JobObject does not enable kill-on-close. Owned backend and PTY process handles now
+also join non-inheritable Windows lifetime jobs with KILL_ON_JOB_CLOSE. APP death
+therefore closes its jobs and terminates its own descendants, without process-name
+cleanup or touching unrelated sessions. Failure to establish ownership aborts startup.
+Validate nested job compatibility and actual APP crash/reopen/same-goal resume.

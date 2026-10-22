@@ -18,8 +18,11 @@ Objects, WebSocket sessions, CLI operation cancellation state, active transfer
 cancellation channels, temporary ZIP packages, and open network connections
 remain in memory or disposable application data.
 
-Codex continuation intents are durable per conversation. One lifecycle lock serializes queue
-dispatch, cancellation and native ownership checks; late completion cannot override a pause.
+Codex continuation intents are durable per conversation. Per-conversation gates serialize normal dispatch and ownership checks. Force stop bypasses
+the normal gate and fences stale workers by generation; readonly polling never waits on it.
+A revisioned execution-attempt journal binds existing goals to native turns and process
+identities. Explicit reconciliation/resume preserves goals, results and history without
+replaying uncertain sends or converting execution completion into business approval.
 APP-only answers and document decisions remain in TaskService; CodexTerminalService orchestrates
 their continuation without approving documents. TaskControlState projects native/connection/queue
 and human-wait states for both UI surfaces. Application startup establishes normal Windows data

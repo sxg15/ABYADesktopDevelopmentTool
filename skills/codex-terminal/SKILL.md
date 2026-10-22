@@ -268,3 +268,30 @@ their existing workflows and the user can explicitly request repair again afterw
 Only fixed backend prompts go to turn/start, not arbitrary UI-provided commands.
 Tests cover exact issue/native identity, duplicate clicks, busy dispatch, changed
 ownership, competing intents and no automatic issue-resolution mutations.
+
+## Task isolation and atomic subprocess recovery (2026-10-22)
+Each conversation owns its bounded normal control gate; readonly control/listing never
+waits for RPC ownership. Tauri blocking work runs on spawn_blocking. Force stop bypasses
+the normal gate, validates the confirmation-time generation, invalidates old work,
+revokes scoped access and terminates only captured owned server/TUI handles. Late
+startup, notification and dispatch results cannot publish into the next generation.
+A revoked CLI lease cannot be recreated until an explicit fresh open authorizes it.
+Never kill by process name, use historical PIDs, auto-restart or replay uncertain sends.
+Execution attempts bind goal/request/conversation/native/turn IDs, process epoch,
+PID plus creation time and generation. A dedicated reconciliation coordinator checks
+actual ownership; getters remain readonly. Dead known execution becomes interrupted;
+live external ownership stays reconciling; missing identity or unacknowledged sends
+requires review. Finished native rounds do not complete business goals.
+resume_goal reuses exact goal/native IDs and appends an idempotent UUID attempt with
+predecessor. Human gates remain authoritative. A definitely-unsent queued crash window
+may reconstruct the same receipt; unknown sends cannot. Legacy same-title goals stay
+separate, never auto-completed or merged. Resume checks native idle before new dispatch.
+Tests: goal_execution_tests (lock isolation, force during dispatch, stale generation,
+same-ID resume/dedup, human gates, process-identity reconciliation); existing queue tests.
+
+Native crash injection exposed surviving app-server processes: process-wrap's std
+JobObject does not enable kill-on-close. Owned backend and PTY process handles now
+also join non-inheritable Windows lifetime jobs with KILL_ON_JOB_CLOSE. APP death
+therefore closes its jobs and terminates its own descendants, without process-name
+cleanup or touching unrelated sessions. Failure to establish ownership aborts startup.
+Validate nested job compatibility and actual APP crash/reopen/same-goal resume.

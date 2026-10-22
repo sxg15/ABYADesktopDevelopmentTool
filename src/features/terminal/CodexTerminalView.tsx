@@ -540,13 +540,16 @@ function ConversationTerminal({
   const [interrupting,setInterrupting]=useState(false);
   const [stopFailed,setStopFailed]=useState(false);
   const [confirmForceStop,setConfirmForceStop]=useState(false);
+  const forceGeneration=useRef(0),stopSequence=useRef(0),forceBusy=useRef(false);
+  const [pausePending,setPausePending]=useState(false);
   const [actionNotice,setActionNotice]=useState("");
   useEffect(()=>setActionNotice(""),[control?.state]);
+  const continueIntent=useRef<string|undefined>(undefined);
   async function continueTask() {
     if(actionBusyRef.current)return;
     actionBusyRef.current=true;setActionBusy(true);setError("");
     try {
-      let result=await productionApi.continueTask(taskId,conversation.id);
+      let result=await productionApi.continueTask(taskId,conversation.id,undefined,continueIntent.current??(continueIntent.current=crypto.randomUUID()));
       if(result.status==="needsConnection"&&result.requestId) {
         setActionNotice("正在接回原对话，连接成功后自动继续执行…");
         await new Promise<void>((resolve,reject)=>{
@@ -564,6 +567,7 @@ function ConversationTerminal({
       }
       if (visibleRef.current && !document.querySelector('[aria-modal="true"]')) terminalRef.current?.focus();
       setActionNotice(continuationMessages[result.status]);
+      if(["started","resumed","running","completed"].includes(result.status))continueIntent.current=undefined;
     }catch(e){setActionNotice("");setError(errorMessage(e));}
     finally{actionBusyRef.current=false;setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
   }
@@ -907,11 +911,13 @@ function ConversationTerminal({
   async function stop() {
     if(actionBusyRef.current)return;
     actionBusyRef.current=true;
+    const operation=++stopSequence.current;setPausePending(true);
     setActionNotice("");
     pendingContinue.current=undefined;setActionBusy(true);
     setError("");
     try {
       await terminalApi.stop(provider, conversation.id);
+      if(operation!==stopSequence.current)return;
       setStopFailed(false);
       setState((current) =>
         current
@@ -919,8 +925,8 @@ function ConversationTerminal({
           : current,
       );
     } catch (value) {
-      setStopFailed(true);setError(errorMessage(value));
-    } finally {actionBusyRef.current=false;setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
+      if(operation===stopSequence.current){setStopFailed(true);setError(errorMessage(value));}
+    } finally {if(operation===stopSequence.current){actionBusyRef.current=false;setActionBusy(false);setPausePending(false);}window.dispatchEvent(new Event("abya:control-changed"));}
   }
 
   async function rebuildTerminal() {
@@ -931,16 +937,17 @@ function ConversationTerminal({
     finally{actionBusyRef.current=false;setActionBusy(false);}
   }
   async function forceStop() {
-    if(actionBusyRef.current)return;
+    if(forceBusy.current)return;
+    forceBusy.current=true;++stopSequence.current;setPausePending(false);
     actionBusyRef.current=true;setActionBusy(true);setConfirmForceStop(false);setError("");setActionNotice("");
     pendingContinue.current=undefined;
     try {
-      await terminalApi.forceStop(provider,taskId,conversation.id);
+      await terminalApi.forceStop(provider,taskId,conversation.id,forceGeneration.current);
       setStopFailed(false);
       setState(current=>current?{...current,status:"exited",pid:undefined}:current);
       setActionNotice("此会话执行器已停止；历史已保留，继续前请核对已完成的操作。");
     } catch(value) {setStopFailed(true);setError(errorMessage(value));}
-    finally {actionBusyRef.current=false;setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
+    finally {forceBusy.current=false;actionBusyRef.current=false;setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
   }
 
   const terminalEnded =
@@ -1037,8 +1044,8 @@ function ConversationTerminal({
           )}
           {provider==="codex" && <button className="primary-button" onClick={()=>void continueTask()}
             disabled={actionBusy||state?.status==="starting"||!control?.nativeSessionId||["running","waitingForResponse","queued","pausing","stopFailed","closed"].includes(control?.state??"")}>{actionBusy?"正在处理…":control?.state==="blocked"?"重新检查问题":"继续任务"}</button>}
-          {(stopFailed||control?.state==="stopFailed") && <button className="secondary-button terminal-stop"
-            disabled={actionBusy} onClick={()=>setConfirmForceStop(true)}>强制停止此会话</button>}
+          {(pausePending||stopFailed||control?.state==="stopFailed"||control?.state==="pausing") && <button className="secondary-button terminal-stop"
+            disabled={forceBusy.current} onClick={()=>{forceGeneration.current=control?.generation??state?.generation??0;setConfirmForceStop(true);}}>强制停止此会话</button>}
           {terminalEnded && (
             <button
               className="secondary-button"

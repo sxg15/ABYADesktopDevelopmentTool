@@ -14,6 +14,7 @@ mod interaction;
 mod issue_export;
 mod issue_repair;
 pub use issue_repair::IssueRepairSpec;
+mod execution;
 mod iteration;
 mod models;
 mod mutation;

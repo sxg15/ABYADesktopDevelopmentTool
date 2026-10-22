@@ -24,15 +24,24 @@ impl CodexTerminalService {
         issue: &str,
         revision: u64,
     ) -> AppResult<IntakeContinuation> {
-        let _guard = self.lifecycle_lock.lock();
+        let gate = self.gate(conversation);
+        let _guard = gate
+            .normal
+            .try_lock_for(Duration::from_secs(2))
+            .ok_or_else(|| {
+                AppError::new(
+                    "codex_control_busy",
+                    "当前会话正在处理，请稍后重试；其他任务可继续使用。",
+                    "not_executed",
+                )
+            })?;
         if self.shutting_down.load(std::sync::atomic::Ordering::SeqCst)
             || self.stopping.lock().contains(conversation)
         {
             return Err(AppError::validation("正在停止执行，请稍后再请求修复。"));
         }
         let spec: crate::modules::tasks::IssueRepairSpec =
-            self.tasks
-                .prepare_issue_repair(task, issue, Some(revision))?;
+            self.tasks.prepare_issue_repair(task, issue, None)?;
         let metadata = self.conversation(task, conversation)?;
         if metadata.archived {
             return Err(AppError::validation("原会话已归档，请先恢复。"));
@@ -58,7 +67,7 @@ impl CodexTerminalService {
             q.repair.as_ref().is_some_and(|r| r.issue_id == issue)
                 && matches!(q.status.as_str(), "sent" | "running")
         }) {
-            let runtime = self.runtime_servers.lock().get(conversation).cloned();
+            let runtime = self.runtime_handle(conversation);
             if let Some(server) = runtime.filter(|s| s.is_alive()) {
                 let snapshot = server.request(
                     "thread/read",
@@ -125,11 +134,15 @@ impl CodexTerminalService {
                 return self.dispatch_or_record(&directory, &mut old);
             }
         }
+        self.tasks
+            .prepare_issue_repair(task, issue, Some(revision))?;
         let mut request = ContinueRequest {
             id: Uuid::new_v4().to_string(),
             task_id: task.into(),
             conversation_id: conversation.into(),
             native_id: native,
+            goal_id: None,
+            attempt_id: None,
             repair: Some(RepairIntent {
                 issue_id: spec.issue_id,
                 fingerprint: spec.fingerprint,

@@ -111,6 +111,7 @@ impl Fixture {
                 task_id: task.id.clone(),
                 session_id: Uuid::new_v4().to_string(),
                 state: Arc::new(Mutex::new(CodexTerminalState {
+                    generation: 0,
                     input_session_id: None,
                     task_id: task.id.clone(),
                     conversation_id: c.id.clone(),
@@ -132,6 +133,7 @@ impl Fixture {
                 killer: Arc::new(Mutex::new(Box::new(Killer))),
                 #[cfg(windows)]
                 process: None,
+                _crash_job: None,
                 subscriber: Default::default(),
             },
         );
@@ -266,7 +268,7 @@ fn issue_repair_targets_one_issue_and_deduplicates_without_marking_it_resolved()
         .unwrap();
     assert_eq!(again.request_id, sent.request_id);
     assert_eq!(f.calls.lock().len(), 1);
-    assert_eq!(f.revision(), revision);
+    assert!(f.revision() > revision);
     assert_eq!(
         f.service
             .tasks
@@ -496,7 +498,8 @@ fn ten_fast_answers_wait_for_native_completion_and_dispatch_once() {
             assert!(start.elapsed() < Duration::from_secs(5));
             std::thread::sleep(Duration::from_millis(10));
         }
-        let _guard = f.service.lifecycle_lock.lock();
+        let gate = f.service.gate(&f.conversation);
+        let _guard = gate.normal.lock();
         assert_eq!(f.calls.lock().len(), i + 1);
         drop(_guard);
         assert_eq!(
@@ -1253,3 +1256,5 @@ fn stale_input_session_cannot_write_into_a_replacement_terminal() {
         .write_bound(&f.conversation, &current, "valid")
         .unwrap();
 }
+#[path = "goal_execution_tests.rs"]
+mod goal_execution_tests;

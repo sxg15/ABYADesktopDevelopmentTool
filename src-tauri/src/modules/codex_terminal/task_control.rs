@@ -15,6 +15,8 @@ pub struct QuestionSubmission {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskControlState {
+    pub generation: u64,
+    pub active_goal_id: Option<String>,
     pub task_id: String,
     pub conversation_id: String,
     pub native_session_id: Option<String>,
@@ -75,20 +77,10 @@ impl CodexTerminalService {
         task_id: &str,
         conversation_id: &str,
     ) -> AppResult<TaskControlState> {
-        let _guard = self
-            .lifecycle_lock
-            .try_lock_for(std::time::Duration::from_millis(250))
-            .ok_or_else(|| {
-                AppError::new(
-                    "codex_control_busy",
-                    "会话控制正在处理，状态稍后刷新。",
-                    "not_executed",
-                )
-            })?;
-        let task = self.tasks.get(task_id)?;
+        let task = self.tasks.get_readonly(task_id)?;
         let metadata = self.conversation(task_id, conversation_id)?;
         let workflow = self.workflow(task_id, conversation_id)?;
-        let production = self.tasks.production_get(task_id)?;
+        let production = self.tasks.production_attention(&task)?;
         self.project_control(&task, &metadata, &workflow, &production, true)
     }
 
@@ -180,9 +172,7 @@ impl CodexTerminalService {
             )
         });
         let runtime = self
-            .runtime_servers
-            .lock()
-            .get(conversation_id)
+            .runtime_handle(conversation_id)
             .is_some_and(|s| s.is_alive());
         let connected = self.sessions.lock().contains_key(conversation_id);
         let same_executor = execution_control.as_ref().is_some_and(|control| {
@@ -191,15 +181,21 @@ impl CodexTerminalService {
                     || (control.owner == self.process_epoch
                         && control.backend_pid
                             == self
-                                .runtime_servers
-                                .lock()
-                                .get(conversation_id)
+                                .runtime_handle(conversation_id)
+                                .as_ref()
                                 .and_then(AppServerHandle::pid)))
         });
         let queued = queue.as_ref().is_some_and(|q| {
             q.status == "queued"
                 && q.owner == self.process_epoch
                 && !self.cancelled.lock().contains(conversation_id)
+        });
+        let attempt = production.record.as_ref().and_then(|r| {
+            r.workbench
+                .attempts
+                .iter()
+                .rev()
+                .find(|a| a.conversation_id == conversation_id)
         });
         let state = if self.stopping.lock().contains(conversation_id) {
             "pausing"
@@ -228,9 +224,13 @@ impl CodexTerminalService {
             }
         } else if task.status != crate::modules::tasks::TaskStatus::Active {
             "closed"
-        } else if queue
-            .as_ref()
-            .is_some_and(|q| q.status == "sending" || q.status == "needsReview")
+        } else if !runtime && attempt.is_some_and(|a| a.status == "interrupted") {
+            "interrupted"
+        } else if (!runtime
+            && attempt.is_some_and(|a| a.status == "reconciling" || a.status == "needsReview"))
+            || queue
+                .as_ref()
+                .is_some_and(|q| q.status == "sending" || q.status == "needsReview")
         {
             "needsReview"
         } else if queue.as_ref().is_some_and(|q| {
@@ -290,6 +290,11 @@ impl CodexTerminalService {
             "ready"
         };
         Ok(TaskControlState {
+            generation: self.gate(conversation_id).epoch(),
+            active_goal_id: production
+                .record
+                .as_ref()
+                .and_then(|r| r.workbench.active_goal_id.clone()),
             task_id: task_id.into(),
             conversation_id: conversation_id.into(),
             native_session_id: metadata.native_session_id.clone(),

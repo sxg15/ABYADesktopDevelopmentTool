@@ -57,11 +57,34 @@ pub struct ProductionRecord {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WorkbenchState {
+    pub attempts: Vec<WorkbenchAttempt>,
     pub goals: Vec<WorkbenchGoal>,
     pub active_goal_id: Option<String>,
     pub drafts: BTreeMap<String, Value>,
     pub requests: Vec<Value>,
     pub deferrals: Vec<Value>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WorkbenchAttempt {
+    pub id: String,
+    pub goal_id: String,
+    pub request_id: Option<String>,
+    pub conversation_id: String,
+    pub native_id: String,
+    pub turn_id: Option<String>,
+    pub process_epoch: String,
+    pub owner_pid: u32,
+    pub owner_created: Option<u64>,
+    pub backend_pid: Option<u32>,
+    pub backend_created: Option<u64>,
+    pub generation: u64,
+    pub status: String,
+    pub reason: String,
+    pub predecessor_id: Option<String>,
+    pub started_at: String,
+    pub updated_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

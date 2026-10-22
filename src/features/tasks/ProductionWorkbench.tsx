@@ -12,8 +12,10 @@ import { WorkbenchIssues } from "./WorkbenchIssues";
 import { Modal } from "../../app/Modal";
 import { statusName } from "./productionText";
 import "./workbench.css";
+import {GoalExecutionPanel,goalExecutionStatus,executionLabels,type ResumeGoal} from "./GoalExecutionPanel";
 
 type Props = ComponentProps<typeof ProductionPanel> & {
+  onResumeGoal?:ResumeGoal;
   control?: TaskControlState; visible:boolean; onTerminal:()=>void;
   onEnsureConnection:ComponentProps<typeof TaskIntakeDialog>["onEnsureConnection"];
   requestedGroup?:ComponentProps<typeof TaskIntakeDialog>["requestedGroup"];
@@ -22,6 +24,7 @@ const stageLabels:Record<string,string>={requirements:"需求整理",resources:"
 const english:Record<string,string>={requirements:"Requirements",resources:"Art & assets",plan:"Plan",implementation:"Implementation",review:"Playtest",delivery:"Acceptance",closeout:"Retrospective"};
 export function ProductionWorkbench(props:Props) {
   const {taskId,active,locale,control,onContinue,visible}=props, en=locale==="en-US";
+  const [reconciling,setReconciling]=useState(true);
   const [view,setView]=useState<ProductionView>(),[error,setError]=useState("");
   const [stage,setStage]=useState(""),[goalId,setGoalId]=useState("");
   const [snapshot,setSnapshot]=useState<ProductionRecord>(),[details,setDetails]=useState(false);
@@ -35,8 +38,14 @@ export function ProductionWorkbench(props:Props) {
   async function refresh(){if(locked.current)return; const seq=++sequence.current;
     try{const next=await productionApi.get(taskId);if(alive.current&&seq===sequence.current){accept(next);if(!dirty.current)setDraft(localStorage.getItem(`abya:workbench:${taskId}`)??next.record?.workbench?.drafts.current??"");}}
     catch(e){if(alive.current)setError(errorMessage(e));}}
+  useEffect(()=>{let valid=true;setReconciling(true);if(!productionApi.reconcile){setReconciling(false);return;}
+    productionApi.reconcile(taskId).then(v=>{if(valid)accept(v);}).catch(e=>{if(valid)setError(errorMessage(e));}).finally(()=>{if(valid)setReconciling(false);});
+    return()=>{valid=false;};},[taskId]);
   useEffect(()=>{alive.current=true;void refresh();const timer=setInterval(()=>{if(visible)void refresh();},3000);
     return()=>{alive.current=false;sequence.current++;clearInterval(timer);};},[taskId,visible]);
+  useEffect(()=>{if(!view?.record?.workbench?.attempts?.some(a=>a.status==="reconciling"))return;
+    let valid=true,pending=false;const timer=setInterval(()=>{if(!pending&&productionApi.reconcile){pending=true;productionApi.reconcile(taskId).then(v=>{if(valid)accept(v);}).catch(()=>{}).finally(()=>{pending=false;});}},5000);
+    return()=>{valid=false;clearInterval(timer);};},[taskId,!!view?.record?.workbench?.attempts?.some(a=>a.status==="reconciling")]);
   useEffect(()=>{const show=(e:Event)=>{const d=(e as CustomEvent<{taskId:string;stage:string}>).detail;if(d.taskId===taskId){setStage(d.stage);setGoalId("");}};
     window.addEventListener("abya:show-stage",show);return()=>window.removeEventListener("abya:show-stage",show);},[taskId]);
   useEffect(()=>{if(props.requestedReview){setStage(props.requestedReview.kind);setGoalId("");props.onReviewOpened?.();}},[props.requestedReview]);
@@ -55,6 +64,7 @@ export function ProductionWorkbench(props:Props) {
     try{const next=await action();if(alive.current)accept(next);return next;}catch(e){if(alive.current)setError(errorMessage(e));}
     finally{locked.current=false;if(alive.current)setBusy(false);}}
   async function send(){if(!r||!draft.trim()||running)return;
+    if(/^(继续|继续执行|继续此子流程|continue|resume)[。.!！\s]*$/i.test(draft.trim())){setNotice(en?"Use Resume this subprocess to keep the original goal.":"请点击‘继续此子流程’恢复当前目标；无需新建名为‘继续’的目标。");return;}
     const next=await run(()=>productionApi.workbench(taskId,r.revision,"request",{id:requestId,text:draft}));
     if(!next?.record)return;setDraft("");dirty.current=false;localStorage.removeItem(`abya:workbench:${taskId}`);setRequestId(crypto.randomUUID());setNotice(en?"Request saved.":"请求已保存，无需重复提交。");
     try{await onContinue?.("",undefined,next.record.revision);}catch(e){setError((en?"Saved; connection needs attention. ":"请求已保存，续接未完成：")+errorMessage(e));}}
@@ -75,11 +85,12 @@ export function ProductionWorkbench(props:Props) {
   return <div className="production-workbench">
     <nav className="wb-stages" aria-label={en?"Production stages":"制作阶段"}>{view.policy.stages.map((s,i)=><button key={s.id} aria-current={currentStage===s.id?"step":undefined} onClick={()=>{setStage(s.id);setGoalId("");}}><span>{i+1}</span><strong>{name(s.id)}</strong><small>{statusName(view.stageStatuses?.[s.id]??r.stages[s.id]??"pending",locale)}</small></button>)}</nav>
     <div className="wb-body"><aside className="wb-goals"><header><h3>{en?"Stage goals":"本阶段子阶段"}</h3><History size={16}/></header>
-      {goals.length===0?<p>{en?"Starts when this stage begins.":"进入本阶段后按目标建立。"}</p>:goals.map(g=><button key={g.id} className={(goalId||r.workbench?.activeGoalId)===g.id?"selected":""} onClick={()=>setGoalId(g.id)}><span>{g.number}</span><div><strong>{g.title}</strong><small>{statusName(g.status,locale)}</small></div><ChevronRight size={14}/></button>)}
+      {goals.length===0?<p>{en?"Starts when this stage begins.":"进入本阶段后按目标建立。"}</p>:goals.map(g=><button key={g.id} className={(goalId||r.workbench?.activeGoalId)===g.id?"selected":""} onClick={()=>setGoalId(g.id)}><span>{g.number}</span><div><strong>{g.title}</strong><small>{en?goalExecutionStatus(r,g,reconciling):executionLabels[goalExecutionStatus(r,g,reconciling)]??statusName(g.status,locale)}</small></div><ChevronRight size={14}/></button>)}
       <button className="text-button" onClick={()=>{setStage(r.currentStage);setGoalId("");}}>{en?"Return to current work":"返回当前工作"}</button>
       <button className="text-button" onClick={()=>setDetails(true)}>{en?"All documents & development details":"全部资料与开发详情"}</button>
     </aside><div className="wb-main"><section className="wb-outcome">{outcome}{!historical&&<WorkbenchIssues taskId={taskId} record={r} stage={currentStage} en={en} active={active&&!running} onUpdated={accept}/>}</section>
     <section className="wb-interaction" aria-label={en?"Task interaction":"任务交互"}>
+      {goal&&["work","request","feedback"].includes(goal.sourceType)&&<GoalExecutionPanel key={goal.id} record={r} goal={goal} active={active} checking={reconciling} en={en} onResume={props.onResumeGoal?async(...args)=>{const result=await props.onResumeGoal!(...args);await refresh();return result;}:undefined}/>}
       <div hidden={historical||mode!=="current"}><TaskIntakeDialog key={taskId} taskId={taskId} active={active} embedded executionBusy={running} requestedGroup={props.requestedGroup} onEnsureConnection={props.onEnsureConnection} onContinue={onContinue}/></div>
       {historical?<div className="wb-history-note"><p>{en?"History is read only. Your current draft is retained.":"当前正在查看历史；工作草稿仍保留，不会改写当时的决定。"}</p><button className="primary-button" onClick={()=>{setGoalId("");setStage(r.currentStage);}}>{en?"Return to current work":"回到当前工作"}</button></div>:<>
       <header><h3>{pending?(en?"Your answers":"需要你回答"):r.stages[currentStage]==="awaiting-confirmation"?(en?"Your decision":"需要你决定"):(en?"Continue this goal":"继续当前目标")}</h3><div><button className="text-button" onClick={()=>setMode(mode==="feedback"?"current":"feedback")}>{mode==="feedback"?(en?"Back to input":"返回输入"):(en?"Feedback & rechecks":"反馈与复验")}</button><button className="text-button" onClick={props.onTerminal}>{en?"Execution controls":"执行控制"}</button></div></header>

@@ -273,7 +273,7 @@ it.each(["waitingForAnswers","waitingForApproval","needsReview","running"])("pre
   renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
   await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
   fireEvent.click(screen.getByRole("button",{name:"继续任务"}));
-  await waitFor(()=>expect(productionApiMock.continueTask).toHaveBeenCalledExactlyOnceWith("task-1","conversation-1"));
+  await waitFor(()=>expect(productionApiMock.continueTask).toHaveBeenCalledExactlyOnceWith("task-1","conversation-1",undefined,expect.any(String)));
   await waitFor(()=>expect((screen.getByRole("button",{name:"继续任务"}) as HTMLButtonElement).disabled).toBe(false));
   expect(terminalApiMock.open).toHaveBeenCalledTimes(1);
   expect(productionApiMock.flushContinuation).not.toHaveBeenCalled();
@@ -332,7 +332,7 @@ describe("Codex conversation list", () => {
     expect(terminalApiMock.forceStop).not.toHaveBeenCalled();
     expect(screen.getByText(/已完成的文件或外部操作不会撤销/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button",{name:"确认强制停止"}));
-    await waitFor(()=>expect(terminalApiMock.forceStop).toHaveBeenCalledExactlyOnceWith("codex","task-1","conversation-1"));
+    await waitFor(()=>expect(terminalApiMock.forceStop).toHaveBeenCalledExactlyOnceWith("codex","task-1","conversation-1",0));
     expect(terminalApiMock.stop).not.toHaveBeenCalled();
     expect(productionApiMock.continueTask).not.toHaveBeenCalled();
     expect(terminalApiMock.open).toHaveBeenCalledTimes(1);
@@ -686,4 +686,18 @@ it("binds typed input to the exact attached PTY session",async()=>{
  await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
  await act(async()=>{terminalEvents.data?.("中文输入");});
  expect(terminalApiMock.write).toHaveBeenCalledWith("codex","conversation-1","中文输入","input-session-test");
+});
+it("force stop preempts a pending pause and ignores its late failure",async()=>{
+  let rejectPause!:(e:Error)=>void;
+  terminalApiMock.stop.mockImplementationOnce(()=>new Promise((_,reject)=>{rejectPause=reject;}));
+  renderView();await screen.findAllByText("Original title");giveHostLayout();act(notifyResize);
+  await waitFor(()=>expect(terminalApiMock.open).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByTitle("Pause task"));
+  const force=await screen.findByRole("button",{name:"强制停止此会话"});
+  expect((force as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(force);fireEvent.click(screen.getByRole("button",{name:"确认强制停止"}));
+  await screen.findByText(/此会话执行器已停止/);
+  await act(async()=>rejectPause(new Error("late pause failure")));
+  expect(screen.queryByText(/late pause failure/)).toBeNull();
+  expect(terminalApiMock.forceStop).toHaveBeenCalledTimes(1);
 });

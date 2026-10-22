@@ -569,3 +569,15 @@ and a fixed scoped prompt. It does not mutate issue state, approvals or evidence
 Record success only through the existing validated production operations. Frontend
 submission is serialized and shows queue/delivery feedback; a reply ending is not
 proof of repair.
+
+## Atomic goal execution journal (2026-10-22)
+workbench.attempts is additive/defaulted and separate from goal business status.
+Each attempt binds an existing current-stage/cycle goal and optional source request,
+with predecessor and executor identity. Only one active/uncertain attempt per task;
+terminal attempts cannot regress from late callbacks. Journal mutations use revisioned
+production commits and never approve documents or complete goals. Active execution
+selects its exact goal; legacy request fallback selects the newest unfinished request.
+The workbench shows interrupted/paused/reconciling/review states, original goal ID and
+attempt history. Continue this subprocess uses a durable idempotency key; bare continue
+text directs users to that control rather than creating another same-title goal.
+Unknown legacy bindings require explicit review; history/results remain intact.

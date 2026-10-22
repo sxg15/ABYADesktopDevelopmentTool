@@ -200,6 +200,8 @@ impl CodexTerminalService {
             task_id: task.into(),
             conversation_id: conversation.into(),
             native_id: native,
+            goal_id: None,
+            attempt_id: None,
             repair: None,
             group_id: None,
             answer_revision: 0,

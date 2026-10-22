@@ -245,3 +245,12 @@ productionApi.repairIssue invokes repair_codex_issue with taskId, conversationId
 issueId and expectedRevision. It returns the existing IntakeContinuation DTO; no
 arbitrary prompt/command input or new credential surface. Task/provider services own
 validation, prompt construction, queue and receipts; Tauri remains an adapter.
+
+## Execution ownership contracts (2026-10-22)
+TaskControlState and CodexTerminalState expose generation; force_stop_codex_conversation
+requires expectedGeneration. resume_workbench_goal accepts exact task/goal/conversation,
+expectedRevision, resumeIntentId and optional reconciliationNote. reconcile_task_execution
+is an explicit mutation coordinator, separate from readonly get_task_production.
+Continuation requests/production attempts retain exact IDs across restart. Scoped CLI
+lease revocation also blocks reissue by stale workers; only a fresh authorized session
+may release that fence. Other conversations retain independent credentials.

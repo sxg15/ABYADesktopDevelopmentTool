@@ -233,8 +233,8 @@ export const terminalApi = {
     withCodex(provider, () => api.stopCodexTerminal(conversationId)),
   interrupt: (provider: TerminalProvider, taskId: string, conversationId: string) =>
     withCodex(provider, () => api.interruptCodexTurn(taskId, conversationId)),
-  forceStop: (provider: TerminalProvider, taskId: string, conversationId: string) =>
-    withCodex(provider, () => invoke<void>("force_stop_codex_conversation", { taskId, conversationId })),
+  forceStop: (provider: TerminalProvider, taskId: string, conversationId: string, expectedGeneration=0) =>
+    withCodex(provider, () => invoke<void>("force_stop_codex_conversation", { taskId, conversationId, expectedGeneration })),
   listConversations: (provider: TerminalProvider, taskId: string) =>
     withCodex(provider, () => api.listCodexConversations(taskId)),
   createConversation: (

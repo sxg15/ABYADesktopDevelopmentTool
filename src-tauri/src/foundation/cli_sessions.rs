@@ -2,7 +2,7 @@
 use parking_lot::Mutex;
 use serde_json::{Value, json};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::OnceLock,
     time::{Duration, Instant},
 };
@@ -11,6 +11,7 @@ use std::{
 struct Registry {
     pipe: String,
     leases: HashMap<String, Lease>,
+    blocked: HashSet<String>,
 }
 struct Lease {
     token: String,
@@ -26,15 +27,22 @@ pub fn activate(pipe: String) {
     *registry().lock() = Registry {
         pipe,
         leases: HashMap::new(),
+        blocked: HashSet::new(),
     };
 }
 pub fn deactivate() {
     *registry().lock() = Registry::default();
 }
 pub fn revoke(provider: &str, conversation: &str) {
+    let mut state = registry().lock();
+    let key = format!("{provider}:{conversation}");
+    state.leases.remove(&key);
+    state.blocked.insert(key);
+}
+pub fn allow_new_session(provider: &str, conversation: &str) {
     registry()
         .lock()
-        .leases
+        .blocked
         .remove(&format!("{provider}:{conversation}"));
 }
 pub fn task_active(task: &str) -> bool {
@@ -45,7 +53,20 @@ pub fn task_active(task: &str) -> bool {
         .any(|lease| lease.context["taskId"] == task && lease.expires > Instant::now())
 }
 pub fn environment(provider: &str, task: &str, conversation: &str) -> Vec<(String, String)> {
-    let mut state = registry().lock();
+    environment_in(&mut registry().lock(), provider, task, conversation)
+}
+fn environment_in(
+    state: &mut Registry,
+    provider: &str,
+    task: &str,
+    conversation: &str,
+) -> Vec<(String, String)> {
+    if state
+        .blocked
+        .contains(&format!("{provider}:{conversation}"))
+    {
+        return vec![];
+    }
     if state.pipe.is_empty() {
         return vec![];
     }
@@ -119,5 +140,25 @@ mod tests {
         assert!(!authorize_in(&state, "secret", &context));
         state.leases.clear();
         assert!(!authorize_in(&state, "secret", &context));
+    }
+}
+
+#[cfg(test)]
+mod fence_tests {
+    use super::*;
+    #[test]
+    fn revoked_conversation_cannot_reissue_lease_until_new_session_authorized() {
+        let mut state = Registry {
+            pipe: "test-pipe".into(),
+            ..Default::default()
+        };
+        let first = environment_in(&mut state, "codex", "task", "chat");
+        assert!(!first.is_empty());
+        state.leases.remove("codex:chat");
+        state.blocked.insert("codex:chat".into());
+        assert!(environment_in(&mut state, "codex", "task", "chat").is_empty());
+        assert!(!environment_in(&mut state, "codex", "other", "other-chat").is_empty());
+        state.blocked.remove("codex:chat");
+        assert_ne!(first, environment_in(&mut state, "codex", "task", "chat"));
     }
 }
