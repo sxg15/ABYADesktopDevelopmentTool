@@ -26,6 +26,8 @@ pub struct MemoryStatus {
     pub latest: Option<MemorySample>,
     pub peak_private_bytes: u64,
     pub pressured: bool,
+    #[serde(default)]
+    pub warning: String,
     pub auto_stop: bool,
     pub incident_id: Option<String>,
     pub report_path: Option<String>,

@@ -24,6 +24,7 @@ export function MemoryPanel({id,managed,running,en=false}:{id:string;managed:boo
   return <section aria-label={t("内存监测与异常记录","Memory monitoring and incidents")} className="production-card">
     <h3>{t("内存监测与异常记录","Memory monitoring and incidents")}</h3>
     <p role="status">{!running&&latest?t("实例已停止，以下保留最后采样与异常记录。","Instance stopped; last samples and incident records remain."):status?.pressured?t("内存保护中：已限制高开销操作，请检查报告。","Memory pressure: expensive operations are restricted. Inspect the report."):latest?t("持续采样中；未触发保护不代表没有泄漏。","Sampling; no trigger is not proof of leak-free operation."):t("暂无采样。外部或已退出的实例不接受自动停止控制。","No sample. External or exited instances cannot be armed.")}</p>
+    {status?.warning&&<p role="status">{status.warning}</p>}
     {latest&&<small>{t("采样时间：","Sample time: ")}{new Date(latest.at).toLocaleString()}</small>}
     <dl className="detail-grid memory-metrics">
       {[[t("私有提交","Private commit"),gib(latest?.privateBytes)],[t("物理驻留","Working set"),gib(latest?.workingSetBytes)],
@@ -34,7 +35,7 @@ export function MemoryPanel({id,managed,running,en=false}:{id:string;managed:boo
     {(error||status?.error)&&<p role="alert" className="inline-error">{error||status?.error}</p>}
     <label className="memory-stop-choice"><input type="checkbox" checked={status?.autoStop??false} disabled={busy||!managed||!running||!latest}
       onChange={e=>void act(()=>memoryApi.arm(id,e.target.checked))}/><span>{t("允许超限时自动停止此实例（未保存内容可能丢失）","Allow automatic stop on pressure (unsaved work may be lost)")}</span></label>
-    <p>{t("默认记录、阻止新操作并请求取消；自动停止仅对本次实例有效。","Default: record, block new operations and request cancellation. Auto-stop applies only to this instance.")}</p>
+    <p>{t("系统可用内存与提交余量不足时仅警告。游戏自身占用或增长超限时保留操作保护；自动停止仅对本次实例有效。","Low system memory and commit headroom only warn. Per-game usage or growth limits retain operation protection; auto-stop applies only to this instance.")}</p>
     <div className="modal-actions"><button className="secondary-button" onClick={()=>void act(()=>memoryApi.reports())}>{t("打开全部异常记录","Open incident records")}</button>
       {status?.reportPath&&<button className="secondary-button" onClick={()=>void act(()=>memoryApi.reports(id))}>{t("打开本次报告","Open this report")}</button>}</div>
     {policy&&<details><summary>{t("保护阈值（全部托管实例）","Thresholds (all managed instances)")}</summary>

@@ -1,5 +1,8 @@
 # Release Skill
 
+## Memory warning release (2026-10-22)
+Publish memory-warning-20261022 after memory sampling/regression and complete checks. System headroom must no longer reject launch or mark instances pressured; preserve per-game protections and old task issue records.
+
 ## v5 workbench (2026-10-21)
 Workflow 2.3.0 includes the v5 workbench, journal and input/export contracts plus the pinned Impeccable 4.7.0 sources and platform adaptation under the canonical art method. Existing tasks retain pins until explicit upgrade. Package checks must include original licenses and nested method resources.
 

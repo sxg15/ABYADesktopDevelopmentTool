@@ -65,10 +65,15 @@ impl MemoryGuard {
             .get(id)
             .is_some_and(|trace| trace.status.pressured)
     }
-    pub fn admit_launch(&self) -> AppResult<()> {
+    pub fn launch_warning(&self) -> Option<String> {
         #[cfg(windows)]
         {
-            let sample = super::memory_probe::MemoryProbe::new(std::process::id())?.sample()?;
+            let sample = match super::memory_probe::MemoryProbe::new(std::process::id())
+                .and_then(|probe| probe.sample())
+            {
+                Ok(sample) => sample,
+                Err(_) => return Some("启动前内存采样不可用；已继续启动，请留意系统资源。".into()),
+            };
             let policy = self.policy();
             let startup = policy.private_limit_mib.min(3072) * 1024 * 1024;
             let pending: u64 = self
@@ -93,14 +98,12 @@ impl MemoryGuard {
                     .saturating_sub(sample.commit_bytes)
                     < pending + startup
             {
-                return Err(AppError::new(
-                    "instanceMemoryCapacity",
-                    "当前可用内存不足以安全启动另一个实例，请先结束不需要的实例。",
-                    "not_started",
-                ));
+                return Some(
+                    "系统可用内存或提交余量偏低，可能影响稳定性；此项仅警告，已继续启动。".into(),
+                );
             }
         }
-        Ok(())
+        None
     }
     fn recover(&self) {
         let Ok(entries) = std::fs::read_dir(self.root.join("active")) else {
@@ -265,13 +268,14 @@ impl MemoryGuard {
         let Some(trace) = traces.get_mut(id) else {
             return false;
         };
-        // 冷启动自然增长不作为泄漏信号；绝对占用与系统余量保护始终有效。
+        // 冷启动自然增长不作为泄漏信号；绝对占用保护始终有效，系统余量仅警告。
         let previous = if trace.samples.len() >= 120 {
             trace.samples.iter().rev().nth(59)
         } else {
             None
         };
         let reason = pressure_reason(&policy, &sample, previous);
+        trace.status.warning = system_warning(&policy, &sample);
         trace.status.peak_private_bytes = trace.status.peak_private_bytes.max(sample.private_bytes);
         trace.status.latest = Some(sample.clone());
         trace.samples.push_back(sample.clone());
@@ -477,6 +481,17 @@ pub(super) fn pressure_reason(
     if sample.private_bytes > policy.private_limit_mib * MIB {
         reasons.push("游戏私有提交超过阈值");
     }
+    if previous.is_some_and(|old| {
+        sample.private_bytes.saturating_sub(old.private_bytes) > policy.growth_limit_mib * MIB
+    }) {
+        reasons.push("近一分钟私有提交增长过快");
+    }
+    reasons.join("；")
+}
+
+pub(super) fn system_warning(policy: &MemoryPolicy, sample: &MemorySample) -> String {
+    const MIB: u64 = 1024 * 1024;
+    let mut reasons = Vec::new();
     if sample.available_bytes < policy.available_floor_mib * MIB {
         reasons.push("系统可用物理内存不足");
     }
@@ -486,10 +501,9 @@ pub(super) fn pressure_reason(
     {
         reasons.push("系统提交量接近上限");
     }
-    if previous.is_some_and(|old| {
-        sample.private_bytes.saturating_sub(old.private_bytes) > policy.growth_limit_mib * MIB
-    }) {
-        reasons.push("近一分钟私有提交增长过快");
+    if reasons.is_empty() {
+        String::new()
+    } else {
+        format!("{}；仅警告，不限制启动或工具操作。", reasons.join("；"))
     }
-    reasons.join("；")
 }

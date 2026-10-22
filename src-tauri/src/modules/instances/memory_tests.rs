@@ -142,3 +142,24 @@ fn failed_stop_does_not_claim_the_process_has_exited() {
     .unwrap();
     assert_eq!(identity["ended"], false);
 }
+
+#[test]
+fn low_system_memory_only_warns_even_when_auto_stop_is_armed() {
+    let (_, guard, instance) = fixture();
+    guard.arm(&instance.id, true).unwrap();
+    let mut low = sample(512);
+    low.available_bytes = 128 * 1024 * 1024;
+    low.commit_bytes = low.commit_limit_bytes;
+    assert!(!guard.sample(&instance.id, low.clone()));
+    assert!(!guard.pressured(&instance.id));
+    assert!(guard.status(&instance.id).warning.contains("仅警告"));
+    assert!(guard.status(&instance.id).incident_id.is_none());
+    low.private_bytes = 5000 * 1024 * 1024;
+    assert!(guard.sample(&instance.id, low));
+    assert!(guard.pressured(&instance.id));
+    for _ in 0..10 {
+        guard.sample(&instance.id, sample(512));
+    }
+    assert!(guard.status(&instance.id).warning.is_empty());
+    assert!(!guard.pressured(&instance.id));
+}

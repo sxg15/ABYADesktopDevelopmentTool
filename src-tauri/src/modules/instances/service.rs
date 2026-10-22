@@ -122,7 +122,7 @@ impl InstanceService {
 
     pub fn launch(&self, mut input: LaunchInstanceInput) -> AppResult<GameInstance> {
         let _launch_guard = self.launch_gate.lock();
-        self.memory.admit_launch()?;
+        let memory_warning = self.memory.launch_warning();
         let _files = crate::foundation::EXECUTABLE_FILES.read();
         let task_id = input.task_id.trim();
         if task_id.is_empty() {
@@ -205,10 +205,13 @@ impl InstanceService {
             Ok(())
         })?;
 
-        let stdout = OpenOptions::new()
+        let mut stdout = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&contract.log_path)?;
+        if let Some(warning) = &memory_warning {
+            let _ = writeln!(stdout, "[ABYA memory warning] {warning}");
+        }
         let stderr = stdout.try_clone()?;
         let executable = input.executable_path.trim().to_string();
         let working_directory = Path::new(&executable).parent().map(Path::to_path_buf);
@@ -271,6 +274,9 @@ impl InstanceService {
             Ok(())
         })?;
         self.monitor(id.clone(), child, log_path);
+        if let Some(warning) = memory_warning {
+            self.memory.event(&id, serde_json::json!({"kind":"launch_memory_warning","message":warning,"at":Utc::now().to_rfc3339()}));
+        }
         self.read(&id)
     }
 

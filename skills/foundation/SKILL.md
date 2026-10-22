@@ -1,5 +1,8 @@
 # Foundation Skill
 
+## System memory warning (2026-10-22)
+MemoryStatus adds defaulted warning text. System RAM/commit headroom now warns independently of pressured; per-game protection remains intact.
+
 ## Workbench adapters (2026-10-21)
 APP-only mutate_production_workbench, read_production_snapshot and export_developer_package delegate to TaskService. Shared record adds optional workbench goals/drafts/requests/deferrals. No schema migration or raw shell input. Legacy records default safely; read-only snapshot access validates the task and revision.
 
