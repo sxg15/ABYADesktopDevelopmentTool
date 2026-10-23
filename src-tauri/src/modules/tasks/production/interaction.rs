@@ -155,7 +155,10 @@ fn feedback_check(
         }
     } else {
         validation::version(r)?;
-        if r.stages.get("implementation").map(String::as_str) != Some("passed") {
+        if !matches!(
+            r.stages.get("implementation").map(String::as_str),
+            Some("passed" | "execution-converged")
+        ) {
             return Err(AppError::validation(
                 "尚无可验收作品，请等待 AI 提交完整初版。",
             ));

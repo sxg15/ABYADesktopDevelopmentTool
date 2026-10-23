@@ -567,7 +567,7 @@ function ConversationTerminal({
       }
       if (visibleRef.current && !document.querySelector('[aria-modal="true"]')) terminalRef.current?.focus();
       setActionNotice(continuationMessages[result.status]);
-      if(["started","resumed","running","completed"].includes(result.status))continueIntent.current=undefined;
+      if(["workSettled","started","resumed","running","completed"].includes(result.status))continueIntent.current=undefined;
     }catch(e){setActionNotice("");setError(errorMessage(e));}
     finally{actionBusyRef.current=false;setActionBusy(false);window.dispatchEvent(new Event("abya:control-changed"));}
   }

@@ -487,6 +487,49 @@ impl DesktopToolDispatcher {
                     serialize(self.dependencies.instances.recording_get(id)?)
                 }
             }
+            "game_runtime_operation_receipt" => serialize(
+                self.dependencies.runtime_bridge.operation_receipt(
+                    arguments["instanceId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("缺少 instanceId"))?,
+                    arguments["operationId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("缺少 operationId"))?,
+                )?,
+            ),
+            "development_production_current" => serialize(
+                self.dependencies.tasks.production_current(
+                    arguments["taskId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("缺少 taskId"))?,
+                )?,
+            ),
+            "development_production_receipt" => serialize(
+                self.dependencies.tasks.production_receipt(
+                    arguments["taskId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("缺少 taskId"))?,
+                    arguments["actionId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("缺少 actionId"))?,
+                )?,
+            ),
+            "development_production_batch" => serialize(
+                self.dependencies.tasks.production_batch(
+                    arguments["taskId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("缺少 taskId"))?,
+                    arguments["expectedRevision"]
+                        .as_u64()
+                        .ok_or_else(|| AppError::validation("缺少 expectedRevision"))?,
+                    arguments["batchId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("缺少 batchId"))?,
+                    arguments["items"]
+                        .as_array()
+                        .ok_or_else(|| AppError::validation("缺少 items"))?,
+                )?,
+            ),
             "development_production_get" => {
                 let id = arguments["taskId"]
                     .as_str()

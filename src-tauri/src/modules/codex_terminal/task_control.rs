@@ -15,6 +15,7 @@ pub struct QuestionSubmission {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskControlState {
+    pub autonomy_notice: Option<String>,
     pub generation: u64,
     pub active_goal_id: Option<String>,
     pub task_id: String,
@@ -222,6 +223,14 @@ impl CodexTerminalService {
             } else {
                 "running"
             }
+        } else if production.record.as_ref().is_some_and(|r| {
+            crate::modules::tasks::autonomous_implementation(r)
+                && matches!(
+                    r.workbench.execution.state.as_str(),
+                    "waitingDependencies" | "settledWithGaps" | "settled"
+                )
+        }) {
+            "workSettled"
         } else if task.status != crate::modules::tasks::TaskStatus::Active {
             "closed"
         } else if !runtime && attempt.is_some_and(|a| a.status == "interrupted") {
@@ -289,7 +298,12 @@ impl CodexTerminalService {
         } else {
             "ready"
         };
+        let settings = super::settings::read(&directory).unwrap_or_default();
+        let autonomy_notice=production.record.as_ref().filter(|r|r.policy["implementationExecution"]["mode"]=="autonomous"&&["plan","implementation"].contains(&r.current_stage.as_str()))
+            .filter(|_|settings["sandboxPolicy"]["type"]=="readOnly"||settings["approvalsReviewer"]=="user"&&settings["approvalPolicy"]!="never")
+            .map(|_|"当前原生权限为只读或人工逐项审核，可能暂停等待命令确认。可在终端执行设置选择 AI 自动审核；APP 不会代你改变权限。".into());
         Ok(TaskControlState {
+            autonomy_notice,
             generation: self.gate(conversation_id).epoch(),
             active_goal_id: production
                 .record

@@ -18,3 +18,10 @@ it("resumes the original interrupted goal with one stable intent and retained hi
   expect(resume.mock.calls[1]).toEqual(resume.mock.calls[0]);
   expect(screen.getByText("old-attempt")).toBeTruthy();
 });
+it("does not ask the user to continue a converged autonomous goal",()=>{
+ const goal={id:"goal",stage:"implementation",cycle:1,status:"in-progress",sourceType:"work"} as WorkbenchGoal;
+ const record={taskId:"task",revision:1,currentStage:"implementation",cycle:1,workbench:{activeGoalId:"goal",execution:{state:"waitingDependencies"},attempts:[{id:"done",goalId:"goal",status:"finished",updatedAt:"2026-10-23T00:00:00Z"}]}} as unknown as ProductionRecord;
+ render(<GoalExecutionPanel record={record} goal={goal} active checking={false} onResume={vi.fn()}/>);
+ expect(screen.getAllByText("已收敛，等待相关条件").length).toBeGreaterThan(0);
+ expect(screen.queryByRole("button",{name:"继续此子流程"})).toBeNull();expect(screen.getByText("done")).toBeTruthy();
+});

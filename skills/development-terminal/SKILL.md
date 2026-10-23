@@ -232,3 +232,13 @@ pause is pending, with independent deduplication and confirmation-time generatio
 Late pause responses cannot override newer force results. Continue carries a stable
 resume intent; interrupted execution navigates to the existing subprocess.
 Regression: useTaskControl.test.tsx, CodexTerminalView.test.tsx and goal execution tests.
+
+## Autonomous implementation control state (2026-10-23)
+workSettled indicates no currently runnable work or a consolidated gap report, not a
+request to click Continue repeatedly. Normal pause/stop, original-conversation controls
+and unknown-outcome handling remain separate. Native failed-turn recovery only runs in
+an explicitly enabled autonomous implementation context; user interruptions do not resume.
+
+Plan/implementation guidance projects a safe autonomyNotice from existing saved native
+permission settings (read-only or manual reviewer). This is a one-place preflight advisory,
+not permission escalation; neither policy upgrade nor scheduling changes native settings.

@@ -1256,5 +1256,7 @@ fn stale_input_session_cannot_write_into_a_replacement_terminal() {
         .write_bound(&f.conversation, &current, "valid")
         .unwrap();
 }
+#[path = "autonomy_queue_tests.rs"]
+mod autonomy_queue_tests;
 #[path = "goal_execution_tests.rs"]
 mod goal_execution_tests;

@@ -213,6 +213,7 @@ impl CodexTerminalService {
         }
     }
     pub(super) fn mark_goal_stopped(&self, task: &str, conversation: &str, status: &str) {
+        let _ = self.tasks.production_execution_pause(task);
         let Ok(view) = self
             .tasks
             .get_readonly(task)
@@ -378,7 +379,8 @@ impl CodexTerminalService {
             .stage_statuses
             .get(&r.current_stage)
             .is_some_and(|s| s == "blocked")
-            || r.feedback.iter().any(|f| f["status"] == "awaiting-recheck")
+            || (!crate::modules::tasks::autonomous_implementation(r)
+                && r.feedback.iter().any(|f| f["status"] == "awaiting-recheck"))
         {
             return Err(AppError::validation(
                 "请先处理当前阻塞或人工复验，再恢复子流程。",

@@ -231,7 +231,7 @@ impl RuntimeBridgeService {
         );
         let mut created = Vec::<String>::new();
         let result = (|| -> AppResult<()> {
-            let spec = self.tasks.acceptance_spec(task)?;
+            let mut spec = self.tasks.acceptance_spec(task)?;
             session["version"] = json!(spec.version);
             let last = self.tasks.acceptance_last(task)?;
             let reusable = last.as_ref().filter(|last| {
@@ -274,6 +274,10 @@ impl RuntimeBridgeService {
                         "上一组验收仍有运行中的窗口，请先关闭该组再打开新版本。",
                     ));
                 }
+                spec.archive_path = self
+                    .tasks
+                    .production_acceptance_archive(task, &spec.version)?;
+                session["launchArchiveCopy"] = json!(spec.archive_path);
                 for seat in 0..spec.seats {
                     self.progress(
                         task,

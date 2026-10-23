@@ -11,7 +11,7 @@ pub struct VersionSources {
     pub level_guid: String,
     pub instance_id: String,
 }
-fn archive_root(path: &Path) -> AppResult<PathBuf> {
+pub(super) fn archive_root(path: &Path) -> AppResult<PathBuf> {
     let root = if path.is_file() {
         path.parent().unwrap()
     } else {
@@ -49,7 +49,7 @@ fn player_roots(path: &Path) -> AppResult<Vec<PathBuf>> {
     }
     Ok(roots)
 }
-fn inventory(roots: &[PathBuf]) -> AppResult<Vec<(String, PathBuf, u64, u128)>> {
+pub(super) fn inventory(roots: &[PathBuf]) -> AppResult<Vec<(String, PathBuf, u64, u128)>> {
     let mut result = Vec::new();
     for (index, root) in roots.iter().enumerate() {
         let mut pending = vec![root.clone()];
@@ -89,7 +89,7 @@ fn inventory(roots: &[PathBuf]) -> AppResult<Vec<(String, PathBuf, u64, u128)>> 
     result.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(result)
 }
-fn digest(roots: &[PathBuf]) -> AppResult<String> {
+pub(super) fn digest(roots: &[PathBuf]) -> AppResult<String> {
     let before = inventory(roots)?;
     let mut h = Sha256::new();
     for (key, path, _, _) in &before {
@@ -148,9 +148,49 @@ impl TaskService {
         let _files = crate::foundation::EXECUTABLE_FILES.read();
         let root = self.production_workspace(task_id)?;
         let archive = archive_root(&sources.archive_path)?;
+        let record = self
+            .production_get(task_id)?
+            .record
+            .ok_or_else(|| AppError::validation("缺少制作记录。"))?;
+        if record.revision != expected {
+            return Err(super::conflict());
+        }
+        if record.current_version.as_deref() == Some(id) {
+            if record.version_details["archiveHash"] == digest(std::slice::from_ref(&archive))?
+                && record.version_details["playerBuildHash"]
+                    == digest(&player_roots(&sources.player_path)?)?
+                && record.version_details["archiveGuid"] == sources.archive_guid
+                && record.version_details["levelGuid"] == sources.level_guid
+            {
+                verify(&record.version_details)?;
+                return self.production_get(task_id);
+            }
+            return Err(AppError::validation("版本内容改变时必须使用新的版本 ID。"));
+        }
+        let freeze = record.policy["implementationExecution"]["mode"] == "autonomous";
+        let editable = archive.clone();
+        let archive = if freeze {
+            super::version_snapshots::copy_verified(
+                &archive,
+                &root
+                    .join("artifacts/version-snapshots")
+                    .join(uuid::Uuid::new_v4().to_string()),
+            )?
+        } else {
+            archive
+        };
         let player = sources.player_path.canonicalize()?;
-        let details = json!({"id":id,"archiveGuid":sources.archive_guid,"levelGuid":sources.level_guid,"instanceId":sources.instance_id,
+        let content = super::version_snapshots::manifest(&archive)?;
+        let mut details = json!({"id":id,"archiveGuid":sources.archive_guid,"levelGuid":sources.level_guid,"instanceId":sources.instance_id,
             "archiveSource":archive,"playerSource":player,"archiveHash":digest(&[archive])?,"playerBuildHash":digest(&player_roots(&player)?)?});
+        details["frozenSnapshot"] = json!(freeze);
+        details["editableArchiveSource"] = json!(editable);
+        details["contentManifest"] = content.clone();
+        details["validationImpact"] = super::version_snapshots::difference(
+            &record.version_details["contentManifest"],
+            &content,
+            record.version_details["playerBuildHash"] != details["playerBuildHash"],
+        );
         self.production_commit(task_id, expected, |r| {
             mutation::set_version(r, &root, &details)
         })?;

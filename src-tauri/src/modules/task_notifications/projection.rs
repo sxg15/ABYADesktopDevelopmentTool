@@ -103,7 +103,11 @@ pub fn project(
                 group.questions.len(),
             );
         }
-        for feedback in &r.feedback {
+        for feedback in r
+            .feedback
+            .iter()
+            .filter(|_| !crate::modules::tasks::autonomous_implementation(r))
+        {
             let Some(id) = feedback["id"].as_str() else {
                 continue;
             };

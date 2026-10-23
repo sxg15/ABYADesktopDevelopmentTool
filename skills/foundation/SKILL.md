@@ -254,3 +254,9 @@ is an explicit mutation coordinator, separate from readonly get_task_production.
 Continuation requests/production attempts retain exact IDs across restart. Scoped CLI
 lease revocation also blocks reissue by stale workers; only a fresh authorized session
 may release that fence. Other conversations retain independent credentials.
+
+## Autonomous implementation presentation (2026-10-23)
+Shared DTOs expose policy implementationExecution and workbench.execution (units, state,
+events) plus issue executionHandling. workSettled is execution convergence, not acceptance.
+The UI retains issue severity/history, shows current route and deferred dependencies,
+and does not route autonomous PB issues to repeated manual repair. No new credential fields.

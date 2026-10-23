@@ -29,6 +29,13 @@ and human-wait states for both UI surfaces. Application startup establishes norm
 context and per-data-directory instance ownership before opening SQLite. Release identity is embedded
 and verified against the installed manifest; validated packages are promoted to a stable Publish entry.
 
+Autonomous implementation (policy 2.4) separates issue severity, runnable dependency
+work and acceptance readiness. TaskService owns durable work units, bounded recovery,
+production receipts and observed timing; Codex owns native dispatch and current-process
+wake conditions. RuntimeBridge receipts fence duplicate capability calls. Saved autonomous
+versions use verified archive snapshots and separate acceptance run copies; file-level
+impact analysis remains shadow-only for unknown schema fields. Approval stays APP-only.
+
 `task-notifications` projects human actions from read-only task/provider interfaces for
 both guidance and Windows notifications. Content-free wakeups plus a 3-second native
 scan cover every active task independently of WebView selection/lifecycle. SQLite

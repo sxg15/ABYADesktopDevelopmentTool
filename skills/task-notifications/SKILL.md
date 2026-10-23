@@ -60,3 +60,9 @@ Run npm run check, Rust fmt, Clippy and tests. Regressions cover baseline, foreg
 ## LLM Maintenance Rule
 
 Update this Skill with identity, suppression, priority, delivery, navigation, settings, tests or lifecycle changes. Notification failures must not alter execution or block guidance.
+
+## Autonomous implementation (2026-10-23)
+While 2.4 autonomous implementation is active, pending feedback rechecks are retained but
+not raised as immediate human actions by the attention projection. At review they become
+normal human rechecks again. Native permission/login/terminal interaction remains visible;
+no approval is synthesized and no feedback is closed by this suppression.

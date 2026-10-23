@@ -53,3 +53,10 @@ it("prioritizes native feedback verification independently of document review",(
   expect(model.action).toBe("recheck");expect(model.target?.feedbackId).toBe("old-feedback");
   expect(model.pending.reviews).toBe(1);expect(model.tone).toBe("human");
 });
+it("autonomous Lua work keeps PB issues visible without sending the user to repair them",()=>{
+ const input={...view,policy:{...view.policy,implementationExecution:{mode:"autonomous"}},record:{taskId:"task",currentStage:"implementation",issues:[{id:"pb",kind:"blocker",status:"open",stage:"implementation",repairTarget:"abya-source",description:"known limitation"}],documents:{}}} as unknown as ProductionView;
+ const guide=taskGuidanceState("task",true,input,{taskId:"task",state:"running"} as TaskControlState,undefined,false);
+ expect(guide.tone).toBe("waiting");expect(guide.title).not.toContain("程序修复");expect(input.record?.issues[0].status).toBe("open");
+ const parked=taskGuidanceState("task",true,input,{taskId:"task",state:"workSettled"} as TaskControlState,undefined,false);
+ expect(parked.title).toContain("收敛");expect(parked.instruction).toContain("无需反复");
+});

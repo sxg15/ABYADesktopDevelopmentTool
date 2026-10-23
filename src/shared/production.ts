@@ -21,6 +21,7 @@ export interface TaskSkill {
   path: string; sha256: string;
 }
 export interface ProductionPolicy {
+  implementationExecution?: {mode:string};
   iterationMode?: string;
   selfTestChecks?: string[];
   workflowVersion: string;
@@ -29,6 +30,7 @@ export interface ProductionPolicy {
   questions: { id: string; text: string; family: string }[];
 }
 export interface ProductionIssue {
+  executionHandling?: {mode:string;reason:string;impact:string;affectedUnitIds:string[]};
   repairTarget?: "abya-source" | "abya-build" | "lua" | "other";
   title?: string; affectedStages?: string[]; blockedOperations?: string[];
   id: string; kind: string; status: string; stage: string; description: string;
@@ -48,6 +50,7 @@ export interface WorkbenchGoal {
 }
 export interface WorkbenchAttempt { id:string;goalId:string;requestId?:string;conversationId:string;nativeId:string;turnId?:string;status:string;reason:string;startedAt:string;updatedAt:string;predecessorId?:string;processEpoch:string;generation:number }
 export interface WorkbenchState {
+  execution?: {scopeHash?:string;state:string;activeUnitId?:string;updatedAt:string;units:{scopeHash?:string;id:string;goalId:string;cycle:number;title:string;status:string;reason:string;dependsOn:string[];routes:string[];route:number;attempts:number;resultPaths:string[]}[];events:{kind:string;unitId?:string;reason:string;at:string}[]};
   attempts?:WorkbenchAttempt[];
   goals:WorkbenchGoal[]; activeGoalId?:string; drafts:Record<string,string>;
   requests:{id:string;text:string;stage:string;status:string;revision:number}[];
@@ -121,12 +124,13 @@ export const productionApi = {
 };
 
 export interface IntakeContinuation {
-  status: "needsConnection" | "started" | "resumed" | "running" | "completed" | "superseded" | "queued" | "paused" | "waitingForAnswers" | "waitingForApproval" | "needsReview";
+  status: "workSettled" | "needsConnection" | "started" | "resumed" | "running" | "completed" | "superseded" | "queued" | "paused" | "waitingForAnswers" | "waitingForApproval" | "needsReview";
   requestId?:string;
   conversationId: string; nativeSessionId: string; turnId?: string;
 }
 export interface QuestionSubmission { production:ProductionView; continuation?:IntakeContinuation; warning?:string }
 export interface TaskControlState {
+  autonomyNotice?:string;
   activeGoalId?:string;
   generation?:number;
   taskId:string;conversationId:string;nativeSessionId?:string;state:string;connection:string;stage?:string;
@@ -135,6 +139,7 @@ export interface TaskControlState {
 }
 
 export const continuationMessages: Record<IntakeContinuation["status"],string> = {
+  workSettled:"当前可执行工作已收敛；未完成项和替代方案已保留，无需反复点击继续。",
   queued:"操作已保存，当前回复结束后继续。", paused:"任务已暂停，答案和历史已保存。",
   waitingForAnswers:"有待回答的问题，请先完成需求问答。",waitingForApproval:"正在等待文档确认，请在制作流程中确认对应版本。",
   needsReview:"上次执行结果需要核对，未重复发送。",needsConnection:"正在连接原会话，连接成功后继续……",

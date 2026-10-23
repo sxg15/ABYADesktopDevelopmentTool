@@ -25,7 +25,8 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
   const currentControl = !control?.taskId || control.taskId === taskId ? control : undefined;
   const state = currentControl?.state ?? (observed && turn ? ({inProgress:"running",waitingForPlan:"waitingForResponse",completed:"ready",failed:"failed",interrupted:"paused"}[turn.status]) : "unknown");
   const stage = r?.currentStage ?? "requirements";
-  const programmerIssues = stage === "implementation" ? activeProgrammerIssues(r?.issues ?? []) : [];
+  const autonomous = stage === "implementation" && view?.policy.implementationExecution?.mode === "autonomous";
+  const programmerIssues = stage === "implementation" && !autonomous ? activeProgrammerIssues(r?.issues ?? []) : [];
   const stageLabel = r ? stageName(stage, view?.policy.stages.find(s => s.id === stage)?.name ?? stage, en ? "en-US" : undefined) : "";
   // Human decisions come exclusively from the native projection used by Windows.
   const all = active && attention?.taskId === taskId && !attention.unavailable ? attention.items : [];
@@ -66,11 +67,16 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
     detail:text("需要你回答或审查时，这里会明确提醒；不必一直盯着终端。", "Questions and reviews will appear here; you do not need to watch the terminal."),
   });
   else if (state === "stopFailed") set({key:state,tone:"error",attention:true,title:text("停止失败，执行可能仍在继续", "Stop failed · execution may continue"),instruction:text("请前往原终端重试停止，或使用强制停止此会话。", "Open the original terminal to retry or force stop this conversation."),detail:currentControl?.lastError??"",button:text("前往终端处理", "Open terminal")});
+  else if (state === "workSettled") set({key:state,action:"stage",destination:text("查看位置：制作流程", "Open in: Workflow"),title:text("当前可执行工作已收敛", "Executable work has converged"),instruction:text("已有产出与待补能力已集中记录，无需反复发送继续。", "Results and remaining dependencies are recorded together."),detail:text("收敛不代表全部验收通过，未完成项仍然可见。", "Convergence is separate from acceptance."),button:text("查看结果与缺口", "View results and gaps")});
   else if (state === "interrupted") set({key:state,action:"stage",destination:text("处理位置：制作流程 · 当前子流程", "Open in: Workflow · current subprocess"),title:text("子流程被中断", "Subprocess interrupted"),instruction:text("进入原子流程，点击‘继续此子流程’恢复。", "Open the subprocess and resume it."),detail:text("保留原 ID、成果和执行历史。", "Original identity, results and history are retained."),button:text("查看原子流程", "Open subprocess")});
   else if (state === "awaitingInput") set({key:state,title:text("当前执行已中断，等待新指令", "Execution interrupted · ready for input"),instruction:text("在原终端直接输入新指令即可。", "Type a new instruction in the original terminal."),detail:text("终端和历史保持不变，已排队的自动续接不会重新启动。", "The terminal and history are retained. Queued continuations will not restart."),button:text("前往终端输入", "Open terminal")});
   else if (state === "awaitingContinue") set({key:state,title:text("终端已连接，任务等待继续", "Terminal connected · ready to continue"),instruction:text("请前往原会话终端，确认后点击“继续任务”。", "Open the original terminal and choose Continue task when ready."),detail:text("重新连接不会自动重发任务，已有答案与审查记录保留。", "Reconnecting does not resend work. Answers and reviews are retained."),button:text("前往终端继续", "Continue in terminal")});
   else if (["paused", "pausing"].includes(state)) set({key:state,title:text(state === "pausing" ? "正在暂停任务" : "任务已暂停", state === "pausing" ? "Pausing task" : "Task paused"),instruction:text("需要继续时，请前往原会话终端。", "Open the original terminal when ready to continue."),detail:text("答案与历史记录已保留，不会自动重新提交。", "Answers and history are retained and will not be resubmitted."),button:text("前往终端", "Open terminal")});
   else if (view && ["ready", "notStarted"].includes(state)) set({key:state,title:text(state === "notStarted" ? "任务尚未开始执行" : "本轮回复已结束", state === "notStarted" ? "Task not started" : "This response has ended"),instruction:text("AI 当前未在执行，请前往终端继续或输入需求。", "AI is idle. Open the terminal to continue or provide a request."),detail:text("如果出现新的阶段待办，这里会显示明确入口。", "New stage actions will appear here."),button:text("前往终端继续", "Continue in terminal")});
+  if(currentControl?.autonomyNotice && !["running","waitingForResponse","queued","pausing","paused","stopFailed"].includes(state)) {
+    model.detail=en?"Native permissions may require manual confirmation. Check execution settings before autonomous implementation; permissions are never changed automatically.":currentControl.autonomyNotice;
+    if(!primary&&!["workSettled","closed"].includes(state)){model.title=text("自主执行前核对原生权限", "Check native permissions before autonomous execution");model.button=text("前往终端执行设置", "Open terminal settings");model.action="terminal";model.destination=text("处理位置：终端 · 执行设置", "Open in: Terminal · execution settings");}
+  }
   model.additional = Math.max(0, items.length - (primary && model.tone !== "programmer" ? 1 : 0));
   return model;
 }

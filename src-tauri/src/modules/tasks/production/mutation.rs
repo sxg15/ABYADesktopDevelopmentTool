@@ -36,6 +36,11 @@ pub(super) fn apply(
         return Err(AppError::validation("data 必须为对象。"));
     }
     match operation {
+        "record-validation-run" => super::validation_runs::record(r, root, data),
+        "save-work-unit"
+        | "report-work-unit"
+        | "record-issue-handling"
+        | "conclude-implementation" => super::autonomy::apply(r, root, operation, data),
         "record-art-input"
         | "save-art-requirement"
         | "review-art-source"
@@ -450,6 +455,11 @@ fn evidence(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
 }
 
 fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
+    if data.get("executionHandling").is_some() {
+        return Err(AppError::validation(
+            "处理与替代方案请通过 record-issue-handling 记录，不能直接覆盖验证绑定。",
+        ));
+    }
     if let Some(target) = data.get("repairTarget")
         && !["abya-source", "abya-build", "lua", "other"]
             .iter()
@@ -527,6 +537,9 @@ fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
     if let Some(i) = r.issues.iter().position(|i| i["id"] == id) {
         if data.get("repairTarget").is_none() && !r.issues[i]["repairTarget"].is_null() {
             value["repairTarget"] = r.issues[i]["repairTarget"].clone();
+        }
+        if data.get("executionHandling").is_none() && !r.issues[i]["executionHandling"].is_null() {
+            value["executionHandling"] = r.issues[i]["executionHandling"].clone();
         }
         r.issues[i] = value;
     } else {
@@ -653,6 +666,7 @@ fn complete(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
             "本阶段还有待回答的问题，请先提交答案。",
         ));
     }
+    super::autonomy::verify_workarounds(r, root, stage)?;
     validation::clear_issues(r, stage)?;
     match stage {
         "resources" => {
@@ -675,6 +689,7 @@ fn complete(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
                 validation::approved(r, root, "requirements")?;
                 validation::approved(r, root, "plan")?;
                 super::iteration::ready(r, root)?;
+                super::autonomy::fulfill_requests(r);
                 set_stage(r, "implementation", "passed");
                 r.current_stage = "review".into();
                 r.stages.insert("review".into(), "awaiting-feedback".into());

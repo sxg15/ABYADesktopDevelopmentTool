@@ -105,6 +105,12 @@ fn answer(r: &mut ProductionRecord, operation: &str, data: &Value) -> AppResult<
 }
 
 pub(super) fn publish(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
+    if super::autonomy::autonomous_implementation(r) {
+        return Err(AppError::validation(
+            "Lua 自主执行阶段请记录工作项与产品差异，集中到试玩决定；不要发布实现过程问答。",
+        ));
+    }
+
     let stage = data["stage"]
         .as_str()
         .unwrap_or(&r.current_stage)

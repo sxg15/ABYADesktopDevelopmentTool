@@ -1,4 +1,5 @@
 mod acceptance;
+mod operation_receipts;
 mod operation_trace;
 mod process;
 fn memory_safe_tool(name: &str) -> bool {
@@ -77,7 +78,7 @@ impl RuntimeBridgeService {
         }
     }
     #[allow(clippy::too_many_arguments)]
-    fn run(
+    fn run_inner(
         &self,
         id: &str,
         args: &[&str],

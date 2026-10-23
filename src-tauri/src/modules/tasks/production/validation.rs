@@ -62,6 +62,8 @@ fn clear_issues_for(r: &ProductionRecord, stage: &str, operation: &str) -> AppRe
         i["status"] != "resolved"
             && i["kind"] != "suggestion"
             && super::workspace::affects(i, stage)
+            && !(["implementation", "review", "delivery", "closeout"].contains(&stage)
+                && super::autonomy::workaround_bound(r, i))
             && i["blockedOperations"]
                 .as_array()
                 .is_none_or(|actions| actions.iter().any(|a| a == operation))
@@ -175,10 +177,12 @@ pub(super) fn document_gate(r: &ProductionRecord, root: &Path, kind: &str) -> Ap
             }
         }
         "delivery" => {
-            if r.issues
-                .iter()
-                .any(|i| i["status"] != "resolved" && i["kind"] != "suggestion")
-            {
+            super::autonomy::verify_workarounds(r, root, "delivery")?;
+            if r.issues.iter().any(|i| {
+                i["status"] != "resolved"
+                    && i["kind"] != "suggestion"
+                    && !super::autonomy::workaround_bound(r, i)
+            }) {
                 return Err(AppError::validation("交付前仍有未关闭的必要问题。"));
             }
             approved(r, root, "requirements")?;

@@ -115,3 +115,8 @@ APP显式升级需停止任务终端，保留Skill备份、批准文档、轮次
 顶部对话步骤用conversation report的plan数组，每项step/status（pending/inProgress/completed/failed）。
 阶段进展用update-stage。计划和报告面向策划用自然中文，命令、技术编号和证据放详细记录。
 技能只按当前操作读取；skill list看摘要，skill read仅读选中项，避免重复全库阅读。
+
+
+流程 2.4 的 Lua 阶段按 [自主实现与恢复](autonomous-implementation.md) 执行。
+问题严重程度和验收影响不等于整阶段停机；重启/恢复预算耗尽后暂缓相关工作，继续独立项。
+同一问题保留 ID 与证据，不将 AI 自测交给策划逐项复验。最终批准与用户反馈仍不代办。

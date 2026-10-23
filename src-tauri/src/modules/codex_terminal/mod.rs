@@ -1,4 +1,5 @@
 mod app_server;
+mod autonomy_watch;
 #[cfg(windows)]
 mod crash_job;
 mod diagnostics;
@@ -213,7 +214,7 @@ impl CodexTerminalService {
         )
     }
     pub fn new(tasks: TaskService) -> AppResult<Self> {
-        Ok(Self {
+        let service = Self {
             tasks,
             sessions: Default::default(),
             resolver: Arc::new(resolve_codex),
@@ -232,7 +233,10 @@ impl CodexTerminalService {
             queue_tasks: Default::default(),
             auto_progress: Default::default(),
             shutting_down: Default::default(),
-        })
+        };
+        #[cfg(not(test))]
+        service.watch_autonomous_dependencies();
+        Ok(service)
     }
 
     pub fn availability(&self) -> CodexTerminalAvailability {

@@ -34,6 +34,6 @@ const en: Record<keyof typeof zh, string> = {
 };
 export const productionText = (locale?: string) => locale === "en-US" ? en : zh;
 const stages: Record<string, string> = { requirements: "Requirements", resources: "Resources", plan: "Plan", implementation: "Implementation", review: "8+4 review", delivery: "Delivery", closeout: "Closeout" };
-const statuses: Record<string, string> = { superseded:"已有新版本", submitted:"已提交", pending:"待处理", completed:"已完成", "awaiting-feedback": "等待人工试玩", "waiting-for-answers": "待回答", "awaiting-recheck": "待复验", "not-started": "未开始", "in-progress": "进行中", "awaiting-confirmation": "待确认", blocked: "遇到问题", passed: "已通过", closed: "已关闭", stopped: "已停止", open: "未关闭", resolved: "已解决", rejected: "已退回", accepted: "已确认", "not-applicable": "不适用" };
+const statuses: Record<string, string> = {"execution-converged":"执行收敛，待补缺口", superseded:"已有新版本", submitted:"已提交", pending:"待处理", completed:"已完成", "awaiting-feedback": "等待人工试玩", "waiting-for-answers": "待回答", "awaiting-recheck": "待复验", "not-started": "未开始", "in-progress": "进行中", "awaiting-confirmation": "待确认", blocked: "遇到问题", passed: "已通过", closed: "已关闭", stopped: "已停止", open: "未关闭", resolved: "已解决", rejected: "已退回", accepted: "已确认", "not-applicable": "不适用" };
 export const stageName = (id: string, fallback: string, locale?: string) => locale === "en-US" ? stages[id] ?? id : fallback;
 export const statusName = (id: string, locale?: string) => locale === "en-US" ? id.replace(/-/g, " ") : statuses[id] ?? id;

@@ -593,3 +593,31 @@ must not disable resizing. Question components stay mounted; no task/answer/appr
 mutation comes from a resize. Both panes scroll independently and the divider stays visible.
 Validate real long-question drafts, question/tab switching, reload, drag cancellation,
 keyboard bounds and small-window overflow with scripts/test-workbench-split.mjs.
+
+## Autonomous implementation 2.4 (2026-10-23)
+New policy implementationExecution.mode=autonomous separates unresolved issue severity,
+execution dependencies and acceptance gates. Old pinned tasks retain their policy until
+explicit APP upgrade. Workbench execution units bind existing goals, immutable definitions,
+DAG dependencies, bounded routes, verified output file hashes, conditions and event history.
+Automatic scheduling chooses independent pending work, then bounded recovery routes; no
+progress is not a manual-continue request. Deferral never resolves the original issue.
+Lua technical questions are recorded as work/issue handling; no technical questionnaire.
+AI self-tests remain separate from user feedback. conclude-implementation preserves gaps;
+only a version with actual lua/core-loop/save-reload evidence can enter review as
+execution-converged. It cannot pass delivery; existing complete-stage gates remain.
+production current is bounded, read-only, omits full documents/history and exposes counts.
+production batch uses per-item durable action receipts and sequential CAS, stops at first
+rejection and reports prior commits. Retries do not advance the revision past intervening
+user edits. Batch registration never approves or closes feedback. record-validation-run
+binds one real run to existing tests/art checks atomically, with immutable input identity.
+Captured autonomous versions keep verified archive snapshots; editable source is recorded
+separately and acceptance receives another validated copy. File-hash impact analysis is
+shadow-only; unknown PBArc/PBConf changes and Player changes require conservative coverage.
+Completed stage may fulfill only exactly-bound requests whose units succeeded; no title merge.
+Observed execution/wait/pause intervals are distinct from model time and unobserved gaps.
+
+Verified equivalent PB workarounds bind exact issue fingerprint, approved scope, cycle,
+version and reviewed evidence. They may clear implementation/delivery issue gates without
+claiming the platform issue resolved; candidate changes never qualify. Gate-time evidence
+hash validation and all normal gameplay/visual acceptance checks remain. save-issue cannot
+forge executionHandling bindings; changed problem/version/scope invalidates coverage.

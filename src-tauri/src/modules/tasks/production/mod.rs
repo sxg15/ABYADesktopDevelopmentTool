@@ -1,3 +1,7 @@
+mod autonomy;
+mod autonomy_service;
+mod receipts;
+pub use autonomy::autonomous_implementation;
 mod acceptance;
 mod art_design;
 mod art_design_sources;
@@ -21,6 +25,8 @@ mod mutation;
 mod questions;
 mod report;
 mod validation;
+mod validation_runs;
+mod version_snapshots;
 mod versions;
 mod visuals;
 mod workbench;

@@ -57,6 +57,7 @@ pub struct ProductionRecord {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WorkbenchState {
+    pub execution: super::autonomy::ExecutionLedger,
     pub attempts: Vec<WorkbenchAttempt>,
     pub goals: Vec<WorkbenchGoal>,
     pub active_goal_id: Option<String>,

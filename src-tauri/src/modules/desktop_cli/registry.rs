@@ -78,6 +78,43 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             reversible_write(),
         ),
         tool(
+            "development_production_current",
+            "Read bounded current work, dependencies and recovery context without full history.",
+            "Current production context",
+            object_schema(json!({"taskId":{"type":"string"}}), &[]),
+            read_only(),
+        ),
+        tool(
+            "development_production_receipt",
+            "Query a saved production action receipt; never replays a write.",
+            "Production action receipt",
+            object_schema(
+                json!({"taskId":{"type":"string"},"actionId":{"type":"string"}}),
+                &["actionId"],
+            ),
+            read_only(),
+        ),
+        tool(
+            "development_production_batch",
+            "Sequential CAS-protected production registrations with durable per-item receipts. Stops at first rejection; prior commits remain applied. Same batch/id with different input conflicts.",
+            "Register production batch",
+            object_schema(
+                json!({"taskId":{"type":"string"},"expectedRevision":{"type":"integer","minimum":0},"batchId":{"type":"string","format":"uuid"},"items":{"type":"array","minItems":1,"maxItems":64,"items":{"type":"object","properties":{"operation":{"type":"string"},"data":{"type":"object"}},"required":["operation","data"],"additionalProperties":false}}}),
+                &["expectedRevision", "batchId", "items"],
+            ),
+            reversible_write(),
+        ),
+        tool(
+            "game_runtime_operation_receipt",
+            "Read an owned runtime operation receipt without replaying its effects or exposing raw output.",
+            "Runtime operation receipt",
+            object_schema(
+                json!({"instanceId":{"type":"string"},"operationId":{"type":"string"}}),
+                &["instanceId", "operationId"],
+            ),
+            read_only(),
+        ),
+        tool(
             "development_production_get",
             "Read this task's authoritative production state, policy, version-bound decisions and warnings.",
             "Read production workflow",
@@ -90,7 +127,7 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             "Update production workflow",
             object_schema(
                 json!({"taskId":{"type":"string"},"expectedRevision":{"type":"integer","minimum":0},
-                "operation":{"type":"string","enum":["initialize","configure","configure-acceptance","register-visual","save-self-test","update-feedback","reuse-evidence","publish-questions","register-artifact","update-stage","register-approved-template","submit-document","register-evidence","set-milestone","save-issue","save-round","complete-stage","save-knowledge","update-workbench-request","record-art-input","save-art-requirement","review-art-source","analyze-art-reference","save-art-direction","save-art-coverage","save-art-realization","save-art-case-draft","inspect-art-case","use-art-case"]},
+                "operation":{"type":"string","enum":["record-validation-run","save-work-unit","report-work-unit","record-issue-handling","conclude-implementation","initialize","configure","configure-acceptance","register-visual","save-self-test","update-feedback","reuse-evidence","publish-questions","register-artifact","update-stage","register-approved-template","submit-document","register-evidence","set-milestone","save-issue","save-round","complete-stage","save-knowledge","update-workbench-request","record-art-input","save-art-requirement","review-art-source","analyze-art-reference","save-art-direction","save-art-coverage","save-art-realization","save-art-case-draft","inspect-art-case","use-art-case"]},
                 "data":{"type":"object","description":"initialize: questionMode; submit-document: kind/path; register-evidence: id/path/kind/captureType/reviewed/description; set-milestone: name/evidenceIds; save-issue: id/kind/status/stage/description/fix/recheck/evidenceIds/resumeWhen; save-round: number/close/checks/questions/evidenceIds; complete-stage: stage/summary/checks; save-knowledge: entries; configure: questionMode/playerMode/taskTemplate/artTemplate; publish-questions: id/title/questions (id/text/options/optional), binding supplied by Desktop. Record saved-file versions through production version."}}),
                 &["expectedRevision", "operation", "data"],
             ),

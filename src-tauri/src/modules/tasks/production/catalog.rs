@@ -242,6 +242,10 @@ impl TaskService {
                 return Ok(());
             }
             if compatible {
+                if r.policy["implementationExecution"]["mode"]=="autonomous" && r.current_stage=="implementation" && r.stages.get("implementation").is_some_and(|s|s=="blocked") {
+                    r.stages.insert("implementation".into(),"in-progress".into());
+                    super::autonomy::event(&mut r.workbench.execution,"policy-upgraded",None,"明确升级后启用问题隔离；原问题和批准历史保留，不自动启动执行。");
+                }
                 r.issues.push(serde_json::json!({"id":format!("workflow-update-{}",r.revision),"kind":"suggestion","status":"resolved","stage":"closeout","description":"制作流程界面与沟通规则已更新，已确认的需求、计划和历史继续有效。","backup":backup,"updatedAt":now()}));
                 return Ok(());
             }

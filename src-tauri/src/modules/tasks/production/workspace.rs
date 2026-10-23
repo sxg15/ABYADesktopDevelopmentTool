@@ -14,9 +14,15 @@ pub(super) fn stage_statuses(r: &ProductionRecord) -> BTreeMap<String, String> {
         if *state == "passed" || *state == "not-started" && *stage != r.current_stage {
             continue;
         }
-        if r.issues
-            .iter()
-            .any(|i| i["status"] != "resolved" && i["kind"] != "suggestion" && affects(i, stage))
+        if !(stage == "implementation" && super::autonomy::autonomous_implementation(r))
+            && r.issues.iter().any(|i| {
+                i["status"] != "resolved"
+                    && i["kind"] != "suggestion"
+                    && affects(i, stage)
+                    && !(["implementation", "review", "delivery", "closeout"]
+                        .contains(&stage.as_str())
+                        && super::autonomy::workaround_bound(r, i))
+            })
         {
             *state = "blocked".into();
         } else if r
@@ -121,6 +127,16 @@ pub(super) fn update_stage(r: &mut ProductionRecord, root: &Path, data: &Value) 
             "进展状态应为进行中、遇到问题或已暂停。",
         ));
     }
+    let status = if stage == "implementation" && super::autonomy::autonomous_implementation(r) {
+        if status == "stopped" {
+            return Err(AppError::validation(
+                "自主执行中的技术问题请记录工作项暂缓；用户暂停由终端控制处理。",
+            ));
+        }
+        "in-progress"
+    } else {
+        status
+    };
     r.stage_updates.insert(stage.into(),json!({"summary":summary,"nextAction":data["nextAction"].as_str().unwrap_or(""),"updatedAt":now()}));
     r.stages.insert(stage.into(), status.into());
     Ok(())

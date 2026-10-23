@@ -7,9 +7,11 @@ export type ResumeGoal = (goal:string,revision:number,intent:string,note?:string
 export function goalExecutionStatus(record:ProductionRecord,goal:WorkbenchGoal,checking=false) {
   if(!["work","request","feedback"].includes(goal.sourceType)||["completed","resolved","accepted","superseded"].includes(goal.status))return goal.status;
   if(checking)return "reconciling";
-  return [...(record.workbench?.attempts??[])].reverse().find(a=>a.goalId===goal.id)?.status??"untracked";
+  const status=[...(record.workbench?.attempts??[])].reverse().find(a=>a.goalId===goal.id)?.status??"untracked";
+  if(status==="finished"&&goal.id===record.workbench?.activeGoalId&&["waitingDependencies","settledWithGaps","settled"].includes(record.workbench?.execution?.state??""))return "workSettled";
+  return status;
 }
-export const executionLabels:Record<string,string>={running:"进行中",sending:"正在派发",queued:"等待连接 / 恢复",finished:"待继续",paused:"已暂停",interrupted:"被中断",reconciling:"正在核对",needsReview:"结果待核对",failed:"执行失败",untracked:"待核对 / 未执行"};
+export const executionLabels:Record<string,string>={workSettled:"已收敛，等待相关条件",running:"进行中",sending:"正在派发",queued:"等待连接 / 恢复",finished:"待继续",paused:"已暂停",interrupted:"被中断",reconciling:"正在核对",needsReview:"结果待核对",failed:"执行失败",untracked:"待核对 / 未执行"};
 export function GoalExecutionPanel({record,goal,active,checking,onResume,en=false}:{record:ProductionRecord;goal:WorkbenchGoal;active:boolean;checking:boolean;onResume?:ResumeGoal;en?:boolean}) {
   const [busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
   const [review,setReview]=useState(false),[note,setNote]=useState("");const locked=useRef(false);
@@ -23,14 +25,14 @@ export function GoalExecutionPanel({record,goal,active,checking,onResume,en=fals
   async function resume(){if(locked.current||!onResume)return;locked.current=true;setBusy(true);setError("");
     const id=intentRef.current??intent();intentRef.current=id;
     try{const result=await onResume(goal.id,record.revision,id,note||undefined);setNotice(continuationMessages[result.status]);
-      if(["started","resumed","running","completed","queued"].includes(result.status)){try{localStorage.removeItem(key);}catch{/* Optional cache. */}intentRef.current=undefined;setReview(false);}}
+      if(["workSettled","started","resumed","running","completed","queued"].includes(result.status)){try{localStorage.removeItem(key);}catch{/* Optional cache. */}intentRef.current=undefined;setReview(false);}}
     catch(e){setError(errorMessage(e));}finally{locked.current=false;setBusy(false);}}
   const allowed=goal.stage===record.currentStage&&goal.cycle===record.cycle&&!!executionLabels[status];
   return <section className="goal-execution" aria-label={en?"Subprocess execution":"子流程执行状态"}>
     <strong>{en?status:executionLabels[status]??status}</strong>
     {attempt?.reason&&<p>{attempt.reason}</p>}
     {status==="untracked"&&<p>{en?"This older goal has no execution binding. Review its history before choosing the original conversation.":"旧记录没有可靠的执行绑定。请核对历史并选定原会话；同名目标不会被自动合并或标记完成。"}</p>}
-    {allowed&&status!=="running"&&status!=="sending"&&<button className="primary-button" disabled={!active||busy||checking||!onResume} onClick={()=>{
+    {allowed&&status!=="workSettled"&&status!=="running"&&status!=="sending"&&<button className="primary-button" disabled={!active||busy||checking||!onResume} onClick={()=>{
       if(["needsReview","reconciling","untracked"].includes(status)){intentRef.current=intent(true);setReview(true);}else void resume();
     }}>{busy?(en?"Resuming…":"正在恢复…"):en?"Resume this subprocess":"继续此子流程"}</button>}
     {notice&&<p role="status">{notice}</p>}{error&&<p role="alert">{error}</p>}

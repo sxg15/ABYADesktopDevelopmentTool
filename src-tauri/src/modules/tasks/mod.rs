@@ -8,6 +8,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 mod production;
+pub use production::autonomous_implementation;
 pub use production::{
     AcceptanceSpec, IssueRepairSpec, ProductionDecision, ProductionMutation, ProductionRecord,
     ProductionView, SkillEntry, VersionSources, WorkbenchAttempt,

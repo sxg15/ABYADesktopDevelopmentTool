@@ -418,7 +418,15 @@ impl CodexTerminalService {
                 .as_array()
                 .and_then(|turns| turns.last());
             if !super::auto_progress::eligible(&production)
-                || latest.is_none_or(|t| t["id"] != *expected || t["status"] != "completed")
+                || latest.is_none_or(|t| {
+                    t["id"] != *expected
+                        || (t["status"] != "completed"
+                            && !(production
+                                .record
+                                .as_ref()
+                                .is_some_and(crate::modules::tasks::autonomous_implementation)
+                                && t["status"] == "failed"))
+                })
             {
                 request.status = "superseded".into();
                 save(directory, request)?;
@@ -478,6 +486,38 @@ impl CodexTerminalService {
         if self.cancelled.lock().contains(&request.conversation_id) {
             return Ok(request.response(S::Paused));
         }
+        let autonomous = production
+            .record
+            .as_ref()
+            .is_some_and(crate::modules::tasks::autonomous_implementation);
+        let unit = if autonomous {
+            self.tasks
+                .production_prepare_goal(&request.task_id, request.goal_id.as_deref())?;
+            self.tasks.production_schedule(
+                &request.task_id,
+                &format!("dispatch:{}", request.id),
+                false,
+            )?
+        } else {
+            None
+        };
+        if autonomous && unit.is_none() {
+            if let Some(id) = &request.attempt_id {
+                self.tasks.production_attempt_status(
+                    &request.task_id,
+                    id,
+                    "paused",
+                    None,
+                    "当前无可派发工作；原目标与结果保留。",
+                )?;
+            }
+            request.status = "settled".into();
+            save(directory, request)?;
+            return Ok(request.response(S::WorkSettled));
+        }
+        if let Some(unit) = &unit {
+            request.goal_id = Some(unit.goal_id.clone());
+        }
         let selected_goal = request.goal_id.clone().or_else(|| {
             production
                 .record
@@ -508,13 +548,15 @@ impl CodexTerminalService {
         request.status = "sending".into();
         save(directory, request)?;
         let goal_prompt=request.goal_id.as_ref().map(|goal|format!("继续唯一子流程 {goal}（原ID保留）。先读取该子流程与执行尝试 {}，核对已有成果和结果未知的写入，只推进本目标剩余工作，不重新创建‘继续’目标，不遍历重放其他请求。正常无人工待办时自动推进；审核、回答、复验、阻塞或暂停仍需遵守。",request.id));
+        let autonomous_prompt = unit.as_ref().map(|u| format!(
+            "Lua 自主执行。原子目标 {}，当前工作项 {}：{}。当前路线：{}。先 production current 核对实际结果与未知写入，再执行本工作项。用 save-work-unit 拆解独立工作和依赖，用 report-work-unit 记录实际结果文件。报告当前工作项结果后结束本轮输出；APP 会自动派发下一项，不要报告未派发工作项或询问是否继续。普通错误自行修复；疑似 PB 问题先排除配置/测试污染，再尝试保持原玩法要求的替代方案；失败则 record-issue-handling 保留影响并暂缓依赖工作，继续独立项。不要求用户继续，不把 AI 自测问题交人工复验，不把暂缓当通过。相同条件下禁止重复已失败路线。所有工作项收敛后核对必要自测，满足原门槛再 complete-stage；有缺口使用 conclude-implementation 保留差异。不得改批准或隐藏交付缺口。",u.goal_id,u.id,u.title,u.routes[u.route]));
         let sent = if let Some(group) = request.group_id.as_ref() {
             self.continue_questions_locked(&request.task_id, group, request.answer_revision)
         } else {
             let receipt = directory.join(format!("task-continue-{}.json", request.id));
             let mut attempt = intake_receipt::start_attempt(&receipt, None, &request.native_id)?;
             let result=server.request("turn/start",json!({"threadId":request.native_id,"clientUserMessageId":attempt["messageId"],
-                "input":[{"type":"text","text":repair_spec.as_ref().map(|s|s.prompt.as_str()).or(goal_prompt.as_deref()).unwrap_or(if request.automatic_after.is_some() { "当前目标尚未完成且没有人工待办，自动推进下一子阶段。读取最新制作记录和已有成果，直接继续实现、检查与验证；不把一次回复结束当作需要用户点击继续。更新具体目标与进展；仅在需要审核、用户回答/复验、实际阻塞、执行失败或任务完成时停下。不得重复已完成操作，不得替用户批准。" } else { "用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。若 workbench.requests 有用户请求，按 id 和 revision 核对已有执行记录，处理尚未执行的请求，开始/完成时用 update-workbench-request 记录 status 与 summary，禁止重复执行；workbench.deferrals 是本任务持续略过的可选建议，保留影响说明，不重复打断，不能把略过当成修复或批准。若 artDesign.caseRequests 有本任务本轮 APP 案例请求，先按 selection 的具体版本与 prompt 核对已有处理记录，再查看候选图像、评估参考或整理草稿；请求不等于已采用或已认可，不重复执行已完成请求，不绕过人工确认。若 artifacts 中存在 plannerReference=true 且 status 不是 withdrawn 的策划参考图片，读取其路径、说明并查看图片后用于美术需求；它们不是验收成果，变更方案仍需修订文档并请求人工确认。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。" }) }]}));
+                "input":[{"type":"text","text":autonomous_prompt.as_deref().or(repair_spec.as_ref().map(|s|s.prompt.as_str())).or(goal_prompt.as_deref()).unwrap_or(if request.automatic_after.is_some() { "当前目标尚未完成且没有人工待办，自动推进下一子阶段。读取最新制作记录和已有成果，直接继续实现、检查与验证；不把一次回复结束当作需要用户点击继续。更新具体目标与进展；仅在需要审核、用户回答/复验、实际阻塞、执行失败或任务完成时停下。不得重复已完成操作，不得替用户批准。" } else { "用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。若 workbench.requests 有用户请求，按 id 和 revision 核对已有执行记录，处理尚未执行的请求，开始/完成时用 update-workbench-request 记录 status 与 summary，禁止重复执行；workbench.deferrals 是本任务持续略过的可选建议，保留影响说明，不重复打断，不能把略过当成修复或批准。若 artDesign.caseRequests 有本任务本轮 APP 案例请求，先按 selection 的具体版本与 prompt 核对已有处理记录，再查看候选图像、评估参考或整理草稿；请求不等于已采用或已认可，不重复执行已完成请求，不绕过人工确认。若 artifacts 中存在 plannerReference=true 且 status 不是 withdrawn 的策划参考图片，读取其路径、说明并查看图片后用于美术需求；它们不是验收成果，变更方案仍需修订文档并请求人工确认。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。" }) }]}));
             result.and_then(|v| {
                 let id = v["turn"]["id"]
                     .as_str()

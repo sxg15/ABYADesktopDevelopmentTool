@@ -23,7 +23,8 @@ pub(super) fn eligible(view: &ProductionView) -> bool {
             .stage_statuses
             .get(&r.current_stage)
             .is_none_or(|s| s != "blocked")
-        && !r.feedback.iter().any(|f| f["status"] == "awaiting-recheck")
+        && (crate::modules::tasks::autonomous_implementation(r)
+            || !r.feedback.iter().any(|f| f["status"] == "awaiting-recheck"))
 }
 
 // Excludes polling times, draft saves, record revisions and internal retries.
@@ -130,6 +131,20 @@ impl CodexTerminalService {
         {
             return Ok(());
         }
+        let recover_failed = !completed
+            && self.workflow(task, conversation).ok().is_some_and(|w| {
+                w.turns
+                    .iter()
+                    .any(|t| t.id == turn && t.status == CodexWorkflowTurnStatus::Failed)
+            })
+            && self
+                .tasks
+                .get_readonly(task)
+                .ok()
+                .and_then(|t| self.tasks.production_attention(&t).ok())
+                .and_then(|v| v.record)
+                .is_some_and(|r| crate::modules::tasks::autonomous_implementation(&r));
+        let completed = completed || recover_failed;
         {
             let mut runs = self.auto_progress.lock();
             let Some(run) = runs
@@ -173,12 +188,34 @@ impl CodexTerminalService {
                 .turns
                 .iter()
                 .find(|t| t.id == turn)
-                .is_none_or(|t| t.status != CodexWorkflowTurnStatus::Completed)
+                .is_none_or(|t| {
+                    t.status != CodexWorkflowTurnStatus::Completed
+                        && !(recover_failed && t.status == CodexWorkflowTurnStatus::Failed)
+                })
         {
             return Ok(());
         }
         let view = self.tasks.production_attention(&task_record)?;
         if !eligible(&view) {
+            return Ok(());
+        }
+        let autonomous = view
+            .record
+            .as_ref()
+            .is_some_and(crate::modules::tasks::autonomous_implementation);
+        if autonomous
+            && self
+                .tasks
+                .production_schedule(task, &format!("turn:{native}:{turn}"), true)?
+                .is_none()
+        {
+            if let Some(run) = self.auto_progress.lock().get_mut(conversation) {
+                run.handled = true;
+            }
+            if let Some(mut request) = continuation_queue::read(&directory)? {
+                request.status = "settled".into();
+                continuation_queue::save(&directory, &mut request)?;
+            }
             return Ok(());
         }
         let fingerprint = progress(&view, &workflow);
@@ -191,7 +228,7 @@ impl CodexTerminalService {
                 return Ok(());
             }
             run.handled = true;
-            let stalled = run.last_progress.as_ref() == Some(&fingerprint);
+            let stalled = !autonomous && run.last_progress.as_ref() == Some(&fingerprint);
             run.last_progress = Some(fingerprint);
             stalled
         };
@@ -235,10 +272,12 @@ pub(super) fn pending_tools(workflow: &CodexWorkflowSnapshot) -> bool {
         .find(|t| Some(&t.id) == workflow.current_turn_id.as_ref())
         .is_some_and(|t| {
             t.activities.iter().any(|a| {
-                matches!(
-                    a.status,
-                    CodexActivityStatus::Started | CodexActivityStatus::Progress
-                )
+                a.source != "desktopCliReport"
+                    && a.kind != CodexActivityKind::Analysis
+                    && matches!(
+                        a.status,
+                        CodexActivityStatus::Started | CodexActivityStatus::Progress
+                    )
             })
         })
 }

@@ -74,7 +74,7 @@ impl TaskService {
         if issue["status"] == "resolved" {
             return Err(AppError::validation("该问题已解决，无需重复发起修复。"));
         }
-        if needs_programmer(issue) {
+        if needs_programmer(issue) && !super::autonomy::autonomous_implementation(&record) {
             return Err(AppError::validation(
                 "该问题需要程序排查或修复 ABYA 源码／构建包，不能从此入口自动修复。",
             ));

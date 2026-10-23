@@ -559,3 +559,12 @@ Publish workbench-resize-20261022 after the real-component long-question drag, d
 retention, persistence, keyboard and short/narrow-window checks, plus normal checks
 and complete package validation. This release changes presentation only; preserve
 live tasks while preparing the candidate and never terminate the user's APP to promote.
+
+## Autonomous implementation 2.4 release (2026-10-23)
+Release autonomous-implementation-20261023 ships the new policy and autonomous-implementation.md.
+New tasks use it; existing tasks explicitly upgrade with their history/decisions intact.
+Validate PB issue isolation, bounded route recovery, human gates, duplicate/outcome-unknown
+receipts, stale revision protection, snapshot/run-copy isolation, unknown diff conservatism,
+attention changes and UI queue visibility. Use controlled task fixtures and native IPC;
+do not claim the 3–4 hour whole-project target from mocked or filesystem-only tests.
+Preserve pause, instance ownership and running formal APP during candidate validation.

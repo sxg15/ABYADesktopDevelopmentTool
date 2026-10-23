@@ -60,3 +60,13 @@ Check exact launch archive/level, CLI capabilities, initialized game context/net
 A task-scoped launch lease prevents concurrent duplicate groups. An intact same-version group is rechecked and shown; partial or old groups require closing first. APP restart checks persisted session IDs against live owned processes.
 Progress distinguishes version checking, Host start, joining, gameplay checks, ready, failed and stopped. Failure records the reason and cleanup failures, stops only newly created instances, and retains task/user decisions. No inference calls or automatic gameplay input occur.
 Required tools and seats are version-bound, with at most eight seats. Readiness operations are bounded read-only CLI calls; runtime secrets remain in memory. Unit tests reject connected-but-failed Lua and mismatched launch reports; real Player validation is separate.
+
+## Durable runtime receipts and snapshot launch (2026-10-23)
+Capability run persists an exclusive pending receipt before subprocess dispatch, hashing
+instance/session/arguments/input. Same operation ID + same input returns the known completion
+receipt (explicitly not the original payload); conflicting input is rejected, pending/unknown outcomes never redispatch. Receipt
+metadata query excludes raw results. Result persistence failure remains outcome_unknown.
+Receipts retain result hashes and success booleans only, never raw output/commands/credentials.
+Repeated callers must inspect original evidence or read current state for payload details. Existing cancellation and memory guards apply.
+For frozen versions, acceptance copies the validated snapshot to a fresh owned run directory;
+never launch the immutable registered snapshot for editing or mutate the source archive.

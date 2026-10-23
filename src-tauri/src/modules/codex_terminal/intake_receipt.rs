@@ -4,6 +4,7 @@ use serde_json::Value;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum IntakeContinueStatus {
+    WorkSettled,
     Queued,
     Paused,
     WaitingForAnswers,

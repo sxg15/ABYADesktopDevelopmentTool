@@ -133,3 +133,14 @@ No model inference or game actions. Run alone because managed leases are process
 ## Background task notifications (2026-10-14)
 
 SettingsView composes the task-notifications settings panel (default-on background action reminders, availability reason, explicit test). These controls use typed Tauri adapters only; no desktop CLI/MCP commands, scopes, credentials or command-line inputs are introduced.
+
+## Autonomous workflow CLI contracts (2026-10-23)
+production current/receipt/batch map to development_production_current/receipt/batch.
+Scoped conversation binding and task checks apply. Batch IDs are UUIDs; items have operation
+and data, with a restricted mutation allowlist. Receipt action IDs are batchId:index.
+production update adds save-work-unit/report-work-unit/record-issue-handling,
+conclude-implementation and record-validation-run; exact fields are in the bundled
+references/autonomous-implementation.md. No agent approval or user-feedback closure added.
+runtime receipt maps to game_runtime_operation_receipt and enforces instance ownership;
+returns status/hash/times/errorCode, not raw runtime output. Reuse --request-id only with
+identical intent; unknown outcomes are reconciled, never retried under a new ID blindly.

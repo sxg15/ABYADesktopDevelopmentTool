@@ -295,3 +295,18 @@ also join non-inheritable Windows lifetime jobs with KILL_ON_JOB_CLOSE. APP deat
 therefore closes its jobs and terminates its own descendants, without process-name
 cleanup or touching unrelated sessions. Failure to establish ownership aborts startup.
 Validate nested job compatibility and actual APP crash/reopen/same-goal resume.
+
+## Autonomous Lua scheduling (2026-10-23)
+For explicitly enabled 2.4 tasks, completion (and confirmed failed native turns) schedules
+bounded dependency work instead of parking on unresolved platform issues or AI rechecks.
+Native tool activity, terminal approvals, unknown sends, generations and manual pause remain
+authoritative. Current-process owned executors may wake on changed parked dependencies;
+never reconnect or replay from startup/history alone. Scheduler events consume once, and
+pause records stop automatic wake. Native prompts identify exact goal/unit/route, require
+result reconciliation and route PB defects through equivalent workarounds then deferral.
+Legacy automatic behavior is unchanged. No-progress text rewrites cannot reset work budgets.
+
+Native trial regression: pending_tools ignores desktopCliReport semantic milestones
+and Analysis activities. They are not outstanding tool processes. Actual native/desktopCli
+command, file, MCP and other tool activities still gate late-result continuation. Do not
+mark semantic reports or business goals completed merely to unblock scheduling.
