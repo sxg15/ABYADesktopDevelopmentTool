@@ -7,6 +7,7 @@ const ALLOWED: &[&str] = &[
     "register-evidence",
     "reuse-evidence",
     "register-artifact",
+    "register-visual",
     "save-issue",
     "record-issue-handling",
     "save-work-unit",

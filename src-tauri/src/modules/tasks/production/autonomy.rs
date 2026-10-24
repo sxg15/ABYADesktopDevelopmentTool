@@ -4,6 +4,8 @@ use sha2::{Digest, Sha256};
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ExecutionLedger {
+    pub recovery_ms: BTreeMap<String, i64>,
+    pub summary: Value,
     pub scope_hash: String,
     pub parked_condition: String,
     pub validation_runs: BTreeMap<String, Value>,
@@ -19,6 +21,10 @@ pub struct ExecutionLedger {
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WorkUnit {
+    pub kind: String,
+    pub attempt_started_at: String,
+    pub elapsed_ms: i64,
+    pub route_elapsed_ms: i64,
     pub scope_hash: String,
     pub id: String,
     pub goal_id: String,
@@ -42,7 +48,7 @@ pub fn autonomous_implementation(r: &ProductionRecord) -> bool {
         && r.current_stage == "implementation"
         && matches!(
             r.stages.get("implementation").map(String::as_str),
-            Some("in-progress" | "not-started")
+            Some("in-progress" | "not-started" | "blocked")
         )
 }
 pub(super) fn scope(r: &ProductionRecord) -> String {
@@ -101,7 +107,6 @@ pub(super) fn unit_condition(r: &ProductionRecord, u: &WorkUnit) -> String {
         Sha256::digest(
             json!([
                 scope(r),
-                r.version_details["archiveHash"],
                 r.version_details["playerBuildHash"],
                 issues,
                 dependencies
@@ -179,6 +184,10 @@ fn strings(data: &Value, key: &str, max: usize) -> AppResult<Vec<String>> {
         .collect()
 }
 fn save_unit(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
+    let kind = data["kind"].as_str().unwrap_or("implementation");
+    if !["implementation", "deployment", "validation", "recovery"].contains(&kind) {
+        return Err(AppError::validation("无效工作项类型。"));
+    }
     let id = mutation::text(data, "id")?;
     if id.len() > 100
         || !id
@@ -207,6 +216,11 @@ fn save_unit(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
     }
     let dependencies = strings(data, "dependsOn", 64)?;
     let issues = strings(data, "issueIds", 32)?;
+    if kind == "recovery" && issues.is_empty() {
+        return Err(AppError::validation(
+            "恢复工作必须绑定问题，以共享故障预算。",
+        ));
+    }
     let routes = strings(data, "routes", 4)?;
     if routes.is_empty() {
         return Err(AppError::validation("至少提供一条执行路线。"));
@@ -227,6 +241,7 @@ fn save_unit(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
             && old.depends_on == dependencies
             && old.issue_ids == issues
             && old.routes == routes
+            && (old.kind == kind || old.kind.is_empty() && kind == "implementation")
         {
             return Ok(());
         }
@@ -248,6 +263,7 @@ fn save_unit(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
         ));
     }
     ledger.units.push(WorkUnit {
+        kind: kind.into(),
         scope_hash,
         id: id.into(),
         goal_id: goal.into(),
@@ -260,7 +276,13 @@ fn save_unit(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
         updated_at: now(),
         ..Default::default()
     });
-    ledger.state = "ready".into();
+    if !ledger
+        .units
+        .iter()
+        .any(|u| u.status == "running" && Some(&u.id) == ledger.active_unit_id.as_ref())
+    {
+        ledger.state = "ready".into();
+    }
     event(ledger, "planned", Some(id), title);
     Ok(())
 }
@@ -292,6 +314,7 @@ fn report_unit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult
         .find(|u| u.id == id)
         .map(|u| unit_condition(r, u))
         .ok_or_else(|| AppError::validation("工作项不存在。"))?;
+    super::autonomy_budget::account(r);
     let scope_hash = scope(r);
     let ledger = &mut r.workbench.execution;
     let unit = ledger
@@ -381,6 +404,7 @@ fn handling(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
         .map(|u| (u.id.clone(), unit_condition(r, u)))
         .collect::<BTreeMap<_, _>>();
     if matches!(mode, "deferred" | "awaiting-condition") {
+        super::autonomy_budget::account(r);
         for unit in r
             .workbench
             .execution
@@ -405,6 +429,7 @@ fn handling(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
 // Execution convergence is distinct from implementation acceptance.
 pub(super) fn conclude(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
     check_enabled(r)?;
+    super::autonomy_budget::account(r);
     let summary = mutation::text(data, "summary")?;
     if summary.len() > 4000 {
         return Err(AppError::validation("收敛摘要过长。"));

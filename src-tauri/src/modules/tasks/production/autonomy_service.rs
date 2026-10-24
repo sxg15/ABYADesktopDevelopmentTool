@@ -68,8 +68,16 @@ impl TaskService {
                     })
                     .cloned());
             }
-            let result =
-                self.production_commit(task, r.revision, |r| schedule(r, event_id, advance));
+            let result = self.production_commit(task, r.revision, |r| {
+                schedule(r, event_id, advance)?;
+                if matches!(
+                    r.workbench.execution.state.as_str(),
+                    "waitingDependencies" | "settled"
+                ) {
+                    finish_available_work(r, &root)?;
+                }
+                Ok(())
+            });
             match result {
                 Err(e) if e.code == "conflict" => continue,
                 other => other?,
@@ -86,12 +94,62 @@ impl TaskService {
         Err(conflict())
     }
 }
+fn finish_available_work(r: &mut ProductionRecord, root: &Path) -> AppResult<()> {
+    let scope = autonomy::scope(r);
+    let conditions = r
+        .workbench
+        .execution
+        .units
+        .iter()
+        .map(|u| (u.id.clone(), autonomy::unit_condition(r, u)))
+        .collect::<BTreeMap<_, _>>();
+    for u in &mut r.workbench.execution.units {
+        if u.cycle == r.cycle && u.scope_hash == scope && u.status == "pending" {
+            u.status = "deferred".into();
+            u.reason = "前置工作未完成；本轮暂缓部署或验证，已有成果保留。".into();
+            u.condition_hash = conditions.get(&u.id).cloned().unwrap_or_default();
+        }
+    }
+    let units: Vec<_> = r
+        .workbench
+        .execution
+        .units
+        .iter()
+        .filter(|u| u.cycle == r.cycle && u.scope_hash == scope)
+        .map(|u| {
+            json!({"id":u.id,"title":u.title,"kind":u.kind,"status":u.status,
+            "reason":u.reason,"resultPaths":u.result_paths})
+        })
+        .collect();
+    let done = units.iter().filter(|u| u["status"] == "succeeded").count();
+    let issues: Vec<_> = r.issues.iter().filter(|i| i["status"] != "resolved")
+        .map(|i| json!({"id":i["id"],"description":i["description"],"handling":i["executionHandling"]})).collect();
+    let summary = format!(
+        "本轮执行已结束：{} 项完成，{} 项未完成或待验证。问题与成果已汇总；执行结束不代表验收通过。",
+        done,
+        units.len() - done
+    );
+    r.workbench.execution.summary =
+        json!({"at":now(),"version":r.current_version,"units":units,"issues":issues});
+    // The scheduler, rather than the model remembering a final tool call, guarantees closure.
+    autonomy::conclude(r, root, &json!({"summary":summary}))
+}
 fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResult<()> {
     if r.workbench.goals.is_empty() {
         super::workbench::observe(r, None);
     }
     let scope_hash = autonomy::scope(r);
-    let progress = autonomy::progress(r);
+    super::autonomy_budget::account(r);
+    let route_ms = super::autonomy_budget::limit(r, "routeMinutes", 15) * 60_000;
+    let attempt_limit = super::autonomy_budget::limit(r, "routeAttemptLimit", 2) as u32;
+    let exhausted: Vec<_> = r
+        .workbench
+        .execution
+        .units
+        .iter()
+        .filter(|u| super::autonomy_budget::exhausted(r, u))
+        .map(|u| u.id.clone())
+        .collect();
     let condition = autonomy::condition(r);
     let conditions = r
         .workbench
@@ -142,17 +200,8 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
             .iter_mut()
             .find(|u| Some(&u.id) == ledger.active_unit_id.as_ref() && u.status == "running")
     {
-        let elapsed = chrono::DateTime::parse_from_rfc3339(&unit.started_at)
-            .ok()
-            .map(|t| Utc::now().signed_duration_since(t).num_minutes())
-            .unwrap_or(0);
-        if progress != ledger.last_progress && elapsed < 15 {
-            unit.attempts = 0;
-            unit.status = "pending".into();
-        } else {
-            unit.status = "failed".into();
-            unit.reason = "本轮未产生可核对的结果，自动切换工作或恢复路线。".into();
-        }
+        unit.status = "failed".into();
+        unit.reason = "本轮尚未报告工作项完成，按预算切换工作或恢复路线。".into();
     }
     for unit in ledger
         .units
@@ -163,15 +212,29 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
             .get(&unit.id)
             .cloned()
             .unwrap_or_else(|| condition.clone());
-        if unit.status == "deferred" && unit.condition_hash != unit_condition {
+        let renewed = unit.status == "deferred" && unit.condition_hash != unit_condition;
+        if renewed {
             unit.status = "pending".into();
             unit.attempts = 0;
             unit.route = 0;
+            unit.elapsed_ms = 0;
+            unit.route_elapsed_ms = 0;
             unit.condition_hash = unit_condition.clone();
         }
-        if unit.status == "failed" && unit.attempts >= 2 {
+        if !renewed
+            && matches!(unit.status.as_str(), "pending" | "failed")
+            && exhausted.contains(&unit.id)
+        {
+            unit.status = "deferred".into();
+            unit.condition_hash = unit_condition.clone();
+            unit.reason = "本项或关联故障的累计恢复预算已用完，保留成果并继续独立工作。".into();
+        }
+        if unit.status == "failed"
+            && (unit.attempts >= attempt_limit || unit.route_elapsed_ms >= route_ms)
+        {
             unit.route += 1;
             unit.attempts = 0;
+            unit.route_elapsed_ms = 0;
             if unit.route >= unit.routes.len() {
                 unit.status = "deferred".into();
                 unit.condition_hash = unit_condition.clone();
@@ -185,6 +248,13 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
             .iter()
             .any(|u| Some(&u.id) == ledger.active_unit_id.as_ref() && u.status == "running")
     {
+        if let Some(u) = ledger
+            .units
+            .iter_mut()
+            .find(|u| Some(&u.id) == ledger.active_unit_id.as_ref())
+        {
+            u.attempt_started_at = now();
+        }
         ledger.state = "running".into();
         autonomy::event(ledger, "resumed", None, "沿用原工作项恢复。");
         return Ok(());
@@ -231,6 +301,7 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
     if let Some(index) = next {
         let unit = &mut ledger.units[index];
         unit.status = "running".into();
+        unit.attempt_started_at = now();
         unit.attempts += 1;
         if unit.attempts == 1 {
             unit.started_at = now();
@@ -288,10 +359,13 @@ impl TaskService {
         let Some(r) = self.database.with_connection(|c| load(c, task))? else {
             return Ok(());
         };
-        if !autonomy::autonomous_implementation(&r) || r.workbench.execution.state == "paused" {
+        if !autonomy::autonomous_implementation(&r)
+            || !matches!(r.workbench.execution.state.as_str(), "running" | "ready")
+        {
             return Ok(());
         }
         self.production_commit(task, r.revision, |r| {
+            super::autonomy_budget::account(r);
             r.workbench.execution.state = "paused".into();
             autonomy::event(
                 &mut r.workbench.execution,

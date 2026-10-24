@@ -1123,7 +1123,7 @@ fn all_stage_types_share_automatic_rules_and_human_waits_remain_gates() {
             view.stage_statuses.clear();
             assert_eq!(
                 auto_progress::eligible(&view),
-                status == "in-progress",
+                status == "in-progress" || stage == "implementation" && status == "blocked",
                 "{stage}/{status}"
             );
         }

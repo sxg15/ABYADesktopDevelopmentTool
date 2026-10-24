@@ -25,6 +25,21 @@ impl CodexTerminalService {
                     {
                         continue;
                     }
+                    // Only interrupt a known owned turn at a tool-free checkpoint.
+                    // In-flight or unknown writes must finish/reconcile before dispatching again.
+                    if service
+                        .tasks
+                        .production_execution_budget_due(&task)
+                        .unwrap_or(false)
+                    {
+                        let worker = service.clone();
+                        let task = task.clone();
+                        let conversation = conversation.clone();
+                        std::thread::spawn(move || {
+                            let _ = worker.checkpoint_autonomy_budget(&task, &conversation);
+                        });
+                        continue;
+                    }
                     let Ok(Some(revision)) = service.tasks.production_execution_wakeable(&task)
                     else {
                         continue;
@@ -49,6 +64,60 @@ impl CodexTerminalService {
 }
 
 impl CodexTerminalService {
+    pub(super) fn checkpoint_autonomy_budget(
+        &self,
+        task: &str,
+        conversation: &str,
+    ) -> AppResult<()> {
+        let gate = self.gate(conversation);
+        let Some(_guard) = gate.normal.try_lock() else {
+            return Ok(());
+        };
+        if self.cancelled.lock().contains(conversation)
+            || self.stopping.lock().contains(conversation)
+            || self.shutting_down.load(std::sync::atomic::Ordering::SeqCst)
+            || !self.tasks.production_execution_budget_due(task)?
+        {
+            return Ok(());
+        }
+        let workflow = self.workflow(task, conversation)?;
+        if workflow.terminal_interaction || super::auto_progress::pending_tools(&workflow) {
+            return Ok(());
+        }
+        let Some(turn) = workflow.turns.iter().find(|t| {
+            Some(&t.id) == workflow.current_turn_id.as_ref()
+                && matches!(
+                    t.status,
+                    CodexWorkflowTurnStatus::InProgress | CodexWorkflowTurnStatus::WaitingForPlan
+                )
+        }) else {
+            return Ok(());
+        };
+        let metadata = self.conversation(task, conversation)?;
+        let Some(native) = metadata.native_session_id.filter(|_| !metadata.archived) else {
+            return Ok(());
+        };
+        let Some(server) = self.runtime_handle(conversation).filter(|s| s.is_alive()) else {
+            return Ok(());
+        };
+        {
+            let mut runs = self.auto_progress.lock();
+            let Some(run) = runs
+                .get_mut(conversation)
+                .filter(|r| r.turn == turn.id && !r.handled && !r.budget_interrupt)
+            else {
+                return Ok(());
+            };
+            run.budget_interrupt = true;
+        }
+        // Never use the user-pause path: its cancellation flag must remain authoritative.
+        // An uncertain interrupt is not resent; only a matching terminal event may continue.
+        server.request(
+            "turn/interrupt",
+            json!({"threadId":native,"turnId":turn.id}),
+        )?;
+        Ok(())
+    }
     pub(super) fn wake_owned_autonomy(
         &self,
         task: &str,

@@ -55,3 +55,4 @@
 .wb-divider:focus-visible{outline:2px solid #a3431d;outline-offset:-2px}
 .wb-divider-help{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .wb-split.is-resizing,.wb-split.is-resizing *{cursor:row-resize!important;user-select:none!important}
+.wb-policy{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:6px 16px;border-bottom:1px solid #d8d3c6;font-size:12px;flex-shrink:0}

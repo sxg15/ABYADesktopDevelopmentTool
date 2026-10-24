@@ -8,7 +8,7 @@ $publishName = if ($RecorderStaging) { "Publish-Staging-Recorder" } elseif ($Val
 $publish = Join-Path $root $publishName
 $running = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith("$publish\", [StringComparison]::OrdinalIgnoreCase) }
 if ($running) { throw "Close the running package before replacing it: $publish" }
-$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } elseif ($UiStaging) { 'guidance-action-panel-20261012' } else { 'autonomous-implementation-20261023' }
+$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } elseif ($UiStaging) { 'guidance-action-panel-20261012' } else { 'autonomous-recovery-20261024' }
 $env:ABYA_BUILD_UTC = [DateTime]::UtcNow.ToString('O')
 $packageVersion = (Get-Content -Raw -LiteralPath (Join-Path $root 'package.json') | ConvertFrom-Json).version
 $llmDirectories = @(".codex")
@@ -16,6 +16,8 @@ $managedSkillRelativePath = "skills\abya-game-development-task\SKILL.md"
 $managedSkillRequiredFiles = @(
     $managedSkillRelativePath,
     "skills\abya-game-development-task\references\autonomous-implementation.md",
+    "skills\abya-game-development-task\references\runtime-scenarios.md",
+    "skills\abya-game-development-task\scripts\runtime-scenario.mjs",
     "skills\abya-game-development-task\references\art-design-records.md",
     "skills\abya-game-development-task\references\game-art-design\SKILL.md",
     "skills\abya-game-development-task\references\game-art-design\references\game-ui-design\SKILL.md",

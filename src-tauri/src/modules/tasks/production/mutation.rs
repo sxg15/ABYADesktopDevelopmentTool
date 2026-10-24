@@ -455,6 +455,26 @@ fn evidence(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
 }
 
 fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
+    if let Some(status) = data.get("diagnosisStatus") {
+        if status != "suspected" && status != "confirmed" {
+            return Err(AppError::validation(
+                "diagnosisStatus 必须为 suspected 或 confirmed。",
+            ));
+        }
+        if status == "confirmed" {
+            for key in ["reproduction", "comparison", "rootCause"] {
+                text(&data["diagnosis"], key)?;
+            }
+            if data["diagnosis"]["playerBuildHash"] != r.version_details["playerBuildHash"]
+                || data["diagnosis"]["playerBuildHash"]
+                    .as_str()
+                    .is_none_or(str::is_empty)
+            {
+                return Err(AppError::validation("平台诊断须绑定当前构建指纹。"));
+            }
+            validation::evidence_refs(r, root, &data["evidenceIds"], validation::version(r)?)?;
+        }
+    }
     if data.get("executionHandling").is_some() {
         return Err(AppError::validation(
             "处理与替代方案请通过 record-issue-handling 记录，不能直接覆盖验证绑定。",

@@ -425,7 +425,15 @@ impl CodexTerminalService {
                                 .record
                                 .as_ref()
                                 .is_some_and(crate::modules::tasks::autonomous_implementation)
-                                && t["status"] == "failed"))
+                                && (t["status"] == "failed"
+                                    || t["status"] == "interrupted"
+                                        && self
+                                            .auto_progress
+                                            .lock()
+                                            .get(&request.conversation_id)
+                                            .is_some_and(|r| {
+                                                r.turn == *expected && r.budget_interrupt
+                                            }))))
                 })
             {
                 request.status = "superseded".into();

@@ -108,6 +108,11 @@ impl CodexTerminalService {
             };
             self.tasks
                 .production_attempt_status(task, &attempt.id, status, None, reason)?;
+            if attempt.process_epoch != self.process_epoch
+                && matches!(status, "interrupted" | "finished" | "needsReview")
+            {
+                self.tasks.production_execution_observation_gap(task)?;
+            }
         }
         self.tasks.production_get(task)
     }

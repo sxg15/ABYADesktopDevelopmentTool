@@ -1,5 +1,14 @@
 # Release Skill
 
+## Autonomous recovery 2.5 (2026-10-24)
+Release autonomous-recovery-20261024 includes migration visibility, guaranteed gap summaries,
+owned budget checkpoints, uncertain diagnosis labels and the reusable runtime scenario runner.
+Verify main-workbench upgrade, same-goal history retention, unresolved platform/dependent work
+closure, real native checkpoint behavior and honest current-version evidence. Package the runner
+and runtime-scenarios reference. Do not equate synthetic tests with a complete-game 3–4 hour trial.
+Keep the live formal APP and user game instances intact during candidate validation; promote
+only after the formal package is no longer running, retain a complete recoverable backup.
+
 ## Terminal freeze recovery (2026-10-22)
 Publish terminal-freeze-fix-20261022 after blocked-writer, delayed-notification RPC, stale historical turn, late tool result and explicit rebuild regressions plus standard checks. The supplied diagnostic package shows completed turns and late writes, not a proven thread-stack deadlock. Preserve this evidence distinction and do not ship user diagnostic archives or task data.
 

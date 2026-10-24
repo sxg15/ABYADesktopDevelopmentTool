@@ -4,6 +4,7 @@ use crate::modules::tasks::ProductionView;
 
 #[derive(Default)]
 pub(super) struct AutoProgress {
+    pub budget_interrupt: bool,
     pub turn: String,
     pub handled: bool,
     pub completion_seen: bool,
@@ -15,10 +16,11 @@ pub(super) fn eligible(view: &ProductionView) -> bool {
         return false;
     };
     continuation_queue::waiting(Some(view)).is_none()
-        && matches!(
-            r.stages.get(&r.current_stage).map(String::as_str),
-            Some("in-progress" | "not-started")
-        )
+        && (crate::modules::tasks::autonomous_implementation(r)
+            || matches!(
+                r.stages.get(&r.current_stage).map(String::as_str),
+                Some("in-progress" | "not-started")
+            ))
         && view
             .stage_statuses
             .get(&r.current_stage)
@@ -89,6 +91,7 @@ impl CodexTerminalService {
             run.turn = turn.into();
             run.handled = false;
             run.completion_seen = false;
+            run.budget_interrupt = false;
         }
     }
 
@@ -131,11 +134,18 @@ impl CodexTerminalService {
         {
             return Ok(());
         }
+        let budget_interrupt = self
+            .auto_progress
+            .lock()
+            .get(conversation)
+            .is_some_and(|r| r.turn == turn && r.budget_interrupt);
         let recover_failed = !completed
             && self.workflow(task, conversation).ok().is_some_and(|w| {
-                w.turns
-                    .iter()
-                    .any(|t| t.id == turn && t.status == CodexWorkflowTurnStatus::Failed)
+                w.turns.iter().any(|t| {
+                    t.id == turn
+                        && (t.status == CodexWorkflowTurnStatus::Failed
+                            || budget_interrupt && t.status == CodexWorkflowTurnStatus::Interrupted)
+                })
             })
             && self
                 .tasks
@@ -190,7 +200,10 @@ impl CodexTerminalService {
                 .find(|t| t.id == turn)
                 .is_none_or(|t| {
                     t.status != CodexWorkflowTurnStatus::Completed
-                        && !(recover_failed && t.status == CodexWorkflowTurnStatus::Failed)
+                        && !(recover_failed
+                            && (t.status == CodexWorkflowTurnStatus::Failed
+                                || budget_interrupt
+                                    && t.status == CodexWorkflowTurnStatus::Interrupted))
                 })
         {
             return Ok(());

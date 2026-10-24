@@ -26,7 +26,7 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
   const state = currentControl?.state ?? (observed && turn ? ({inProgress:"running",waitingForPlan:"waitingForResponse",completed:"ready",failed:"failed",interrupted:"paused"}[turn.status]) : "unknown");
   const stage = r?.currentStage ?? "requirements";
   const autonomous = stage === "implementation" && view?.policy.implementationExecution?.mode === "autonomous";
-  const programmerIssues = stage === "implementation" && !autonomous ? activeProgrammerIssues(r?.issues ?? []) : [];
+  const programmerIssues = stage === "implementation" && !autonomous && !view?.availableUpdate ? activeProgrammerIssues(r?.issues ?? []) : [];
   const stageLabel = r ? stageName(stage, view?.policy.stages.find(s => s.id === stage)?.name ?? stage, en ? "en-US" : undefined) : "";
   // Human decisions come exclusively from the native projection used by Windows.
   const all = active && attention?.taskId === taskId && !attention.unavailable ? attention.items : [];
@@ -78,5 +78,12 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
     if(!primary&&!["workSettled","closed"].includes(state)){model.title=text("自主执行前核对原生权限", "Check native permissions before autonomous execution");model.button=text("前往终端执行设置", "Open terminal settings");model.action="terminal";model.destination=text("处理位置：终端 · 执行设置", "Open in: Terminal · execution settings");}
   }
   model.additional = Math.max(0, items.length - (primary && model.tone !== "programmer" ? 1 : 0));
+  if(active&&stage==="implementation"&&!autonomous&&view?.availableUpdate&&!primary&&!["running","waitingForResponse","queued","pausing","stopFailed"].includes(state)) {
+    set({key:"workflow-upgrade",tone:"neutral",action:"stage",attention:true,
+      title:text("本任务仍使用旧执行规则", "This task still uses legacy execution rules"),
+      instruction:text(`本任务流程 ${r?.workflowVersion} 尚未启用 Lua 自主执行；更新 APP 不会自动迁移任务。`, `Task workflow ${r?.workflowVersion} has not enabled autonomous execution.`),
+      detail:text("先暂停本任务，再从制作流程顶部升级；原 ID、成果和批准记录保留。", "Pause, then upgrade from the workflow toolbar. Identity, results and approvals are preserved."),
+      destination:text("处理位置：制作流程顶部", "Open in: Workflow toolbar"),button:text("查看流程升级", "View workflow upgrade")});
+  }
   return model;
 }

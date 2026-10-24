@@ -15,7 +15,7 @@ try{
   assert.equal((await invoke('list_tasks')).length,0);
   const task=await invoke('create_task',{input:{title:'工作台原生隔离验证',description:'Synthetic IPC validation. No AI inference or gameplay acceptance.'}});
   let view=await invoke('update_task_production',{input:{taskId:task.id,expectedRevision:0,operation:'initialize',data:{questionMode:'no-followup'}}});
-  assert.equal(view.record.workflowVersion,'2.4.0');
+  assert.equal(view.record.workflowVersion,'2.5.0');
   const base=view.record.revision;
   const action=async(operation,data)=>view=await invoke('mutate_production_workbench',{input:{taskId:task.id,expectedRevision:view.record.revision,operation,data}});
   await action('save-draft',{key:'current',text:'草稿不会创建新目标'});

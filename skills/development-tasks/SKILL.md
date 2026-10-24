@@ -1,5 +1,23 @@
 # Development Tasks Skill
 
+## Autonomous recovery 2.5 (2026-10-24)
+Task policy identity and explicit compatible upgrade are visible in the main workbench.
+Upgrade retains exact goals, approvals, artifacts and history; it never starts inference.
+An enabled autonomous policy tolerates legacy raw blocked status without disabling itself.
+Work units distinguish implementation/deployment/validation/recovery. Recovery requires issue
+bindings; elapsed time is shared across unit IDs by scope/build/issue. Route and work budgets
+are durable; pause accounts the observed interval, process loss excludes unobserved gaps.
+No-runnable-work always consolidates a summary and dependent deferrals, even with open issues.
+Convergence only enters review with valid current lua/core-loop/save-reload evidence; no
+playable evidence means ended-with-gaps, not passed or an endless Continue request.
+Closing/pausing an idle executor preserves an already consolidated ledger; only running/ready
+work changes to paused. Native cancellation still suppresses wakeups independently.
+diagnosisStatus defaults unconfirmed; confirmed requires reproduction/comparison/rootCause,
+current build fingerprint and reviewed version evidence. Material checks do not prove causality.
+Batch registration now includes register-visual with the same original validation and receipts.
+Regress 2.3 migration, dependency exhaustion, all-deferred closure, raw blocked states,
+shared fault budgets, pause/restart timing, original IDs, stale approvals and honest evidence.
+
 ## v5 workbench (2026-10-21)
 ProductionRecord.workbench is additive and serde-defaulted. APP owns drafts, idempotent user requests, optional-suggestion deferrals/restoration and bounded input attachments. Read-only legacy projection never rewrites pins or database records. Goals reference immutable production-history revisions; internal polling and draft writes do not create new goals. Goal progress cannot approve documents or resolve issues. Word imports preserve original, body XML, image relationship data and omitted-file manifest; Markdown ZIP paths and expanded bytes are bounded. Developer ZIP exports only selected programmer issues and referenced hash-verified evidence, with explicit omissions; no external sending.
 

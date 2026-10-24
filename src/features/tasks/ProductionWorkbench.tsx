@@ -85,7 +85,13 @@ export function ProductionWorkbench(props:Props) {
       {goal?.decision&&<section><h3>{en?"Recorded decision":"当时的决定"}</h3><ReadableText text={goal.decision}/></section>}
     </>}</>;
   return <div className="production-workbench">
-    <nav className="wb-stages" aria-label={en?"Production stages":"制作阶段"}>{view.policy.stages.map((s,i)=><button key={s.id} aria-current={currentStage===s.id?"step":undefined} onClick={()=>{setStage(s.id);setGoalId("");}}><span>{i+1}</span><strong>{name(s.id)}</strong><small>{statusName(view.stageStatuses?.[s.id]??r.stages[s.id]??"pending",locale)}</small></button>)}</nav>
+    <div className="wb-policy" role="status">
+      <span>{en?"Task workflow":"本任务流程"} {r.workflowVersion} · {view.policy.implementationExecution?.mode==="autonomous"?(en?"Autonomous Lua execution":"Lua 自主执行"):(en?"Legacy execution rules":"仍使用旧执行规则")}</span>
+      {view.availableUpdate&&<button className="text-button" disabled={!active||busy||running} onClick={()=>{
+        if(window.confirm(en?"Pause this task first. Upgrade preserves IDs, results and approvals; it does not start execution.":"请先暂停本任务。升级保留原 ID、成果、批准和历史，同时更新任务内规则，不自动开始执行。继续升级？"))void run(()=>productionApi.upgrade(taskId,r.revision));
+      }}>{en?"Upgrade task workflow":"升级本任务流程"}</button>}
+    </div>
+    <nav className="wb-stages" aria-label={en?"Production stages":"制作阶段"}>{view.policy.stages.map((s,i)=><button key={s.id} aria-current={currentStage===s.id?"step":undefined} onClick={()=>{setStage(s.id);setGoalId("");}}><span>{i+1}</span><strong>{name(s.id)}</strong><small>{s.id==="implementation"&&r.currentStage==="implementation"&&["settledWithGaps","settled"].includes(r.workbench?.execution?.state??"")?(en?"Execution ended":"本轮已结束"):statusName(view.stageStatuses?.[s.id]??r.stages[s.id]??"pending",locale)}</small></button>)}</nav>
     <div className="wb-body"><aside className="wb-goals"><header><h3>{en?"Stage goals":"本阶段子阶段"}</h3><History size={16}/></header>
       {goals.length===0?<p>{en?"Starts when this stage begins.":"进入本阶段后按目标建立。"}</p>:goals.map(g=><button key={g.id} className={(goalId||r.workbench?.activeGoalId)===g.id?"selected":""} onClick={()=>setGoalId(g.id)}><span>{g.number}</span><div><strong>{g.title}</strong><small>{en?goalExecutionStatus(r,g,reconciling):executionLabels[goalExecutionStatus(r,g,reconciling)]??statusName(g.status,locale)}</small></div><ChevronRight size={14}/></button>)}
       <button className="text-button" onClick={()=>{setStage(r.currentStage);setGoalId("");}}>{en?"Return to current work":"返回当前工作"}</button>

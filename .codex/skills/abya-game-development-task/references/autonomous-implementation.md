@@ -1,4 +1,17 @@
-# Lua 自主执行（流程 2.4）
+# Lua 自主执行（流程 2.5）
+
+2.5：工作项 kind 区分 implementation、deployment、validation、recovery（默认 implementation）。
+按功能与目标拆分，单项约5–15分钟；恢复项必须绑定稳定 issueIds，不重新编号逃避预算。
+同故障/构建/范围共享30分钟恢复时间，每路线15分钟、无完成最多两次，单工作项总计60分钟。
+模型单轮15分钟后由 APP 在无在途工具的检查点中断并续接；在途写入先完成或对账，不盲目重发。
+暂停不计入执行预算，进程退出后的未知区间不算模型工时。不得用新工作项包装同一恢复问题。
+无可做项时后端会汇总成果、未完成项及问题，缺少可玩证据时明确结束本轮但不通过验收。
+实现、部署和验证分别记录；编辑器不可用时仍完成代码与可行的离线验证。
+验证复用 [运行测试工具](runtime-scenarios.md)，不要重复搭建 CLI、轮询和回执框架。
+
+save-issue 的 repairTarget 只是处理归属。默认原因待确认；diagnosisStatus=confirmed 必须附
+diagnosis.reproduction、comparison、rootCause、当前 playerBuildHash 以及已审阅 evidenceIds。
+此检查只验证材料齐全，AI 仍须实际复现和对照，不能把尾部重复日志当作根因。
 
 仅当当前 policy.implementationExecution.mode 为 autonomous 且阶段为 implementation 时启用。
 旧任务按原 policy；通过 APP 明确升级后才启用。需求、美术、计划和交付决定仍由用户完成。

@@ -1,5 +1,16 @@
 # Codex Terminal Skill
 
+## Autonomous budget checkpoints (2026-10-24)
+The five-second owned-executor watcher checks durable work/route/fault budgets during a turn.
+At a tool-free checkpoint it interrupts exactly the known current native turn once. Native
+approval/input waits, in-flight tools, manual pause, process shutdown and ownership gates win.
+Only a matching confirmed interrupted event carrying this process-local budget marker may
+continue automatically; ordinary user interruptions remain stopped. Unknown acknowledgements
+never cause resend. Restart never reconstructs this authorization from history.
+The normal gate serializes checkpoint dispatch; a busy task never delays other task scans.
+Reconciliation excludes unobserved post-exit time from the work budget. Tests cover confirmed
+budget interrupt/continuation/dedup and preserved manual cancellation and unknown-write gates.
+
 ## Terminal freeze recovery (2026-10-22)
 TerminalInput owns one bounded worker per PTY. Every UI write binds the returned inputSessionId; delayed IPC for a replaced PTY fails not_executed. Input acknowledgement times out after two seconds, poisons that channel and rejects all later input until actual connection rebuild; never replay unknown writes. Native bridge observation remains inline, but ordered notification projection uses a 256-entry/32-MiB bounded lane; overload explicitly fails the bridge, never silently drops lifecycle state. Ignore unsupported token/output delta projections before DB/file I/O. Status polling has a 250ms lifecycle-lock bound. Reattach releases the session-map guard before replay. Idle checks and continuation examine the latest native turn, not stale historical inProgress entries. APP-only rebuild_idle_terminal validates task ownership, native idle and no pending tool results, cancels queues, closes owned handles and keeps native identity/history; subsequent open does not infer or replay work. Late tool results gate automatic continuation and can wake it after settling.
 

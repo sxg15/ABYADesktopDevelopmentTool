@@ -37,6 +37,53 @@ fn seed(f: &Fixture) {
     .unwrap();
 }
 #[test]
+fn budget_interrupt_continues_only_its_owned_turn_after_native_completion() {
+    let f = Fixture::new();
+    seed(&f);
+    f.service
+        .tasks
+        .production_schedule(&f.task, "initial", false)
+        .unwrap();
+    let db = rusqlite::Connection::open(f.root.join("db.sqlite")).unwrap();
+    let body: String = db
+        .query_row(
+            "SELECT body FROM task_production WHERE task_id=?1",
+            [&f.task],
+            |r| r.get(0),
+        )
+        .unwrap();
+    let mut record: Value = serde_json::from_str(&body).unwrap();
+    record["workbench"]["execution"]["units"][0]["attemptStartedAt"] =
+        json!((Utc::now() - chrono::Duration::minutes(16)).to_rfc3339());
+    db.execute(
+        "UPDATE task_production SET body=?2 WHERE task_id=?1",
+        rusqlite::params![f.task, record.to_string()],
+    )
+    .unwrap();
+    finish_auto_fixture(&f, "budget-turn", true);
+    let task = f.service.tasks.get(&f.task).unwrap();
+    let dir = conversation_directory(Path::new(&task.workspace_path), &f.conversation);
+    let mut workflow = load_workflow(&dir, &f.task, &f.conversation).unwrap();
+    workflow.turns.last_mut().unwrap().status = CodexWorkflowTurnStatus::InProgress;
+    save_workflow(&dir, &workflow, "budgetFixture").unwrap();
+    f.turns.lock().last_mut().unwrap()["status"] = json!("inProgress");
+    f.service
+        .checkpoint_autonomy_budget(&f.task, &f.conversation)
+        .unwrap();
+    assert_eq!(f.turns.lock().last().unwrap()["status"], "interrupted");
+    assert!(f.calls.lock().is_empty()); // Interrupt acknowledgement alone never replays.
+    workflow.turns.last_mut().unwrap().status = CodexWorkflowTurnStatus::Interrupted;
+    save_workflow(&dir, &workflow, "budgetConfirmed").unwrap();
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, "budget-turn", false)
+        .unwrap();
+    assert_eq!(f.calls.lock().len(), 1);
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, "budget-turn", false)
+        .unwrap();
+    assert_eq!(f.calls.lock().len(), 1);
+}
+#[test]
 fn native_completion_continues_with_platform_issue_and_recheck_without_human_resume() {
     let f = Fixture::new();
     seed(&f);
@@ -84,6 +131,10 @@ fn dependency_wakeup_never_clears_manual_pause_or_starts_a_turn() {
         .wake_owned_autonomy(&f.task, &f.conversation, f.revision())
         .unwrap();
     assert!(f.service.cancelled.lock().contains(&f.conversation));
+    assert!(f.calls.lock().is_empty());
+    f.service
+        .checkpoint_autonomy_budget(&f.task, &f.conversation)
+        .unwrap();
     assert!(f.calls.lock().is_empty());
 }
 #[test]

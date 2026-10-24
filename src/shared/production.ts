@@ -30,6 +30,7 @@ export interface ProductionPolicy {
   questions: { id: string; text: string; family: string }[];
 }
 export interface ProductionIssue {
+  diagnosisStatus?: "suspected" | "confirmed";
   executionHandling?: {mode:string;reason:string;impact:string;affectedUnitIds:string[]};
   repairTarget?: "abya-source" | "abya-build" | "lua" | "other";
   title?: string; affectedStages?: string[]; blockedOperations?: string[];

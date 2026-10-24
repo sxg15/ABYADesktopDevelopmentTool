@@ -71,9 +71,14 @@ impl TaskService {
         );
         for (index, issue) in selected.iter().enumerate() {
             out.push_str(&format!("## 问题 {}\n\n", index + 1));
+            out.push_str(if issue["diagnosisStatus"] == "confirmed" {
+                "诊断：已登记复现、对照、根因与构建证据。\n\n"
+            } else {
+                "诊断：运行异常，原因待确认；处理归属不代表根因已确认。\n\n"
+            });
             out.push_str(match issue["repairTarget"].as_str() {
-                Some("abya-source") => "归属：ABYA 游戏源码缺陷（已登记）\n\n",
-                Some("abya-build") => "归属：ABYA 构建包缺陷（已登记）\n\n",
+                Some("abya-source") => "处理归属：ABYA 游戏源码排查\n\n",
+                Some("abya-build") => "处理归属：ABYA 构建包排查\n\n",
                 _ => "归属：疑似 ABYA 源码／构建包缺陷，待程序排查\n\n",
             });
             for (key, label) in [

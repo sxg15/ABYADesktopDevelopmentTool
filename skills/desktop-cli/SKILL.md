@@ -1,5 +1,13 @@
 # Desktop CLI
 
+## Workflow 2.5 (2026-10-24)
+save-work-unit accepts kind implementation/deployment/validation/recovery; recovery binds
+issueIds. save-issue accepts optional diagnosisStatus and bound diagnosis material; repairTarget
+alone never proves platform causality. production batch supports register-visual without
+changing approval or file-validation rules. The task-bundled runtime-scenario.mjs uses the
+existing runtime run CLI with durable request IDs, bounded read-only polling and assertions;
+unknown writes are never repeated. It introduces no new transport, permission or approval API.
+
 ## v5 workbench (2026-10-21)
 production update adds update-workbench-request {id,status,summary}, status in-progress/completed. It updates only an existing user goal. Request creation, draft editing, deferral/restoration, attachments and exports are APP-only; no new agent approval route.
 

@@ -3,6 +3,13 @@ import { taskGuidanceState } from "./taskGuidanceState";
 import type { ProductionView, TaskControlState } from "../../shared/production";
 import { attentionFixture } from "../../shared/notifications.test-fixtures";
 const view = {policy:{stages:[]},actions:{review:{},feedback:{}},record:undefined} as unknown as ProductionView;
+it("offers migration for a stopped legacy Lua task without claiming a confirmed PB defect",()=>{
+ const legacy={...view,availableUpdate:true,record:{taskId:"task",workflowVersion:"2.3.0",currentStage:"implementation",issues:[{id:"pb",repairTarget:"abya-build",status:"open",stage:"implementation"}]}} as unknown as ProductionView;
+ const guide=taskGuidanceState("task",true,legacy,{taskId:"task",state:"paused"} as TaskControlState,undefined,false);
+ expect(guide.key).toBe("workflow-upgrade");expect(guide.instruction).toContain("2.3.0");expect(guide.tone).not.toBe("programmer");
+ const running=taskGuidanceState("task",true,legacy,{taskId:"task",state:"running"} as TaskControlState,undefined,false);
+ expect(running.key).toBe("running");
+});
 it("distinguishes interrupted input from a paused terminal",()=>{
   const guide=taskGuidanceState('task',true,view,{taskId:'task',state:'awaitingInput',connection:'connected'} as TaskControlState,undefined,false);
   expect(guide.title).toBe('当前执行已中断，等待新指令');
@@ -14,7 +21,7 @@ it("prioritizes unresolved ABYA defects over an AI-running message and clears on
   const input={...view,record} as unknown as ProductionView;
   const control={taskId:'task',state:'running'} as TaskControlState;
   const guide=taskGuidanceState('task',true,input,control,undefined,false);
-  expect(guide.tone).toBe('programmer');expect(guide.title).toContain('需要程序修复');expect(guide.action).toBe('stage');
+  expect(guide.tone).toBe('programmer');expect(guide.title).toContain('需要排查');expect(guide.action).toBe('stage');
   record.issues[0].status='resolved';
   expect(taskGuidanceState('task',true,input,control,undefined,false).tone).toBe('waiting');
 });

@@ -10,6 +10,128 @@ fn autonomous() -> Fixture {
         .unwrap();
     f
 }
+#[test]
+fn elapsed_budget_rotates_route_and_manual_pause_stops_accounting() {
+    let f = autonomous();
+    unit(&f, "slow", json!([]), json!(["native", "alternative"]));
+    next(&f, "start", false);
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.workbench.execution.units[0].attempt_started_at =
+                (Utc::now() - chrono::Duration::minutes(16)).to_rfc3339();
+            Ok(())
+        })
+        .unwrap();
+    assert!(f.service.production_execution_budget_due(&f.id).unwrap());
+    let u = next(&f, "budget", true).unwrap();
+    assert_eq!(u.route, 1);
+    assert!(u.elapsed_ms >= 16 * 60_000);
+    assert!(!f.service.production_execution_budget_due(&f.id).unwrap());
+    f.service.production_execution_pause(&f.id).unwrap();
+    assert!(
+        f.record().workbench.execution.units[0]
+            .attempt_started_at
+            .is_empty()
+    );
+    assert!(!f.service.production_execution_budget_due(&f.id).unwrap());
+}
+#[test]
+fn reporting_an_output_does_not_disable_the_native_turn_budget() {
+    let f = autonomous();
+    unit(&f, "work", json!([]), json!(["code"]));
+    next(&f, "start", false);
+    report(&f, "work", "succeeded");
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            for e in &mut r.workbench.execution.events {
+                if e["kind"] == "scheduled" {
+                    e["at"] = json!((Utc::now() - chrono::Duration::minutes(16)).to_rfc3339());
+                }
+            }
+            Ok(())
+        })
+        .unwrap();
+    assert!(f.service.production_execution_budget_due(&f.id).unwrap());
+    f.service.production_execution_pause(&f.id).unwrap();
+    assert!(!f.service.production_execution_budget_due(&f.id).unwrap());
+}
+#[test]
+fn raw_legacy_blocked_state_cannot_disable_an_enabled_autonomous_policy() {
+    let f = autonomous();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.stages.insert("implementation".into(), "blocked".into());
+            Ok(())
+        })
+        .unwrap();
+    assert_eq!(
+        f.service.production_get(&f.id).unwrap().stage_statuses["implementation"],
+        "in-progress"
+    );
+    assert!(next(&f, "recover", false).is_some());
+}
+#[test]
+fn explicit_23_migration_preserves_identity_approvals_results_and_no_auto_start() {
+    let f = autonomous();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.policy = policy();
+            r.policy["workflowVersion"] = json!("2.3.0");
+            r.policy
+                .as_object_mut()
+                .unwrap()
+                .remove("implementationExecution");
+            r.workflow_version = "2.3.0".into();
+            r.stages.insert("implementation".into(), "blocked".into());
+            Ok(())
+        })
+        .unwrap();
+    let before = f.record();
+    let r = f
+        .service
+        .production_upgrade(&f.id, before.revision)
+        .unwrap()
+        .record
+        .unwrap();
+    assert_eq!(r.workflow_version, "2.5.0");
+    assert_eq!(r.workbench.active_goal_id, before.workbench.active_goal_id);
+    assert_eq!(r.current_version, before.current_version);
+    assert_eq!(
+        serde_json::to_value(r.approvals).unwrap(),
+        serde_json::to_value(before.approvals).unwrap()
+    );
+    assert_eq!(r.self_tests.len(), before.self_tests.len());
+    assert!(r.workbench.execution.units.is_empty());
+    assert_eq!(r.stages["implementation"], "in-progress");
+}
+#[test]
+fn confirmed_diagnosis_requires_reproduction_comparison_and_bound_evidence() {
+    let f = autonomous();
+    assert!(f.apply("save-issue",json!({"id":"claim","kind":"blocker","stage":"implementation","status":"open","description":"unknown failure","resumeWhen":"healthy","repairTarget":"abya-build","diagnosisStatus":"confirmed"})).is_err());
+    f.apply("save-issue",json!({"id":"claim","kind":"blocker","stage":"implementation","status":"open","description":"unknown failure","resumeWhen":"healthy","repairTarget":"abya-build","diagnosisStatus":"suspected"})).unwrap();
+}
+#[test]
+fn recovery_budget_is_shared_across_unit_ids_but_not_independent_work() {
+    let f = autonomous();
+    f.apply("save-issue",json!({"id":"startup","stage":"implementation","kind":"blocker","status":"open","description":"init failure","resumeWhen":"healthy instance"})).unwrap();
+    let goal = f.record().workbench.active_goal_id.unwrap();
+    for id in ["repair-a", "repair-b"] {
+        f.apply("save-work-unit",json!({"id":id,"goalId":goal,"title":id,"kind":"recovery","dependsOn":[],"issueIds":["startup"],"routes":["recover"]})).unwrap();
+    }
+    unit(&f, "code", json!([]), json!(["write code"]));
+    next(&f, "start", false);
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.workbench.execution.units[0].attempt_started_at =
+                (Utc::now() - chrono::Duration::minutes(31)).to_rfc3339();
+            Ok(())
+        })
+        .unwrap();
+    assert_eq!(next(&f, "budget", true).unwrap().id, "code");
+    let r = f.record();
+    assert_eq!(r.workbench.execution.units[0].status, "deferred");
+    assert_eq!(r.workbench.execution.units[1].status, "deferred");
+}
 fn unit(f: &Fixture, id: &str, deps: Value, routes: Value) {
     let goal = f.record().workbench.active_goal_id.unwrap();
     f.apply(
@@ -51,7 +173,14 @@ fn pb_issue_does_not_stop_independent_work_or_erase_delivery_gate() {
     report(&f, "independent", "succeeded");
     assert!(next(&f, "three", true).is_none());
     let r = f.record();
-    assert_eq!(r.workbench.execution.state, "waitingDependencies");
+    assert_eq!(r.workbench.execution.state, "settledWithGaps");
+    assert_eq!(
+        r.workbench.execution.summary["units"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
     assert_eq!(r.issues[0]["status"], "open");
     assert_eq!(r.approvals.len(), approvals);
     assert_eq!(
@@ -62,7 +191,7 @@ fn pb_issue_does_not_stop_independent_work_or_erase_delivery_gate() {
             .find(|u| u.id == "dependent")
             .unwrap()
             .status,
-        "pending"
+        "deferred"
     );
 }
 #[test]
@@ -216,12 +345,9 @@ fn wake_requires_changed_conditions_and_respects_pause_and_convergence() {
             .is_some()
     );
     f.service.production_execution_pause(&f.id).unwrap();
-    assert!(
-        f.service
-            .production_execution_wakeable(&f.id)
-            .unwrap()
-            .is_none()
-    );
+    assert_eq!(f.record().workbench.execution.state, "settledWithGaps");
+    // Execution pause belongs to the native cancellation gate. Closing an idle APP
+    // must not erase an already consolidated report or require another Continue.
 }
 #[test]
 fn frozen_version_and_acceptance_copy_are_isolated_from_editable_archive() {

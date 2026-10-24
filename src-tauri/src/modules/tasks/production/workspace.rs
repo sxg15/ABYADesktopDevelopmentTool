@@ -11,6 +11,12 @@ pub(super) fn affects(issue: &Value, stage: &str) -> bool {
 pub(super) fn stage_statuses(r: &ProductionRecord) -> BTreeMap<String, String> {
     let mut states = r.stages.clone();
     for (stage, state) in &mut states {
+        if stage == "implementation"
+            && super::autonomy::autonomous_implementation(r)
+            && *state == "blocked"
+        {
+            *state = "in-progress".into();
+        }
         if *state == "passed" || *state == "not-started" && *stage != r.current_stage {
             continue;
         }

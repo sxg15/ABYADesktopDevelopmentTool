@@ -11,7 +11,7 @@ export function goalExecutionStatus(record:ProductionRecord,goal:WorkbenchGoal,c
   if(status==="finished"&&goal.id===record.workbench?.activeGoalId&&["waitingDependencies","settledWithGaps","settled"].includes(record.workbench?.execution?.state??""))return "workSettled";
   return status;
 }
-export const executionLabels:Record<string,string>={workSettled:"已收敛，等待相关条件",running:"进行中",sending:"正在派发",queued:"等待连接 / 恢复",finished:"待继续",paused:"已暂停",interrupted:"被中断",reconciling:"正在核对",needsReview:"结果待核对",failed:"执行失败",untracked:"待核对 / 未执行"};
+export const executionLabels:Record<string,string>={workSettled:"本轮已结束，查看结果与缺口",running:"进行中",sending:"正在派发",queued:"等待连接 / 恢复",finished:"待继续",paused:"已暂停",interrupted:"被中断",reconciling:"正在核对",needsReview:"结果待核对",failed:"执行失败",untracked:"待核对 / 未执行"};
 export function GoalExecutionPanel({record,goal,active,checking,onResume,en=false}:{record:ProductionRecord;goal:WorkbenchGoal;active:boolean;checking:boolean;onResume?:ResumeGoal;en?:boolean}) {
   const [busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
   const [review,setReview]=useState(false),[note,setNote]=useState("");const locked=useRef(false);

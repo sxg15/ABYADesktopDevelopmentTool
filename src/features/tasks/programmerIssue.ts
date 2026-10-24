@@ -6,8 +6,10 @@ export function affectsLua(issue: ProductionIssue) {
 }
 
 export function programmerIssue(issue: ProductionIssue, en = false) {
-  if (issue.repairTarget === "abya-source") return {suspected:false,label:en ? "ABYA game source defect" : "ABYA 游戏源码缺陷"};
-  if (issue.repairTarget === "abya-build") return {suspected:false,label:en ? "ABYA build defect" : "ABYA 构建包缺陷"};
+  if (issue.repairTarget === "abya-source" || issue.repairTarget === "abya-build") {
+    const confirmed=issue.diagnosisStatus==="confirmed";
+    return {suspected:!confirmed,label:confirmed?(en?"Confirmed platform issue":"已确认平台问题"):(en?"Runtime issue · cause unconfirmed":"运行异常 · 原因待确认")};
+  }
   if (issue.repairTarget) return undefined;
   // Older pinned tasks have no structured target. Only explicit programmer handoff
   // language plus engine/build context qualifies, and it remains labelled suspected.

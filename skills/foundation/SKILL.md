@@ -1,5 +1,11 @@
 # Foundation Skill
 
+## Workflow 2.5 shared diagnosis (2026-10-24)
+ProductionIssue adds optional diagnosisStatus (suspected/confirmed). Missing legacy values
+remain unconfirmed, independently of repairTarget. Tasks owns evidence validation and UI
+projection; no approval, transport or credential changes. Native readonly status remains
+separate from current task policy identity and explicit migration actions.
+
 ## Terminal freeze recovery (2026-10-22)
 CodexTerminalState exposes an ephemeral inputSessionId. write_codex_terminal requires that exact PTY session identity, rejecting delayed calls after replacement before writing bytes.
 rebuild_codex_terminal is an APP-only spawn_blocking adapter to the Codex service. It preserves the task/native binding and cannot replay input or resume inference. terminalApi.rebuild uses the existing command boundary; no credentials or raw terminal input are logged.
