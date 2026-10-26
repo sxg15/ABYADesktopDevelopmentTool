@@ -11,6 +11,16 @@ pub(super) fn affects(issue: &Value, stage: &str) -> bool {
 pub(super) fn stage_statuses(r: &ProductionRecord) -> BTreeMap<String, String> {
     let mut states = r.stages.clone();
     for (stage, state) in &mut states {
+        if super::stage_contracts::enabled(r)
+            && super::stage_contracts::design_stage(stage)
+            && *state == "blocked"
+            && !r
+                .issues
+                .iter()
+                .any(|i| super::stage_contracts::blocks(r, i, stage, "complete-stage"))
+        {
+            *state = "in-progress".into();
+        }
         if stage == "implementation"
             && super::autonomy::autonomous_implementation(r)
             && *state == "blocked"
@@ -21,14 +31,9 @@ pub(super) fn stage_statuses(r: &ProductionRecord) -> BTreeMap<String, String> {
             continue;
         }
         if !(stage == "implementation" && super::autonomy::autonomous_implementation(r))
-            && r.issues.iter().any(|i| {
-                i["status"] != "resolved"
-                    && i["kind"] != "suggestion"
-                    && affects(i, stage)
-                    && !(["implementation", "review", "delivery", "closeout"]
-                        .contains(&stage.as_str())
-                        && super::autonomy::workaround_bound(r, i))
-            })
+            && r.issues
+                .iter()
+                .any(|i| super::stage_contracts::blocks(r, i, stage, "complete-stage"))
         {
             *state = "blocked".into();
         } else if r
@@ -131,6 +136,18 @@ pub(super) fn update_stage(r: &mut ProductionRecord, root: &Path, data: &Value) 
     if !["in-progress", "blocked", "stopped"].contains(&status) {
         return Err(AppError::validation(
             "进展状态应为进行中、遇到问题或已暂停。",
+        ));
+    }
+    if status == "blocked"
+        && super::stage_contracts::enabled(r)
+        && super::stage_contracts::design_stage(stage)
+        && !r
+            .issues
+            .iter()
+            .any(|i| super::stage_contracts::blocks(r, i, stage, "complete-stage"))
+    {
+        return Err(AppError::validation(
+            "当前没有有效设计门槛。技术问题保留为后续待办，继续形成当前设计产物。",
         ));
     }
     let status = if stage == "implementation" && super::autonomy::autonomous_implementation(r) {

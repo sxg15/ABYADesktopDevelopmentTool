@@ -2,6 +2,8 @@
 
 仅在需要检查、修改或运行玩法时读取。CLI 命令映射见 [cli-commands.md](cli-commands.md)。
 完整流程写入前须确认需求和计划；局部任务沿用其明确范围及授权，不重复完整访谈。
+流程 2.7 设计阶段默认不启动运行预检。APP 明确授权的隔离交互小样可在副本中验证指定范围；
+授权到期、撤销、阶段或需求/计划变化后失效。小样结果不能代替正式实现或改变设计批准。
 
 ## 托管实例预检
 
@@ -29,6 +31,9 @@ CreatorTest/Local 不作为联机证明。预检可管理临时实例，但对�
 游戏内容变更读取 [架构约定](gameplay-architecture.md)，取得实际 snapshot，维护
 artifacts/gameplay-architecture.v1.json，并提交完整 validate。错误阻止写入；
 警告须修复或记录精确规则、目标、依据与例外。ready=true 后再实施。
+工具 success 仅表示调用完成，必须继续核对 data.valid、ready 和 diagnostics。
+发现 schema 缺字段或枚举不明时重新描述当前工具一次；仍缺失则记录 contract-gap，停止猜测拼写。
+输入错误修正后复验；平台缺口暂缓依赖写入，继续独立项，不绕过确定性校验。
 Bot 新定义使用 [Bot 指南](bot-development.md) 的有限可撤销候选暂存例外；
 先校验基础与候选 Lua，暂存后完整验证，再做其他绑定，不以省步骤跳过确定性错误。
 

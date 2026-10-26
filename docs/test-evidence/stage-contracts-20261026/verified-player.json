@@ -1,0 +1,33 @@
+{
+  "purpose": "匹配阶段契约的诊断 Player；基于当前 PB 工作区构建，不替代全部玩法验收",
+  "plasticChangeset": 11806,
+  "contractVersion": "2026-10-26.1",
+  "editModeTests": {
+    "passed": 35,
+    "failed": 0
+  },
+  "realPlayerSmoke": "passed (synthetic task; no gameplay approval)",
+  "fingerprints": [
+    {
+      "path": "ABYA_PB.exe",
+      "bytes": 666624,
+      "sha256": "f089c8d6f47aa2f74ae1eda6e6f3daf2bc1451bf54f19677d78f9c44f6724770"
+    },
+    {
+      "path": "ABYA_PB_Data/Managed/Assembly-CSharp.dll",
+      "bytes": 435712,
+      "sha256": "4d2a06f67aeeeddb612da7128851efc9cc7a505521d2870b6960e592535a8f2f"
+    },
+    {
+      "path": "ABYA_PB_Data/Managed/Abya.Capabilities.Modules.dll",
+      "bytes": 1086464,
+      "sha256": "b17875450d1f31e56a97a31a3b8ff3edfc408f74a1a2d4ed829b4ea54fa18cb0"
+    },
+    {
+      "path": "ABYA_PB_Data/Managed/Abya.Legacy.Runtime.dll",
+      "bytes": 7641600,
+      "sha256": "10e2419c718a154ca80bce77280f675cc678cfd093f0919bb3a756145ef5cf7e"
+    }
+  ],
+  "includesExistingWorkspaceBaseline": true
+}

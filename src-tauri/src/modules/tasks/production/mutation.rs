@@ -567,7 +567,7 @@ fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
     if kind == "blocker" {
         text(data, "resumeWhen")?;
     }
-    let mut value = data.clone();
+    let mut value = super::stage_contracts::normalize_issue(r, data)?;
     value["updatedAt"] = json!(now());
     if let Some(i) = r.issues.iter().position(|i| i["id"] == id) {
         if data.get("repairTarget").is_none() && !r.issues[i]["repairTarget"].is_null() {

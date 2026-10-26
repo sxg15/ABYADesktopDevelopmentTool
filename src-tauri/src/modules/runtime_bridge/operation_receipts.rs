@@ -68,6 +68,9 @@ fn once(path: &Path, hash: &str, run: impl FnOnce() -> AppResult<Value>) -> AppR
         Ok(value) => {
             receipt["status"] = json!("returned");
             receipt["runtimeSuccess"] = json!(value["success"].as_bool().unwrap_or(false));
+            if value["verification"].is_object() {
+                receipt["verification"] = value["verification"].clone();
+            }
             receipt["resultHash"] = json!(format!(
                 "{:x}",
                 Sha256::digest(value.to_string().as_bytes())

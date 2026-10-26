@@ -1,5 +1,12 @@
 # 验证续接与 CLI 长请求（2026-10-26）
 
+## 2026-10-26 — Workflow 2.7 stage contracts
+
+- Separate design submission gates from technical runtime issues, preserving actual materials, questions and approvals.
+- Scope game authoring to approved implementation or an APP-authorized isolated prototype with expiry and revocation.
+- Remove misleading empty programmer exports; slim stage prompts and load historical Skill contracts on demand.
+- Preserve explicit pinned upgrades, original task IDs, results and history.
+
 - resources/plan 增加独立有限技术恢复：需实际运行工具失败证据，保留审批、暂停与未知写入门禁；不把所有blocked自动放行。
 - 另一台机器材料确认热加载300秒来自游戏工具自身超时，冷启动未完成；重启恢复不等于底层初始化缺陷已修复。
 

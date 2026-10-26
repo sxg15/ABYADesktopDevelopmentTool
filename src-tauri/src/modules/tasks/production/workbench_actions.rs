@@ -6,6 +6,12 @@ impl TaskService {
         let task = self.get(&input.task_id)?;
         self.production_commit(&input.task_id, input.expected_revision, |r| {
             match input.operation.as_str() {
+                "revoke-prototype" => {
+                    let id=mutation::text(&input.data,"id")?;
+                    let grant=r.workbench.prototype_grants.iter_mut().find(|g|g["id"]==id)
+                        .ok_or_else(||AppError::validation("授权不存在。"))?;
+                    grant["status"]=json!("revoked");
+                }
                 "attach" => super::workbench_import::attach(
                     r,
                     Path::new(&task.workspace_path),

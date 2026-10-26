@@ -1,15 +1,5 @@
 # LLM Maintenance Contract
 
-Task-specific branch exception (user request, 2026-10-19): remove Grok on the
-requested 界面优化 branch based on synchronized CLI/dev. Validate and publish the
-complete feature commit to CLI then dev without changing the occupied CLI worktree
-or its uncommitted work. Leave 界面优化 checked out for follow-up UI work.
-
-Task-specific branch exception (user request, 2026-10-16): game art workflow and
-reference-library work develops on 美术优化, created from synchronized CLI/dev.
-After verification, push this feature branch and integrate into CLI then dev under
-the normal non-destructive release policy; leave 美术优化 checked out for follow-up.
-
 Release branch policy (user clarification, 2026-10-15): all development happens
 on CLI. Before editing, inspect the working tree, fetch origin/CLI and origin/dev,
 switch to CLI, and integrate both latest remote branches into CLI. Preserve local
@@ -26,16 +16,16 @@ actual conflict or remote failure. Never force-push, reset unrelated work or upd
 main. This supersedes historical dev-only rules. No additional confirmation is
 needed for this routine sync.
 
-Before changing production code:
+Before changing production code (load context according to the change):
 
-1. Read `ARCHITECTURE.md` and `module-registry.json`.
-2. Read every `skills/<module>/SKILL.md` affected by the change.
+1. Locate ownership with `module-registry.json`; read relevant `ARCHITECTURE.md` sections when crossing boundaries.
+2. Read affected `skills/<module>/SKILL.md` current contracts. Load linked history only for the affected surface; do not read all modules or dated release history every turn.
 3. Keep business logic inside the owning module and depend only on its public
    interfaces.
 4. Update the affected Skill in the same change whenever behavior, contracts,
    schemas, dependencies, tests, or workflows change.
 5. Update `CHANGELOG.md` for every production-code change.
-6. Run `npm run check`, Rust formatting, Clippy, and Rust tests.
+6. During iteration run focused checks for the affected contract. Before release run `npm run check`, Rust formatting, Clippy and Rust tests; reuse successful results unless relevant inputs change. Package validation is still required.
 
 Do not add raw command-line input to the UI. Do not introduce or persist game
 connection secrets without an explicit security-design change. Do not add

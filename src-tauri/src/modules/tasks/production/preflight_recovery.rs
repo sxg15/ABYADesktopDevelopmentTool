@@ -30,6 +30,7 @@ fn human_wait(r: &ProductionRecord) -> bool {
 }
 fn enabled(r: &ProductionRecord) -> bool {
     r.policy["preflightRecovery"]["enabled"] == true
+        && (!super::stage_contracts::enabled(r) || super::authoring::has_prototype(r))
         && matches!(r.current_stage.as_str(), "resources" | "plan")
         && !human_wait(r)
         && !r

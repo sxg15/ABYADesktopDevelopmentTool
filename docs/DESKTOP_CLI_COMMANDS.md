@@ -1,5 +1,16 @@
 # 桌面 CLI 命令契约
 
+## 阶段契约（2.7）
+
+新任务启用 stageContractsVersion=1；旧任务保持固定策略，APP 显式升级时保留批准、成果及历史。
+资源/方案阶段的技术问题可以记录，但提交门槛由 APP 的材料、问题组、策划反馈及批准状态决定。
+game_instance_launch 与 game_runtime_call_tool 共享后端 authoring guard。设计阶段没有正式写入授权；
+用户可在 APP 创建 30 分钟的隔离小样授权，范围仅限独立存档的 UI 与事件绑定。
+授权不能通过 CLI 创建，不能切换存档或运行任意 Lua；每次写入核对实际存档路径。
+expiry/revocation/scope 变化影响后续派发；已派发的操作仍须完成或按原收据对账。
+运行工具的 success/executionState 表示调用结果；verification.valid/ready 表示校验结果，均不代表用户验收。
+旧 Player 若无法打开任务工作区副本，需要更新匹配的 Player；不会自动改用同 GUID 的原始存档。
+
 ## 美术设计与案例库（2.2）
 
 `art list` 接受 `{ "query": "desktop inventory" }`，检索最新有效案例；先按玩法、平台、镜头与输入筛选，再看风格。

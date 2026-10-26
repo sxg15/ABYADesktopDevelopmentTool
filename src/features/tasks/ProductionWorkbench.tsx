@@ -11,6 +11,7 @@ import { ReadableText } from "./ReadableText";
 import { VisualGallery } from "./VisualGallery";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { WorkbenchIssues } from "./WorkbenchIssues";
+import { PrototypeAuthorization } from "./PrototypeAuthorization";
 import { Modal } from "../../app/Modal";
 import { statusName } from "./productionText";
 import "./workbench.css";
@@ -99,6 +100,7 @@ export function ProductionWorkbench(props:Props) {
     </aside><WorkbenchSplit en={en}><section className="wb-outcome">{outcome}{!historical&&<WorkbenchIssues taskId={taskId} record={r} stage={currentStage} en={en} active={active&&!running} onUpdated={accept}/>}</section>
     <section className="wb-interaction" aria-label={en?"Task interaction":"任务交互"}>
       <AutonomousExecution record={r} en={en} control={control}/>
+      {!historical&&view.policy.stageContractsVersion===1&&["resources","plan"].includes(currentStage)&&<PrototypeAuthorization key={taskId} record={r} active={active&&!running} en={en} onUpdated={accept}/>}
       {goal&&["work","request","feedback"].includes(goal.sourceType)&&<GoalExecutionPanel key={goal.id} record={r} goal={goal} active={active} checking={reconciling} en={en} onResume={props.onResumeGoal?async(...args)=>{const result=await props.onResumeGoal!(...args);await refresh();return result;}:undefined}/>}
       <div hidden={historical||mode!=="current"}><TaskIntakeDialog key={taskId} taskId={taskId} active={active} embedded executionBusy={running} requestedGroup={props.requestedGroup} onEnsureConnection={props.onEnsureConnection} onContinue={onContinue}/></div>
       {historical?<div className="wb-history-note"><p>{en?"History is read only. Your current draft is retained.":"当前正在查看历史；工作草稿仍保留，不会改写当时的决定。"}</p><button className="primary-button" onClick={()=>{setGoalId("");setStage(r.currentStage);}}>{en?"Return to current work":"回到当前工作"}</button></div>:<>

@@ -554,19 +554,24 @@ impl CodexTerminalService {
         }
         request.status = "sending".into();
         save(directory, request)?;
-        let goal_prompt=request.goal_id.as_ref().map(|goal|format!("继续唯一子流程 {goal}（原ID保留）。先读取该子流程与执行尝试 {}，核对已有成果和结果未知的写入，只推进本目标剩余工作，不重新创建‘继续’目标，不遍历重放其他请求。正常无人工待办时自动推进；审核、回答、复验、阻塞或暂停仍需遵守。",request.id));
+        let stage_contract = production.record.as_ref().filter(|r|r.policy["stageContractsVersion"]==1)
+            .map(|r|format!("当前阶段 {}，流程 {}。resources/plan 交付可审核设计或计划，技术疑点记录后续待验证，不提前绑定Lua/架构验证或启动Player。隔离运行小样仅使用APP当前有效授权。先读取 production current 和当前目标已有成果。",r.current_stage,r.workflow_version)).unwrap_or_default();
+        let goal_prompt=request.goal_id.as_ref().map(|goal|format!("{stage_contract}继续原子目标 {goal}，执行尝试 {}。保留ID与成果，先对账未知写入，仅推进剩余工作。达到当前阶段结果即提交；遇到真实人工决定或用户暂停时等待，不重复已完成请求。",request.id));
         let autonomous_prompt = unit.as_ref().map(|u| format!(
-            "Lua 自主执行。原子目标 {}，当前工作项 {}：{}。当前路线：{}。先 production current 核对实际结果与未知写入；workflowVersion改变时重读本任务Skill的自主执行说明。版本登记按新策略显式声明purpose=candidate或fixture，测试夹具不替换正式候选。再执行本工作项。用 save-work-unit 拆解独立工作和依赖，用 report-work-unit 记录实际结果文件。报告当前工作项结果后结束本轮输出；APP 会自动派发下一项，不要报告未派发工作项或询问是否继续。普通错误自行修复；疑似 PB 问题先排除配置/测试污染，再尝试保持原玩法要求的替代方案；失败则 record-issue-handling 保留影响并暂缓依赖工作，继续独立项。不要求用户继续，不把 AI 自测问题交人工复验，不把暂缓当通过。相同条件下禁止重复已失败路线。所有工作项收敛后核对必要自测，满足原门槛再 complete-stage；有缺口使用 conclude-implementation 保留差异。conclude-implementation已结束当前派发，成功后直接结束回复，不再report-work-unit或重复提交。不得改批准或隐藏交付缺口。",u.goal_id,u.id,u.title,u.routes[u.route]));
+            "Lua 自主执行：目标 {}，工作项 {}：{}，路线 {}。读取 production current；策略变化时按需读取本任务 references/autonomous-implementation.md。核对未知写入后完成本项，以 report-work-unit 记录实际结果，再结束本轮，APP 自动派发后续。普通错误自行修复，PB问题有限恢复/等效替代后隔离依赖，继续独立项，不要求用户反复继续。候选与fixture版本分开。全部收敛时核对自测并 complete-stage；有缺口 conclude-implementation 后直接结束，不重复报告。不得把暂缓、静态校验或调用成功当成运行通过。",u.goal_id,u.id,u.title,u.routes[u.route]));
         let preflight_prompt=production.record.as_ref().filter(|r|crate::modules::tasks::preflight_recovery_active(r)).map(|r|format!(
             "技术预检有限恢复，第{}轮，原目标{}。只处理本任务当前{}阶段的运行加载/CLI/UI前置条件，不进入Lua实现，不批准文档或关闭用户反馈。先production current核对当前问题和已完成操作，历史失败资料不是当前状态。连续只读CLI超时后改查托管进程、磁盘启动报告与日志，不反复堆叠主线程请求。热加载部分成功时保留原存档ID，不重复建档；有未知写入先对账。仅对本任务专用预检实例、已证明无未保存操作且原进程确认退出后，按原存档和确切关卡作干净启动；包含已尝试的首次冷启动，总共最多两次。用户试玩实例、未知写入、未保存状态不允许自动重启或强停。先核对同一启动身份的ready/worldReady和实际存档关卡，再核对所需入口；UI面板前置条件用当前可见原生按钮处理，不猜历史组件ID。恢复后用原问题ID登记证据、更新当前摘要并继续资源/方案预检；根因不明仍标未确认。范围外权限/缺资料或预算耗尽如实保留，不将未测项记通过。每轮至多10分钟，正常审核与用户暂停优先。",
             r.workbench.execution.preflight.attempts,r.workbench.execution.preflight.goal_id,r.current_stage));
+        let general_prompt = format!(
+            "{stage_contract}继续当前制作目标。按当前记录处理尚未执行的 workbench.requests、caseRequests 和策划反馈，按ID/版本去重。沿用已确认要求及持续略过事项，先查看实际参考和成果。按需要加载本任务Skill；记录实际进展，完成本阶段结果后提交。普通执行连续推进，真实审核/回答/复验或用户暂停时等待，不替用户批准。"
+        );
         let sent = if let Some(group) = request.group_id.as_ref() {
             self.continue_questions_locked(&request.task_id, group, request.answer_revision)
         } else {
             let receipt = directory.join(format!("task-continue-{}.json", request.id));
             let mut attempt = intake_receipt::start_attempt(&receipt, None, &request.native_id)?;
             let result=server.request("turn/start",json!({"threadId":request.native_id,"clientUserMessageId":attempt["messageId"],
-                "input":[{"type":"text","text":autonomous_prompt.as_deref().or(preflight_prompt.as_deref()).or(repair_spec.as_ref().map(|s|s.prompt.as_str())).or(goal_prompt.as_deref()).unwrap_or(if request.automatic_after.is_some() { "当前目标尚未完成且没有人工待办，自动推进下一子阶段。读取最新制作记录和已有成果，直接继续实现、检查与验证；不把一次回复结束当作需要用户点击继续。更新具体目标与进展；仅在需要审核、用户回答/复验、实际阻塞、执行失败或任务完成时停下。不得重复已完成操作，不得替用户批准。" } else { "用户在 APP 点击继续任务。读取最新制作记录，核对已有成果后继续当前阶段。若 workbench.requests 有用户请求，按 id 和 revision 核对已有执行记录，处理尚未执行的请求，开始/完成时用 update-workbench-request 记录 status 与 summary，禁止重复执行；workbench.deferrals 是本任务持续略过的可选建议，保留影响说明，不重复打断，不能把略过当成修复或批准。若 artDesign.caseRequests 有本任务本轮 APP 案例请求，先按 selection 的具体版本与 prompt 核对已有处理记录，再查看候选图像、评估参考或整理草稿；请求不等于已采用或已认可，不重复执行已完成请求，不绕过人工确认。若 artifacts 中存在 plannerReference=true 且 status 不是 withdrawn 的策划参考图片，读取其路径、说明并查看图片后用于美术需求；它们不是验收成果，变更方案仍需修订文档并请求人工确认。先在顶部对话步骤登记本轮工作。遇到已知问题时检查是否有新进展，说明问题、处理方式和下一步，并继续可完成的相关工作。进展用简短自然的中文说明；需求、执行计划和交付通过原有文档确认流程处理。" }) }]}));
+                "input":[{"type":"text","text":autonomous_prompt.as_deref().or(preflight_prompt.as_deref()).or(repair_spec.as_ref().map(|s|s.prompt.as_str())).or(goal_prompt.as_deref()).unwrap_or(&general_prompt)}]}));
             result.and_then(|v| {
                 let id = v["turn"]["id"]
                     .as_str()

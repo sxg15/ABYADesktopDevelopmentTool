@@ -81,7 +81,7 @@ impl RuntimeBridgeService {
         })
     }
 
-    fn acceptance_read(&self, id: &str, tool: &str, input: Value) -> AppResult<Value> {
+    pub(super) fn acceptance_read(&self, id: &str, tool: &str, input: Value) -> AppResult<Value> {
         let value = self.run(
             id,
             &["capability", "run", tool],

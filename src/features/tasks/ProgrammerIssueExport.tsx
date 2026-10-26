@@ -32,6 +32,7 @@ export function ProgrammerIssueExport({ taskId, revision, issueIds, en = false, 
     } catch (e) { if (generation.current === request) setError(errorMessage(e)); }
     finally { if (generation.current === request) { pending.current = false; setBusy(false); } }
   }
+  if (!issueIds.length) return null;
   return <div className="programmer-issue-export">
     <button className="secondary-button" disabled={busy || !issueIds.length} onClick={() => void exportFile()}>
       <Download size={15} aria-hidden="true" />{busy ? (en ? "Exporting…" : "正在导出…") : single ? (en ? "Export this issue (MD)" : "导出此问题（MD）") : (en ? "Export programmer issues (MD)" : "导出程序问题汇总（MD）")}

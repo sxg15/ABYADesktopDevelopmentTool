@@ -1,5 +1,7 @@
+mod authoring;
 mod autonomy;
 mod preflight_recovery;
+mod stage_contracts;
 pub use preflight_recovery::{
     preflight_recovery_active, preflight_recovery_manual, preflight_recovery_resumable,
 };
@@ -282,6 +284,7 @@ impl TaskService {
         let task = self.database.with_connection(|c| read_task(c, id))?;
         if let Some(r) = &mut record {
             art_design_sources::refresh(r, &task);
+            authoring::project_grants(r);
             if r.workbench.goals.is_empty() {
                 workbench::observe(r, None);
             }

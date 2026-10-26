@@ -249,6 +249,21 @@ async fn reconcile_task_execution(
         .map_err(foundation::AppError::internal)?
 }
 #[tauri::command]
+async fn start_production_prototype(
+    task_id: String,
+    expected_revision: u64,
+    source_instance_id: String,
+    note: String,
+    state: State<'_, AppState>,
+) -> AppResult<ProductionView> {
+    let service = state.runtime_bridge.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.start_prototype(&task_id, expected_revision, &source_instance_id, &note)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
+}
+#[tauri::command]
 async fn resume_workbench_goal(
     task_id: String,
     goal_id: String,
@@ -1262,6 +1277,7 @@ pub fn run() {
             acknowledge_task_notification_activations,
             get_task_production,
             reconcile_task_execution,
+            start_production_prototype,
             resume_workbench_goal,
             start_task_acceptance,
             get_task_acceptance,

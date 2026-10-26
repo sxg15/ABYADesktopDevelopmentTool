@@ -51,6 +51,11 @@ fn seed_preflight(f: &Fixture) {
     r["stages"]["resources"] = json!("blocked");
     r["feedback"] = json!([]);
     r["policy"]["preflightRecovery"] = json!({"enabled":true});
+    // This fixture exercises the pinned 2.6 recovery contract, before scoped grants.
+    r["policy"]
+        .as_object_mut()
+        .unwrap()
+        .remove("stageContractsVersion");
     r["issues"] = json!([{"id":"load","kind":"blocker","stage":"resources","status":"open","description":"launch failed","resumeWhen":"ready"}]);
     db.execute(
         "UPDATE task_production SET body=?2 WHERE task_id=?1",

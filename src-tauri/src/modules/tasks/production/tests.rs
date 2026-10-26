@@ -5,6 +5,7 @@ mod art_library_tests;
 mod art_recovery_tests;
 mod art_references_tests;
 mod issue_export_tests;
+mod stage_contracts_tests;
 mod workbench_tests;
 use crate::foundation::{AppPaths, Database};
 use crate::modules::tasks::TaskInput;
@@ -14,6 +15,7 @@ fn prior_policy() -> Value {
     let mut p = policy();
     p.as_object_mut().unwrap().remove("artDesignVersion");
     p.as_object_mut().unwrap().remove("implementationExecution");
+    p.as_object_mut().unwrap().remove("stageContractsVersion");
     p["workflowVersion"] = json!("2.1.0");
     p
 }
@@ -1128,7 +1130,7 @@ fn explicit_upgrade_preserves_approvals_and_round_history_without_inventing_self
     let old = f.record();
     let view = f.service.production_upgrade(&f.id, old.revision).unwrap();
     let r = view.record.unwrap();
-    assert_eq!(r.workflow_version, "2.6.0");
+    assert_eq!(r.workflow_version, "2.7.0");
     assert_eq!(r.cycle, old.cycle);
     assert_eq!(r.approvals.len(), old.approvals.len());
     assert_eq!(r.documents["plan"].sha256, old.documents["plan"].sha256);

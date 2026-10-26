@@ -152,8 +152,12 @@ async function outputContent(result, flags) {
   let data;
   try { data = JSON.parse(firstText); } catch { data = firstText; }
   const denied = data?.approval === 'denied';
+  const verification = data && typeof data === 'object' && typeof data.valid === 'boolean'
+    ? {valid:data.valid,ready:typeof data.ready==='boolean'?data.ready:null,
+      scope:data.verificationScope??'unspecified',runtimeAcceptanceVerified:data.runtimeAcceptanceVerified===true}
+    : undefined;
   return { schemaVersion: 1, requestId: result.requestId, success: result.success && !denied,
-    executionState: denied ? 'not_executed' : result.success ? 'completed' : 'failed', data, content };
+    executionState: denied ? 'not_executed' : result.success ? 'completed' : 'failed', verification, data, content };
 }
 
 function ensureCommand(positional) {

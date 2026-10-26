@@ -243,6 +243,7 @@ impl TaskService {
                 return Ok(());
             }
             if compatible {
+                if super::stage_contracts::enabled(r) {super::stage_contracts::migrate(r);}
                 if budget_upgrade {super::autonomy_budget::migrate_budget(r);}
                 if r.policy["implementationExecution"]["mode"]=="autonomous" && r.current_stage=="implementation" && r.stages.get("implementation").is_some_and(|s|s=="blocked") {
                     r.stages.insert("implementation".into(),"in-progress".into());

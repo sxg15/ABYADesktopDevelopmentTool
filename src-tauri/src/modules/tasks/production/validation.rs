@@ -58,16 +58,10 @@ pub(super) fn clear_issues(r: &ProductionRecord, stage: &str) -> AppResult<()> {
 }
 
 fn clear_issues_for(r: &ProductionRecord, stage: &str, operation: &str) -> AppResult<()> {
-    if r.issues.iter().any(|i| {
-        i["status"] != "resolved"
-            && i["kind"] != "suggestion"
-            && super::workspace::affects(i, stage)
-            && !(["implementation", "review", "delivery", "closeout"].contains(&stage)
-                && super::autonomy::workaround_bound(r, i))
-            && i["blockedOperations"]
-                .as_array()
-                .is_none_or(|actions| actions.iter().any(|a| a == operation))
-    }) {
+    if r.issues
+        .iter()
+        .any(|i| super::stage_contracts::blocks(r, i, stage, operation))
+    {
         return Err(AppError::validation(
             "仍有未关闭的问题或阻塞，请先处理并记录复验。",
         ));

@@ -1,0 +1,51 @@
+{
+  "botRuntimeAcceptanceRequired": true,
+  "contentRevision": "49805a9010df8d03a9a40538688c1a8479232ef458da998c490fdb65f4bc5ca3",
+  "contractVersion": "2026-10-26.1",
+  "diagnostics": [
+    {
+      "code": "bots.plan_missing",
+      "message": "AI definitions require a bots plan in the architecture manifest.",
+      "path": "$.bots",
+      "severity": "error",
+      "targetKey": "",
+      "waived": false
+    },
+    {
+      "allowedValues": [
+        "coordinator",
+        "entity",
+        "input",
+        "presentation"
+      ],
+      "code": "component.scope",
+      "contractVersion": "2026-10-26.1",
+      "message": "Unknown component scope.",
+      "path": "$.components[0].scope",
+      "received": "customUiNode",
+      "recovery": "Read the current Player capability schema; do not guess alternate spellings.",
+      "severity": "error",
+      "targetKey": "invalid-enum",
+      "waived": false
+    },
+    {
+      "code": "component.target",
+      "message": "Component target is required.",
+      "path": "$.components[0].target",
+      "severity": "error",
+      "targetKey": "invalid-enum",
+      "waived": false
+    }
+  ],
+  "errorCount": 3,
+  "manifestHash": "371aa7a64d5854137aee7b5171bdd94d59846b42dce833ea79ef388c6c9a6b32",
+  "mode": "manifestValidation",
+  "ready": false,
+  "runtimeAcceptanceVerified": false,
+  "schemaVersion": "abya.gameplay-architecture/v1",
+  "snapshotRevision": "96b90b48522564ae53fb7ec8ae29dc7208b281bee42675a3f4c825e08e1af3d6",
+  "valid": false,
+  "verificationScope": "static",
+  "waivedWarningCount": 0,
+  "warningCount": 0
+}

@@ -1,6 +1,7 @@
 {
   "schema": "abya.game-development-policy/v1",
-  "workflowVersion": "2.6.0",
+  "workflowVersion": "2.7.0",
+  "stageContractsVersion": 1,
   "artDesignVersion": 1,
   "preflightRecovery": {"enabled":true,"stages":["resources","plan"],"attempts":2,"turnMinutes":10},
   "scope": "完整玩法、较大改动；独立阶段仅执行明确范围",

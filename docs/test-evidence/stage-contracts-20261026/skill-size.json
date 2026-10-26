@@ -1,0 +1,26 @@
+{
+  "development-tasks": {
+    "beforeBytes": 53191,
+    "afterBytes": 17568
+  },
+  "game-runtime-bridge": {
+    "beforeBytes": 6760,
+    "afterBytes": 3666
+  },
+  "codex-terminal": {
+    "beforeBytes": 27042,
+    "afterBytes": 10630
+  },
+  "desktop-cli": {
+    "beforeBytes": 13410,
+    "afterBytes": 5374
+  },
+  "foundation": {
+    "beforeBytes": 20673,
+    "afterBytes": 6742
+  },
+  "release": {
+    "beforeBytes": 44487,
+    "afterBytes": 12308
+  }
+}

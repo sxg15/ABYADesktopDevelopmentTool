@@ -68,3 +68,10 @@ test('cancel targets the original operation within the same session',async t=>{
   assert.equal(r.code,0);const cancel=f.requests.find(x=>x.url.endsWith('/cancel'));
   assert.equal(cancel.targetRequestId,'operation-1');assert.equal(cancel.sessionId,'conversation-1');
 });
+test('completed transport retains failed static validation without claiming runtime acceptance',async t=>{
+  const f=await fixture(t,()=>[{type:'text',text:JSON.stringify({valid:false,ready:false,verificationScope:'static',diagnostics:[{code:'component.scope'}]})}]);
+  const r=await f.run(['capability','run','validate','--input-file','-']);
+  assert.equal(r.code,0);assert.equal(r.value.success,true);
+  assert.deepEqual(r.value.verification,{valid:false,ready:false,scope:'static',runtimeAcceptanceVerified:false});
+  assert.equal(r.value.data.diagnostics[0].code,'component.scope');
+});

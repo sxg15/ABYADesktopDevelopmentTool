@@ -1,4 +1,5 @@
 mod acceptance;
+mod authoring;
 mod operation_receipts;
 mod operation_trace;
 mod process;
@@ -294,15 +295,17 @@ impl RuntimeBridgeService {
                 (id.into(), session.into(), cancel.clone()),
             );
         }
-        let result = self.run(
-            id,
-            &["capability", "run", name],
-            Some(input),
-            session,
-            operation,
-            Duration::from_secs(690),
-            cancel,
-        );
+        let result = self.check_authoring(id, name).and_then(|()| {
+            self.run(
+                id,
+                &["capability", "run", name],
+                Some(input),
+                session,
+                operation,
+                Duration::from_secs(690),
+                cancel,
+            )
+        });
         self.active.lock().remove(operation);
         let value = result?;
         Ok(RuntimeToolResult {

@@ -1,0 +1,75 @@
+{
+  "scope": "real-model interpretation; not tool execution or full-game timing",
+  "model": "gpt-6-astra",
+  "results": [
+    {
+      "variant": "old-skill",
+      "status": "completed",
+      "elapsedMs": 143964,
+      "decisions": [
+        {
+          "id": "art-buttons",
+          "action": "submit-design",
+          "reason": "美术 v2 已覆盖最新反馈，应提交该版本供 APP 确认，明确保留按钮并支持 W/S。Player 不可用应记录为运行验证缺口，不阻止先展示设计，也不授权提前实现。"
+        },
+        {
+          "id": "scope-gap",
+          "action": "submit-design",
+          "reason": "美术稿与要求映射已完成，应继续当前资源阶段并提交审查。停止猜测 scope 枚举，将未完成的技术预检如实记录，不以其代替设计审查或宣称验证通过。"
+        },
+        {
+          "id": "implementation-invalid",
+          "action": "repair-input",
+          "reason": "success=true 不代表架构有效；data.valid=false、data.ready=false 明确表示校验未通过。应按组件职责从 coordinator/entity/input/presentation 中选择正确 scope，修复输入并重新校验，再继续实现。"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "variant": "new-skill",
+      "status": "completed",
+      "elapsedMs": 130195,
+      "decisions": [
+        {
+          "id": "art-buttons",
+          "action": "submit-design",
+          "reason": "美术 v2 已覆盖最新反馈，可提交 APP 审查；保留按钮并在设计规格中明确 W/S 输入映射。plan 未批准且无小样授权，不进行运行绑定，Player 不可用不阻碍设计提交。"
+        },
+        {
+          "id": "scope-gap",
+          "action": "submit-design",
+          "reason": "美术稿与需求映射已完成，可提交当前资源阶段审查。停止猜测 scope 枚举，将技术疑点及影响记录为实现阶段待验证项，不以运行验证阻碍设计提交。"
+        },
+        {
+          "id": "implementation-invalid",
+          "action": "repair-input",
+          "reason": "success=true 不代表架构有效；data.valid=false、data.ready=false 表明校验未通过。应按组件职责从 coordinator/entity/input/presentation 中选择合法 scope，修正后重新校验，并在已批准计划范围内继续实现，无需用户再次确认。"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "variant": "new-skill-with-contract",
+      "status": "completed",
+      "elapsedMs": 43456,
+      "decisions": [
+        {
+          "id": "art-buttons",
+          "action": "submit-design",
+          "reason": "提交覆盖最新反馈的美术 v2，保留按钮并明确 W/S 输入映射规格，交由 APP 用户审查。plan 未批准且无小样授权，不进行运行绑定；Player 不可用不阻碍设计提交。"
+        },
+        {
+          "id": "scope-gap",
+          "action": "submit-design",
+          "reason": "美术稿与要求映射已完整，可提交当前资源阶段审查。scope 枚举疑点记录为实现阶段待验证项，不继续猜测枚举，也不以运行技术问题阻止设计提交。"
+        },
+        {
+          "id": "implementation-invalid",
+          "action": "repair-input",
+          "reason": "success=true 仅说明调用完成；valid=false、ready=false 表明架构校验未通过。应按组件职责从 coordinator/entity/input/presentation 中选择正确 scope，修复并重新校验，通过后继续 Lua 实现，无需新增人工确认。"
+        }
+      ],
+      "passed": true
+    }
+  ]
+}

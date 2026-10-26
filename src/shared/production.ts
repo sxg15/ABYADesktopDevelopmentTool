@@ -21,6 +21,7 @@ export interface TaskSkill {
   path: string; sha256: string;
 }
 export interface ProductionPolicy {
+  stageContractsVersion?:number;
   implementationExecution?: {mode:string};
   iterationMode?: string;
   selfTestChecks?: string[];
@@ -30,6 +31,7 @@ export interface ProductionPolicy {
   questions: { id: string; text: string; family: string }[];
 }
 export interface ProductionIssue {
+  category?:string; owningStage?:string; detectedStage?:string; blockingDisposition?:string;
   diagnosisStatus?: "suspected" | "confirmed";
   executionHandling?: {mode:string;reason:string;impact:string;affectedUnitIds:string[]};
   repairTarget?: "abya-source" | "abya-build" | "lua" | "other";
@@ -51,6 +53,7 @@ export interface WorkbenchGoal {
 }
 export interface WorkbenchAttempt { id:string;goalId:string;requestId?:string;conversationId:string;nativeId:string;turnId?:string;status:string;reason:string;startedAt:string;updatedAt:string;predecessorId?:string;processEpoch:string;generation:number }
 export interface WorkbenchState {
+  prototypeGrants?:{id:string;instanceId:string;note:string;status:string;expiresAt:string;archivePath:string;effective?:boolean}[];
   execution?: {preflight?:{state:string;stage:string;goalId:string;attempts:number;elapsedMs:number};scopeHash?:string;state:string;activeUnitId?:string;updatedAt:string;units:{scopeHash?:string;id:string;goalId:string;cycle:number;title:string;status:string;reason:string;dependsOn:string[];routes:string[];route:number;attempts:number;resultPaths:string[]}[];events:{kind:string;unitId?:string;reason:string;at:string}[]};
   attempts?:WorkbenchAttempt[];
   goals:WorkbenchGoal[]; activeGoalId?:string; drafts:Record<string,string>;
@@ -96,6 +99,7 @@ export const productionApi = {
   media: (taskId: string, artifactId: string) => invoke<string>("read_production_media", { taskId, artifactId }),
   feedback: (taskId: string, expectedRevision: number, operation: string, data: unknown) =>
     invoke<ProductionView>("submit_production_feedback", { input: { taskId, expectedRevision, operation, data } }),
+  startPrototype: (taskId:string,expectedRevision:number,sourceInstanceId:string,note:string)=>invoke<ProductionView>("start_production_prototype",{taskId,expectedRevision,sourceInstanceId,note}),
   startAcceptance: (taskId: string) => invoke<AcceptanceSession>("start_task_acceptance", { taskId }),
   acceptanceStatus: (taskId: string) => invoke<AcceptanceSession>("get_task_acceptance", { taskId }),
   timing: (taskId:string)=>invoke<{elapsedMs:number|null;firstPlayableMs:number|null;humanWaitMs:number|null;blockedMs:number|null;feedbackReworkMs:number|null;activeWorkMs:number|null;executionMs:number|null;toolMs:number|null;answerWaitMs:number|null;approvalWaitMs:number|null;pauseMs:number|null;connectionMs:number|null;unfinishedTurns:number;note:string}>("get_production_timing",{taskId}),

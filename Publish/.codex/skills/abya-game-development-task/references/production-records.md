@@ -124,3 +124,12 @@ APP显式升级需停止任务终端，保留Skill备份、批准文档、轮次
 流程 2.4 的 Lua 阶段按 [自主实现与恢复](autonomous-implementation.md) 执行。
 问题严重程度和验收影响不等于整阶段停机；重启/恢复预算耗尽后暂缓相关工作，继续独立项。
 同一问题保留 ID 与证据，不将 AI 自测交给策划逐项复验。最终批准与用户反馈仍不代办。
+
+## 流程 2.7 的阶段与问题归属
+
+save-issue 可带 category（agent-input / contract-gap / runtime-state / runtime-unknown / platform-confirmed / design-decision / unclassified）、detectedStage 与 owningStage。
+platform-confirmed 仍需 diagnosisStatus=confirmed 及当前构建的完整诊断和证据；否则保持疑似。
+资源/方案的技术问题保留 requestedBlockedOperations 与影响说明；其 blockingDisposition 由 APP 计算，不能靠问题描述新增设计提交门槛。
+真实问题组、策划反馈、材料完整性及文档批准仍按原入口核对。设计稿无需 Runtime 或 Lua 先验通过。
+交互小样授权只能由 APP 用户创建或撤销；workbench.prototypeGrants.effective 是只读有效性投影。
+工具 success、verification.valid/ready、真实运行验证和用户批准分别记录。输入校验错误不等于平台缺陷。

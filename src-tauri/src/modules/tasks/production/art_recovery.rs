@@ -21,9 +21,10 @@ pub(super) fn check(r: &ProductionRecord, root: &Path) -> AppResult<()> {
     {
         return Err(AppError::validation("请先回答本阶段的美术问题。"));
     }
-    if r.issues.iter().any(|i| {
-        i["status"] != "resolved" && i["kind"] != "suggestion" && workspace::affects(i, "resources")
-    }) {
+    if r.issues
+        .iter()
+        .any(|i| super::stage_contracts::blocks(r, i, "resources", "complete-stage"))
+    {
         return Err(AppError::validation(
             "美术阶段仍有未解决问题，请先处理并记录复验。",
         ));

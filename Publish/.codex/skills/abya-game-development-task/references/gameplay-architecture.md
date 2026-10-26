@@ -2,6 +2,14 @@
 
 Use this contract before gameplay mutation within the confirmed plan or an explicitly
 authorized scoped change. Reuse the existing task decisions and applicable validation.
+Design-only resources/plan work does not require a manifest or a running Player.
+Before plan approval, runtime authoring is limited to an APP-authorized isolated prototype.
+Use the schema from the running Player. `customUiNode` is a target kind; component
+scope describes ownership. Never infer enum values from target names or try spellings.
+On an unknown enum, read `allowedValues`/`contractVersion` or describe the tool once.
+If the deployed contract is incomplete, record a contract gap and defer dependent
+implementation while continuing independent work. Do not bypass validation.
+Tool success, manifest valid/ready, runtime acceptance and human approval are separate results.
 
 ## Target Ownership
 

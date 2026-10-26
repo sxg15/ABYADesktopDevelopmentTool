@@ -5,6 +5,10 @@ import { ProgrammerIssueExport } from "./ProgrammerIssueExport";
 import { productionApi } from "../../shared/production";
 vi.mock("../../shared/production", () => ({productionApi:{exportProgrammerIssues:vi.fn(),revealDocument:vi.fn()}}));
 afterEach(() => {cleanup();vi.resetAllMocks();});
+it("hides programmer export actions when only ordinary issues exist",()=>{
+  render(<ProgrammerIssueExport taskId="task" revision={7} issueIds={[]}/>);
+  expect(screen.queryByRole("button")).toBeNull();
+});
 
 it("exports the exact issue snapshot once and reveals the saved Markdown", async () => {
   let finish!: (path:string)=>void;

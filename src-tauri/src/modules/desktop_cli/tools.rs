@@ -738,22 +738,26 @@ impl DesktopToolDispatcher {
                         "Configure the game executable path in desktop settings or provide executablePath.",
                     ));
                 }
-                serialize(self.dependencies.instances.launch(LaunchInstanceInput {
-                    task_id: input.task_id,
-                    name: input.name,
-                    executable_path,
-                    profile: LaunchProfile {
-                        mode: input.mode,
-                        window_mode: input.window_mode,
-                        visibility_mode: input.visibility_mode,
-                        width: input.width,
-                        height: input.height,
-                        archive: input.archive,
-                        host_instance_id: input.host_instance_id,
-                        exit_on_failure: input.exit_on_failure,
-                        language: input.language,
-                    },
-                })?)
+                serialize(
+                    self.dependencies
+                        .runtime_bridge
+                        .launch_scoped(LaunchInstanceInput {
+                            task_id: input.task_id,
+                            name: input.name,
+                            executable_path,
+                            profile: LaunchProfile {
+                                mode: input.mode,
+                                window_mode: input.window_mode,
+                                visibility_mode: input.visibility_mode,
+                                width: input.width,
+                                height: input.height,
+                                archive: input.archive,
+                                host_instance_id: input.host_instance_id,
+                                exit_on_failure: input.exit_on_failure,
+                                language: input.language,
+                            },
+                        })?,
+                )
             }
             "game_instance_set_window_visibility" => {
                 let input: InstanceWindowVisibilityInput = decode(arguments)?;
@@ -1363,6 +1367,141 @@ mod tests {
                     .expect("Screenshot file missing");
                 std::fs::copy(image, output.join("runtime.png")).unwrap();
             }
+        }
+        if std::env::var("ABYA_CLI_SMOKE_STAGE_CONTRACTS").as_deref() == Ok("1") {
+            let validate = tools
+                .iter()
+                .find(|t| t["name"] == "editor_gameplay_architecture_validate")
+                .unwrap();
+            assert!(
+                validate["inputSchema"]["properties"]["manifest"]["properties"]["components"]
+                    .is_object()
+            );
+            let call = |tool: &str, args: Value| {
+                fixture.dispatcher.call_with_context(
+                    Some(context.clone()),
+                    &Uuid::new_v4().to_string(),
+                    "game_runtime_call_tool",
+                    json!({"instanceId":instance_id,"toolName":tool,"arguments":args}),
+                )
+            };
+            let snapshot = result_json(call("editor_gameplay_architecture_snapshot", json!({})));
+            assert_eq!(snapshot["contractVersion"], "2026-10-26.1");
+            let manifest = json!({"schemaVersion":snapshot["schemaVersion"],"archiveId":snapshot["archiveId"],"levelId":snapshot["levelId"],"snapshotRevision":snapshot["snapshotRevision"],"gameMode":{"playerModel":"manual","networkMode":"single"},"components":[{"id":"invalid-enum","scope":"customUiNode","authority":"client","responsibilities":["ui"]}]});
+            let checked = result_json(call(
+                "editor_gameplay_architecture_validate",
+                json!({"manifest":manifest}),
+            ));
+            assert_eq!(checked["valid"], false);
+            assert!(checked["diagnostics"].as_array().unwrap().iter().any(|d| {
+                d["code"] == "component.scope"
+                    && d["received"] == "customUiNode"
+                    && d["allowedValues"]
+                        .as_array()
+                        .unwrap()
+                        .contains(&json!("presentation"))
+            }));
+            std::fs::write(
+                output.join("architecture-invalid-enum.json"),
+                serde_json::to_vec_pretty(&checked).unwrap(),
+            )
+            .unwrap();
+            let view = fixture
+                .tasks
+                .production_update(crate::modules::tasks::ProductionMutation {
+                    task_id: task.id.clone(),
+                    expected_revision: 0,
+                    operation: "initialize".into(),
+                    data: json!({"questionMode":"no-followup"}),
+                })
+                .unwrap();
+            let revision = view.record.unwrap().revision;
+            assert!(call("editor_save_archive", json!({})).is_error);
+            assert!(
+                call(
+                    "editor_gameplay_architecture_validate",
+                    json!({"manifest":manifest})
+                )
+                .is_error
+            );
+            assert!(!call("editor_get_archive", json!({})).is_error);
+            std::fs::create_dir_all(std::path::Path::new(&task.workspace_path).join("artifacts"))
+                .unwrap();
+            std::fs::write(
+                std::path::Path::new(&task.workspace_path)
+                    .join("artifacts/synthetic-requirements.md"),
+                "Synthetic prototype authorization fixture, not human gameplay approval.",
+            )
+            .unwrap();
+            let view=fixture.tasks.production_update(crate::modules::tasks::ProductionMutation{task_id:task.id.clone(),expected_revision:revision,operation:"submit-document".into(),data:json!({"kind":"requirements","path":"artifacts/synthetic-requirements.md"})}).unwrap();
+            let record = view.record.unwrap();
+            let view = fixture
+                .tasks
+                .production_decide(crate::modules::tasks::ProductionDecision {
+                    task_id: task.id.clone(),
+                    expected_revision: record.revision,
+                    kind: "requirements".into(),
+                    document_hash: record.documents["requirements"].sha256.clone(),
+                    accepted: true,
+                    feedback: "Synthetic fixture only".into(),
+                })
+                .unwrap();
+            let view = deps
+                .runtime_bridge
+                .start_prototype(
+                    &task.id,
+                    view.record.unwrap().revision,
+                    &instance_id,
+                    "Synthetic UI contract probe",
+                )
+                .unwrap();
+            let record = view.record.unwrap();
+            let grant = record.workbench.prototype_grants.last().unwrap();
+            let prototype = grant["instanceId"].as_str().unwrap().to_owned();
+            let _prototype_stop = StopInstance(deps.instances.clone(), prototype.clone());
+            deps.runtime_bridge
+                .wait_for_cli(&prototype, Duration::from_secs(120))
+                .unwrap();
+            let start = std::time::Instant::now();
+            while deps
+                .instances
+                .read_launch_report(&prototype)
+                .unwrap()
+                .report["phase"]
+                != "ready"
+            {
+                assert_ne!(
+                    deps.instances
+                        .read_launch_report(&prototype)
+                        .unwrap()
+                        .report["phase"],
+                    "failed",
+                    "Isolated prototype startup failed"
+                );
+                assert!(start.elapsed() < Duration::from_secs(120));
+                std::thread::sleep(Duration::from_millis(250));
+            }
+            let prototype_call = |tool: &str| {
+                fixture.dispatcher.call_with_context(
+                    Some(context.clone()),
+                    &Uuid::new_v4().to_string(),
+                    "game_runtime_call_tool",
+                    json!({"instanceId":prototype,"toolName":tool,"arguments":{}}),
+                )
+            };
+            assert!(prototype_call("editor_create_archive").is_error);
+            assert!(!prototype_call("editor_save_archive").is_error);
+            fixture
+                .tasks
+                .production_workbench(crate::modules::tasks::ProductionMutation {
+                    task_id: task.id.clone(),
+                    expected_revision: record.revision,
+                    operation: "revoke-prototype".into(),
+                    data: json!({"id":grant["id"]}),
+                })
+                .unwrap();
+            assert!(prototype_call("editor_save_archive").is_error);
+            std::fs::write(output.join("stage-contracts.json"),"{\"schema\":\"abya.stage-contract-smoke/v1\",\"passed\":true,\"realPlayer\":true,\"syntheticTask\":true}").unwrap();
         }
         // 可选的人机就绪检查走真实托管 Player；只读定义与 API，不生成或保存玩法。
         let bot_prerequisites = std::env::var("ABYA_CLI_SMOKE_BOTS").as_deref() == Ok("1");
