@@ -4,6 +4,8 @@ use sha2::{Digest, Sha256};
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ExecutionLedger {
+    pub preflight: super::preflight_recovery::PreflightRecovery,
+    pub validation_snapshots: BTreeMap<String, Value>,
     pub recovery_ms: BTreeMap<String, i64>,
     pub summary: Value,
     pub scope_hash: String,
@@ -21,6 +23,7 @@ pub struct ExecutionLedger {
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WorkUnit {
+    pub budget_epoch_ms: i64,
     pub kind: String,
     pub attempt_started_at: String,
     pub elapsed_ms: i64,

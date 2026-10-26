@@ -79,6 +79,10 @@ source记录来源/许可说明。游戏实拍可回填资源节点，但不会�
 
 ## 实际版本与必要自测
 
+流程2.6的 production version 增加必填 purpose=candidate|fixture；夹具独立冻结，不替换
+currentVersion。夹具证据显式填写version。已记录候选可用 production activate-version
+{expectedRevision,sourceRevision,versionId}核验恢复；不重建实例或伪造批准/通过。
+
 保存并冷加载正确存档/关卡后，production version 使用：
 ~~~json
 {"expectedRevision":12,"versionId":"game-v1","instanceId":"实际托管实例ID"}

@@ -1,4 +1,8 @@
 mod autonomy;
+mod preflight_recovery;
+pub use preflight_recovery::{
+    preflight_recovery_active, preflight_recovery_manual, preflight_recovery_resumable,
+};
 mod autonomy_budget;
 mod autonomy_service;
 mod receipts;

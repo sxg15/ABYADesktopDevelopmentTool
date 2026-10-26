@@ -36,6 +36,116 @@ fn seed(f: &Fixture) {
     )
     .unwrap();
 }
+fn seed_preflight(f: &Fixture) {
+    seed(f);
+    let db = rusqlite::Connection::open(f.root.join("db.sqlite")).unwrap();
+    let body: String = db
+        .query_row(
+            "SELECT body FROM task_production WHERE task_id=?1",
+            [&f.task],
+            |r| r.get(0),
+        )
+        .unwrap();
+    let mut r: Value = serde_json::from_str(&body).unwrap();
+    r["currentStage"] = json!("resources");
+    r["stages"]["resources"] = json!("blocked");
+    r["feedback"] = json!([]);
+    r["policy"]["preflightRecovery"] = json!({"enabled":true});
+    r["issues"] = json!([{"id":"load","kind":"blocker","stage":"resources","status":"open","description":"launch failed","resumeWhen":"ready"}]);
+    db.execute(
+        "UPDATE task_production SET body=?2 WHERE task_id=?1",
+        rusqlite::params![f.task, r.to_string()],
+    )
+    .unwrap();
+}
+#[test]
+fn resource_runtime_failure_dispatches_scoped_recovery_without_approving_art() {
+    let f = Fixture::new();
+    seed_preflight(&f);
+    finish_auto_fixture(&f, "preflight", true);
+    let task = f.service.tasks.get(&f.task).unwrap();
+    let dir = conversation_directory(Path::new(&task.workspace_path), &f.conversation);
+    let mut w = load_workflow(&dir, &f.task, &f.conversation).unwrap();
+    w.record_activity(
+        "preflight",
+        Some("runtime-error"),
+        CodexActivityKind::GameInstance,
+        CodexActivityStatus::Failed,
+        "Waiting for the game Runtime CLI",
+        "",
+        "desktopCli",
+    );
+    save_workflow(&dir, &w, "runtimeFailure").unwrap();
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, "preflight", true)
+        .unwrap();
+    assert_eq!(f.calls.lock().len(), 1);
+    assert!(
+        f.calls.lock()[0]["input"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("技术预检有限恢复")
+    );
+    let result = f
+        .service
+        .tasks
+        .production_get(&f.task)
+        .unwrap()
+        .record
+        .unwrap();
+    assert_eq!(result.current_stage, "resources");
+    assert_eq!(result.stages["resources"], "blocked");
+    assert_eq!(result.workbench.execution.preflight.attempts, 1);
+}
+#[test]
+fn explicit_resume_of_legacy_blocked_preflight_stays_on_original_goal() {
+    let f = Fixture::new();
+    seed_preflight(&f);
+    f.mutate(
+        "update-stage",
+        json!({"stage":"resources","status":"blocked","summary":"controlled old failure"}),
+    );
+    let r = f
+        .service
+        .tasks
+        .production_get(&f.task)
+        .unwrap()
+        .record
+        .unwrap();
+    let goal = r.workbench.active_goal_id.unwrap();
+    let result = f
+        .service
+        .resume_goal(
+            &f.task,
+            &goal,
+            &f.conversation,
+            r.revision,
+            &Uuid::new_v4().to_string(),
+            None,
+        )
+        .unwrap();
+    assert_eq!(result.status, S::Started);
+    assert_eq!(f.calls.lock().len(), 1);
+    assert!(
+        f.calls.lock()[0]["input"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("技术预检有限恢复")
+    );
+    let after = f
+        .service
+        .tasks
+        .production_get(&f.task)
+        .unwrap()
+        .record
+        .unwrap();
+    assert_eq!(
+        after.workbench.active_goal_id.as_deref(),
+        Some(goal.as_str())
+    );
+    assert_eq!(after.current_stage, "resources");
+    assert_eq!(after.workbench.execution.preflight.attempts, 1);
+}
 #[test]
 fn budget_interrupt_continues_only_its_owned_turn_after_native_completion() {
     let f = Fixture::new();

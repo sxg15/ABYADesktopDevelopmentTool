@@ -7,6 +7,29 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { findInstance, parseArgs, request, run } from '../src/cli.mjs';
+import {loopbackFetch} from '../src/loopback-http.mjs';
+
+test('runtime transport waits for delayed headers/body and respects explicit cancellation',async t=>{
+  let calls=0;
+  const server=createServer(async(req,res)=>{
+    calls++;let raw='';for await(const c of req)raw+=c;
+    await new Promise(r=>setTimeout(r,120));res.writeHead(200,{'Content-Type':'application/json'});
+    res.write('{"value":');await new Promise(r=>setTimeout(r,120));res.end('1}');
+  });
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>{server.closeAllConnections();server.close();});
+  const url=`http://127.0.0.1:${server.address().port}/invoke`;
+  const r=await loopbackFetch(url,{body:'{}',signal:AbortSignal.timeout(1000)});
+  assert.deepEqual(await r.json(),{value:1});assert.equal(calls,1);
+  await assert.rejects(loopbackFetch(url,{body:'{}',signal:AbortSignal.timeout(30)}));
+  assert.equal(calls,2);await assert.rejects(loopbackFetch('http://example.com/',{}),/loopback/);
+});
+test('runtime transport does not replay disconnected writes or follow redirects',async t=>{
+ let count=0;const server=createServer((req,res)=>{count++;if(req.url==='/lost'){req.socket.destroy();return;}res.writeHead(302,{Location:'http://example.com/'});res.end('{}');});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>{server.closeAllConnections();server.close();});
+ const url=`http://127.0.0.1:${server.address().port}`;
+ await assert.rejects(loopbackFetch(url+'/lost',{body:'{}',signal:AbortSignal.timeout(1000)}));assert.equal(count,1);
+ assert.equal((await loopbackFetch(url+'/redirect',{signal:AbortSignal.timeout(1000)})).status,302);assert.equal(count,2);
+});
 
 test('parser rejects unknown and repeated options', () => {
   assert.deepEqual(parseArgs(['capability', 'list', '--json']), {

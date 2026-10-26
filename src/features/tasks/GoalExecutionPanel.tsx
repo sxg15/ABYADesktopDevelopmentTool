@@ -8,10 +8,11 @@ export function goalExecutionStatus(record:ProductionRecord,goal:WorkbenchGoal,c
   if(!["work","request","feedback"].includes(goal.sourceType)||["completed","resolved","accepted","superseded"].includes(goal.status))return goal.status;
   if(checking)return "reconciling";
   const status=[...(record.workbench?.attempts??[])].reverse().find(a=>a.goalId===goal.id)?.status??"untracked";
-  if(status==="finished"&&goal.id===record.workbench?.activeGoalId&&["waitingDependencies","settledWithGaps","settled"].includes(record.workbench?.execution?.state??""))return "workSettled";
+  if(["finished","interrupted","paused","failed"].includes(status)&&record.workbench?.execution?.preflight?.state==="exhausted"&&record.workbench.execution.preflight.goalId===goal.id&&goal.stage===record.currentStage)return "recoveryExhausted";
+  if(["finished","interrupted","paused","failed"].includes(status)&&goal.id===record.workbench?.activeGoalId&&["waitingDependencies","settledWithGaps","settled"].includes(record.workbench?.execution?.state??""))return "workSettled";
   return status;
 }
-export const executionLabels:Record<string,string>={workSettled:"本轮已结束，查看结果与缺口",running:"进行中",sending:"正在派发",queued:"等待连接 / 恢复",finished:"待继续",paused:"已暂停",interrupted:"被中断",reconciling:"正在核对",needsReview:"结果待核对",failed:"执行失败",untracked:"待核对 / 未执行"};
+export const executionLabels:Record<string,string>={recoveryExhausted:"预检恢复未成功，查看问题与恢复条件",workSettled:"本轮已结束，查看结果与缺口",running:"进行中",sending:"正在派发",queued:"等待连接 / 恢复",finished:"待继续",paused:"已暂停",interrupted:"被中断",reconciling:"正在核对",needsReview:"结果待核对",failed:"执行失败",untracked:"待核对 / 未执行"};
 export function GoalExecutionPanel({record,goal,active,checking,onResume,en=false}:{record:ProductionRecord;goal:WorkbenchGoal;active:boolean;checking:boolean;onResume?:ResumeGoal;en?:boolean}) {
   const [busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
   const [review,setReview]=useState(false),[note,setNote]=useState("");const locked=useRef(false);
@@ -32,7 +33,7 @@ export function GoalExecutionPanel({record,goal,active,checking,onResume,en=fals
     <strong>{en?status:executionLabels[status]??status}</strong>
     {attempt?.reason&&<p>{attempt.reason}</p>}
     {status==="untracked"&&<p>{en?"This older goal has no execution binding. Review its history before choosing the original conversation.":"旧记录没有可靠的执行绑定。请核对历史并选定原会话；同名目标不会被自动合并或标记完成。"}</p>}
-    {allowed&&status!=="workSettled"&&status!=="running"&&status!=="sending"&&<button className="primary-button" disabled={!active||busy||checking||!onResume} onClick={()=>{
+    {allowed&&status!=="recoveryExhausted"&&status!=="workSettled"&&status!=="running"&&status!=="sending"&&<button className="primary-button" disabled={!active||busy||checking||!onResume} onClick={()=>{
       if(["needsReview","reconciling","untracked"].includes(status)){intentRef.current=intent(true);setReview(true);}else void resume();
     }}>{busy?(en?"Resuming…":"正在恢复…"):en?"Resume this subprocess":"继续此子流程"}</button>}
     {notice&&<p role="status">{notice}</p>}{error&&<p role="alert">{error}</p>}

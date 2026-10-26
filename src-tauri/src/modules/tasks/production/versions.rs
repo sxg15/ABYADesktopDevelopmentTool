@@ -138,6 +138,7 @@ impl TaskService {
         })
     }
 
+    #[cfg(test)]
     pub fn production_capture_version(
         &self,
         task_id: &str,
@@ -145,6 +146,19 @@ impl TaskService {
         id: &str,
         sources: VersionSources,
     ) -> AppResult<ProductionView> {
+        self.production_capture_version_for_purpose(task_id, expected, id, sources, "candidate")
+    }
+    pub fn production_capture_version_for_purpose(
+        &self,
+        task_id: &str,
+        expected: u64,
+        id: &str,
+        sources: VersionSources,
+        purpose: &str,
+    ) -> AppResult<ProductionView> {
+        if !["candidate", "fixture"].contains(&purpose) {
+            return Err(AppError::validation("版本用途须为 candidate 或 fixture。"));
+        }
         let _files = crate::foundation::EXECUTABLE_FILES.read();
         let root = self.production_workspace(task_id)?;
         let archive = archive_root(&sources.archive_path)?;
@@ -154,6 +168,23 @@ impl TaskService {
             .ok_or_else(|| AppError::validation("缺少制作记录。"))?;
         if record.revision != expected {
             return Err(super::conflict());
+        }
+        super::validation::approved(&record, &root, "requirements")?;
+        super::validation::approved(&record, &root, "plan")?;
+        if purpose == "fixture" && record.current_version.as_deref() == Some(id) {
+            return Err(AppError::validation("测试夹具不能覆盖当前候选版本。"));
+        }
+        if let Some(old) = record.workbench.execution.validation_snapshots.get(id) {
+            if purpose != "fixture" {
+                return Err(AppError::validation("夹具 ID 不能作为交付候选。"));
+            }
+            verify(old)?;
+            if old["archiveHash"] == digest(std::slice::from_ref(&archive))?
+                && old["playerBuildHash"] == digest(&player_roots(&sources.player_path)?)?
+            {
+                return self.production_get(task_id);
+            }
+            return Err(AppError::validation("夹具内容改变须使用新的版本 ID。"));
         }
         if record.current_version.as_deref() == Some(id) {
             if record.version_details["archiveHash"] == digest(std::slice::from_ref(&archive))?
@@ -184,6 +215,9 @@ impl TaskService {
         let mut details = json!({"id":id,"archiveGuid":sources.archive_guid,"levelGuid":sources.level_guid,"instanceId":sources.instance_id,
             "archiveSource":archive,"playerSource":player,"archiveHash":digest(&[archive])?,"playerBuildHash":digest(&player_roots(&player)?)?});
         details["frozenSnapshot"] = json!(freeze);
+        details["purpose"] = json!(purpose);
+        details["scopeHash"] = json!(super::autonomy::scope(&record));
+        details["cycle"] = json!(record.cycle);
         details["editableArchiveSource"] = json!(editable);
         details["contentManifest"] = content.clone();
         details["validationImpact"] = super::version_snapshots::difference(
@@ -192,9 +226,57 @@ impl TaskService {
             record.version_details["playerBuildHash"] != details["playerBuildHash"],
         );
         self.production_commit(task_id, expected, |r| {
-            mutation::set_version(r, &root, &details)
+            if purpose == "fixture" {
+                if !freeze || r.workbench.execution.validation_snapshots.len() >= 128 {
+                    return Err(AppError::validation(
+                        "夹具快照需启用自主流程且不能超过128份。",
+                    ));
+                }
+                r.workbench
+                    .execution
+                    .validation_snapshots
+                    .insert(id.into(), details.clone());
+                Ok(())
+            } else {
+                mutation::set_version(r, &root, &details)
+            }
         })?;
         self.production_export(task_id)?;
         self.production_get(task_id)
+    }
+    pub fn production_activate_version(
+        &self,
+        task: &str,
+        expected: u64,
+        revision: u64,
+        id: &str,
+    ) -> AppResult<ProductionView> {
+        let _files = crate::foundation::EXECUTABLE_FILES.read();
+        let root = self.production_workspace(task)?;
+        let saved = self.production_snapshot(task, revision)?;
+        let current = self
+            .production_get(task)?
+            .record
+            .ok_or_else(super::conflict)?;
+        if current.revision != expected {
+            return Err(super::conflict());
+        }
+        if current.current_stage != "implementation"
+            || saved.current_version.as_deref() != Some(id)
+            || saved.version_details["frozenSnapshot"] != true
+            || saved.version_details["purpose"] == "fixture"
+            || saved.cycle != current.cycle
+            || super::autonomy::scope(&saved) != super::autonomy::scope(&current)
+        {
+            return Err(AppError::validation(
+                "只能恢复本任务同范围、同周期的已登记冻结候选。",
+            ));
+        }
+        verify(&saved.version_details)?;
+        self.production_commit(task, expected, |r| {
+            mutation::set_version(r, &root, &saved.version_details)
+        })?;
+        self.production_export(task)?;
+        self.production_get(task)
     }
 }

@@ -345,3 +345,8 @@ initialize/configure 支持 playerMode=unspecified/single/multiplayer；已明�
 - Production mutations: `configure-acceptance` (seats, requiredTools, requireUi), `register-visual` (stage/path/title/sourceType/roles/visualVersion/groupId), `save-self-test` (id/status/observations/evidenceIds), `reuse-evidence` (id/sourceId/reason/unaffectedScope), `update-feedback` (id/status/fix/recheck/evidenceIds).
 - Agent feedback statuses are limited to in-progress and awaiting-recheck. Closing/reopening human feedback and document decisions are APP-only.
 - New tasks have no fixed rounds. Existing 1.x tasks retain pinned rules until an explicit backed-up upgrade. See the deployed production-records reference for details.
+
+## Workflow 2.6
+
+`production version` accepts purpose `candidate` or `fixture` (required by new task policy). Fixtures do not replace currentVersion.
+`production activate-version` accepts `{expectedRevision, sourceRevision, versionId}` to verify and select a same-task/cycle/approved-scope frozen candidate from recorded history. It neither edits game files nor approves tests.

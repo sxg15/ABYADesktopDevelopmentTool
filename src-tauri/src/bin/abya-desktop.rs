@@ -20,6 +20,7 @@ fn command(group: &str, action: &str) -> Option<&'static str> {
         ("production", "update") => "development_production_update",
         ("production", "report") => "development_production_report",
         ("production", "version") => "development_production_version",
+        ("production", "activate-version") => "development_production_activate_version",
         ("skill", "list") => "development_skill_list",
         ("skill", "read") => "development_skill_read",
         ("art", "list") => "development_production_art_library_list",

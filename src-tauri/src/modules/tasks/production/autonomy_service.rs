@@ -12,6 +12,9 @@ impl TaskService {
         let ledger = &r.workbench.execution;
         Ok(
             json!({"taskId":task,"revision":r.revision,"cycle":r.cycle,"stage":r.current_stage,
+            "workflowVersion":r.workflow_version,"implementationPolicy":r.policy["implementationExecution"],
+            "preflightRecovery":ledger.preflight,
+            "fixtureVersions":ledger.validation_snapshots.iter().take(16).map(|(id,v)|json!({"id":id,"cycle":v["cycle"],"archiveHash":v["archiveHash"]})).collect::<Vec<_>>(),
             "version":r.current_version,"autonomous":autonomy::autonomous_implementation(&r),
             "requests":r.workbench.requests.iter().rev().filter(|q|q["status"]!="completed"&&q["stage"]==r.current_stage).take(12).map(|q|json!({"id":q["id"],"revision":q["revision"],"status":q["status"],"text":q["text"].as_str().unwrap_or("").chars().take(1000).collect::<String>()})).collect::<Vec<_>>(),
             "documentRefs":r.documents.iter().map(|(kind,d)|json!({"kind":kind,"path":d.path,"sha256":d.sha256,"revision":d.revision})).collect::<Vec<_>>(),
@@ -260,15 +263,34 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         return Ok(());
     }
     let final_id = format!("implementation-{}-{}-handoff", r.cycle, &scope_hash[..8]);
-    if ledger
-        .units
-        .iter()
-        .filter(|u| u.cycle == r.cycle && u.scope_hash == scope_hash)
-        .all(|u| u.status == "succeeded")
+    let runnable = ledger.units.iter().any(|u| {
+        u.cycle == r.cycle
+            && u.scope_hash == scope_hash
+            && matches!(u.status.as_str(), "pending" | "failed")
+            && u.depends_on.iter().all(|id| {
+                ledger
+                    .units
+                    .iter()
+                    .any(|d| &d.id == id && d.status == "succeeded")
+            })
+    });
+    if !runnable
+        && ledger
+            .units
+            .iter()
+            .filter(|u| u.cycle == r.cycle && u.scope_hash == scope_hash)
+            .all(|u| u.status != "running")
         && !ledger.units.iter().any(|u| u.id == final_id)
     {
-        ledger.units.push(WorkUnit {scope_hash:scope_hash.clone(),id:final_id,goal_id:r.workbench.active_goal_id.clone().unwrap_or_default(),cycle:r.cycle,
-            title:"统一自测、证据与交付缺口收敛".into(),routes:vec!["核对原门槛，通过才 complete-stage；未通过自行修复或 conclude-implementation 如实保留缺口。".into(),"核对全部产出与未完成项，提交真实收敛摘要，禁止伪造通过。".into()],status:"pending".into(),updated_at:now(),..Default::default()});
+        for u in &mut ledger.units {
+            if u.cycle == r.cycle && u.scope_hash == scope_hash && u.status == "pending" {
+                u.status = "deferred".into();
+                u.reason = "前置工作未完成，保留已有产出供最终核对。".into();
+                u.condition_hash = conditions.get(&u.id).cloned().unwrap_or_default();
+            }
+        }
+        ledger.units.push(WorkUnit {kind:"finalization".into(),scope_hash:scope_hash.clone(),id:final_id,goal_id:r.workbench.active_goal_id.clone().unwrap_or_default(),cycle:r.cycle,
+            title:"恢复正式候选、核对实际自测并汇总缺口".into(),routes:vec!["先完成测试夹具清理或通过activate-version恢复已验证的冻结候选；核对已完成的真实回执并登记版本适用的必要自测，禁止重放已完成测试。满足原门槛再complete-stage；缺口如实保留，能完成的版本核对与材料登记不能因其他项暂缓而省略。".into(),"核对已有产出、候选与未测项，保存汇总并conclude-implementation，不伪造通过。".into()],status:"pending".into(),updated_at:now(),..Default::default()});
     }
     let next = ledger
         .units
@@ -359,6 +381,12 @@ impl TaskService {
         let Some(r) = self.database.with_connection(|c| load(c, task))? else {
             return Ok(());
         };
+        if super::preflight_recovery::preflight_recovery_active(&r) {
+            return self.production_commit(task, r.revision, |r| {
+                super::preflight_recovery::pause(r);
+                Ok(())
+            });
+        }
         if !autonomy::autonomous_implementation(&r)
             || !matches!(r.workbench.execution.state.as_str(), "running" | "ready")
         {

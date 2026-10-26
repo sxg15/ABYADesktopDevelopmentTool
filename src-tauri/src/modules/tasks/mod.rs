@@ -13,6 +13,9 @@ pub use production::{
     AcceptanceSpec, IssueRepairSpec, ProductionDecision, ProductionMutation, ProductionRecord,
     ProductionView, SkillEntry, VersionSources, WorkbenchAttempt,
 };
+pub use production::{
+    preflight_recovery_active, preflight_recovery_manual, preflight_recovery_resumable,
+};
 
 const MANAGED_SKILL_NAME: &str = "abya-game-development-task";
 const MANAGED_LLM_DIRECTORIES: [&str; 1] = [".codex"];

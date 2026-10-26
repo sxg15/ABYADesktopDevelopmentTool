@@ -1,5 +1,13 @@
 # Desktop CLI
 
+## Candidate and fixture versions (2026-10-26)
+production version requires purpose candidate|fixture when the task enables versionPurposeRequired.
+Older policies retain their default. Fixture snapshots never select the current candidate.
+production activate-version maps to development_production_activate_version with expectedRevision,
+sourceRevision and versionId under the existing authenticated conversation/task context. It only
+selects verified frozen history within the current cycle and approved scope; no paths/hashes or
+approval decisions are accepted from callers. register-evidence may select a known fixture version.
+
 ## Workflow 2.5 (2026-10-24)
 save-work-unit accepts kind implementation/deployment/validation/recovery; recovery binds
 issueIds. save-issue accepts optional diagnosisStatus and bound diagnosis material; repairTarget

@@ -1,4 +1,5 @@
 import { runBuild } from './build-command.mjs';
+import { loopbackFetch } from './loopback-http.mjs';
 import { liveCandidates } from './instance-discovery.mjs';
 import { randomUUID } from 'node:crypto';
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
@@ -102,7 +103,7 @@ export async function findInstance(flags, env = process.env) {
 export async function request(instance, method, data = {}, options = {}) {
   const requestId = options.requestId || randomUUID();
   options.onRequestId?.(requestId);
-  const response = await (options.fetchImpl || fetch)(
+  const response = await (options.fetchImpl || loopbackFetch)(
     `${instance.endpoint}/api/v1/${method}`, {
       method: 'POST',
       redirect: 'error',
@@ -196,6 +197,7 @@ export async function run(args, io = process, env = process.env) {
   let onInterrupt;
   let timeout;
   let timedOut = false;
+  let activeRequestId;
   try {
     const parsed = parseArgs(args);
     flags = parsed.flags;
@@ -253,7 +255,6 @@ export async function run(args, io = process, env = process.env) {
       throw new CliError('invalid_request', '--input-file requires run.');
     }
     const controller = new AbortController();
-    let activeRequestId;
     onInterrupt = () => {
       if (activeRequestId) {
         cancellation = request(instance, 'cancel',
@@ -277,11 +278,14 @@ export async function run(args, io = process, env = process.env) {
       (exitCodes[output.data?.errorCode] || 6);
   } catch (error) {
     const code = error.name === 'AbortError' ?
-      (timedOut ? 'timeout' : 'outcome_unknown') :
-      error.code || 'request_failed';
-    const message = error.message || 'CLI request failed.';
+      (activeRequestId ? (timedOut ? 'timeout' : 'outcome_unknown') : 'request_failed') :
+      error instanceof CliError ? error.code : activeRequestId ? 'outcome_unknown' : 'request_failed';
+    const message = code === 'outcome_unknown'
+      ? 'Runtime connection ended without a confirmed result. Inspect the original operation receipt and game state; do not replay the write.'
+      : error.message || 'CLI request failed.';
     if (flags.json)
-      io.stdout.write(JSON.stringify({ success: false, errorCode: code, message }) + '\n');
+      io.stdout.write(JSON.stringify({ success: false, errorCode: code, message,
+        executionState: activeRequestId ? 'outcome_unknown' : 'not_executed' }) + '\n');
     else io.stderr.write(`${code}: ${message}\n`);
     return exitCodes[code] || 6;
   } finally {

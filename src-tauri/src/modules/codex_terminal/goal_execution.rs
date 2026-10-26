@@ -380,10 +380,13 @@ impl CodexTerminalService {
                 request_id: None,
             });
         }
-        if view
-            .stage_statuses
-            .get(&r.current_stage)
-            .is_some_and(|s| s == "blocked")
+        if !crate::modules::tasks::preflight_recovery_active(r)
+            && !crate::modules::tasks::preflight_recovery_resumable(r)
+            && !crate::modules::tasks::preflight_recovery_manual(r)
+            && view
+                .stage_statuses
+                .get(&r.current_stage)
+                .is_some_and(|s| s == "blocked")
             || (!crate::modules::tasks::autonomous_implementation(r)
                 && r.feedback.iter().any(|f| f["status"] == "awaiting-recheck"))
         {
@@ -430,6 +433,24 @@ impl CodexTerminalService {
             // Never enqueue a duplicate continuation behind that unbound turn.
             server.ensure_idle(&native)?;
         }
+        if crate::modules::tasks::preflight_recovery_manual(r)
+            && !crate::modules::tasks::preflight_recovery_active(r)
+            && !crate::modules::tasks::preflight_recovery_resumable(r)
+            && view
+                .stage_statuses
+                .get(&r.current_stage)
+                .is_some_and(|s| s == "blocked")
+            && !self.tasks.production_prepare_preflight_recovery(
+                task,
+                &format!("user-resume:{intent}"),
+                true,
+            )?
+        {
+            return Err(AppError::validation(
+                "技术恢复预算已结束，请先核对问题中的恢复条件。",
+            ));
+        }
+        self.tasks.production_resume_preflight(task)?;
         let attempt = self.attempt_template(intent, goal, &bound, &native);
         self.tasks.production_begin_attempt(task, None, attempt)?;
         let t = self.tasks.get(task)?;

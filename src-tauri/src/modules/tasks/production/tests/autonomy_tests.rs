@@ -11,6 +11,208 @@ fn autonomous() -> Fixture {
     f
 }
 #[test]
+fn finalization_with_valid_baseline_enters_review_even_with_recorded_optional_gaps() {
+    let f = autonomous();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.policy["iterationMode"] = json!("human-feedback");
+            Ok(())
+        })
+        .unwrap();
+    f.apply("save-issue",json!({"id":"unavailable-input","stage":"implementation","kind":"checkpoint","status":"open","description":"unverified platform focus"})).unwrap();
+    unit(&f, "input", json!([]), json!(["check"]));
+    next(&f, "first", false);
+    report(&f, "input", "deferred");
+    let finalizer = next(&f, "needs-finalization", true).unwrap();
+    assert_eq!(finalizer.kind, "finalization");
+    f.evidence("baseline-contract", "json", "state");
+    for id in ["lua", "core-loop", "save-reload"] {
+        f.apply("save-self-test",json!({"id":id,"status":"passed","observations":"synthetic contract evidence only","evidenceIds":["baseline-contract"]})).unwrap();
+    }
+    let approvals = f.record().approvals.len();
+    report(&f, &finalizer.id, "succeeded");
+    assert!(next(&f, "finalized", true).is_none());
+    let r = f.record();
+    assert_eq!(r.current_stage, "review");
+    assert_eq!(r.stages["implementation"], "execution-converged");
+    assert_eq!(r.stages["review"], "awaiting-feedback");
+    assert_eq!(r.issues[0]["status"], "open");
+    assert_eq!(r.approvals.len(), approvals);
+    assert_ne!(r.stages["delivery"], "passed");
+}
+#[test]
+fn preflight_recovery_requires_runtime_evidence_and_preserves_human_gates_and_budget() {
+    let f = Fixture::new();
+    f.doc("requirements", "Approved game scope");
+    f.accept("requirements");
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.policy["preflightRecovery"] = json!({"enabled":true});
+            r.current_stage = "resources".into();
+            r.stages.insert("resources".into(), "blocked".into());
+            Ok(())
+        })
+        .unwrap();
+    f.apply("save-issue",json!({"id":"startup","stage":"resources","kind":"blocker","status":"open","description":"editor not ready","resumeWhen":"verified ready"})).unwrap();
+    assert!(
+        !f.service
+            .production_prepare_preflight_recovery(&f.id, "unverified", false)
+            .unwrap()
+    );
+    assert!(
+        f.service
+            .production_prepare_preflight_recovery(&f.id, "first", true)
+            .unwrap()
+    );
+    assert!(
+        f.service
+            .production_prepare_preflight_recovery(&f.id, "first", true)
+            .unwrap()
+    );
+    assert_eq!(f.record().workbench.execution.preflight.attempts, 1);
+    assert!(validation::clear_issues(&f.record(), "resources").is_err());
+    f.service.production_execution_pause(&f.id).unwrap();
+    assert!(!super::super::preflight_recovery_active(&f.record()));
+    assert!(super::super::preflight_recovery_resumable(&f.record()));
+    f.service.production_resume_preflight(&f.id).unwrap();
+    assert!(
+        f.service
+            .production_prepare_preflight_recovery(&f.id, "second", false)
+            .unwrap()
+    );
+    assert!(
+        !f.service
+            .production_prepare_preflight_recovery(&f.id, "third", true)
+            .unwrap()
+    );
+    assert_eq!(f.record().workbench.execution.preflight.state, "exhausted");
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.stages
+                .insert("resources".into(), "awaiting-confirmation".into());
+            Ok(())
+        })
+        .unwrap();
+    assert!(
+        !f.service
+            .production_prepare_preflight_recovery(&f.id, "approval", true)
+            .unwrap()
+    );
+}
+#[test]
+fn productive_budget_checkpoints_keep_work_route_and_do_not_spend_fault_budget() {
+    let f = autonomous();
+    f.apply("save-issue",json!({"id":"logic","stage":"implementation","kind":"defect","status":"open","description":"ordinary correction"})).unwrap();
+    let goal = f.record().workbench.active_goal_id.unwrap();
+    f.apply("save-work-unit",json!({"id":"code","goalId":goal,"kind":"deployment","title":"save remaining code","dependsOn":[],"issueIds":["logic"],"routes":["normal","alternate"]})).unwrap();
+    next(&f, "start", false);
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.workbench.execution.units[0].attempt_started_at =
+                (Utc::now() - chrono::Duration::minutes(16)).to_rfc3339();
+            Ok(())
+        })
+        .unwrap();
+    assert!(
+        f.service
+            .production_execution_checkpoint(&f.id, "checkpoint:one")
+            .unwrap()
+    );
+    let resumed = next(&f, "dispatch:two", false).unwrap();
+    assert_eq!(resumed.id, "code");
+    assert_eq!(resumed.route, 0);
+    assert_eq!(resumed.attempts, 1);
+    assert!(f.record().workbench.execution.recovery_ms.is_empty());
+    assert!(!f.service.production_execution_budget_due(&f.id).unwrap());
+}
+#[test]
+fn budget_migration_requeues_only_misclassified_work_and_preserves_elapsed_history() {
+    let f = autonomous();
+    unit(&f, "visual", json!([]), json!(["verify"]));
+    unit(&f, "dependent", json!(["visual"]), json!(["finish"]));
+    unit(&f, "capability", json!([]), json!(["focus"]));
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            let units = &mut r.workbench.execution.units;
+            units[0].status = "deferred".into();
+            units[0].elapsed_ms = 123456;
+            units[0].reason = "本项或关联故障的累计恢复预算已用完，保留成果并继续独立工作。".into();
+            units[1].status = "deferred".into();
+            units[1].reason = "前置工作未完成；本轮暂缓部署或验证，已有成果保留。".into();
+            units[2].status = "deferred".into();
+            units[2].reason = "No supported focus capability".into();
+            super::super::autonomy_budget::migrate_budget(r);
+            Ok(())
+        })
+        .unwrap();
+    let r = f.record();
+    assert_eq!(r.workbench.execution.state, "paused");
+    assert_eq!(r.workbench.execution.units[0].status, "pending");
+    assert_eq!(r.workbench.execution.units[0].elapsed_ms, 123456);
+    assert_eq!(r.workbench.execution.units[0].budget_epoch_ms, 123456);
+    assert_eq!(r.workbench.execution.units[1].status, "pending");
+    assert_eq!(r.workbench.execution.units[2].status, "deferred");
+}
+#[test]
+fn fixture_snapshots_never_replace_candidate_and_activation_checks_saved_bytes() {
+    let f = autonomous();
+    let sources = || VersionSources {
+        archive_path: f.workspace.join("fixture-archive"),
+        player_path: f.workspace.join("fixture-player.exe"),
+        archive_guid: "archive".into(),
+        level_guid: "level".into(),
+        instance_id: "fixture".into(),
+    };
+    let saved = f
+        .service
+        .production_capture_version(&f.id, f.record().revision, "candidate", sources())
+        .unwrap()
+        .record
+        .unwrap();
+    std::fs::write(
+        f.workspace.join("fixture-archive/Main.PBArc"),
+        "fixed sequence fixture",
+    )
+    .unwrap();
+    let result = f
+        .service
+        .production_capture_version_for_purpose(
+            &f.id,
+            saved.revision,
+            "fixed-sequence",
+            sources(),
+            "fixture",
+        )
+        .unwrap()
+        .record
+        .unwrap();
+    assert_eq!(result.current_version, saved.current_version);
+    assert_eq!(result.version_details, saved.version_details);
+    assert_eq!(
+        result.workbench.execution.validation_snapshots["fixed-sequence"]["purpose"],
+        "fixture"
+    );
+    // Simulate an older client that had already selected a temporary version.
+    f.service
+        .production_capture_version(&f.id, result.revision, "legacy-temporary", sources())
+        .unwrap();
+    let restored = f
+        .service
+        .production_activate_version(&f.id, f.record().revision, saved.revision, "candidate")
+        .unwrap()
+        .record
+        .unwrap();
+    assert_eq!(restored.version_details, saved.version_details);
+    assert_eq!(restored.self_tests.len(), saved.self_tests.len());
+    let path = PathBuf::from(saved.version_details["archiveSource"].as_str().unwrap());
+    std::fs::write(path.join("Main.PBArc"), "changed frozen file").unwrap();
+    assert!(
+        f.service
+            .production_activate_version(&f.id, restored.revision, saved.revision, "candidate")
+            .is_err()
+    );
+}
+#[test]
 fn elapsed_budget_rotates_route_and_manual_pause_stops_accounting() {
     let f = autonomous();
     unit(&f, "slow", json!([]), json!(["native", "alternative"]));
@@ -93,7 +295,7 @@ fn explicit_23_migration_preserves_identity_approvals_results_and_no_auto_start(
         .unwrap()
         .record
         .unwrap();
-    assert_eq!(r.workflow_version, "2.5.0");
+    assert_eq!(r.workflow_version, "2.6.0");
     assert_eq!(r.workbench.active_goal_id, before.workbench.active_goal_id);
     assert_eq!(r.current_version, before.current_version);
     assert_eq!(
@@ -145,6 +347,13 @@ fn next(f: &Fixture, event: &str, advance: bool) -> Option<super::super::autonom
         .production_schedule(&f.id, event, advance)
         .unwrap()
 }
+fn finish_gaps(f: &Fixture, event: &str) {
+    let finalizer =
+        next(f, event, true).expect("finalization runs even with deferred dependencies");
+    assert_eq!(finalizer.kind, "finalization");
+    report(f, &finalizer.id, "succeeded");
+    assert!(next(f, &format!("{event}-finalized"), true).is_none());
+}
 fn report(f: &Fixture, id: &str, status: &str) {
     files::write_file(
         &f.workspace,
@@ -171,7 +380,7 @@ fn pb_issue_does_not_stop_independent_work_or_erase_delivery_gate() {
     f.apply("record-issue-handling",json!({"issueId":"platform","mode":"deferred","reason":"both options unavailable","impact":"visual effect omitted from candidate","affectedUnitIds":["affected"]})).unwrap();
     assert_eq!(next(&f, "two", true).unwrap().id, "independent");
     report(&f, "independent", "succeeded");
-    assert!(next(&f, "three", true).is_none());
+    finish_gaps(&f, "three");
     let r = f.record();
     assert_eq!(r.workbench.execution.state, "settledWithGaps");
     assert_eq!(
@@ -179,7 +388,7 @@ fn pb_issue_does_not_stop_independent_work_or_erase_delivery_gate() {
             .as_array()
             .unwrap()
             .len(),
-        3
+        4
     );
     assert_eq!(r.issues[0]["status"], "open");
     assert_eq!(r.approvals.len(), approvals);
@@ -207,7 +416,7 @@ fn no_progress_changes_route_then_parks_without_fake_completion() {
     assert_eq!(next(&f, "end1", true).unwrap().attempts, 2);
     assert_eq!(next(&f, "end2", true).unwrap().route, 1);
     assert_eq!(next(&f, "end3", true).unwrap().attempts, 2);
-    assert!(next(&f, "end4", true).is_none());
+    finish_gaps(&f, "end4");
     assert_eq!(f.record().workbench.execution.units[0].status, "deferred");
     assert!(next(&f, "end4", true).is_none());
     assert_eq!(f.record().stages["implementation"], "in-progress");
@@ -314,7 +523,7 @@ fn wake_requires_changed_conditions_and_respects_pause_and_convergence() {
     unit(&f, "missing", json!([]), json!(["one"]));
     next(&f, "start", false);
     report(&f, "missing", "deferred");
-    assert!(next(&f, "end", true).is_none());
+    finish_gaps(&f, "end");
     assert!(
         f.service
             .production_execution_wakeable(&f.id)
@@ -402,7 +611,7 @@ fn unrelated_issue_does_not_reset_exhausted_route_budget() {
     unit(&f, "fixed-scope", json!([]), json!(["single route"]));
     next(&f, "start", false);
     report(&f, "fixed-scope", "deferred");
-    assert!(next(&f, "end", true).is_none());
+    finish_gaps(&f, "end");
     f.apply("save-issue",json!({"id":"unrelated","stage":"implementation","kind":"defect","status":"open","description":"independent problem"})).unwrap();
     assert!(next(&f, "unrelated-event", false).is_none());
     assert_eq!(f.record().workbench.execution.units[0].status, "deferred");
@@ -413,7 +622,7 @@ fn newly_approved_scope_does_not_replay_old_work_units() {
     unit(&f, "old", json!([]), json!(["old route"]));
     next(&f, "old-start", false);
     report(&f, "old", "deferred");
-    next(&f, "old-end", true);
+    finish_gaps(&f, "old-end");
     let text = "Updated approved implementation plan";
     // This fixture uses the real human decision endpoint to accept the replacement plan.
     f.service
@@ -522,7 +731,7 @@ fn a_new_user_goal_after_convergence_gets_its_own_queue_without_replaying_old_wo
     unit(&f, "old-deferred", json!([]), json!(["old route"]));
     next(&f, "old-start", false);
     report(&f, "old-deferred", "deferred");
-    next(&f, "old-end", true);
+    finish_gaps(&f, "old-end");
     let id = uuid::Uuid::new_v4().to_string();
     let view = f
         .service

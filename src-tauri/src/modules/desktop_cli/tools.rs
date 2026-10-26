@@ -419,19 +419,50 @@ impl DesktopToolDispatcher {
                 let id = arguments["versionId"]
                     .as_str()
                     .ok_or_else(|| AppError::validation("versionId is required."))?;
-                serialize(self.dependencies.tasks.production_capture_version(
-                    task_id,
-                    expected,
-                    id,
-                    crate::modules::tasks::VersionSources {
-                        archive_path: archive.archive_path.into(),
-                        player_path: executable.into(),
-                        archive_guid: archive.archive_guid,
-                        level_guid: archive.level_guid,
-                        instance_id: instance_id.into(),
+                let view = self.dependencies.tasks.production_get(task_id)?;
+                let purpose = arguments["purpose"].as_str().unwrap_or(
+                    if view.record.as_ref().is_some_and(|r| {
+                        r.policy["implementationExecution"]["versionPurposeRequired"] == true
+                    }) {
+                        ""
+                    } else {
+                        "candidate"
                     },
-                )?)
+                );
+                serialize(
+                    self.dependencies
+                        .tasks
+                        .production_capture_version_for_purpose(
+                            task_id,
+                            expected,
+                            id,
+                            crate::modules::tasks::VersionSources {
+                                archive_path: archive.archive_path.into(),
+                                player_path: executable.into(),
+                                archive_guid: archive.archive_guid,
+                                level_guid: archive.level_guid,
+                                instance_id: instance_id.into(),
+                            },
+                            purpose,
+                        )?,
+                )
             }
+            "development_production_activate_version" => serialize(
+                self.dependencies.tasks.production_activate_version(
+                    arguments["taskId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("taskId required"))?,
+                    arguments["expectedRevision"]
+                        .as_u64()
+                        .ok_or_else(|| AppError::validation("expectedRevision required"))?,
+                    arguments["sourceRevision"]
+                        .as_u64()
+                        .ok_or_else(|| AppError::validation("sourceRevision required"))?,
+                    arguments["versionId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("versionId required"))?,
+                )?,
+            ),
             "game_recording_tools" => {
                 let executable = crate::modules::instances::recorder_executable();
                 Ok(

@@ -1,5 +1,13 @@
 # Foundation Skill
 
+## Owned CLI lease heartbeat (2026-10-26)
+Shared workbench execution optionally exposes preflight recovery state/stage/goal/attempts/time.
+Older records remain readable. Exhausted recovery never implies successful art or gameplay review.
+Only the native lifecycle owner may renew an existing unexpired managed lease after checking
+its live executor, exact task/conversation binding and cancellation flags. Renewal retains
+the token; revoked, expired, foreign and absent leases never revive. No agent renewal endpoint,
+permission escalation, persisted credential or fallback to standalone credentials is added.
+
 ## Workflow 2.5 shared diagnosis (2026-10-24)
 ProductionIssue adds optional diagnosisStatus (suspected/confirmed). Missing legacy values
 remain unconfirmed, independently of repairTarget. Tasks owns evidence validation and UI

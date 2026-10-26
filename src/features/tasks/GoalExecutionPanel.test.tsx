@@ -1,9 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { GoalExecutionPanel } from "./GoalExecutionPanel";
+import { GoalExecutionPanel,goalExecutionStatus } from "./GoalExecutionPanel";
 import type { ProductionRecord, WorkbenchGoal } from "../../shared/production";
 afterEach(()=>{cleanup();localStorage.clear();});
+it("exhausted preflight cannot mask a newly running or uncertain attempt",()=>{
+ const goal={id:"goal",stage:"resources",cycle:1,status:"in-progress",sourceType:"work"} as WorkbenchGoal;
+ const record={taskId:"task",currentStage:"resources",workbench:{execution:{preflight:{state:"exhausted",goalId:"goal"}},attempts:[{goalId:"goal",status:"finished"}]}} as unknown as ProductionRecord;
+ expect(goalExecutionStatus(record,goal)).toBe("recoveryExhausted");
+ record.workbench!.attempts![0].status="running";expect(goalExecutionStatus(record,goal)).toBe("running");
+ record.workbench!.attempts![0].status="needsReview";expect(goalExecutionStatus(record,goal)).toBe("needsReview");
+});
 it("resumes the original interrupted goal with one stable intent and retained history",async()=>{
   const goal={id:"original-goal",title:"同一个实现目标",stage:"implementation",cycle:1,status:"in-progress",sourceType:"work"} as WorkbenchGoal;
   const record={taskId:"task",revision:7,currentStage:"implementation",cycle:1,workbench:{attempts:[{id:"old-attempt",goalId:goal.id,status:"interrupted",reason:"旧执行已退出",updatedAt:"2026-10-22T01:00:00Z"}]}} as ProductionRecord;
@@ -18,9 +25,9 @@ it("resumes the original interrupted goal with one stable intent and retained hi
   expect(resume.mock.calls[1]).toEqual(resume.mock.calls[0]);
   expect(screen.getByText("old-attempt")).toBeTruthy();
 });
-it("does not ask the user to continue a converged autonomous goal",()=>{
+it.each(["finished","interrupted","paused","failed"])("does not ask the user to continue a converged autonomous goal after %s",(status)=>{
  const goal={id:"goal",stage:"implementation",cycle:1,status:"in-progress",sourceType:"work"} as WorkbenchGoal;
- const record={taskId:"task",revision:1,currentStage:"implementation",cycle:1,workbench:{activeGoalId:"goal",execution:{state:"waitingDependencies"},attempts:[{id:"done",goalId:"goal",status:"finished",updatedAt:"2026-10-23T00:00:00Z"}]}} as unknown as ProductionRecord;
+ const record={taskId:"task",revision:1,currentStage:"implementation",cycle:1,workbench:{activeGoalId:"goal",execution:{state:"settledWithGaps"},attempts:[{id:"done",goalId:"goal",status,updatedAt:"2026-10-23T00:00:00Z"}]}} as unknown as ProductionRecord;
  render(<GoalExecutionPanel record={record} goal={goal} active checking={false} onResume={vi.fn()}/>);
  expect(screen.getAllByText("本轮已结束，查看结果与缺口").length).toBeGreaterThan(0);
  expect(screen.queryByRole("button",{name:"继续此子流程"})).toBeNull();expect(screen.getByText("done")).toBeTruthy();

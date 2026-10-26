@@ -1,5 +1,15 @@
 # Game Runtime CLI Bridge
 
+## Long response transport (2026-10-26)
+Bundled Node CLI uses node:http for exact loopback POSTs, with caller AbortSignal deadlines,
+bounded response bytes and no redirect/proxy/automatic replay. It avoids an independent
+fetch/Undici header/body timeout overriding the 660s game / 670s Node / 690s bridge budgets.
+Post-dispatch transport loss is outcome_unknown; retain the original receipt and reconcile.
+Failure during discovery/status/input validation is explicitly not_executed; the bridge preserves
+that state in its receipt. This does not classify returned game errors as rolled-back writes.
+This does not make a failed game initializer ready. Diagnose transport and launch report separately.
+Regress delayed headers/body, abort, dropped writes, redirects and a real >300s local response.
+
 ## 内存保护与操作追踪（2026-10-19）
 同实例高开销 capability run 串行，全局八个 CLI 子进程上限保留；status、工具目录、
 read_me_first、editor_get_state、capability_search/describe 仍可用于诊断。内存压力下拒绝

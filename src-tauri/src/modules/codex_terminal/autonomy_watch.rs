@@ -26,6 +26,7 @@ impl CodexTerminalService {
                         continue;
                     }
                     // Only interrupt a known owned turn at a tool-free checkpoint.
+                    crate::foundation::cli_sessions::renew_owned("codex", &task, &conversation);
                     // In-flight or unknown writes must finish/reconcile before dispatching again.
                     if service
                         .tasks

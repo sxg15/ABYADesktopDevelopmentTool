@@ -78,6 +78,14 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
     if(!primary&&!["workSettled","closed"].includes(state)){model.title=text("自主执行前核对原生权限", "Check native permissions before autonomous execution");model.button=text("前往终端执行设置", "Open terminal settings");model.action="terminal";model.destination=text("处理位置：终端 · 执行设置", "Open in: Terminal · execution settings");}
   }
   model.additional = Math.max(0, items.length - (primary && model.tone !== "programmer" ? 1 : 0));
+  if(active&&!primary&&r?.workbench?.execution?.preflight?.stage===stage&&r.workbench.execution.preflight.state==="exhausted"
+    && !["running","waitingForResponse","queued","paused","pausing","stopFailed"].includes(state)) {
+    set({key:"preflight-exhausted",tone:"neutral",action:"stage",attention:true,
+      title:text("技术预检恢复未成功", "Technical preflight recovery ended"),
+      instruction:text("有限恢复已结束，原成果与问题已保留。", "Bounded recovery ended; results and issues are preserved."),
+      detail:text("查看具体恢复条件或补充新信息，无需反复点击继续。", "Review the required conditions or provide new information."),
+      destination:text("查看位置：当前阶段的问题", "Open in: Current stage issues"),button:text("查看预检问题", "View preflight issues")});
+  }
   if(active&&stage==="implementation"&&!autonomous&&view?.availableUpdate&&!primary&&!["running","waitingForResponse","queued","pausing","stopFailed"].includes(state)) {
     set({key:"workflow-upgrade",tone:"neutral",action:"stage",attention:true,
       title:text("本任务仍使用旧执行规则", "This task still uses legacy execution rules"),

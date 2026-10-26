@@ -34,6 +34,7 @@ test('desktop identity mismatch prevents capability execution',async t=>{
   const f=await fixture(t,()=>[]);
   const r=await f.run(['capability','run','read','--input-file','-'],{ABYA_CLI_DESKTOP_INSTANCE_ID:'wrong'});
   assert.equal(r.code,3);assert.equal(f.requests.length,1);
+  assert.equal(r.value.executionState,'not_executed');
 });
 test('separate CLI processes preserve session and carry operation identity',async t=>{
   const f=await fixture(t,()=>[{type:'text',text:'{}'}]);

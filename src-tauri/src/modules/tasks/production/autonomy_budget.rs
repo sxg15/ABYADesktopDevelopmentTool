@@ -18,6 +18,9 @@ fn running_ms(u: &autonomy::WorkUnit) -> i64 {
         .unwrap_or(0)
 }
 fn keys(r: &ProductionRecord, u: &autonomy::WorkUnit) -> Vec<String> {
+    if u.kind != "recovery" {
+        return vec![];
+    }
     // A new unit ID cannot buy another budget for the same issue/build/scope.
     u.issue_ids
         .iter()
@@ -40,7 +43,7 @@ fn keys(r: &ProductionRecord, u: &autonomy::WorkUnit) -> Vec<String> {
 }
 pub(super) fn exhausted(r: &ProductionRecord, u: &autonomy::WorkUnit) -> bool {
     let extra = running_ms(u);
-    u.elapsed_ms + extra >= limit(r, "workMinutes", 60) * 60_000
+    u.elapsed_ms.saturating_sub(u.budget_epoch_ms) + extra >= limit(r, "workMinutes", 60) * 60_000
         || keys(r, u).iter().any(|k| {
             r.workbench
                 .execution
@@ -79,11 +82,99 @@ pub(super) fn account(r: &mut ProductionRecord) {
         unit.attempt_started_at.clear();
     }
 }
+pub(super) fn migrate_budget(r: &mut ProductionRecord) {
+    if r.current_stage != "implementation" {
+        return;
+    }
+    let scope = autonomy::scope(r);
+    let previous = std::mem::take(&mut r.workbench.execution.recovery_ms);
+    let units = &mut r.workbench.execution.units;
+    for u in units
+        .iter_mut()
+        .filter(|u| u.cycle == r.cycle && u.scope_hash == scope)
+    {
+        if u.kind != "recovery"
+            && u.status == "deferred"
+            && (u.reason == "不同执行路线已达到恢复预算；暂缓本项，继续其他工作。"
+                || u.reason == "本项或关联故障的累计恢复预算已用完，保留成果并继续独立工作。")
+        {
+            u.status = "pending".into();
+            u.route = 0;
+            u.attempts = 0;
+            u.route_elapsed_ms = 0;
+            u.budget_epoch_ms = u.elapsed_ms;
+            u.attempt_started_at.clear();
+            u.reason = "兼容升级已纠正检查点计费，沿用原ID核对并继续剩余工作。".into();
+        }
+    }
+    for _ in 0..units.len() {
+        let revived: Vec<_> = units
+            .iter()
+            .filter(|u| u.cycle == r.cycle && u.scope_hash == scope && u.status == "pending")
+            .map(|u| u.id.clone())
+            .collect();
+        for u in units
+            .iter_mut()
+            .filter(|u| u.cycle == r.cycle && u.scope_hash == scope)
+        {
+            if u.status == "deferred"
+                && u.reason == "前置工作未完成；本轮暂缓部署或验证，已有成果保留。"
+                && u.depends_on.iter().any(|id| revived.contains(id))
+            {
+                u.status = "pending".into();
+            }
+        }
+    }
+    r.workbench.execution.state = "paused".into();
+    r.workbench.execution.active_unit_id = None;
+    r.workbench.execution.events.push(
+        json!({"kind":"budget-policy-migrated","at":now(),"previousRecoveryMs":previous,
+        "reason":"显式升级保留累计耗时及历史；检查点不再当故障，等待用户恢复原子流程。"}),
+    );
+}
 impl TaskService {
+    pub fn production_execution_checkpoint(&self, task: &str, event_id: &str) -> AppResult<bool> {
+        let Some(r) = self.database.with_connection(|c| load(c, task))? else {
+            return Ok(false);
+        };
+        if !autonomy::autonomous_implementation(&r) || r.workbench.execution.last_event == event_id
+        {
+            return Ok(false);
+        }
+        let Some(unit) = r.workbench.execution.units.iter().find(|u| {
+            Some(&u.id) == r.workbench.execution.active_unit_id.as_ref() && u.status == "running"
+        }) else {
+            return Ok(false);
+        };
+        if unit.kind == "recovery" || exhausted(&r, unit) {
+            return Ok(false);
+        }
+        self.production_commit(task, r.revision, |r| {
+            account(r);
+            r.workbench.execution.state = "ready".into();
+            r.workbench.execution.last_event = event_id.into();
+            let id = r.workbench.execution.active_unit_id.clone();
+            autonomy::event(
+                &mut r.workbench.execution,
+                "checkpoint",
+                id.as_deref(),
+                "轮次预算检查点：保留当前工作和路线，先核对已有产出再续接；不计为技术失败。",
+            );
+            Ok(())
+        })?;
+        Ok(true)
+    }
     pub fn production_execution_observation_gap(&self, task: &str) -> AppResult<()> {
         let Some(r) = self.database.with_connection(|c| load(c, task))? else {
             return Ok(());
         };
+        if super::preflight_recovery::preflight_recovery_active(&r) {
+            return self.production_commit(task, r.revision, |r| {
+                r.workbench.execution.preflight.started_at.clear();
+                r.workbench.execution.preflight.state = "paused".into();
+                Ok(())
+            });
+        }
         if !autonomy::autonomous_implementation(&r)
             || !matches!(r.workbench.execution.state.as_str(), "running" | "ready")
         {
@@ -107,6 +198,9 @@ impl TaskService {
         let Some(r) = self.database.with_connection(|c| load(c, task))? else {
             return Ok(false);
         };
+        if super::preflight_recovery::due(&r) {
+            return Ok(true);
+        }
         if !autonomy::autonomous_implementation(&r)
             || !matches!(r.workbench.execution.state.as_str(), "running" | "ready")
         {
@@ -134,7 +228,9 @@ impl TaskService {
             u.status == "running"
                 && Some(&u.id) == r.workbench.execution.active_unit_id.as_ref()
                 && (running_ms(u) >= limit(&r, "turnMinutes", 15) * 60_000
-                    || u.route_elapsed_ms + running_ms(u) >= limit(&r, "routeMinutes", 15) * 60_000
+                    || u.kind == "recovery"
+                        && u.route_elapsed_ms + running_ms(u)
+                            >= limit(&r, "routeMinutes", 15) * 60_000
                     || exhausted(&r, u))
         }))
     }

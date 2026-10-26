@@ -371,10 +371,25 @@ pub(super) fn set_version(r: &mut ProductionRecord, root: &Path, data: &Value) -
 }
 
 fn evidence(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
-    let version = r
+    let mut version = r
         .current_version
         .clone()
         .unwrap_or_else(|| "preflight".into());
+    if let Some(id) = data["version"].as_str() {
+        if id != version {
+            let fixture = r
+                .workbench
+                .execution
+                .validation_snapshots
+                .get(id)
+                .ok_or_else(|| AppError::validation("证据版本必须为当前候选或已登记夹具。"))?;
+            if fixture["cycle"] != r.cycle || fixture["scopeHash"] != super::autonomy::scope(r) {
+                return Err(AppError::validation("夹具已不属于当前需求范围。"));
+            }
+            super::versions::verify(fixture)?;
+        }
+        version = id.into();
+    }
     let id = text(data, "id")?;
     if r.evidence.iter().any(|e| e.id == id) {
         return Err(AppError::validation(

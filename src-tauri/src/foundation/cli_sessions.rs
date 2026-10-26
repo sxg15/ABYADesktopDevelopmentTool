@@ -100,6 +100,27 @@ fn environment_in(
 pub fn authorize(token: &str, context: &Value) -> bool {
     authorize_in(&registry().lock(), token, context)
 }
+/// Called only by the lifecycle owner after checking its live executor handle.
+/// Never creates, rotates, revives an expired lease, or clears a revocation fence.
+pub fn renew_owned(provider: &str, task: &str, conversation: &str) -> bool {
+    renew_in(&mut registry().lock(), provider, task, conversation)
+}
+fn renew_in(state: &mut Registry, provider: &str, task: &str, conversation: &str) -> bool {
+    let key = format!("{provider}:{conversation}");
+    if state.blocked.contains(&key) {
+        return false;
+    }
+    let Some(lease) = state.leases.get_mut(&key) else {
+        return false;
+    };
+    if lease.expires <= Instant::now()
+        || lease.context != json!({"provider":provider,"taskId":task,"conversationId":conversation})
+    {
+        return false;
+    }
+    lease.expires = Instant::now() + Duration::from_secs(12 * 3600);
+    true
+}
 fn authorize_in(state: &Registry, token: &str, context: &Value) -> bool {
     let provider = context["provider"].as_str().unwrap_or("");
     let conversation = context["conversationId"].as_str().unwrap_or("");
@@ -146,6 +167,25 @@ mod tests {
 #[cfg(test)]
 mod fence_tests {
     use super::*;
+    #[test]
+    fn owned_heartbeat_keeps_token_stable_but_never_revives_expiry_or_revocation() {
+        let mut r = Registry {
+            pipe: "test".into(),
+            ..Default::default()
+        };
+        let env = environment_in(&mut r, "codex", "task", "chat");
+        let token = r.leases["codex:chat"].token.clone();
+        r.leases.get_mut("codex:chat").unwrap().expires = Instant::now() + Duration::from_secs(2);
+        assert!(!renew_in(&mut r, "codex", "foreign", "chat"));
+        assert!(renew_in(&mut r, "codex", "task", "chat"));
+        assert_eq!(env, environment_in(&mut r, "codex", "task", "chat"));
+        assert_eq!(r.leases["codex:chat"].token, token);
+        r.blocked.insert("codex:chat".into());
+        assert!(!renew_in(&mut r, "codex", "task", "chat"));
+        r.blocked.clear();
+        r.leases.get_mut("codex:chat").unwrap().expires = Instant::now() - Duration::from_secs(1);
+        assert!(!renew_in(&mut r, "codex", "task", "chat"));
+    }
     #[test]
     fn revoked_conversation_cannot_reissue_lease_until_new_session_authorized() {
         let mut state = Registry {

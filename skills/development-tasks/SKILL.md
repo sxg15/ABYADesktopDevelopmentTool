@@ -1,5 +1,28 @@
 # Development Tasks Skill
 
+## Workflow continuity 2.6 (2026-10-26)
+Resources/plan have a separate bounded technical-recovery record (not full Lua autonomy).
+Automatic entry requires native-observed authenticated runtime failures; explicit user resume
+may request bounded diagnosis for an already blocked legacy task. Approved requirements,
+human waits, pause, owned execution and unknown-write reconciliation remain authoritative.
+Two recovery turns, ten minutes each, are keyed by stage/cycle/approved requirements rather
+than new issue IDs. Safe instance restart prerequisites stay explicit in the scoped prompt;
+no engine restart or source modification is dispatched by TaskService. Recovery resolution
+updates the current stage summary without changing design approvals or historical evidence.
+Exhaustion is shown as required conditions, not an ineffective Continue button.
+Time slices checkpoint ordinary work, rather than treating elapsed time as a failed route.
+Only recovery-kind units consume shared issue recovery budgets. Explicit compatible migration
+requeues precisely identified legacy budget/dependency deferrals, preserves elapsed totals and
+history, and remains paused until explicit resume. Capability deferrals and unknown writes stay.
+Always schedule a finalization unit even when other dependencies were deferred. It restores the
+candidate and registers supported tests before the existing honest convergence/acceptance gates.
+Version capture distinguishes candidate and fixture. Fixtures live in bounded validationSnapshots
+with scope/cycle bindings and cannot replace the candidate; fixture evidence retains that identity.
+activate-version verifies an existing same-task/cycle/scope frozen historical candidate, then uses
+normal version selection/invalidation. Never restore approvals, fake tests or write a live archive.
+Ended ledgers display ended for interrupted/paused/failed terminal attempts too, avoiding a dead
+Continue button after a budget interruption. Preserve running/sending/uncertain state precedence.
+
 ## Autonomous recovery 2.5 (2026-10-24)
 Task policy identity and explicit compatible upgrade are visible in the main workbench.
 Upgrade retains exact goals, approvals, artifacts and history; it never starts inference.

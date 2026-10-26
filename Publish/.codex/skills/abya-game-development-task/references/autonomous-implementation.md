@@ -1,8 +1,24 @@
-# Lua 自主执行（流程 2.5）
+# Lua 自主执行（流程 2.6）
 
-2.5：工作项 kind 区分 implementation、deployment、validation、recovery（默认 implementation）。
+conclude-implementation成功后，当前派发已结束；直接结束回复，不再调用report-work-unit。
+工作项报告与整个阶段收尾是不同操作，不因已收尾后的重复报告被拒而重新派发工作。
+
+2.6 修正：15分钟是保存/核对进度的时间片，正常实现、部署、验证的预算中断续接原工作和
+原路线，不算故障失败。只有kind=recovery消耗关联问题的恢复预算。单项总预算仍有限。
+全部可做工作结束后，APP必定派发finalization：先恢复正式候选、登记可证明的必要自测，
+再汇总未测项；不能把最后的版本恢复/材料登记依赖于所有可选或受阻检查都通过。
+
+production version 必须声明 purpose=candidate 或 fixture。fixture只写独立冻结测试快照到
+record.workbench.execution.validationSnapshots，不改变currentVersion、交付候选或批准。
+夹具证据register-evidence须显式version=夹具ID，不能登记成正式候选的完整通过证据。
+如果旧流程已把测试版设为当前版本，通过 production activate-version 输入 expectedRevision、
+sourceRevision、versionId 恢复同任务同周期同批准范围的既有冻结候选；sourceRevision来自当时
+成功的版本登记回执。此操作重新核验实际文件哈希，不启动实例、不覆盖编辑源、不新增通过记录。
+不要为了恢复候选重抓仍在保存/清理中的目录，也不要让固定题序夹具留作最终交付版本。
+
+工作项 kind 区分 implementation、deployment、validation、recovery（默认 implementation）。
 按功能与目标拆分，单项约5–15分钟；恢复项必须绑定稳定 issueIds，不重新编号逃避预算。
-同故障/构建/范围共享30分钟恢复时间，每路线15分钟、无完成最多两次，单工作项总计60分钟。
+恢复工作同故障/构建/范围共享30分钟恢复时间，每路线15分钟、无完成最多两次，单工作项总计60分钟。
 模型单轮15分钟后由 APP 在无在途工具的检查点中断并续接；在途写入先完成或对账，不盲目重发。
 暂停不计入执行预算，进程退出后的未知区间不算模型工时。不得用新工作项包装同一恢复问题。
 无可做项时后端会汇总成果、未完成项及问题，缺少可玩证据时明确结束本轮但不通过验收。

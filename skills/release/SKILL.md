@@ -1,5 +1,12 @@
 # Release Skill
 
+## Workflow continuity 2.6 (2026-10-26)
+Release workflow-continuity-20261026 packages the loopback HTTP transport and policy 2.6.
+Validate >300s delayed response without duplicate dispatch, bounded cancellation, live-lease renewal
+without revival, checkpoint continuation, protected finalization, fixture/candidate isolation and
+historical candidate verification. Run the actual task as a recovery check, without claiming its
+gameplay acceptance or another machine's root cause before examining that machine's evidence.
+
 ## Autonomous recovery 2.5 (2026-10-24)
 Release autonomous-recovery-20261024 includes migration visibility, guaranteed gap summaries,
 owned budget checkpoints, uncertain diagnosis labels and the reusable runtime scenario runner.

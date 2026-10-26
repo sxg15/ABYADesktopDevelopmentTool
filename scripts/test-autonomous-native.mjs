@@ -8,13 +8,13 @@ try{
  const page=browser.contexts()[0].pages()[0];await page.waitForFunction(()=>!!window.__TAURI_INTERNALS__?.invoke);
  const invoke=async(command,args={})=>{const r=await page.evaluate(async({command,args})=>{try{return{ok:true,value:await window.__TAURI_INTERNALS__.invoke(command,args)};}catch(e){return{ok:false,error:e};}},{command,args});if(!r.ok)throw Error(JSON.stringify({command,error:r.error}));return r.value;};
  const paths=await invoke('get_app_paths');assert.equal(path.resolve(paths.dataDir).toLowerCase(),path.join(root,'Local','ABYA Desktop Development Tool','Data').toLowerCase());
- const build=await invoke('get_build_info');assert.equal(build.testEnvironment,true);assert.equal(build.verification,'verified');assert.equal(build.release,'autonomous-recovery-20261024');
+ const build=await invoke('get_build_info');assert.equal(build.testEnvironment,true);assert.equal(build.verification,'verified');assert.equal(build.release,'workflow-continuity-20261026');
  const file=path.join(root,'autonomous-native.json');let state=fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):{};
  const save=()=>fs.writeFileSync(file,JSON.stringify(state,null,2));
  if(action==='prepare'){
   assert.equal((await invoke('list_tasks')).length,0);
   state.task=await invoke('create_task',{input:{title:'Lua 自主调度隔离验收',description:'这是APP自主调度的合成测试，不是游戏开发。只处理已登记工作项：在本任务 artifacts 下写简短测试文本并通过 production update 报告当前工作项完成。不要启动游戏、联网、生成美术或操作其他目录。PB问题是故障注入数据，保留它及其依赖，完成其余可做项即可。'}});
-  const view=await invoke('update_task_production',{input:{taskId:state.task.id,expectedRevision:0,operation:'initialize',data:{questionMode:'no-followup',playerMode:'single'}}});assert.equal(view.record.workflowVersion,'2.5.0');
+  const view=await invoke('update_task_production',{input:{taskId:state.task.id,expectedRevision:0,operation:'initialize',data:{questionMode:'no-followup',playerMode:'single'}}});assert.equal(view.record.workflowVersion,'2.6.0');
   state.conversation=await invoke('create_codex_conversation',{taskId:state.task.id,title:'自主调度测试原会话'});save();console.log(JSON.stringify({prepared:true,task:state.task.id}));
  }else if(action==='run'){
   let view=await invoke('get_task_production',{taskId:state.task.id});const goal=view.record.workbench.activeGoalId;

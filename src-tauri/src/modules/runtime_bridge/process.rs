@@ -170,7 +170,11 @@ pub(super) fn execute(
         return Err(AppError::new(
             "runtimeCliFailed",
             value["message"].as_str().unwrap_or("Runtime CLI failed."),
-            value["errorCode"].as_str().unwrap_or(""),
+            if value["executionState"] == "not_executed" {
+                "not_executed"
+            } else {
+                value["errorCode"].as_str().unwrap_or("")
+            },
         ));
     }
     Ok(value)

@@ -17,14 +17,16 @@ pub(super) fn eligible(view: &ProductionView) -> bool {
     };
     continuation_queue::waiting(Some(view)).is_none()
         && (crate::modules::tasks::autonomous_implementation(r)
+            || crate::modules::tasks::preflight_recovery_active(r)
             || matches!(
                 r.stages.get(&r.current_stage).map(String::as_str),
                 Some("in-progress" | "not-started")
             ))
-        && view
-            .stage_statuses
-            .get(&r.current_stage)
-            .is_none_or(|s| s != "blocked")
+        && (crate::modules::tasks::preflight_recovery_active(r)
+            || view
+                .stage_statuses
+                .get(&r.current_stage)
+                .is_none_or(|s| s != "blocked"))
         && (crate::modules::tasks::autonomous_implementation(r)
             || !r.feedback.iter().any(|f| f["status"] == "awaiting-recheck"))
 }
@@ -153,7 +155,10 @@ impl CodexTerminalService {
                 .ok()
                 .and_then(|t| self.tasks.production_attention(&t).ok())
                 .and_then(|v| v.record)
-                .is_some_and(|r| crate::modules::tasks::autonomous_implementation(&r));
+                .is_some_and(|r| {
+                    crate::modules::tasks::autonomous_implementation(&r)
+                        || crate::modules::tasks::preflight_recovery_active(&r)
+                });
         let completed = completed || recover_failed;
         {
             let mut runs = self.auto_progress.lock();
@@ -208,6 +213,22 @@ impl CodexTerminalService {
         {
             return Ok(());
         }
+        let runtime_failed = workflow
+            .turns
+            .iter()
+            .find(|t| t.id == turn)
+            .is_some_and(|t| {
+                t.activities.iter().any(|a| {
+                    a.source == "desktopCli"
+                        && a.kind == CodexActivityKind::GameInstance
+                        && a.status == CodexActivityStatus::Failed
+                })
+            });
+        self.tasks.production_prepare_preflight_recovery(
+            task,
+            &format!("turn:{native}:{turn}"),
+            runtime_failed,
+        )?;
         let view = self.tasks.production_attention(&task_record)?;
         if !eligible(&view) {
             return Ok(());
@@ -216,7 +237,13 @@ impl CodexTerminalService {
             .record
             .as_ref()
             .is_some_and(crate::modules::tasks::autonomous_implementation);
+        let checkpoint = autonomous
+            && budget_interrupt
+            && self
+                .tasks
+                .production_execution_checkpoint(task, &format!("checkpoint:{native}:{turn}"))?;
         if autonomous
+            && !checkpoint
             && self
                 .tasks
                 .production_schedule(task, &format!("turn:{native}:{turn}"), true)?
@@ -241,7 +268,12 @@ impl CodexTerminalService {
                 return Ok(());
             }
             run.handled = true;
-            let stalled = !autonomous && run.last_progress.as_ref() == Some(&fingerprint);
+            let stalled = !autonomous
+                && !view
+                    .record
+                    .as_ref()
+                    .is_some_and(crate::modules::tasks::preflight_recovery_active)
+                && run.last_progress.as_ref() == Some(&fingerprint);
             run.last_progress = Some(fingerprint);
             stalled
         };

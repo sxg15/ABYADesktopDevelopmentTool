@@ -72,8 +72,18 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             "Fingerprint the managed instance's saved launch archive and actual Player files. Save and reload the matching archive/level first. Never accepts caller-supplied hashes or source paths.",
             "Record actual game version",
             object_schema(
-                json!({"taskId":{"type":"string"},"instanceId":{"type":"string"},"expectedRevision":{"type":"integer","minimum":1},"versionId":{"type":"string","minLength":1}}),
+                json!({"taskId":{"type":"string"},"instanceId":{"type":"string"},"expectedRevision":{"type":"integer","minimum":1},"versionId":{"type":"string","minLength":1},"purpose":{"type":"string","enum":["candidate","fixture"],"description":"Required in workflow 2.6. Fixtures never replace the delivery candidate."}}),
                 &["instanceId", "expectedRevision", "versionId"],
+            ),
+            reversible_write(),
+        ),
+        tool(
+            "development_production_activate_version",
+            "Restore an existing verified frozen candidate from this task's recorded sourceRevision. Does not recapture mutable files, approve or declare tests passed.",
+            "Restore saved candidate",
+            object_schema(
+                json!({"taskId":{"type":"string"},"expectedRevision":{"type":"integer","minimum":1},"sourceRevision":{"type":"integer","minimum":1},"versionId":{"type":"string","minLength":1}}),
+                &["expectedRevision", "sourceRevision", "versionId"],
             ),
             reversible_write(),
         ),

@@ -1,5 +1,21 @@
 # Codex Terminal Skill
 
+## Progress checkpoints versus failures (2026-10-26)
+Native desktopCli GameInstance failures may start scoped resources/plan recovery when task policy
+enables it. Semantic reports cannot establish failure provenance. Recheck approvals/pause/pending
+tools and latest native predecessor before dispatch; never turn all blocked stages autonomous.
+Resource recovery prompts distinguish partial archive load, runtime readiness and UI prerequisites,
+requiring reconciliation and safe task-owned clean restart conditions. Budget events are bounded;
+pause/restart preserves the original goal and excludes unobserved time.
+Explicit user resume can establish bounded legacy preflight recovery after native-idle and
+human-gate checks; it does not reset an exhausted recovery budget or revive uncertain writes.
+Confirmed budget interruption of ordinary work resumes the same unit and route without spending
+a failure attempt; actual failed results and recovery work still use bounded alternatives.
+User pauses and uncertain native/tool results retain their existing gates. Owned live executors
+renew existing CLI leases across long tasks; no expired/revoked session is resurrected.
+Only finalization determines whether usable evidence permits review; a native reply ending or
+a time slice ending never declares implementation done.
+
 ## Autonomous budget checkpoints (2026-10-24)
 The five-second owned-executor watcher checks durable work/route/fault budgets during a turn.
 At a tool-free checkpoint it interrupts exactly the known current native turn once. Native

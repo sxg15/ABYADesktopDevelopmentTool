@@ -25,7 +25,10 @@ description: 制作完整 ABYA 玩法、实施较大玩法改动，或执行用�
 模板菜单或固定轮次。已有玩法中的局部实现仍遵守适用的 Runtime、架构及保存约束。
 资料未变化且当前上下文已读过时复用，不每轮重读全部文档。
 
-## Lua 自主执行（流程 2.5）
+## Lua 自主执行（流程 2.6）
+
+resources/plan 的基础运行/CLI/界面前置条件失败按 [技术预检恢复](references/preflight-recovery.md)
+执行有限诊断和恢复，不把资源预检直接交给用户反复点击继续；审核、暂停和未知写入仍优先。
 
 当前 policy 启用自主执行时，读取 [自主实现与恢复](references/autonomous-implementation.md)。
 普通错误自动修复；PB 问题先复现和找等效替代，无解则暂缓相关工作并继续独立项。
