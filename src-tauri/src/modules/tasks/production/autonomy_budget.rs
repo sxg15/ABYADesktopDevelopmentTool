@@ -18,7 +18,10 @@ fn running_ms(u: &autonomy::WorkUnit) -> i64 {
         .unwrap_or(0)
 }
 fn keys(r: &ProductionRecord, u: &autonomy::WorkUnit) -> Vec<String> {
-    if u.kind != "recovery" && u.kind != "repair-plan" {
+    if !matches!(
+        u.kind.as_str(),
+        "recovery" | "repair-plan" | "handoff-repair"
+    ) {
         return vec![];
     }
     // A new unit ID cannot buy another budget for the same issue/build/scope.

@@ -31,6 +31,7 @@ export interface ProductionPolicy {
   questions: { id: string; text: string; family: string }[];
 }
 export interface ProductionIssue {
+  diagnosis?: {reproduction?:string;comparison?:string;rootCause?:string;playerBuildHash?:string};
   category?:string; owningStage?:string; detectedStage?:string; blockingDisposition?:string;
   diagnosisStatus?: "suspected" | "confirmed";
   executionHandling?: {mode:string;reason:string;impact:string;affectedUnitIds:string[]};

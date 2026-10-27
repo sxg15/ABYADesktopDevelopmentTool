@@ -216,6 +216,7 @@ impl TaskService {
             r.skill_pins = scan(&root)?;
             let next_policy=policy();
             let completion_upgrade=!super::completion::enabled(r);
+            let handoff_upgrade=!super::review_handoff::enabled(r);
             let budget_upgrade=r.policy["implementationExecution"]["checkpointMode"]!=next_policy["implementationExecution"]["checkpointMode"];
             let design_upgrade = !super::art_design_sources::enabled(r) && next_policy["artDesignVersion"] == 1;
             let art_upgrade = !super::interaction::art_approval(r) && next_policy["stages"].as_array().is_some_and(|stages| stages.iter().any(|s| s["approval"] == "resources"));
@@ -247,6 +248,7 @@ impl TaskService {
                 if super::stage_contracts::enabled(r) {super::stage_contracts::migrate(r);}
                 if budget_upgrade {super::autonomy_budget::migrate_budget(r);}
                 if completion_upgrade&&super::completion::enabled(r){super::completion::migrate(r);}
+                if handoff_upgrade&&super::review_handoff::enabled(r){super::review_handoff::migrate(r);}
                 if r.policy["implementationExecution"]["mode"]=="autonomous" && r.current_stage=="implementation" && r.stages.get("implementation").is_some_and(|s|s=="blocked") {
                     r.stages.insert("implementation".into(),"in-progress".into());
                     super::autonomy::event(&mut r.workbench.execution,"policy-upgraded",None,"明确升级后启用问题隔离；原问题和批准历史保留，不自动启动执行。");

@@ -14,7 +14,10 @@ pub(super) fn check_signature(r: &ProductionRecord) -> Value {
         .filter(|t| t["version"].as_str() == r.current_version.as_deref() && t["cycle"] == r.cycle)
     {
         if let Some(id) = t["id"].as_str() {
-            checks.insert(id, json!([t["status"], t["evidenceIds"]]));
+            checks.insert(
+                id,
+                json!([t["status"], t["evidenceIds"], t["blockedByIssueIds"]]),
+            );
         }
     }
     json!(checks)

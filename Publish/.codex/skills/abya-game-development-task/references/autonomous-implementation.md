@@ -1,4 +1,4 @@
-# Lua 自主执行（流程 2.8）
+# Lua 自主执行（流程 2.9）
 
 conclude-implementation成功后，当前派发已结束；直接结束回复，不再调用report-work-unit。
 工作项报告与整个阶段收尾是不同操作，不因已收尾后的重复报告被拒而重新派发工作。
@@ -15,7 +15,11 @@ bootstrap 按 `milestone=core` 登记上述链路及验证包工作，其他扩�
 
 每个目标/产出批次都有最终核对。没有包时先安排缺失的实际接入与验证；可继续的工作进入队列，不能只写总结结束。核心 lua、主输入、core-loop、save-reload 实测通过后调用 build-verification-package，生成存档、验证记录、原始证据、缺口及指纹绑定的 ZIP。
 
-完整门槛满足用 complete-stage；部分可玩且有真实包可 conclude-implementation 进入带缺口试玩。没有可玩证据或包则保持 repairRequired/externalBlocked，不显示正常完成。原成果与已验证包保留，不伪造验收。
+完整门槛满足用 complete-stage；conclude-implementation 只允许携带已证实的 Abya-PB 源码缺陷进入试玩。普通缺陷、未测项、疑似平台异常必须继续在 Lua 阶段自动修复/取证，核心包不是阶段放行证。没有包或普通问题未闭环时保留 Lua 技术恢复状态，不能转交玩家或伪造验收。
+
+流程 2.9 的 reviewHandoffVersion=1：仅 repairTarget=abya-source、diagnosisStatus=confirmed，且 diagnosis 中有 reproduction/comparison/rootCause/当前 playerBuildHash，并关联当前候选/周期的实际 evidenceIds，才是可交接的源码缺陷。abya-build、超时、断连、预算耗尽和原因未知不能冒充源码根因。仍应先尝试等效方案；若相关自测确被该缺陷阻止，以 failed/blocked 和 blockedByIssueIds 明确关联，不改为 passed。没有关联的必要检查必须完成。无需重新执行已经有有效证据的测试。
+
+APP 会为收尾遗漏自动派发 handoff-repair；读取 production current.reviewHandoffDeficits，沿用原目标修复及复验，保留预算。权限/登录等真实外部条件不能绕过；无法继续就保存技术恢复状态和证据，不当作已完成或要求玩家替代技术修复。试玩卡片由已确认源码缺陷生成，保留影响、替代方案与诊断 ZIP 导出。
 
 production version 必须声明 purpose=candidate 或 fixture。fixture只写独立冻结测试快照到
 record.workbench.execution.validationSnapshots，不改变currentVersion、交付候选或批准。
@@ -60,9 +64,9 @@ diagnosis.reproduction、comparison、rootCause、当前 playerBuildHash 以及�
   工作项完成不代表游戏自测或交付通过。
 - record-issue-handling：issueId、mode、reason、impact、affectedUnitIds。mode 为 diagnosing、
   repairing、workaround、deferred、awaiting-condition；暂缓只隔离相关工作项，保留原问题。
-- conclude-implementation：summary。可做工作已收敛但不满足原完成门槛时使用。
-  仅在最低可试玩检查已有实际证据时进入试玩阶段，implementation 标 execution-converged，
-  不能当作 passed，交付门槛仍检查全部必要项；无可试玩证据则保留当前阶段及缺口。
+- conclude-implementation：summary。核对原成果、完整检查与实际包后使用。
+  2.9 仅在剩余事项全部由当前证据确认的 PB 源码缺陷解释时进入试玩；否则保留 Lua 修复状态。
+  execution-converged 不等于 passed，交付门槛仍检查全部必要项。
 
 普通错误自行修复并自测。疑似 PB 问题先保存现象、操作链、干净对照；不要仅凭调试层存在
 就归为源码缺陷。确认后查已有能力，尝试等效实现，再验证。无方案时保存问题和影响，

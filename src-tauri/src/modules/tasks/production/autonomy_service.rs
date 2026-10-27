@@ -34,6 +34,7 @@ impl TaskService {
             "activeUnit":ledger.units.iter().find(|u|Some(&u.id)==ledger.active_unit_id.as_ref()),
             "workUnitCount":ledger.units.iter().filter(|u|u.cycle==r.cycle&&u.scope_hash==scope_hash).count(),
             "workUnits":current_units, "workUnitsTruncated":false, "verificationPackage":ledger.verification_package,
+            "reviewHandoffDeficits":super::review_handoff::deficits(&r),
             "issueCount":r.issues.iter().filter(|i|i["status"]!="resolved").count(),
             "issues":r.issues.iter().filter(|i|i["status"]!="resolved").take(16).map(|i|json!({"id":i["id"],"status":i["status"],"repairTarget":i["repairTarget"],"description":i["description"].as_str().unwrap_or("").chars().take(300).collect::<String>(),"handling":{"mode":i["executionHandling"]["mode"],"reason":i["executionHandling"]["reason"].as_str().unwrap_or("").chars().take(200).collect::<String>(),"impact":i["executionHandling"]["impact"].as_str().unwrap_or("").chars().take(200).collect::<String>()}})).collect::<Vec<_>>(),
             "pendingQuestions":r.question_groups.iter().filter(|g|g.status=="pending").map(|g|&g.id).collect::<Vec<_>>(),
@@ -290,6 +291,7 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
     }
     if loop_enabled {
         completion::ensure_repair(r);
+        super::review_handoff::ensure_repairs(r);
     }
     let relevant = completion::relevant(r);
     let sig = completion::signature(r);
@@ -342,7 +344,7 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
             }
         }
         ledger.units.push(WorkUnit {input_signature:sig,kind:"finalization".into(),scope_hash:scope_hash.clone(),id:final_id.clone(),goal_id:r.workbench.active_goal_id.clone().unwrap_or_default(),cycle:r.cycle,
-            title:"恢复正式候选、核对实际自测并汇总缺口".into(),routes:vec!["先完成测试夹具清理或通过activate-version恢复已验证的冻结候选；2.8没有候选时，优先完成真实输入及核心循环接入，捕获candidate并核对lua/input/core-loop/save-reload证据，调用build-verification-package。需要继续实现时登记具体工作项后报告本项暂缓，由APP继续派发；不得仅写缺口清单结束。核对已完成的真实回执并登记版本适用的必要自测，禁止重放已完成测试。满足原门槛再complete-stage；缺口如实保留，能完成的版本核对与材料登记不能因其他项暂缓而省略。".into(),"核对已有产出、候选与未测项，保存汇总并conclude-implementation，不伪造通过。".into()],status:"pending".into(),updated_at:now(),..Default::default()});
+            title:"恢复正式候选、核对实际自测并汇总缺口".into(),routes:vec!["先完成测试夹具清理或通过activate-version恢复已验证的冻结候选；2.8没有候选时，优先完成真实输入及核心循环接入，捕获candidate并核对lua/input/core-loop/save-reload证据，调用build-verification-package。需要继续实现时登记具体工作项后报告本项暂缓，由APP继续派发；不得仅写缺口清单结束。核对已完成的真实回执并登记版本适用的必要自测，禁止重放已完成测试。满足原门槛再complete-stage；缺口如实保留，能完成的版本核对与材料登记不能因其他项暂缓而省略。".into(),"核对已有产出、候选与全部必要自测。2.9只有确证PB源码缺陷可携带进入试玩，普通缺陷及未测项须自动修复；conclude-implementation不会凭核心包放行。不伪造通过。".into()],status:"pending".into(),updated_at:now(),..Default::default()});
     }
     let next = ledger
         .units

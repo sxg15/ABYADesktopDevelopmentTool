@@ -11,6 +11,7 @@ import { ReadableText } from "./ReadableText";
 import { VisualGallery } from "./VisualGallery";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { WorkbenchIssues } from "./WorkbenchIssues";
+import { PlaytestIssues } from "./PlaytestIssues";
 import { VerificationPackage } from "./VerificationPackage";
 import { PrototypeAuthorization } from "./PrototypeAuthorization";
 import { Modal } from "../../app/Modal";
@@ -98,7 +99,7 @@ export function ProductionWorkbench(props:Props) {
       {goals.length===0?<p>{en?"Starts when this stage begins.":"进入本阶段后按目标建立。"}</p>:goals.map(g=><button key={g.id} className={(goalId||r.workbench?.activeGoalId)===g.id?"selected":""} onClick={()=>setGoalId(g.id)}><span>{g.number}</span><div><strong>{g.title}</strong><small>{en?goalExecutionStatus(r,g,reconciling):executionLabels[goalExecutionStatus(r,g,reconciling)]??statusName(g.status,locale)}</small></div><ChevronRight size={14}/></button>)}
       <button className="text-button" onClick={()=>{setStage(r.currentStage);setGoalId("");}}>{en?"Return to current work":"返回当前工作"}</button>
       <button className="text-button" onClick={()=>setDetails(true)}>{en?"All documents & development details":"全部资料与开发详情"}</button>
-    </aside><WorkbenchSplit en={en}><section className="wb-outcome">{outcome}{!historical&&<WorkbenchIssues taskId={taskId} record={r} stage={currentStage} en={en} active={active&&!running} onUpdated={accept}/>}</section>
+    </aside><WorkbenchSplit en={en}><section className="wb-outcome">{!historical&&currentStage==="review"&&<PlaytestIssues record={r} en={en}/ >}{outcome}{!historical&&<WorkbenchIssues taskId={taskId} record={r} stage={currentStage} en={en} active={active&&!running} onUpdated={accept}/>}</section>
     <section className="wb-interaction" aria-label={en?"Task interaction":"任务交互"}>
       <AutonomousExecution record={r} en={en} control={control}/>
       {!historical&&<VerificationPackage key={taskId} record={r} active={active&&!running} en={en}/>}

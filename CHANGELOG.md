@@ -1,5 +1,12 @@
 # 验证续接与 CLI 长请求（2026-10-26）
 
+## 2026-10-27 — Playtest handoff 2.9.0
+
+- Automatically queue Lua repair for ordinary defects, missing checks and unfinished work; a core package alone cannot advance to playtest.
+- Only evidence-bound, confirmed Abya-PB source defects may remain at handoff, with explicit affected-check links; uncertain causes and build/environment issues do not qualify.
+- Show source defect cards at the top of playtest, including cross-stage issues and one-click diagnostic ZIP with selected diagnosis, version fingerprints and linked evidence.
+- Explicit upgrade returns legacy premature handoffs to the original Lua goal while preserving packages, approvals, history and budgets.
+
 ## 2026-10-27 — Lua completion loop 2.8.1
 
 - Resume repairable failures automatically, revise original work with audit history and preserve recovery budgets.

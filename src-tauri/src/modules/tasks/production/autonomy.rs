@@ -109,6 +109,7 @@ pub(super) fn condition(r: &ProductionRecord) -> String {
                     r.version_details["archiveHash"],
                     r.version_details["playerBuildHash"],
                     completion::check_signature(r),
+                    super::review_handoff::deficits(r),
                     r.workbench
                         .execution
                         .validation_runs
@@ -427,6 +428,9 @@ fn report_unit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult
                 "最终核对完成须有当前可验证包；有缺口请如实conclude-implementation，不声明成功。",
             ));
         }
+        if current.kind == "finalization" && status == "succeeded" {
+            super::review_handoff::gate(r, root)?;
+        }
     }
     let ledger = &mut r.workbench.execution;
     let unit = ledger
@@ -629,6 +633,8 @@ pub(super) fn conclude(r: &mut ProductionRecord, root: &Path, data: &Value) -> A
     } else {
         playable
     };
+    let handoff = super::review_handoff::gate(r, root);
+    let ready_for_review = playable && handoff.is_ok();
     let external = enhanced
         && r.workbench.execution.units.iter().any(|u| {
             relevant.contains(&u.id)
@@ -669,7 +675,7 @@ pub(super) fn conclude(r: &mut ProductionRecord, root: &Path, data: &Value) -> A
         .find(|u| Some(&u.id) == active.as_ref())
     {
         if !enhanced || unit.status != "succeeded" {
-            unit.status = if enhanced && playable {
+            unit.status = if enhanced && ready_for_review {
                 "succeeded"
             } else {
                 "deferred"
@@ -684,8 +690,8 @@ pub(super) fn conclude(r: &mut ProductionRecord, root: &Path, data: &Value) -> A
         unit.updated_at = now();
     }
     ledger.active_unit_id = None;
-    ledger.state = if enhanced && !playable {
-        if external {
+    ledger.state = if enhanced && !ready_for_review {
+        if external && handoff.is_ok() {
             "externalBlocked"
         } else {
             "repairRequired"
@@ -696,11 +702,21 @@ pub(super) fn conclude(r: &mut ProductionRecord, root: &Path, data: &Value) -> A
     .into();
     event(ledger, "converged", None, summary);
     r.stage_updates.insert("implementation".into(),json!({"summary":summary,"nextAction":"在统一结果中核对未完成项和替代方案；不反复发送继续。","updatedAt":now()}));
-    if playable {
+    if ready_for_review {
         r.stages
             .insert("implementation".into(), "execution-converged".into());
         r.current_stage = "review".into();
         r.stages.insert("review".into(), "awaiting-feedback".into());
+    }
+    if let Err(error) = handoff {
+        r.stage_updates.insert(
+            "implementation".into(),
+            json!({"summary":summary,
+            "nextAction":error.message,"updatedAt":now()}),
+        );
+        r.current_stage = "implementation".into();
+        r.stages
+            .insert("implementation".into(), "in-progress".into());
     }
     if enhanced {
         r.workbench.execution.parked_condition = condition(r);

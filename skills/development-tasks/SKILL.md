@@ -2,6 +2,8 @@
 
 ## Current scope
 
+Workflow 2.9 enforces reviewHandoffVersion=1: unresolved ordinary issues, missing/failed checks and unfinished work stay in Lua with bounded automatic handoff-repair. Only confirmed abya-source diagnosis bound to current Player/evidence may cross; blocked checks link blockedByIssueIds. Core package does not waive this gate. Playtest shows cross-stage source-defect cards and selected diagnostic ZIP; upgrades preserve original IDs, approvals, budgets and packages and return premature legacy handoffs to Lua without starting execution.
+
 Workflow 2.8 adds a scoped completion loop: current-goal dependency closure, evidence-based wake signals, audited work revision, automatic repair plans, per-output finalization and honest repairRequired/externalBlocked outcomes. No candidate completion without a hash-bound playable ZIP and current lua/input/core-loop/save-reload evidence. Fixture validation remains separate. Upgrade preserves budgets, IDs and approvals; explicit resume retains the original goal and cannot replay uncertain writes. Package compression runs outside the database mutex.
 
 Workflow 2.7: stage_contracts owns effective issue gates for resources/plan. Agent prose cannot create a design gate; actual questions, planner feedback, material hashes and approval validators remain authoritative. category/owningStage and requested blocked operations retain diagnosis history. Explicit compatible upgrade preserves approvals/IDs/history and corrects obsolete technical blocking disposition without marking an issue fixed.

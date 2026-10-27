@@ -37,6 +37,29 @@ impl TaskService {
             }
         }
         let mut total = 0usize;
+        let selected: Vec<_> = record
+            .issues
+            .iter()
+            .filter(|i| ids.iter().any(|id| i["id"] == *id))
+            .collect();
+        let checks: Vec<_> = record
+            .self_tests
+            .iter()
+            .filter(|t| {
+                t["version"].as_str() == record.current_version.as_deref()
+                    && t["cycle"] == record.cycle
+                    && t["blockedByIssueIds"]
+                        .as_array()
+                        .is_some_and(|a| a.iter().any(|i| ids.iter().any(|id| i == id)))
+            })
+            .collect();
+        zip.start_file("diagnosis.json", options)
+            .map_err(|e| AppError::validation(e.to_string()))?;
+        zip.write_all(&serde_json::to_vec_pretty(&json!({"schema":"abya.issue-diagnosis/v1",
+            "taskId":task_id,"revision":revision,"workflowVersion":record.workflow_version,
+            "version":record.current_version,"cycle":record.cycle,
+            "archiveHash":record.version_details["archiveHash"],"playerBuildHash":record.version_details["playerBuildHash"],
+            "issues":selected,"affectedChecks":checks}))?)?;
         for (index, (path, expected)) in paths.into_iter().enumerate() {
             let result = (|| -> AppResult<Vec<u8>> {
                 let file = files::safe_path(root, &path)?;

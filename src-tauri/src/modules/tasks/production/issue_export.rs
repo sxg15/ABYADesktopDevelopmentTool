@@ -90,6 +90,8 @@ impl TaskService {
                 ("affectedStages", "影响阶段"),
                 ("blockedOperations", "受阻操作"),
                 ("description", "问题描述／复现线索"),
+                ("diagnosis", "复现、对照、源码根因与构建指纹"),
+                ("executionHandling", "已尝试替代方案与影响范围"),
                 ("fix", "已尝试处理／修复方案"),
                 ("resumeWhen", "恢复条件"),
                 ("recheck", "复验结果"),

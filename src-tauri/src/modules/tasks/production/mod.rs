@@ -3,6 +3,7 @@ mod autonomy;
 mod completion;
 mod completion_repair;
 mod preflight_recovery;
+mod review_handoff;
 mod stage_contracts;
 mod verification_package;
 pub use preflight_recovery::{

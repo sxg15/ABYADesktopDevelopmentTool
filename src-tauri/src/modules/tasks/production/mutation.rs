@@ -564,7 +564,9 @@ fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
         for field in ["fix", "recheck"] {
             text(data, field)?;
         }
-        if ["defect", "checkpoint"].contains(&kind) {
+        if ["defect", "checkpoint"].contains(&kind)
+            || super::review_handoff::enabled(r) && kind == "blocker"
+        {
             validation::evidence_refs(r, root, &data["evidenceIds"], validation::version(r)?)?;
         }
     }
@@ -723,6 +725,7 @@ fn complete(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
             r.current_stage = "plan".into();
         }
         "implementation" => {
+            super::review_handoff::gate(r, root)?;
             if super::completion::enabled(r) && !super::verification_package::valid(r, root) {
                 return Err(AppError::validation(
                     "请先生成与当前候选及实测一致的可验证包（build-verification-package）。",

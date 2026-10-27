@@ -3,10 +3,11 @@ import { productionApi, type ProductionRecord, type ProductionView } from "../..
 import { errorMessage } from "../../shared/api";
 import { ProgrammerIssueExport } from "./ProgrammerIssueExport";
 import { activeProgrammerIssues } from "./programmerIssue";
+import { confirmedSourceDefect } from "./PlaytestIssues";
 export function WorkbenchIssues({taskId,record:r,stage,en,active,onUpdated}:{taskId:string;record:ProductionRecord;stage:string;en:boolean;active:boolean;onUpdated:(v:ProductionView)=>void}){
   const [selected,setSelected]=useState(""),[reason,setReason]=useState(""),[impact,setImpact]=useState("");
   const [error,setError]=useState(""),[busy,setBusy]=useState(false);
-  const issues=r.issues.filter(i=>i.status!=="resolved"&&(i.stage===stage||i.affectedStages?.includes(stage)));
+  const issues=r.issues.filter(i=>i.status!=="resolved"&&(i.stage===stage||i.affectedStages?.includes(stage))&&!(stage==="review"&&confirmedSourceDefect(r,i.id)));
   const deferred=(id:string)=>{const issue=r.issues.find(i=>i.id===id);if(!issue||issue.kind!=="suggestion")return undefined;
     return r.workbench?.deferrals.find(d=>d.status==="deferred" && d.stage===issue.stage && d.description.replace(/\s+/g," ").trim()===issue.description.replace(/\s+/g," ").trim() && JSON.stringify(d.affectedStages??null)===JSON.stringify(issue.affectedStages??null) && JSON.stringify(d.blockedOperations??null)===JSON.stringify(issue.blockedOperations??null));};
   const open=issues.filter(i=>!deferred(i.id)),skipped=issues.filter(i=>deferred(i.id));

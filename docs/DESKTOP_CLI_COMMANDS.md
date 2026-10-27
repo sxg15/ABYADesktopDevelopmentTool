@@ -367,3 +367,5 @@ initialize/configure 支持 playerMode=unspecified/single/multiplayer；已明�
 production update 新增 revise-work-unit、classify-work-unit、reconcile-work-unit、record-work-signal、build-verification-package。工作修订保留 ID、累计预算及定义/证据哈希历史；未知结果须实际对账，不能直接重新派发原路线。当前摘要返回完整有界工作索引并优先当前目标。
 record-validation-run 的 purpose=fixture 写独立验证索引，不改候选自测。有效核心检查完成后自动生成首个存档验证 ZIP；最终核对显式刷新最新检查及缺口。playable-input 仅证明主输入，完整 input 等原验收门槛继续保留。
 生成包的压缩及读回校验位于数据库事务外，CAS 失败不会登记过期包；真实生成失败返回 packageWarning，不重放已经提交的检查。试玩副本放在工作区根的短目录 .abya-play-runs/<UUID>/Archives，用任务 owner 标记和内部 data-root 覆盖隔离，兼容旧 Player。
+
+Workflow 2.9: production current includes reviewHandoffDeficits (issue/check/work IDs). save-self-test may use blockedByIssueIds only to explain failed/blocked checks by current confirmed abya-source defects. All other gaps stay in Lua; core packages alone cannot advance. The APP diagnostic ZIP includes diagnosis.json, report.md, evidence and inclusion/omission manifest.
