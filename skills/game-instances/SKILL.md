@@ -1,5 +1,8 @@
 # Game Instances Skill
 
+## Owned acceptance data roots (2.8)
+Frozen candidates run from TaskService-validated workspace-root/.abya-play-runs/<UUID>/Archives copies. An owner marker binds every run to its task; short paths avoid legacy Player MAX_PATH failures. The acceptance orchestrator alone passes an internal data-root override; ordinary CLI/UI profiles cannot select arbitrary roots. This makes older Players discover the exact run copy without changing the candidate, global archive collection, or Player fingerprint.
+
 ## 内存监测与异常证据（2026-10-19）
 每个托管进程的监控线程每秒读取私有提交、工作集、系统可用物理内存与提交上限。
 进程采样持有原进程句柄，不能按同名进程或复用 PID 停止其他程序。

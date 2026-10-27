@@ -37,7 +37,11 @@ pub(super) fn apply(
     }
     match operation {
         "record-validation-run" => super::validation_runs::record(r, root, data),
+        "record-work-signal" => super::completion::record_signal(r, root, data),
         "save-work-unit"
+        | "revise-work-unit"
+        | "classify-work-unit"
+        | "reconcile-work-unit"
         | "report-work-unit"
         | "record-issue-handling"
         | "conclude-implementation" => super::autonomy::apply(r, root, operation, data),
@@ -719,6 +723,11 @@ fn complete(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
             r.current_stage = "plan".into();
         }
         "implementation" => {
+            if super::completion::enabled(r) && !super::verification_package::valid(r, root) {
+                return Err(AppError::validation(
+                    "请先生成与当前候选及实测一致的可验证包（build-verification-package）。",
+                ));
+            }
             super::art_design_validation::gate(r, root, "implementation", None)?;
             if super::iteration::enabled(r) {
                 validation::approved(r, root, "requirements")?;

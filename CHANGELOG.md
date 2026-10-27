@@ -1,5 +1,13 @@
 # 验证续接与 CLI 长请求（2026-10-26）
 
+## 2026-10-27 — Lua completion loop 2.8.1
+
+- Resume repairable failures automatically, revise original work with audit history and preserve recovery budgets.
+- Reevaluate current-goal dependencies, expose the complete bounded work index and finalize every output generation.
+- Keep fixture checks separate and automatically create a verified playable archive package at the first valid core checkpoint.
+- Launch frozen playtest copies under short task-owned data roots for existing Players; retain the original snapshot and executable fingerprint.
+- Preserve original task identity, approvals and candidate evidence during explicit upgrades.
+
 ## 2026-10-26 — Workflow 2.7 stage contracts
 
 - Separate design submission gates from technical runtime issues, preserving actual materials, questions and approvals.

@@ -173,42 +173,46 @@ impl RuntimeBridgeService {
         seat: u8,
         host_id: Option<String>,
     ) -> AppResult<GameInstance> {
-        self.instances.launch(LaunchInstanceInput {
-            task_id: task.into(),
-            name: format!(
-                "验收 {} · {}",
-                spec.version,
-                if seat == 0 {
-                    "Host / 单人".into()
-                } else {
-                    format!("Client {seat}")
-                }
-            ),
-            executable_path: spec.executable_path.clone(),
-            profile: LaunchProfile {
-                mode: if spec.seats == 1 {
-                    LaunchMode::Offline
-                } else if seat == 0 {
-                    LaunchMode::LanHost
-                } else {
-                    LaunchMode::LanClient
+        self.instances.launch_with_data_root(
+            LaunchInstanceInput {
+                task_id: task.into(),
+                name: format!(
+                    "验收 {} · {}",
+                    spec.version,
+                    if seat == 0 {
+                        "Host / 单人".into()
+                    } else {
+                        format!("Client {seat}")
+                    }
+                ),
+                executable_path: spec.executable_path.clone(),
+                profile: LaunchProfile {
+                    mode: if spec.seats == 1 {
+                        LaunchMode::Offline
+                    } else if seat == 0 {
+                        LaunchMode::LanHost
+                    } else {
+                        LaunchMode::LanClient
+                    },
+                    window_mode: WindowMode::Windowed,
+                    visibility_mode: WindowVisibilityMode::Visible,
+                    width: 1280,
+                    height: 720,
+                    exit_on_failure: true,
+                    language: String::new(),
+                    host_instance_id: host_id,
+                    archive: Some(ArchiveSelection {
+                        archive_path: spec.archive_path.clone(),
+                        archive_guid: spec.archive_guid.clone(),
+                        archive_name: "任务验收存档".into(),
+                        level_guid: spec.level_guid.clone(),
+                        level_name: "验收关卡".into(),
+                    }),
                 },
-                window_mode: WindowMode::Windowed,
-                visibility_mode: WindowVisibilityMode::Visible,
-                width: 1280,
-                height: 720,
-                exit_on_failure: true,
-                language: String::new(),
-                host_instance_id: host_id,
-                archive: Some(ArchiveSelection {
-                    archive_path: spec.archive_path.clone(),
-                    archive_guid: spec.archive_guid.clone(),
-                    archive_name: "任务验收存档".into(),
-                    level_guid: spec.level_guid.clone(),
-                    level_name: "验收关卡".into(),
-                }),
             },
-        })
+            self.tasks
+                .production_acceptance_data_root(task, &spec.archive_path)?,
+        )
     }
 
     pub fn start_acceptance(&self, task: &str) -> AppResult<Value> {

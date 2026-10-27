@@ -541,7 +541,16 @@ impl TaskService {
                 .replace('\\', "/")
                 .starts_with("artifacts/art-library-exports/")
         {
-            return Err(AppError::validation("仅可定位本任务导出的美术案例包。"));
+            let record = self
+                .database
+                .with_connection(|c| load(c, id))?
+                .ok_or_else(super::conflict)?;
+            let package = &record.workbench.execution.verification_package;
+            if package["path"] != relative || files::hash_file(&path)?.0 != package["sha256"] {
+                return Err(AppError::validation(
+                    "仅可定位本任务登记且哈希一致的导出包。",
+                ));
+            }
         }
         if extension == "html" {
             let allowed = ["plan", "review", "closeout"]

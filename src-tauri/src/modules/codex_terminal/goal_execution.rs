@@ -451,6 +451,8 @@ impl CodexTerminalService {
             ));
         }
         self.tasks.production_resume_preflight(task)?;
+        self.tasks
+            .production_resume_completion(task, goal, intent)?;
         let attempt = self.attempt_template(intent, goal, &bound, &native);
         self.tasks.production_begin_attempt(task, None, attempt)?;
         let t = self.tasks.get(task)?;

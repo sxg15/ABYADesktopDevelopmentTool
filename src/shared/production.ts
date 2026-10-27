@@ -54,7 +54,7 @@ export interface WorkbenchGoal {
 export interface WorkbenchAttempt { id:string;goalId:string;requestId?:string;conversationId:string;nativeId:string;turnId?:string;status:string;reason:string;startedAt:string;updatedAt:string;predecessorId?:string;processEpoch:string;generation:number }
 export interface WorkbenchState {
   prototypeGrants?:{id:string;instanceId:string;note:string;status:string;expiresAt:string;archivePath:string;effective?:boolean}[];
-  execution?: {preflight?:{state:string;stage:string;goalId:string;attempts:number;elapsedMs:number};scopeHash?:string;state:string;activeUnitId?:string;updatedAt:string;units:{scopeHash?:string;id:string;goalId:string;cycle:number;title:string;status:string;reason:string;dependsOn:string[];routes:string[];route:number;attempts:number;resultPaths:string[]}[];events:{kind:string;unitId?:string;reason:string;at:string}[]};
+  execution?: {verificationPackage?:{path:string;version:string;sha256:string;status:string;createdAt:string};preflight?:{state:string;stage:string;goalId:string;attempts:number;elapsedMs:number};scopeHash?:string;state:string;activeUnitId?:string;updatedAt:string;units:{scopeHash?:string;id:string;goalId:string;cycle:number;title:string;status:string;reason:string;dependsOn:string[];routes:string[];route:number;attempts:number;resultPaths:string[]}[];events:{kind:string;unitId?:string;reason:string;at:string}[]};
   attempts?:WorkbenchAttempt[];
   goals:WorkbenchGoal[]; activeGoalId?:string; drafts:Record<string,string>;
   requests:{id:string;text:string;stage:string;status:string;revision:number}[];

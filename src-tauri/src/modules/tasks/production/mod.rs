@@ -1,7 +1,10 @@
 mod authoring;
 mod autonomy;
+mod completion;
+mod completion_repair;
 mod preflight_recovery;
 mod stage_contracts;
+mod verification_package;
 pub use preflight_recovery::{
     preflight_recovery_active, preflight_recovery_manual, preflight_recovery_resumable,
 };
@@ -346,12 +349,16 @@ impl TaskService {
     }
 
     pub fn production_update(&self, input: ProductionMutation) -> AppResult<ProductionView> {
+        if input.operation == "build-verification-package" {
+            return self.production_build_package(&input.task_id, input.expected_revision);
+        }
         if input.operation == "initialize" {
             return self.production_initialize(input);
         }
         if ["inspect-art-case", "use-art-case"].contains(&input.operation.as_str()) {
             return self.art_library_use(input);
         }
+        self.production_validate_mutation_files(&input.task_id, &input.operation, &input.data)?;
         let root = self.production_workspace(&input.task_id)?;
         self.production_commit(&input.task_id, input.expected_revision, |record| {
             mutation::apply(record, &root, &input.operation, &input.data)
@@ -363,7 +370,20 @@ impl TaskService {
                 e.to_string(),
             )
         })?;
-        self.production_get(&input.task_id)
+        let warning = if matches!(
+            input.operation.as_str(),
+            "save-self-test" | "record-validation-run"
+        ) {
+            self.production_auto_package(&input.task_id)
+        } else {
+            None
+        };
+        let mut view = self.production_get(&input.task_id)?;
+        if let Some(message) = warning {
+            view.warnings
+                .push(format!("检查已保存；可玩包暂未生成：{message}"));
+        }
+        Ok(view)
     }
 
     fn production_commit(

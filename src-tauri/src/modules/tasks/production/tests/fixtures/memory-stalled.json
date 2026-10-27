@@ -1,0 +1,1428 @@
+{
+  "source": "2026-10-27 handoff: sanitized graph only; no game content, approvals, machine paths or credentials",
+  "activeGoalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+  "units": [
+    {
+      "id": "goal-bootstrap-4406bcebdef246c3bb132db55e8d6787d0ea647677c51610d39e9028a0d9ae2f",
+      "goalId": "work:implementation:1:13",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [],
+      "attempts": 1,
+      "elapsedMs": 494774,
+      "routeElapsedMs": 494774,
+      "route": 0,
+      "resultHash": "46a28919867c210a98c027fb9a1aeb570db8d43d0ef73a486f3efe5e287a2f38",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "goal-bootstrap-4406bcebdef246c3bb132db55e8d6787d0ea647677c51610d39e9028a0d9ae2f",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-contracts",
+      "goalId": "work:implementation:1:13",
+      "kind": "implementation",
+      "status": "deferred",
+      "dependsOn": [
+        "goal-bootstrap-4406bcebdef246c3bb132db55e8d6787d0ea647677c51610d39e9028a0d9ae2f"
+      ],
+      "attempts": 0,
+      "elapsedMs": 902257,
+      "routeElapsedMs": 0,
+      "route": 1,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-contracts",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-runtime-baseline",
+      "goalId": "work:implementation:1:13",
+      "kind": "deployment",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-4406bcebdef246c3bb132db55e8d6787d0ea647677c51610d39e9028a0d9ae2f"
+      ],
+      "attempts": 1,
+      "elapsedMs": 434901,
+      "routeElapsedMs": 434901,
+      "route": 0,
+      "resultHash": "6e00340b56d90836509cb533b5aa1ec529730c5cc751340abf2857f01195d92c",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "memory-c1-runtime-baseline",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-rules",
+      "goalId": "work:implementation:1:13",
+      "kind": "implementation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-contracts"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-rules",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-ui-content",
+      "goalId": "work:implementation:1:13",
+      "kind": "implementation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-contracts"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-ui-content",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-server-lobby",
+      "goalId": "work:implementation:1:13",
+      "kind": "implementation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-contracts"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-server-lobby",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-server-round",
+      "goalId": "work:implementation:1:13",
+      "kind": "implementation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-rules",
+        "memory-c1-server-lobby"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-server-round",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-client-input",
+      "goalId": "work:implementation:1:13",
+      "kind": "implementation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-contracts",
+        "memory-c1-ui-content"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-client-input",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-bot-policy",
+      "goalId": "work:implementation:1:13",
+      "kind": "implementation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-contracts",
+        "memory-c1-rules"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-bot-policy",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-deploy-core",
+      "goalId": "work:implementation:1:13",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-runtime-baseline",
+        "memory-c1-ui-content",
+        "memory-c1-server-round",
+        "memory-c1-client-input"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "memory-c1-deploy-core",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-validate-core",
+      "goalId": "work:implementation:1:13",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-deploy-core"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-validate-core",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-validate-network",
+      "goalId": "work:implementation:1:13",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-deploy-core"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-validate-network",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-deploy-bots",
+      "goalId": "work:implementation:1:13",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-deploy-core",
+        "memory-c1-bot-policy"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-deploy-bots",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-validate-bots",
+      "goalId": "work:implementation:1:13",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-deploy-bots",
+        "memory-c1-validate-core",
+        "memory-c1-validate-network"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-validate-bots",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-validate-four-seats",
+      "goalId": "work:implementation:1:13",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-deploy-bots",
+        "memory-c1-validate-network"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-validate-four-seats",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-validate-lifecycle",
+      "goalId": "work:implementation:1:13",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-deploy-bots",
+        "memory-c1-validate-core",
+        "memory-c1-validate-network"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-validate-lifecycle",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-validate-visual",
+      "goalId": "work:implementation:1:13",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-deploy-core",
+        "memory-c1-validate-core"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-validate-visual",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-freeze-candidate",
+      "goalId": "work:implementation:1:13",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-validate-bots",
+        "memory-c1-validate-four-seats",
+        "memory-c1-validate-lifecycle",
+        "memory-c1-validate-visual"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-freeze-candidate",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-final-core",
+      "goalId": "work:implementation:1:13",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-freeze-candidate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-final-core",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-final-authority",
+      "goalId": "work:implementation:1:13",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-freeze-candidate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-final-authority",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-final-visual",
+      "goalId": "work:implementation:1:13",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-freeze-candidate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-final-visual",
+      "cycle": 1
+    },
+    {
+      "id": "memory-c1-implementation-gate",
+      "goalId": "work:implementation:1:13",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-c1-final-core",
+        "memory-c1-final-authority",
+        "memory-c1-final-visual"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-c1-implementation-gate",
+      "cycle": 1
+    },
+    {
+      "id": "goal-bootstrap-56da089447cb973823e6a4a3e8e9993d183b4a131efe05b5b7fef561c9d4a2b1",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [],
+      "attempts": 1,
+      "elapsedMs": 573313,
+      "routeElapsedMs": 573313,
+      "route": 0,
+      "resultHash": "dd15a65eccd7d84a9af68d89de13de5ed7b6eba9860654f0f55673e23e88cbee",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "goal-bootstrap-56da089447cb973823e6a4a3e8e9993d183b4a131efe05b5b7fef561c9d4a2b1",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-rule-contract",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-56da089447cb973823e6a4a3e8e9993d183b4a131efe05b5b7fef561c9d4a2b1"
+      ],
+      "attempts": 1,
+      "elapsedMs": 607221,
+      "routeElapsedMs": 607221,
+      "route": 0,
+      "resultHash": "7ec04e0ef8268dd42fe5277c3d46b9b39a50e0343f80f6d3f6e23efb475d919a",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-rule-contract",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-message-contract",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-56da089447cb973823e6a4a3e8e9993d183b4a131efe05b5b7fef561c9d4a2b1"
+      ],
+      "attempts": 1,
+      "elapsedMs": 648730,
+      "routeElapsedMs": 648730,
+      "route": 0,
+      "resultHash": "68538f328a2f65278a1d6f06f1c94891450d7b52274823a5e68f77a78a0f1494",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-message-contract",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-acceptance-matrix",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-56da089447cb973823e6a4a3e8e9993d183b4a131efe05b5b7fef561c9d4a2b1"
+      ],
+      "attempts": 1,
+      "elapsedMs": 595199,
+      "routeElapsedMs": 595199,
+      "route": 0,
+      "resultHash": "0a59ac59f79d0699addbc555978c41d09cf9ace0f93fd3e093eae61f2c8a16a9",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-acceptance-matrix",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-runtime-contracts",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-56da089447cb973823e6a4a3e8e9993d183b4a131efe05b5b7fef561c9d4a2b1"
+      ],
+      "attempts": 1,
+      "elapsedMs": 802380,
+      "routeElapsedMs": 802380,
+      "route": 0,
+      "resultHash": "67656488762e01b6e7fa57946b9d42180d1dd50523d72aa74d18b0e9587a0702",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-runtime-contracts",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-rules",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "memory-redo-rule-contract"
+      ],
+      "attempts": 1,
+      "elapsedMs": 717676,
+      "routeElapsedMs": 717676,
+      "route": 0,
+      "resultHash": "35761f32a01be3a36fcf475845d04195bcd7103ef57c06b88600fb97daf4d76a",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-rules",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-ui-content",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-56da089447cb973823e6a4a3e8e9993d183b4a131efe05b5b7fef561c9d4a2b1"
+      ],
+      "attempts": 1,
+      "elapsedMs": 715690,
+      "routeElapsedMs": 715690,
+      "route": 0,
+      "resultHash": "134cee1dabca81ceb9cb3d43dc7d853cd399465738a551c2c0ed85fc15485947",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-ui-content",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-server-lobby",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "implementation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-message-contract",
+        "memory-redo-runtime-contracts"
+      ],
+      "attempts": 1,
+      "elapsedMs": 666831,
+      "routeElapsedMs": 666831,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-server-lobby",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-server-round",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "implementation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-rules",
+        "memory-redo-server-lobby"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-server-round",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-client-input",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "implementation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-message-contract",
+        "memory-redo-runtime-contracts",
+        "memory-redo-ui-content"
+      ],
+      "attempts": 1,
+      "elapsedMs": 745909,
+      "routeElapsedMs": 745909,
+      "route": 0,
+      "resultHash": "1e456de9843bc12865cc0c2c78b134e7415b724cace1e306b19290fb295cd2b4",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-client-input",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-bot-policy",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "memory-redo-message-contract",
+        "memory-redo-rule-contract"
+      ],
+      "attempts": 1,
+      "elapsedMs": 976978,
+      "routeElapsedMs": 976978,
+      "route": 0,
+      "resultHash": "002bb1ecf51dad0483a04a2819f825afc738f192dfb2654f0f77345c42e561a6",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-bot-policy",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-deploy-core",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-ui-content",
+        "memory-redo-server-round",
+        "memory-redo-client-input"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-deploy-core",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-validate-core",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-deploy-core",
+        "memory-redo-acceptance-matrix"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-validate-core",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-validate-network",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-deploy-core",
+        "memory-redo-acceptance-matrix"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-validate-network",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-deploy-bots",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-deploy-core",
+        "memory-redo-bot-policy"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-deploy-bots",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-validate-bots",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-deploy-bots",
+        "memory-redo-validate-core",
+        "memory-redo-validate-network"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-validate-bots",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-validate-four-seats",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-deploy-bots",
+        "memory-redo-validate-network"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-validate-four-seats",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-validate-lifecycle",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-deploy-bots",
+        "memory-redo-validate-core",
+        "memory-redo-validate-network"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-validate-lifecycle",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-validate-visual",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-deploy-core",
+        "memory-redo-validate-core"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-validate-visual",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-freeze-candidate",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-validate-bots",
+        "memory-redo-validate-four-seats",
+        "memory-redo-validate-lifecycle",
+        "memory-redo-validate-visual"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-freeze-candidate",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-final-core",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-freeze-candidate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-final-core",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-final-authority",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-freeze-candidate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-final-authority",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-final-visual",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-freeze-candidate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-final-visual",
+      "cycle": 1
+    },
+    {
+      "id": "memory-redo-implementation-gate",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-final-core",
+        "memory-redo-final-authority",
+        "memory-redo-final-visual"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-redo-implementation-gate",
+      "cycle": 1
+    },
+    {
+      "id": "memory-runtime-coordinator-recovery",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "recovery",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-runtime-contracts"
+      ],
+      "attempts": 0,
+      "elapsedMs": 904867,
+      "routeElapsedMs": 0,
+      "route": 1,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-runtime-coordinator-recovery",
+      "cycle": 1
+    },
+    {
+      "id": "memory-client-runtime-dispatch-recovery",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "recovery",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-runtime-contracts"
+      ],
+      "attempts": 1,
+      "elapsedMs": 525032,
+      "routeElapsedMs": 525032,
+      "route": 0,
+      "resultHash": "ec41fd2ed6fdb7dddf22a0443c48487bdaaf90189a00f0e97c44e2bc6abe5301",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-client-runtime-dispatch-recovery",
+      "cycle": 1
+    },
+    {
+      "id": "memory-bot-runtime-scope-check",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-redo-deploy-bots"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-bot-runtime-scope-check",
+      "cycle": 1
+    },
+    {
+      "id": "implementation-1-c7c64580-handoff",
+      "goalId": "request:cbfcca89-42a7-49ca-84bb-4ecd0aaf5fbb",
+      "kind": "finalization",
+      "status": "deferred",
+      "dependsOn": [],
+      "attempts": 1,
+      "elapsedMs": 458476,
+      "routeElapsedMs": 458476,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "implementation-1-c7c64580-handoff",
+      "cycle": 1
+    },
+    {
+      "id": "goal-bootstrap-38796e3a9335d5dfae35ac8788c40f120a43124da675f65a7ae25c8d0ff505d8",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [],
+      "attempts": 1,
+      "elapsedMs": 1062282,
+      "routeElapsedMs": 1062282,
+      "route": 0,
+      "resultHash": "c7336d58f57b5dde00b0393f2a82aa3e902629f6a2aafaf36272c66ce852fdf8",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "goal-bootstrap-38796e3a9335d5dfae35ac8788c40f120a43124da675f65a7ae25c8d0ff505d8",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-controller-checkpoint",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-38796e3a9335d5dfae35ac8788c40f120a43124da675f65a7ae25c8d0ff505d8"
+      ],
+      "attempts": 1,
+      "elapsedMs": 1478040,
+      "routeElapsedMs": 1478040,
+      "route": 0,
+      "resultHash": "db469e9a13cdc54fc06ecf4281c033b7bebcc6169883bdedd4b4dba3675e7816",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-controller-checkpoint",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-receipt-reconciliation",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "memory-next-controller-checkpoint"
+      ],
+      "attempts": 1,
+      "elapsedMs": 1380704,
+      "routeElapsedMs": 1380704,
+      "route": 0,
+      "resultHash": "133cc5997c080b45153777a14f40eeb3a5b1c83d0a419d183b2519da2e7d58dc",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-receipt-reconciliation",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-private-delivery-wake",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "memory-next-controller-checkpoint",
+        "memory-next-receipt-reconciliation"
+      ],
+      "attempts": 1,
+      "elapsedMs": 584687,
+      "routeElapsedMs": 584687,
+      "route": 0,
+      "resultHash": "b0fd6e263aa46e815a34f55af0dff9519b3da7160831505c87e303040e504d5d",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-private-delivery-wake",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-effect-executor",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "memory-next-controller-checkpoint"
+      ],
+      "attempts": 1,
+      "elapsedMs": 948966,
+      "routeElapsedMs": 948966,
+      "route": 0,
+      "resultHash": "aef0e46c93292482a00fec519cd47ef8e064117985f06306bfdab5cbc0dfbd5d",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-effect-executor",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-client-event-coordinator",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "memory-next-receipt-reconciliation"
+      ],
+      "attempts": 1,
+      "elapsedMs": 650870,
+      "routeElapsedMs": 650870,
+      "route": 0,
+      "resultHash": "91a07371e466084b9e16d5d4649f2b45c2232383a28efdf0d9be453e4d96b0bb",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-client-event-coordinator",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-ui-renderer",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-38796e3a9335d5dfae35ac8788c40f120a43124da675f65a7ae25c8d0ff505d8",
+        "memory-redo-ui-content"
+      ],
+      "attempts": 1,
+      "elapsedMs": 1280219,
+      "routeElapsedMs": 1280219,
+      "route": 0,
+      "resultHash": "4cb508d439c62d6213812e4f1523690c2083dfe6e3eee00a788989b9569689a5",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-ui-renderer",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-server-native-package",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "memory-next-private-delivery-wake",
+        "memory-next-effect-executor"
+      ],
+      "attempts": 1,
+      "elapsedMs": 1083725,
+      "routeElapsedMs": 1083725,
+      "route": 0,
+      "resultHash": "44bf32345cb9ac57bb0c117ae895703292b3f7e7cd86cefa0b0e6c05902f8148",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-server-native-package",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-client-native-package",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "memory-next-client-event-coordinator",
+        "memory-next-ui-renderer"
+      ],
+      "attempts": 1,
+      "elapsedMs": 1555776,
+      "routeElapsedMs": 1555776,
+      "route": 0,
+      "resultHash": "cead2ac2dac851a422b3671e7d00540d52e7f09ee94295e3c9329433394c7751",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-client-native-package",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-deploy-core",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-server-native-package",
+        "memory-next-client-native-package"
+      ],
+      "attempts": 1,
+      "elapsedMs": 290866,
+      "routeElapsedMs": 290866,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-deploy-core",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-solo-proof",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-deploy-core"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-solo-proof",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-dual-proof",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-solo-proof"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-dual-proof",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-deploy-bots",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-deploy-core",
+        "memory-next-effect-executor",
+        "memory-redo-bot-policy"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-deploy-bots",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-bot-proof",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-deploy-bots",
+        "memory-next-dual-proof"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-bot-proof",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-four-seat-proof",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-dual-proof",
+        "memory-next-deploy-bots"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-four-seat-proof",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-lifecycle-proof",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-solo-proof",
+        "memory-next-dual-proof",
+        "memory-next-deploy-bots"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-lifecycle-proof",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-visual-proof",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-solo-proof",
+        "memory-next-ui-renderer"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-visual-proof",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-freeze-candidate",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-bot-proof",
+        "memory-next-four-seat-proof",
+        "memory-next-lifecycle-proof",
+        "memory-next-visual-proof"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-freeze-candidate",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-final-core",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-freeze-candidate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-final-core",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-final-authority",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-freeze-candidate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-final-authority",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-final-visual",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-freeze-candidate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-final-visual",
+      "cycle": 1
+    },
+    {
+      "id": "memory-next-completion-gate",
+      "goalId": "request:072f193e-3fbc-4083-ba6c-916b775e7862",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "memory-next-final-core",
+        "memory-next-final-authority",
+        "memory-next-final-visual"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route"
+      ],
+      "title": "memory-next-completion-gate",
+      "cycle": 1
+    }
+  ]
+}

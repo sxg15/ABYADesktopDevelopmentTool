@@ -128,9 +128,17 @@ impl TaskService {
             return Ok(source.to_string_lossy().into_owned());
         }
         let root = self.production_workspace(task)?;
-        let parent = root
-            .join("artifacts/acceptance-runs")
-            .join(uuid::Uuid::new_v4().to_string());
+        let workspace_root = root.parent().ok_or_else(conflict)?;
+        let runs = files::safe_path(workspace_root, ".abya-play-runs")?;
+        let data = runs.join(uuid::Uuid::new_v4().simple().to_string());
+        let parent = data.join("Archives");
+        std::fs::create_dir_all(&parent)?;
+        std::fs::write(
+            data.join("owner.json"),
+            serde_json::to_vec(
+                &json!({"taskId":task,"version":version,"archiveHash":r.version_details["archiveHash"]}),
+            )?,
+        )?;
         let copied = copy_verified(source, &parent)?;
         let display = copied.to_string_lossy();
         Ok(if let Some(rest) = display.strip_prefix(r"\\?\UNC\") {
@@ -138,5 +146,34 @@ impl TaskService {
         } else {
             display.strip_prefix(r"\\?\").unwrap_or(&display).into()
         })
+    }
+    pub fn production_acceptance_data_root(
+        &self,
+        task: &str,
+        archive: &str,
+    ) -> AppResult<Option<PathBuf>> {
+        let root = self.production_workspace(task)?;
+        let allowed = files::safe_path(root.parent().ok_or_else(conflict)?, ".abya-play-runs")?;
+        if !allowed.is_dir() {
+            return Ok(None);
+        }
+        let archive = Path::new(archive).canonicalize()?;
+        if !archive.starts_with(allowed.canonicalize()?) {
+            return Ok(None);
+        }
+        let archives = archive.parent().ok_or_else(conflict)?;
+        let data = archives.parent().ok_or_else(conflict)?;
+        if archives.file_name() != Some(std::ffi::OsStr::new("Archives"))
+            || data.parent() != Some(allowed.canonicalize()?.as_path())
+        {
+            return Err(conflict());
+        }
+        uuid::Uuid::parse_str(data.file_name().and_then(|s| s.to_str()).unwrap_or(""))
+            .map_err(|_| conflict())?;
+        let marker: Value = serde_json::from_slice(&std::fs::read(data.join("owner.json"))?)?;
+        if marker["taskId"] != task {
+            return Err(AppError::validation("试玩运行目录不属于本任务。"));
+        }
+        Ok(Some(data.to_path_buf()))
     }
 }

@@ -1,0 +1,658 @@
+{
+  "source": "2026-10-27 handoff: sanitized graph only; no game content, approvals, machine paths or credentials",
+  "activeGoalId": "request:ad4a156a-74c6-49c5-9fff-2d658bcecb70",
+  "units": [
+    {
+      "id": "goal-bootstrap-9d385fdcd9490d6a8b90c820c69ad04ab3790095db5d0d77c154da1be5548a20",
+      "goalId": "work:implementation:1:7",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [],
+      "attempts": 1,
+      "elapsedMs": 1093556,
+      "routeElapsedMs": 1093556,
+      "route": 0,
+      "resultHash": "5d60f423b0d6ebf421775cb44ca65b7ff3a71165f25b23e8a0592c7d26d5036b",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "goal-bootstrap-9d385fdcd9490d6a8b90c820c69ad04ab3790095db5d0d77c154da1be5548a20",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-01-baseline",
+      "goalId": "work:implementation:1:7",
+      "kind": "deployment",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-9d385fdcd9490d6a8b90c820c69ad04ab3790095db5d0d77c154da1be5548a20"
+      ],
+      "attempts": 1,
+      "elapsedMs": 836785,
+      "routeElapsedMs": 836785,
+      "route": 0,
+      "resultHash": "f4581ab9bde1549ec4d9406008dd57773faa40cd97894c5026e39a442eaab01d",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-01-baseline",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-02-rules-contract",
+      "goalId": "work:implementation:1:7",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-9d385fdcd9490d6a8b90c820c69ad04ab3790095db5d0d77c154da1be5548a20"
+      ],
+      "attempts": 1,
+      "elapsedMs": 1131960,
+      "routeElapsedMs": 1131960,
+      "route": 0,
+      "resultHash": "5fe6e1c573cda41650d1fac865b07025f5bae3158d8e979eade4193a4a47aecf",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-02-rules-contract",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-03-ui-source",
+      "goalId": "work:implementation:1:7",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-9d385fdcd9490d6a8b90c820c69ad04ab3790095db5d0d77c154da1be5548a20"
+      ],
+      "attempts": 1,
+      "elapsedMs": 1398837,
+      "routeElapsedMs": 1398837,
+      "route": 0,
+      "resultHash": "0b3596b3a69596e7284ea852532f36a8f7e278816c26b7d1eb1781255202b4a5",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-03-ui-source",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-04-authority-source",
+      "goalId": "work:implementation:1:7",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "impl-1-02-rules-contract"
+      ],
+      "attempts": 1,
+      "elapsedMs": 1756627,
+      "routeElapsedMs": 1756627,
+      "route": 0,
+      "resultHash": "b8cfa355bd9691feb31b22fb29d57a6880835de398882eeab26a9d125c48763f",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-04-authority-source",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-05-client-source",
+      "goalId": "work:implementation:1:7",
+      "kind": "implementation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-02-rules-contract",
+        "impl-1-03-ui-source"
+      ],
+      "attempts": 0,
+      "elapsedMs": 1201906,
+      "routeElapsedMs": 0,
+      "route": 2,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-05-client-source",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-06-bot-source",
+      "goalId": "work:implementation:1:7",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "impl-1-02-rules-contract"
+      ],
+      "attempts": 2,
+      "elapsedMs": 1554973,
+      "routeElapsedMs": 1554973,
+      "route": 0,
+      "resultHash": "9cdd4af45dead4b7fbfd1ec418de77ad15c44f5035a75bc33cf38e3264031c53",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-06-bot-source",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-07-authority-fixture",
+      "goalId": "work:implementation:1:7",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-01-baseline",
+        "impl-1-04-authority-source"
+      ],
+      "attempts": 2,
+      "elapsedMs": 1333636,
+      "routeElapsedMs": 1333636,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-07-authority-fixture",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-08-core-deploy",
+      "goalId": "work:implementation:1:7",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-01-baseline",
+        "impl-1-02-rules-contract",
+        "impl-1-03-ui-source",
+        "impl-1-04-authority-source",
+        "impl-1-05-client-source",
+        "impl-1-07-authority-fixture"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-08-core-deploy",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-10-representative",
+      "goalId": "work:implementation:1:7",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-08-core-deploy"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-10-representative",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-10b-full-loop-deploy",
+      "goalId": "work:implementation:1:7",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-10-representative"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-10b-full-loop-deploy",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-09-rule-boundaries",
+      "goalId": "work:implementation:1:7",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-10b-full-loop-deploy"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-09-rule-boundaries",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-11-solo-loop",
+      "goalId": "work:implementation:1:7",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-10b-full-loop-deploy"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-11-solo-loop",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-12-two-human",
+      "goalId": "work:implementation:1:7",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-10b-full-loop-deploy"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-12-two-human",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-13-bot-admission",
+      "goalId": "work:implementation:1:7",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-01-baseline",
+        "impl-1-04-authority-source",
+        "impl-1-06-bot-source",
+        "impl-1-07-authority-fixture"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-13-bot-admission",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-14-bot-integrate",
+      "goalId": "work:implementation:1:7",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-10b-full-loop-deploy",
+        "impl-1-13-bot-admission",
+        "impl-1-06-bot-source"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-14-bot-integrate",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-15-bot-four-levels",
+      "goalId": "work:implementation:1:7",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-14-bot-integrate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-15-bot-four-levels",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-16-mixed-seats",
+      "goalId": "work:implementation:1:7",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-14-bot-integrate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-16-mixed-seats",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-17-lifecycle",
+      "goalId": "work:implementation:1:7",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-10b-full-loop-deploy"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-17-lifecycle",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-18-ui-states",
+      "goalId": "work:implementation:1:7",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-10b-full-loop-deploy",
+        "impl-1-10-representative"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-18-ui-states",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-19-freeze-candidate",
+      "goalId": "work:implementation:1:7",
+      "kind": "deployment",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-14-bot-integrate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-19-freeze-candidate",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-20-cold-reload",
+      "goalId": "work:implementation:1:7",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-19-freeze-candidate"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-20-cold-reload",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-21-version-validation",
+      "goalId": "work:implementation:1:7",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-09-rule-boundaries",
+        "impl-1-10-representative",
+        "impl-1-11-solo-loop",
+        "impl-1-12-two-human",
+        "impl-1-15-bot-four-levels",
+        "impl-1-16-mixed-seats",
+        "impl-1-17-lifecycle",
+        "impl-1-18-ui-states",
+        "impl-1-19-freeze-candidate",
+        "impl-1-20-cold-reload"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-21-version-validation",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-22-completion-gate",
+      "goalId": "work:implementation:1:7",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "impl-1-21-version-validation"
+      ],
+      "attempts": 0,
+      "elapsedMs": 0,
+      "routeElapsedMs": 0,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "impl-1-22-completion-gate",
+      "cycle": 1
+    },
+    {
+      "id": "impl-1-07a-authority-source-align",
+      "goalId": "work:implementation:1:7",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [
+        "impl-1-04-authority-source"
+      ],
+      "attempts": 1,
+      "elapsedMs": 1015967,
+      "routeElapsedMs": 1015967,
+      "route": 0,
+      "resultHash": "1620f5e6ae8ba45fcce4144653f95711705537c50840f4243b035b81178fde3c",
+      "routes": [
+        "historical route"
+      ],
+      "title": "impl-1-07a-authority-source-align",
+      "cycle": 1
+    },
+    {
+      "id": "implementation-1-3f8a7a3b-handoff",
+      "goalId": "work:implementation:1:7",
+      "kind": "finalization",
+      "status": "deferred",
+      "dependsOn": [],
+      "attempts": 1,
+      "elapsedMs": 265487,
+      "routeElapsedMs": 265487,
+      "route": 0,
+      "resultHash": "",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "implementation-1-3f8a7a3b-handoff",
+      "cycle": 1
+    },
+    {
+      "id": "goal-bootstrap-2fd470b2e176419e7a2aceb05b5c3e85f727aae9989054f449e747b3ba1b3d9d",
+      "goalId": "request:ad4a156a-74c6-49c5-9fff-2d658bcecb70",
+      "kind": "implementation",
+      "status": "succeeded",
+      "dependsOn": [],
+      "attempts": 1,
+      "elapsedMs": 251607,
+      "routeElapsedMs": 251607,
+      "route": 0,
+      "resultHash": "668f5c7faf2f6365d7a27342b2aacc5ad391b2e2361d9378351d4ec994925039",
+      "routes": [
+        "historical route",
+        "historical route"
+      ],
+      "title": "goal-bootstrap-2fd470b2e176419e7a2aceb05b5c3e85f727aae9989054f449e747b3ba1b3d9d",
+      "cycle": 1
+    },
+    {
+      "id": "req-ad4a-client-delta-validation",
+      "goalId": "request:ad4a156a-74c6-49c5-9fff-2d658bcecb70",
+      "kind": "validation",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-2fd470b2e176419e7a2aceb05b5c3e85f727aae9989054f449e747b3ba1b3d9d"
+      ],
+      "attempts": 1,
+      "elapsedMs": 434320,
+      "routeElapsedMs": 434320,
+      "route": 0,
+      "resultHash": "b5945dedddf2b622afa0d5a5b92b088acd5156aba5069c8fbcff5ed722e2d6d2",
+      "routes": [
+        "historical route"
+      ],
+      "title": "req-ad4a-client-delta-validation",
+      "cycle": 1
+    },
+    {
+      "id": "req-ad4a-cleanup-capability-delta",
+      "goalId": "request:ad4a156a-74c6-49c5-9fff-2d658bcecb70",
+      "kind": "validation",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-2fd470b2e176419e7a2aceb05b5c3e85f727aae9989054f449e747b3ba1b3d9d"
+      ],
+      "attempts": 1,
+      "elapsedMs": 347884,
+      "routeElapsedMs": 347884,
+      "route": 0,
+      "resultHash": "092e38112b4223e7f862d875664d72faafa62e1ea22f9f6335790f4e91c505e4",
+      "routes": [
+        "historical route"
+      ],
+      "title": "req-ad4a-cleanup-capability-delta",
+      "cycle": 1
+    },
+    {
+      "id": "req-ad4a-ui-fixture-assets",
+      "goalId": "request:ad4a156a-74c6-49c5-9fff-2d658bcecb70",
+      "kind": "deployment",
+      "status": "succeeded",
+      "dependsOn": [
+        "goal-bootstrap-2fd470b2e176419e7a2aceb05b5c3e85f727aae9989054f449e747b3ba1b3d9d",
+        "impl-1-03-ui-source"
+      ],
+      "attempts": 1,
+      "elapsedMs": 894921,
+      "routeElapsedMs": 894921,
+      "route": 0,
+      "resultHash": "82044ed34a1d5f8600e4630a748d3f2d0e742d3b81cfb897d4877fc163a8acf5",
+      "routes": [
+        "historical route"
+      ],
+      "title": "req-ad4a-ui-fixture-assets",
+      "cycle": 1
+    },
+    {
+      "id": "req-ad4a-ui-fixture-client-bind",
+      "goalId": "request:ad4a156a-74c6-49c5-9fff-2d658bcecb70",
+      "kind": "deployment",
+      "status": "succeeded",
+      "dependsOn": [
+        "req-ad4a-client-delta-validation",
+        "req-ad4a-ui-fixture-assets"
+      ],
+      "attempts": 1,
+      "elapsedMs": 1526455,
+      "routeElapsedMs": 1526455,
+      "route": 0,
+      "resultHash": "a3b2c892fa09be85e5bcaec5819c6bfad77ae2bafa5040d85420a2c3a6420cf6",
+      "routes": [
+        "historical route"
+      ],
+      "title": "req-ad4a-ui-fixture-client-bind",
+      "cycle": 1
+    },
+    {
+      "id": "req-ad4a-ui-fixture-verify",
+      "goalId": "request:ad4a156a-74c6-49c5-9fff-2d658bcecb70",
+      "kind": "validation",
+      "status": "deferred",
+      "dependsOn": [
+        "req-ad4a-ui-fixture-client-bind"
+      ],
+      "attempts": 1,
+      "elapsedMs": 1471517,
+      "routeElapsedMs": 1471517,
+      "route": 0,
+      "resultHash": "e7c004cd570c6fced1d3d1583af5e9e758a4e0b57cabe63539b93847da058399",
+      "routes": [
+        "historical route"
+      ],
+      "title": "req-ad4a-ui-fixture-verify",
+      "cycle": 1
+    }
+  ]
+}

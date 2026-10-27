@@ -60,6 +60,11 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
     groupId: primary.target.groupId ?? undefined,
     reviewKind: primary.kind === "review" ? primary.target.stage : undefined,
   });
+  else if (["repairRequired","externalBlocked"].includes(state)) set({key:state,tone:"neutral",action:"stage",attention:true,
+    title:text(state==="repairRequired"?"尚未形成可试玩包":"存在需要处理的外部条件",state==="repairRequired"?"No playable package yet":"External condition required"),
+    instruction:text("已有代码、验证记录和历史版本均保留，当前实现尚未成功结束。","Code, evidence and prior versions are retained; implementation has not completed successfully."),
+    detail:text("进入当前子流程核对具体缺口，可诊断并恢复原目标；不会重置预算或重放未知写入。","Review the gap and diagnose the original goal without resetting budgets or replaying uncertain writes."),
+    destination:text("处理位置：Lua 实现","Open in: Implementation"),button:text("查看修复与恢复","Review recovery")});
   else if (view && ["running", "waitingForResponse", "queued"].includes(state)) set({
     key:state,tone:"waiting",title:text(state === "queued" ? "操作已保存，等待 AI 继续" : state === "waitingForResponse" ? "正在等待 AI 输出" : "AI 正在执行", state === "queued" ? "Saved · waiting for AI" : state === "waitingForResponse" ? "Waiting for AI output" : "AI is working"),
     instruction:text("当前无需操作，请等待结果。", "No action is needed. Please wait for the result."),

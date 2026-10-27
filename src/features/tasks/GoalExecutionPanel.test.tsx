@@ -4,6 +4,13 @@ import { afterEach, expect, it, vi } from "vitest";
 import { GoalExecutionPanel,goalExecutionStatus } from "./GoalExecutionPanel";
 import type { ProductionRecord, WorkbenchGoal } from "../../shared/production";
 afterEach(()=>{cleanup();localStorage.clear();});
+it.each(["repairRequired","externalBlocked"])("keeps a same-goal recovery action for %s",async state=>{
+ const goal={id:"goal",stage:"implementation",cycle:1,status:"in-progress",sourceType:"work"} as WorkbenchGoal;
+ const record={taskId:"task",revision:8,currentStage:"implementation",cycle:1,workbench:{activeGoalId:"goal",execution:{state},attempts:[{id:"attempt",goalId:"goal",status:"finished"}]}} as unknown as ProductionRecord;
+ const resume=vi.fn().mockResolvedValue({status:"started"});render(<GoalExecutionPanel record={record} goal={goal} active checking={false} onResume={resume}/>);
+ fireEvent.click(screen.getByRole("button",{name:"诊断并恢复此目标"}));await waitFor(()=>expect(resume).toHaveBeenCalledOnce());
+ expect(resume.mock.calls[0][0]).toBe("goal");expect(screen.queryByText("本轮已结束，查看结果与缺口")).toBeNull();
+});
 it("exhausted preflight cannot mask a newly running or uncertain attempt",()=>{
  const goal={id:"goal",stage:"resources",cycle:1,status:"in-progress",sourceType:"work"} as WorkbenchGoal;
  const record={taskId:"task",currentStage:"resources",workbench:{execution:{preflight:{state:"exhausted",goalId:"goal"}},attempts:[{goalId:"goal",status:"finished"}]}} as unknown as ProductionRecord;

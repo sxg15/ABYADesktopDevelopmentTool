@@ -120,7 +120,15 @@ impl InstanceService {
         })
     }
 
-    pub fn launch(&self, mut input: LaunchInstanceInput) -> AppResult<GameInstance> {
+    pub fn launch(&self, input: LaunchInstanceInput) -> AppResult<GameInstance> {
+        self.launch_with_data_root(input, None)
+    }
+    /// Used only by the owned acceptance orchestrator with TaskService-validated run directories.
+    pub(crate) fn launch_with_data_root(
+        &self,
+        mut input: LaunchInstanceInput,
+        data_root: Option<PathBuf>,
+    ) -> AppResult<GameInstance> {
         let _launch_guard = self.launch_gate.lock();
         let memory_warning = self.memory.launch_warning();
         let _files = crate::foundation::EXECUTABLE_FILES.read();
@@ -216,7 +224,17 @@ impl InstanceService {
         let executable = input.executable_path.trim().to_string();
         let working_directory = Path::new(&executable).parent().map(Path::to_path_buf);
         let log_path = PathBuf::from(&contract.log_path);
-        let args = if cfg!(test) || std::env::var("ABYA_TEST_MODE").as_deref() == Ok("1") {
+        let args = if let Some(root) = data_root {
+            let mut isolated = contract.args;
+            let raw = root.to_string_lossy();
+            let display = if let Some(p) = raw.strip_prefix(r"\\?\UNC\") {
+                format!(r"\\{p}")
+            } else {
+                raw.strip_prefix(r"\\?\").unwrap_or(&raw).to_owned()
+            };
+            isolated.push(format!("--abya-data-root={display}"));
+            isolated
+        } else if cfg!(test) || std::env::var("ABYA_TEST_MODE").as_deref() == Ok("1") {
             let mut isolated = contract.args;
             isolated.push(format!(
                 "--abya-data-root={}",

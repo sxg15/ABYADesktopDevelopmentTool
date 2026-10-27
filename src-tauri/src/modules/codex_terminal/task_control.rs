@@ -223,6 +223,18 @@ impl CodexTerminalService {
             } else {
                 "running"
             }
+        } else if production
+            .record
+            .as_ref()
+            .is_some_and(|r| r.workbench.execution.state == "repairRequired")
+        {
+            "repairRequired"
+        } else if production
+            .record
+            .as_ref()
+            .is_some_and(|r| r.workbench.execution.state == "externalBlocked")
+        {
+            "externalBlocked"
         } else if production.record.as_ref().is_some_and(|r| {
             crate::modules::tasks::autonomous_implementation(r)
                 && matches!(

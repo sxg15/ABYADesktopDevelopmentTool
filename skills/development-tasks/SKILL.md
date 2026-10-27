@@ -2,6 +2,8 @@
 
 ## Current scope
 
+Workflow 2.8 adds a scoped completion loop: current-goal dependency closure, evidence-based wake signals, audited work revision, automatic repair plans, per-output finalization and honest repairRequired/externalBlocked outcomes. No candidate completion without a hash-bound playable ZIP and current lua/input/core-loop/save-reload evidence. Fixture validation remains separate. Upgrade preserves budgets, IDs and approvals; explicit resume retains the original goal and cannot replay uncertain writes. Package compression runs outside the database mutex.
+
 Workflow 2.7: stage_contracts owns effective issue gates for resources/plan. Agent prose cannot create a design gate; actual questions, planner feedback, material hashes and approval validators remain authoritative. category/owningStage and requested blocked operations retain diagnosis history. Explicit compatible upgrade preserves approvals/IDs/history and corrects obsolete technical blocking disposition without marking an issue fixed.
 APP-only prototype authorization clones a saved archive to artifacts/prototypes, binds stage/cycle/requirement-plan scope and expires after 30 minutes. Revocation affects future dispatch; no agent grant operation exists. Authoring requires approved requirements/plan or that grant. No policy record and pinned older policies retain compatibility. Fixture/candidate separation and honest implementation convergence remain unchanged.
 UI hides programmer export when the filtered programmer issue set is empty. Prototype controls are optional and disclose saved-source copying, expiry and independence from approvals.

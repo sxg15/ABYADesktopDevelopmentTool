@@ -18,7 +18,7 @@ fn running_ms(u: &autonomy::WorkUnit) -> i64 {
         .unwrap_or(0)
 }
 fn keys(r: &ProductionRecord, u: &autonomy::WorkUnit) -> Vec<String> {
-    if u.kind != "recovery" {
+    if u.kind != "recovery" && u.kind != "repair-plan" {
         return vec![];
     }
     // A new unit ID cannot buy another budget for the same issue/build/scope.
@@ -87,7 +87,37 @@ pub(super) fn migrate_budget(r: &mut ProductionRecord) {
         return;
     }
     let scope = autonomy::scope(r);
-    let previous = std::mem::take(&mut r.workbench.execution.recovery_ms);
+    if completion::enabled(r) {
+        // Migration preserves charged time. Unobserved time after a stopped executor is not work.
+        for u in &mut r.workbench.execution.units {
+            if u.scope_hash == scope {
+                if !u.attempt_started_at.is_empty() {
+                    u.definition_history.push(json!({"at":now(),"unobservedSince":u.attempt_started_at,"reason":"升级前执行已停止；未观测间隔不计费。"}));
+                }
+                u.attempt_started_at.clear();
+                if u.status == "running" {
+                    u.status = "deferred".into();
+                    u.defer_reason_code = "repairable".into();
+                    u.reason =
+                        "先核对中断前成果和原始操作收据，再继续原工作；不重放未知写入。".into();
+                }
+            }
+        }
+        r.workbench.execution.state = "paused".into();
+        r.workbench.execution.active_unit_id = None;
+        autonomy::event(
+            &mut r.workbench.execution,
+            "budget-policy-migrated",
+            None,
+            "保留原累计及共享问题预算，恢复时只审查当前目标；不按历史文案批量重置队列。",
+        );
+        return;
+    }
+    let previous = if completion::enabled(r) {
+        r.workbench.execution.recovery_ms.clone()
+    } else {
+        std::mem::take(&mut r.workbench.execution.recovery_ms)
+    };
     let units = &mut r.workbench.execution.units;
     for u in units
         .iter_mut()

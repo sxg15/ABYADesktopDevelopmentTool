@@ -4,6 +4,8 @@ use sha2::{Digest, Sha256};
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ExecutionLedger {
+    pub condition_signals: BTreeMap<String, Value>,
+    pub verification_package: Value,
     pub preflight: super::preflight_recovery::PreflightRecovery,
     pub validation_snapshots: BTreeMap<String, Value>,
     pub recovery_ms: BTreeMap<String, i64>,
@@ -23,6 +25,15 @@ pub struct ExecutionLedger {
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WorkUnit {
+    pub validation_failures: std::collections::BTreeSet<String>,
+    pub milestone: String,
+    pub validation_outcome: String,
+    pub definition_revision: u32,
+    pub definition_history: Vec<Value>,
+    pub defer_reason_code: String,
+    pub next_condition: String,
+    pub repair_for: String,
+    pub input_signature: String,
     pub budget_epoch_ms: i64,
     pub kind: String,
     pub attempt_started_at: String,
@@ -68,6 +79,49 @@ pub(super) fn scope(r: &ProductionRecord) -> String {
     )
 }
 pub(super) fn condition(r: &ProductionRecord) -> String {
+    if completion::enabled(r) {
+        let ids = completion::relevant(r);
+        let units: Vec<_> = r
+            .workbench
+            .execution
+            .units
+            .iter()
+            .filter(|u| ids.contains(&u.id))
+            .map(|u| {
+                json!([
+                    u.id,
+                    u.definition_revision,
+                    u.status,
+                    u.result_hash,
+                    u.defer_reason_code,
+                    unit_condition(r, u)
+                ])
+            })
+            .collect();
+        return format!(
+            "{:x}",
+            Sha256::digest(
+                json!([
+                    scope(r),
+                    r.workbench.active_goal_id,
+                    r.current_version,
+                    r.workbench.execution.condition_signals,
+                    r.version_details["archiveHash"],
+                    r.version_details["playerBuildHash"],
+                    completion::check_signature(r),
+                    r.workbench
+                        .execution
+                        .validation_runs
+                        .iter()
+                        .map(|(id, v)| json!([id, v["inputHash"]]))
+                        .collect::<Vec<_>>(),
+                    r.workbench.execution.verification_package["sha256"],
+                    units
+                ])
+                .to_string()
+            )
+        );
+    }
     let issues: Vec<_> = r
         .issues
         .iter()
@@ -105,18 +159,23 @@ pub(super) fn unit_condition(r: &ProductionRecord, u: &WorkUnit) -> String {
         .filter(|d| u.depends_on.contains(&d.id))
         .map(|d| json!([d.id, d.result_hash, d.status]))
         .collect::<Vec<_>>();
-    format!(
-        "{:x}",
-        Sha256::digest(
-            json!([
-                scope(r),
-                r.version_details["playerBuildHash"],
-                issues,
-                dependencies
-            ])
-            .to_string()
-        )
-    )
+    let payload = if completion::enabled(r) {
+        json!([
+            scope(r),
+            r.version_details["playerBuildHash"],
+            issues,
+            dependencies,
+            r.workbench.execution.condition_signals.get(&u.id)
+        ])
+    } else {
+        json!([
+            scope(r),
+            r.version_details["playerBuildHash"],
+            issues,
+            dependencies
+        ])
+    };
+    format!("{:x}", Sha256::digest(payload.to_string()))
 }
 pub(super) fn progress(r: &ProductionRecord) -> String {
     let outputs: Vec<_> = r
@@ -162,6 +221,9 @@ pub(super) fn apply(
     validation::approved(r, root, "requirements")?;
     validation::approved(r, root, "plan")?;
     match op {
+        "revise-work-unit" | "classify-work-unit" | "reconcile-work-unit" => {
+            super::completion_repair::apply(r, root, op, data)
+        }
         "conclude-implementation" => conclude(r, root, data),
         "save-work-unit" => save_unit(r, data),
         "report-work-unit" => report_unit(r, root, data),
@@ -187,6 +249,12 @@ fn strings(data: &Value, key: &str, max: usize) -> AppResult<Vec<String>> {
         .collect()
 }
 fn save_unit(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
+    let milestone = data["milestone"].as_str().unwrap_or("unspecified");
+    if !["core", "extension", "unspecified"].contains(&milestone) {
+        return Err(AppError::validation(
+            "milestone 应为 core、extension 或 unspecified。",
+        ));
+    }
     let kind = data["kind"].as_str().unwrap_or("implementation");
     if !["implementation", "deployment", "validation", "recovery"].contains(&kind) {
         return Err(AppError::validation("无效工作项类型。"));
@@ -244,6 +312,8 @@ fn save_unit(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
             && old.depends_on == dependencies
             && old.issue_ids == issues
             && old.routes == routes
+            && (old.milestone == milestone
+                || old.milestone.is_empty() && milestone == "unspecified")
             && (old.kind == kind || old.kind.is_empty() && kind == "implementation")
         {
             return Ok(());
@@ -266,6 +336,7 @@ fn save_unit(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
         ));
     }
     ledger.units.push(WorkUnit {
+        milestone: milestone.into(),
         kind: kind.into(),
         scope_hash,
         id: id.into(),
@@ -293,6 +364,10 @@ fn report_unit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult
     let id = mutation::text(data, "id")?;
     let status = mutation::text(data, "status")?;
     let reason = mutation::text(data, "reason")?;
+    let loop_enabled = completion::enabled(r);
+    if loop_enabled {
+        completion::validate_defer(data, status)?;
+    }
     if reason.chars().count() > 1000
         || !["succeeded", "failed", "deferred", "awaiting-condition"].contains(&status)
     {
@@ -319,6 +394,40 @@ fn report_unit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult
         .ok_or_else(|| AppError::validation("工作项不存在。"))?;
     super::autonomy_budget::account(r);
     let scope_hash = scope(r);
+    let completed_signature = completion::signature(r);
+    if loop_enabled {
+        let current = r
+            .workbench
+            .execution
+            .units
+            .iter()
+            .find(|u| u.id == id)
+            .ok_or_else(conflict)?;
+        if data["deferReasonCode"] == "budget-exhausted" && !autonomy_budget::exhausted(r, current)
+        {
+            return Err(AppError::validation("不能以说明文字代替实际预算计费。"));
+        }
+        if current.kind == "repair-plan"
+            && status == "succeeded"
+            && r.workbench
+                .execution
+                .units
+                .iter()
+                .any(|u| u.id == current.repair_for && completion::is_repairable(u))
+        {
+            return Err(AppError::validation(
+                "诊断完成后须修订原工作项或提供明确外部条件；只写总结不能结束修复。",
+            ));
+        }
+        if current.kind == "finalization"
+            && status == "succeeded"
+            && !super::verification_package::valid(r, root)
+        {
+            return Err(AppError::validation(
+                "最终核对完成须有当前可验证包；有缺口请如实conclude-implementation，不声明成功。",
+            ));
+        }
+    }
     let ledger = &mut r.workbench.execution;
     let unit = ledger
         .units
@@ -334,12 +443,26 @@ fn report_unit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult
         return Err(AppError::validation("只能报告调度器当前派发的工作项。"));
     }
     unit.status = status.into();
+    if loop_enabled && status == "succeeded" && unit.validation_outcome == "failed" {
+        unit.status = "deferred".into();
+    }
     unit.reason = reason.into();
     unit.result_paths = paths;
     unit.result_hash = format!("{:x}", digest.finalize());
     unit.condition_hash = conditions;
     unit.updated_at = now();
-    event(ledger, status, Some(id), reason);
+    if loop_enabled {
+        unit.defer_reason_code = data["deferReasonCode"].as_str().unwrap_or("").into();
+        if unit.validation_outcome == "failed" && status == "succeeded" {
+            unit.defer_reason_code = "repairable".into();
+        }
+        unit.next_condition = data["nextCondition"].as_str().unwrap_or("").into();
+        if unit.kind == "finalization" {
+            unit.input_signature = completed_signature;
+        }
+    }
+    let actual_status = unit.status.clone();
+    event(ledger, &actual_status, Some(id), reason);
     Ok(())
 }
 fn handling(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
@@ -407,6 +530,8 @@ fn handling(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
         .map(|u| (u.id.clone(), unit_condition(r, u)))
         .collect::<BTreeMap<_, _>>();
     if matches!(mode, "deferred" | "awaiting-condition") {
+        let enhanced = completion::enabled(r);
+        let active = r.workbench.execution.active_unit_id.clone();
         super::autonomy_budget::account(r);
         for unit in r
             .workbench
@@ -415,7 +540,18 @@ fn handling(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
             .iter_mut()
             .filter(|u| units.contains(&u.id) && u.status != "succeeded")
         {
+            if enhanced && Some(&unit.id) == active.as_ref() {
+                continue;
+            }
             unit.status = mode.into();
+            if enhanced {
+                unit.defer_reason_code = if mode == "awaiting-condition" {
+                    "unknown-result"
+                } else {
+                    "repairable"
+                }
+                .into();
+            }
             unit.reason = reason.into();
             unit.condition_hash = conditions.get(&unit.id).cloned().unwrap_or_default();
             unit.updated_at = now();
@@ -450,8 +586,23 @@ pub(super) fn conclude(r: &mut ProductionRecord, root: &Path, data: &Value) -> A
         ));
     }
     let active = r.workbench.execution.active_unit_id.clone();
+    let enhanced = completion::enabled(r);
+    let relevant = completion::relevant(r);
+    let sig = completion::signature(r);
+    if enhanced
+        && !r.workbench.execution.units.iter().any(|u| {
+            u.kind == "finalization"
+                && Some(&u.goal_id) == r.workbench.active_goal_id.as_ref()
+                && u.input_signature == sig
+        })
+    {
+        return Err(AppError::validation(
+            "先报告当前工作项；调度器将自动派发本目标的最终核对，不能提前结束。",
+        ));
+    }
     if r.workbench.execution.units.iter().any(|u| {
-        u.cycle == r.cycle
+        (!enhanced || relevant.contains(&u.id))
+            && u.cycle == r.cycle
             && u.scope_hash == scope_hash
             && Some(&u.id) != active.as_ref()
             && matches!(u.status.as_str(), "pending" | "running" | "failed")
@@ -473,6 +624,34 @@ pub(super) fn conclude(r: &mut ProductionRecord, root: &Path, data: &Value) -> A
                 })
         })
     }) && super::versions::verify(&r.version_details).is_ok();
+    let playable = if enhanced {
+        super::verification_package::valid(r, root)
+    } else {
+        playable
+    };
+    let external = enhanced
+        && r.workbench.execution.units.iter().any(|u| {
+            relevant.contains(&u.id)
+                && !matches!(u.kind.as_str(), "repair-plan" | "finalization")
+                && u.status != "succeeded"
+                && u.defer_reason_code != "dependency"
+        })
+        && r.workbench
+            .execution
+            .units
+            .iter()
+            .filter(|u| {
+                relevant.contains(&u.id)
+                    && !matches!(u.kind.as_str(), "repair-plan" | "finalization")
+                    && u.status != "succeeded"
+                    && u.defer_reason_code != "dependency"
+            })
+            .all(|u| {
+                matches!(
+                    u.defer_reason_code.as_str(),
+                    "external-condition" | "unknown-result" | "budget-exhausted"
+                )
+            });
     let conditions = condition(r);
     let active_condition = r
         .workbench
@@ -489,13 +668,32 @@ pub(super) fn conclude(r: &mut ProductionRecord, root: &Path, data: &Value) -> A
         .iter_mut()
         .find(|u| Some(&u.id) == active.as_ref())
     {
-        unit.status = "deferred".into();
+        if !enhanced || unit.status != "succeeded" {
+            unit.status = if enhanced && playable {
+                "succeeded"
+            } else {
+                "deferred"
+            }
+            .into();
+        }
+        if enhanced {
+            unit.input_signature = sig.clone();
+        }
         unit.reason = summary.into();
         unit.condition_hash = active_condition;
         unit.updated_at = now();
     }
     ledger.active_unit_id = None;
-    ledger.state = "settledWithGaps".into();
+    ledger.state = if enhanced && !playable {
+        if external {
+            "externalBlocked"
+        } else {
+            "repairRequired"
+        }
+    } else {
+        "settledWithGaps"
+    }
+    .into();
     event(ledger, "converged", None, summary);
     r.stage_updates.insert("implementation".into(),json!({"summary":summary,"nextAction":"在统一结果中核对未完成项和替代方案；不反复发送继续。","updatedAt":now()}));
     if playable {
@@ -503,6 +701,9 @@ pub(super) fn conclude(r: &mut ProductionRecord, root: &Path, data: &Value) -> A
             .insert("implementation".into(), "execution-converged".into());
         r.current_stage = "review".into();
         r.stages.insert("review".into(), "awaiting-feedback".into());
+    }
+    if enhanced {
+        r.workbench.execution.parked_condition = condition(r);
     }
     Ok(())
 }

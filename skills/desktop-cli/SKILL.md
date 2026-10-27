@@ -2,6 +2,8 @@
 
 ## Current scope
 
+Workflow 2.8 adds a scoped completion loop: current-goal dependency closure, evidence-based wake signals, audited work revision, automatic repair plans, per-output finalization and honest repairRequired/externalBlocked outcomes. No candidate completion without a hash-bound playable ZIP and current lua/input/core-loop/save-reload evidence. Fixture validation remains separate. Upgrade preserves budgets, IDs and approvals; explicit resume retains the original goal and cannot replay uncertain writes. Package compression runs outside the database mutex.
+
 Workflow 2.7 agent game_instance_launch delegates to RuntimeBridgeService.launch_scoped. Agent tool calls pass the same stage contract; there is no CLI operation granting prototypes or approvals. Existing task/conversation ownership and unknown-write contracts remain unchanged. Runtime schema must come from the selected Player, not source-tree assumptions.
 
 ## Purpose

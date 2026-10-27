@@ -1,12 +1,21 @@
-# Lua 自主执行（流程 2.6）
+# Lua 自主执行（流程 2.8）
 
 conclude-implementation成功后，当前派发已结束；直接结束回复，不再调用report-work-unit。
 工作项报告与整个阶段收尾是不同操作，不因已收尾后的重复报告被拒而重新派发工作。
 
-2.6 修正：15分钟是保存/核对进度的时间片，正常实现、部署、验证的预算中断续接原工作和
-原路线，不算故障失败。只有kind=recovery消耗关联问题的恢复预算。单项总预算仍有限。
-全部可做工作结束后，APP必定派发finalization：先恢复正式候选、登记可证明的必要自测，
-再汇总未测项；不能把最后的版本恢复/材料登记依赖于所有可选或受阻检查都通过。
+计划批准后，以真实可玩闭环为首个结果：一次自然输入 → 正确权威状态变化 → 画面反馈 → 完整局 → 保存冷加载。先接通最小真实链路再扩展多人、Bot、表现；所有批准要求保留，早期检查点不表示完整验收。
+
+bootstrap 按 `milestone=core` 登记上述链路及验证包工作，其他扩展标 `extension`。不要先生成大量依赖未来注入接口的抽象模块或以离线断言数量代替接入。
+
+15 分钟是进度检查点，普通实现/部署/验证续接原项，不算故障。恢复及 repair-plan 消耗关联问题的实际预算，修订保留累计耗时，不新编号刷新额度。用户暂停与未知写入对账优先。
+
+检查完成但行为失败时，登记真实失败结果并报告 `deferred`、`deferReasonCode=repairable`。APP 自动派发 repair-plan；读取失败证据，采用实际不同的修复路线，通过 revise-work-unit 修订原项后交还执行。报告修复规划完成前，原项必须已重新排队或有证据明确分类。
+
+外部阻塞用 external-condition，未知写入用 unknown-result，并提供 resultPaths 和 nextCondition。budget-exhausted 由实际账本验证。不要把可修复 Lua/输入接线错误归为永久平台缺失。重试条件变化可用 record-work-signal 提交实际文件路径；同文件同哈希或改摘要不产生新条件。
+
+每个目标/产出批次都有最终核对。没有包时先安排缺失的实际接入与验证；可继续的工作进入队列，不能只写总结结束。核心 lua、主输入、core-loop、save-reload 实测通过后调用 build-verification-package，生成存档、验证记录、原始证据、缺口及指纹绑定的 ZIP。
+
+完整门槛满足用 complete-stage；部分可玩且有真实包可 conclude-implementation 进入带缺口试玩。没有可玩证据或包则保持 repairRequired/externalBlocked，不显示正常完成。原成果与已验证包保留，不伪造验收。
 
 production version 必须声明 purpose=candidate 或 fixture。fixture只写独立冻结测试快照到
 record.workbench.execution.validationSnapshots，不改变currentVersion、交付候选或批准。
@@ -42,8 +51,11 @@ diagnosis.reproduction、comparison、rootCause、当前 playerBuildHash 以及�
 `production update` 新操作：
 
 - save-work-unit：id、goalId（已有本阶段原子目标）、title、dependsOn、issueIds、routes。
-  三个列表均显式提供。依赖须先登记，最多4条实际不同路线；定义登记后不覆盖，变更另记新项。
-- report-work-unit：id、status、reason、resultPaths。仅报告当前派发项；status 为 succeeded、
+  三个列表均显式提供。依赖须先登记，最多4条实际不同路线；2.8 用 revise-work-unit 修订失败/暂缓原项，保留定义历史，不追加重复目标。
+- revise-work-unit：id、expectedDefinitionRevision、reason、routes、dependsOn、resultPaths。不得改运行中或成功项，不能产生依赖环或重置实际预算。
+- classify-work-unit：id、expectedDefinitionRevision、reason、deferReasonCode、resultPaths、nextCondition。未知结果不靠分类改写消除。
+- record-work-signal：unitId、reason、paths。APP 核验文件哈希，只重评相关依赖。
+- report-work-unit：id、status、reason、resultPaths；暂缓另带 deferReasonCode，外部或未知结果另带 nextCondition。仅报告当前派发项；status 为 succeeded、
   failed、deferred、awaiting-condition。succeeded 必须引用实际任务内文件，服务记录摘要。
   工作项完成不代表游戏自测或交付通过。
 - record-issue-handling：issueId、mode、reason、impact、affectedUnitIds。mode 为 diagnosing、
@@ -86,7 +98,7 @@ schema 变化或能力拒绝时再查。实例先按任务和用途列出，复�
 
 ## 验证与版本
 
-`record-validation-run` 输入 id、version、checks、artChecks；一次真实运行的结果关联同一
+`record-validation-run` 输入 id、version、purpose（candidate/fixture）、checks、artChecks；fixture 使用独立登记的快照版本，可记录通过/失败，不写入正式候选自测。一次真实运行的结果关联同一
 runId，再由后端登记已有自测/美术矩阵。检查项仍要满足原证据和版本规则，不虚构检查。
 可放入 production batch。重复 runId 不重复登记，不同输入必须使用新的真实运行记录。
 
@@ -109,3 +121,10 @@ mode=workaround 必须提供 scope：equivalent 或 candidate。equivalent 还�
 已审阅 evidenceIds；服务绑定问题指纹、需求/计划 hash、cycle/version，并在门槛处重新验文件。
 经过验证的等效替代允许本任务继续完成，但原 PB 问题仍为未解决并展示；candidate 或缺证据
 的替代不能豁免验收。问题、版本或批准范围变化即失效。不要直接在 save-issue 填写 executionHandling。
+
+核心预览的主输入用 save-self-test id=playable-input 记录真实自然输入引起正确状态变化的证据；未单独登记时使用 input。失焦、异常输入等完整 input 检查仍单独保留，不能因核心预览可玩就把完整输入验收标为通过。完整交付继续要求全部原检查。
+
+2.8.1：核心四项有效检查登记完成后 APP 自动生成第一份验证包，其他工作继续推进；最终核对仍调用 build-verification-package 更新最新检查和缺口。检查保存成功但自动打包失败时返回 packageWarning，不重放已登记检查。
+试玩使用 production start-acceptance：APP 将冻结存档复制到工作区根目录的短路径 .abya-play-runs/<运行ID>/Archives，绑定任务 owner 标记并传入独立 data root。旧 Player 无需识别工作区外部路径，不把冻结快照作为编辑档。不要自行启动非托管进程或改源快照来绕过加载失败。
+
+对账恢复使用 reconcile-work-unit：沿用 revise-work-unit 的字段，另提供 reconciliation.operationIds、outcome（applied/not-executed/partial）及 readbackPaths。必须先实际读取原请求与目标状态；APP保存原始成功读回文件的哈希及对账说明。只登记尚未执行的不同剩余路线，不能重放原写入；对账不关闭问题或产生验收通过。

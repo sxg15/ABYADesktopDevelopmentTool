@@ -1,6 +1,6 @@
 {
   "schema": "abya.game-development-policy/v1",
-  "workflowVersion": "2.7.0",
+  "workflowVersion": "2.8.1",
   "stageContractsVersion": 1,
   "artDesignVersion": 1,
   "preflightRecovery": {"enabled":true,"stages":["resources","plan"],"attempts":2,"turnMinutes":10},
@@ -209,6 +209,7 @@
     "authority"
   ],
   "implementationExecution": {
+    "completionLoopVersion": 1,
     "mode": "autonomous",
     "checkpointMode": "resume-current",
     "versionPurposeRequired": true,

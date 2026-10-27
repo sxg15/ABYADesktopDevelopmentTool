@@ -1,6 +1,10 @@
 use super::*;
 use sha2::{Digest, Sha256};
 const ALLOWED: &[&str] = &[
+    "revise-work-unit",
+    "classify-work-unit",
+    "reconcile-work-unit",
+    "record-work-signal",
     "record-validation-run",
     "save-self-test",
     "save-art-realization",
@@ -56,9 +60,17 @@ impl TaskService {
             }
         }
         // A failed export does not erase or repeat committed items; receipts remain queryable.
+        let package_warning = if !stopped {
+            self.production_auto_package(task)
+        } else {
+            None
+        };
+        if let Some(record) = self.production_get(task)?.record {
+            revision = record.revision;
+        }
         let export_error = self.production_export(task).err().map(|e| e.message);
         Ok(
-            json!({"batchId":batch,"revision":revision,"complete":!stopped,"results":results,"exportWarning":export_error}),
+            json!({"batchId":batch,"revision":revision,"complete":!stopped,"results":results,"exportWarning":export_error,"packageWarning":package_warning}),
         )
     }
     fn production_action(
@@ -80,6 +92,7 @@ impl TaskService {
             return self.receipt_result(task, existing, &hash);
         }
         let root = self.production_workspace(task)?;
+        self.production_validate_mutation_files(task, op, &input["data"])?;
         let result=self.production_commit(task,expected,|r| {
             if r.workbench.execution.receipts.len()>=4000 {return Err(AppError::validation("操作收据容量已满。"));}
             mutation::apply(r,&root,op,&input["data"])?;

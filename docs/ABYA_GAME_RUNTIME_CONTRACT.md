@@ -246,3 +246,5 @@ up to ten minutes.
 `archive_transfer_cancel` requires the game to stop receiving and remove
 staging data. v1 does not resume after disconnect or application restart.
 Desktop limits are two active transfers globally and one per target.
+
+Frozen candidate playtests use an owned per-session `--abya-data-root` with the run copy under workspace-root/.abya-play-runs/<UUID>/Archives. TaskService validates the path and the acceptance orchestrator supplies it internally; this is not a free-text launch option. Existing Player binaries remain pinned and the source snapshot is unchanged.

@@ -10,6 +10,18 @@ impl TaskService {
         };
         let scope_hash = autonomy::scope(&r);
         let ledger = &r.workbench.execution;
+        let mut ordered: Vec<_> = ledger
+            .units
+            .iter()
+            .filter(|u| u.cycle == r.cycle && u.scope_hash == scope_hash)
+            .collect();
+        ordered.sort_by_key(|u| {
+            (
+                Some(&u.goal_id) != r.workbench.active_goal_id.as_ref(),
+                u.status == "succeeded",
+            )
+        });
+        let current_units:Vec<_>=ordered.iter().map(|u|json!({"id":u.id,"goalId":u.goal_id,"title":u.title,"kind":u.kind,"status":u.status,"dependsOn":u.depends_on,"definitionRevision":u.definition_revision,"milestone":u.milestone,"deferReasonCode":u.defer_reason_code,"nextCondition":u.next_condition,"repairFor":u.repair_for})).collect();
         Ok(
             json!({"taskId":task,"revision":r.revision,"cycle":r.cycle,"stage":r.current_stage,
             "workflowVersion":r.workflow_version,"implementationPolicy":r.policy["implementationExecution"],
@@ -21,7 +33,7 @@ impl TaskService {
             "executionTiming":super::validation_runs::timing(&r),"validationImpact":{"mode":r.version_details["validationImpact"]["mode"],"unknownImpact":r.version_details["validationImpact"]["unknownImpact"],"mustRetest":r.version_details["validationImpact"]["mustRetest"],"changedFileCount":r.version_details["validationImpact"]["changedFiles"].as_array().map_or(0,Vec::len)},"executionState":ledger.state,"activeGoalId":r.workbench.active_goal_id,
             "activeUnit":ledger.units.iter().find(|u|Some(&u.id)==ledger.active_unit_id.as_ref()),
             "workUnitCount":ledger.units.iter().filter(|u|u.cycle==r.cycle&&u.scope_hash==scope_hash).count(),
-            "workUnits":ledger.units.iter().filter(|u|u.cycle==r.cycle&&u.scope_hash==scope_hash).take(32).map(|u|json!({"id":u.id,"goalId":u.goal_id,"title":u.title,"status":u.status,"dependsOn":u.depends_on})).collect::<Vec<_>>(),
+            "workUnits":current_units, "workUnitsTruncated":false, "verificationPackage":ledger.verification_package,
             "issueCount":r.issues.iter().filter(|i|i["status"]!="resolved").count(),
             "issues":r.issues.iter().filter(|i|i["status"]!="resolved").take(16).map(|i|json!({"id":i["id"],"status":i["status"],"repairTarget":i["repairTarget"],"description":i["description"].as_str().unwrap_or("").chars().take(300).collect::<String>(),"handling":{"mode":i["executionHandling"]["mode"],"reason":i["executionHandling"]["reason"].as_str().unwrap_or("").chars().take(200).collect::<String>(),"impact":i["executionHandling"]["impact"].as_str().unwrap_or("").chars().take(200).collect::<String>()}})).collect::<Vec<_>>(),
             "pendingQuestions":r.question_groups.iter().filter(|g|g.status=="pending").map(|g|&g.id).collect::<Vec<_>>(),
@@ -42,7 +54,8 @@ impl TaskService {
                 .with_connection(|c| load(c, task))?
                 .ok_or_else(conflict)?;
             if !autonomy::autonomous_implementation(&r)
-                || (r.workbench.execution.state == "settledWithGaps"
+                || ((r.workbench.execution.state == "settledWithGaps"
+                    || completion::blocked_state(&r.workbench.execution.state))
                     && r.workbench.execution.parked_condition == autonomy::condition(&r))
             {
                 return Ok(None);
@@ -99,6 +112,7 @@ impl TaskService {
 }
 fn finish_available_work(r: &mut ProductionRecord, root: &Path) -> AppResult<()> {
     let scope = autonomy::scope(r);
+    let relevant = completion::relevant(r);
     let conditions = r
         .workbench
         .execution
@@ -107,8 +121,13 @@ fn finish_available_work(r: &mut ProductionRecord, root: &Path) -> AppResult<()>
         .map(|u| (u.id.clone(), autonomy::unit_condition(r, u)))
         .collect::<BTreeMap<_, _>>();
     for u in &mut r.workbench.execution.units {
-        if u.cycle == r.cycle && u.scope_hash == scope && u.status == "pending" {
+        if relevant.contains(&u.id)
+            && u.cycle == r.cycle
+            && u.scope_hash == scope
+            && u.status == "pending"
+        {
             u.status = "deferred".into();
+            u.defer_reason_code = "dependency".into();
             u.reason = "前置工作未完成；本轮暂缓部署或验证，已有成果保留。".into();
             u.condition_hash = conditions.get(&u.id).cloned().unwrap_or_default();
         }
@@ -118,7 +137,7 @@ fn finish_available_work(r: &mut ProductionRecord, root: &Path) -> AppResult<()>
         .execution
         .units
         .iter()
-        .filter(|u| u.cycle == r.cycle && u.scope_hash == scope)
+        .filter(|u| relevant.contains(&u.id) && u.cycle == r.cycle && u.scope_hash == scope)
         .map(|u| {
             json!({"id":u.id,"title":u.title,"kind":u.kind,"status":u.status,
             "reason":u.reason,"resultPaths":u.result_paths})
@@ -142,6 +161,8 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         super::workbench::observe(r, None);
     }
     let scope_hash = autonomy::scope(r);
+    let loop_enabled = completion::enabled(r);
+    let relevant = completion::relevant(r);
     super::autonomy_budget::account(r);
     let route_ms = super::autonomy_budget::limit(r, "routeMinutes", 15) * 60_000;
     let attempt_limit = super::autonomy_budget::limit(r, "routeAttemptLimit", 2) as u32;
@@ -185,11 +206,11 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         ledger.units.push(WorkUnit {
             scope_hash: scope_hash.clone(),
             id: format!("implementation-{}-{}-bootstrap", r.cycle, &scope_hash[..8]),
-            goal_id: goal,
+            goal_id: goal.clone(),
             cycle: r.cycle,
             title: "拆解已批准计划并建立实现、恢复与验证工作队列".into(),
             routes: vec![
-                "按批准计划登记有依赖的工作项，写入队列说明文件后报告本项完成。".into(),
+                "按批准计划先登记milestone=core的真实输入、核心循环、保存冷加载与候选包工作；扩展功能标extension。禁止先堆大量抽象端口。写入队列说明文件后报告本项完成。".into(),
                 "核对已有实现和失败记录，按可完成范围登记工作项；不等待用户继续。".into(),
             ],
             status: "pending".into(),
@@ -206,21 +227,25 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         unit.status = "failed".into();
         unit.reason = "本轮尚未报告工作项完成，按预算切换工作或恢复路线。".into();
     }
-    for unit in ledger
-        .units
-        .iter_mut()
-        .filter(|u| u.cycle == r.cycle && u.scope_hash == scope_hash)
-    {
+    for unit in ledger.units.iter_mut().filter(|u| {
+        (!loop_enabled || relevant.contains(&u.id))
+            && u.cycle == r.cycle
+            && u.scope_hash == scope_hash
+    }) {
         let unit_condition = conditions
             .get(&unit.id)
             .cloned()
             .unwrap_or_else(|| condition.clone());
-        let renewed = unit.status == "deferred" && unit.condition_hash != unit_condition;
+        let renewed = unit.status == "deferred"
+            && unit.condition_hash != unit_condition
+            && (!loop_enabled || unit.defer_reason_code == "dependency");
         if renewed {
             unit.status = "pending".into();
             unit.attempts = 0;
             unit.route = 0;
-            unit.elapsed_ms = 0;
+            if !loop_enabled {
+                unit.elapsed_ms = 0;
+            }
             unit.route_elapsed_ms = 0;
             unit.condition_hash = unit_condition.clone();
         }
@@ -230,6 +255,7 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         {
             unit.status = "deferred".into();
             unit.condition_hash = unit_condition.clone();
+            unit.defer_reason_code = "budget-exhausted".into();
             unit.reason = "本项或关联故障的累计恢复预算已用完，保留成果并继续独立工作。".into();
         }
         if unit.status == "failed"
@@ -262,9 +288,20 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         autonomy::event(ledger, "resumed", None, "沿用原工作项恢复。");
         return Ok(());
     }
-    let final_id = format!("implementation-{}-{}-handoff", r.cycle, &scope_hash[..8]);
+    if loop_enabled {
+        completion::ensure_repair(r);
+    }
+    let relevant = completion::relevant(r);
+    let sig = completion::signature(r);
+    let final_id = if loop_enabled {
+        completion::final_id(r)
+    } else {
+        format!("implementation-{}-{}-handoff", r.cycle, &scope_hash[..8])
+    };
+    let ledger = &mut r.workbench.execution;
     let runnable = ledger.units.iter().any(|u| {
-        u.cycle == r.cycle
+        (!loop_enabled || relevant.contains(&u.id))
+            && u.cycle == r.cycle
             && u.scope_hash == scope_hash
             && matches!(u.status.as_str(), "pending" | "failed")
             && u.depends_on.iter().all(|id| {
@@ -278,27 +315,44 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         && ledger
             .units
             .iter()
-            .filter(|u| u.cycle == r.cycle && u.scope_hash == scope_hash)
+            .filter(|u| {
+                (!loop_enabled || relevant.contains(&u.id))
+                    && u.cycle == r.cycle
+                    && u.scope_hash == scope_hash
+            })
             .all(|u| u.status != "running")
-        && !ledger.units.iter().any(|u| u.id == final_id)
+        && !ledger.units.iter().any(|u| {
+            u.id == final_id
+                || loop_enabled
+                    && u.kind == "finalization"
+                    && u.goal_id == goal
+                    && u.input_signature == sig
+        })
     {
         for u in &mut ledger.units {
-            if u.cycle == r.cycle && u.scope_hash == scope_hash && u.status == "pending" {
+            if (!loop_enabled || relevant.contains(&u.id))
+                && u.cycle == r.cycle
+                && u.scope_hash == scope_hash
+                && u.status == "pending"
+            {
                 u.status = "deferred".into();
+                u.defer_reason_code = "dependency".into();
                 u.reason = "前置工作未完成，保留已有产出供最终核对。".into();
                 u.condition_hash = conditions.get(&u.id).cloned().unwrap_or_default();
             }
         }
-        ledger.units.push(WorkUnit {kind:"finalization".into(),scope_hash:scope_hash.clone(),id:final_id,goal_id:r.workbench.active_goal_id.clone().unwrap_or_default(),cycle:r.cycle,
-            title:"恢复正式候选、核对实际自测并汇总缺口".into(),routes:vec!["先完成测试夹具清理或通过activate-version恢复已验证的冻结候选；核对已完成的真实回执并登记版本适用的必要自测，禁止重放已完成测试。满足原门槛再complete-stage；缺口如实保留，能完成的版本核对与材料登记不能因其他项暂缓而省略。".into(),"核对已有产出、候选与未测项，保存汇总并conclude-implementation，不伪造通过。".into()],status:"pending".into(),updated_at:now(),..Default::default()});
+        ledger.units.push(WorkUnit {input_signature:sig,kind:"finalization".into(),scope_hash:scope_hash.clone(),id:final_id.clone(),goal_id:r.workbench.active_goal_id.clone().unwrap_or_default(),cycle:r.cycle,
+            title:"恢复正式候选、核对实际自测并汇总缺口".into(),routes:vec!["先完成测试夹具清理或通过activate-version恢复已验证的冻结候选；2.8没有候选时，优先完成真实输入及核心循环接入，捕获candidate并核对lua/input/core-loop/save-reload证据，调用build-verification-package。需要继续实现时登记具体工作项后报告本项暂缓，由APP继续派发；不得仅写缺口清单结束。核对已完成的真实回执并登记版本适用的必要自测，禁止重放已完成测试。满足原门槛再complete-stage；缺口如实保留，能完成的版本核对与材料登记不能因其他项暂缓而省略。".into(),"核对已有产出、候选与未测项，保存汇总并conclude-implementation，不伪造通过。".into()],status:"pending".into(),updated_at:now(),..Default::default()});
     }
     let next = ledger
         .units
         .iter()
-        .position(|u| {
-            u.cycle == r.cycle
+        .enumerate()
+        .filter(|(_, u)| {
+            (!loop_enabled || relevant.contains(&u.id) || u.id == final_id)
+                && u.cycle == r.cycle
                 && u.scope_hash == scope_hash
-                && u.status == "pending"
+                && matches!(u.status.as_str(), "pending" | "failed")
                 && u.depends_on.iter().all(|id| {
                     ledger
                         .units
@@ -306,19 +360,19 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
                         .any(|d| d.id == *id && d.status == "succeeded")
                 })
         })
-        .or_else(|| {
-            ledger.units.iter().position(|u| {
-                u.cycle == r.cycle
-                    && u.scope_hash == scope_hash
-                    && u.status == "failed"
-                    && u.depends_on.iter().all(|id| {
-                        ledger
-                            .units
-                            .iter()
-                            .any(|d| d.id == *id && d.status == "succeeded")
-                    })
-            })
-        });
+        .min_by_key(|(_, u)| {
+            if loop_enabled && r.current_version.is_none() {
+                match (u.kind.as_str(), u.milestone.as_str()) {
+                    ("repair-plan", _) | (_, "core") => 0,
+                    (_, "extension") => 2,
+                    ("finalization", _) => 3,
+                    _ => 1,
+                }
+            } else {
+                usize::from(u.status == "failed")
+            }
+        })
+        .map(|(i, _)| i);
     ledger.last_event = event_id.into();
     if let Some(index) = next {
         let unit = &mut ledger.units[index];
@@ -331,7 +385,9 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         unit.updated_at = now();
         let id = unit.id.clone();
         let reason = unit.routes[unit.route].clone();
-        r.workbench.active_goal_id = Some(unit.goal_id.clone());
+        if !loop_enabled {
+            r.workbench.active_goal_id = Some(unit.goal_id.clone());
+        }
         ledger.active_unit_id = Some(id.clone());
         ledger.state = "running".into();
         autonomy::event(ledger, "scheduled", Some(&id), &reason);
@@ -341,7 +397,11 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         ledger.state = if ledger
             .units
             .iter()
-            .filter(|u| u.cycle == r.cycle && u.scope_hash == scope_hash)
+            .filter(|u| {
+                (!loop_enabled || relevant.contains(&u.id))
+                    && u.cycle == r.cycle
+                    && u.scope_hash == scope_hash
+            })
             .all(|u| u.status == "succeeded")
         {
             "settled"
@@ -372,7 +432,11 @@ impl TaskService {
         Ok((autonomy::autonomous_implementation(&r)
             && matches!(
                 l.state.as_str(),
-                "waitingDependencies" | "settledWithGaps" | "ready"
+                "waitingDependencies"
+                    | "settledWithGaps"
+                    | "repairRequired"
+                    | "externalBlocked"
+                    | "ready"
             )
             && (l.state == "ready" || l.parked_condition != autonomy::condition(&r)))
         .then_some(r.revision))
