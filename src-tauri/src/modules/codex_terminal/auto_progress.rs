@@ -22,7 +22,8 @@ pub(super) fn eligible(view: &ProductionView) -> bool {
                 r.stages.get(&r.current_stage).map(String::as_str),
                 Some("in-progress" | "not-started")
             ))
-        && (crate::modules::tasks::preflight_recovery_active(r)
+        && (crate::modules::tasks::autonomous_implementation(r)
+            || crate::modules::tasks::preflight_recovery_active(r)
             || view
                 .stage_statuses
                 .get(&r.current_stage)

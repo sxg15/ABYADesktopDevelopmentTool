@@ -27,21 +27,21 @@ if(action==='init'){
   if(action==='verify'){
     const tasks=await invoke('list_tasks');assert.equal(tasks.length,1);
     const task=tasks[0],view=await invoke('get_task_production',{taskId:task.id});
-    assert.equal(view.record.workflowVersion,'2.9.0');assert.equal(view.record.stages.resources,'awaiting-confirmation');
+    assert.equal(view.record.workflowVersion,'2.10.0');assert.equal(view.record.stages.resources,'awaiting-confirmation');
     assert.equal(view.record.issues[0].status,'open');assert.equal(view.record.approvals.length,1);
     assert.equal((await invoke('list_instances',{taskId:task.id})).length,0);
     await page.getByRole('heading',{name:'阶段契约原生隔离测试',exact:true}).waitFor();
     await page.getByRole('navigation',{name:'制作阶段'}).getByRole('button',{name:/资源美术/}).waitFor();
     assert.equal(await page.getByRole('button',{name:'导出程序问题汇总（MD）',exact:true}).count(),0);
     await page.screenshot({path:path.join(root,'native-design-review.png')});
-    fs.writeFileSync(path.join(root,'result.json'),JSON.stringify({passed:true,taskId:task.id,workflow:'2.9.0',designSubmittedWithoutPlayer:true,issueStillOpen:true,approvals:1,scope:'synthetic native APP fixture'},null,2));
+    fs.writeFileSync(path.join(root,'result.json'),JSON.stringify({passed:true,taskId:task.id,workflow:'2.10.0',designSubmittedWithoutPlayer:true,issueStillOpen:true,approvals:1,scope:'synthetic native APP fixture'},null,2));
     await browser.close();process.exit(0);
   }
   assert.equal((await invoke('list_tasks')).length,0);
   const task=await invoke('create_task',{input:{title:'阶段契约原生隔离测试',description:'保留比较按钮，并在设计稿中注明 W/S 输入。此任务仅验证 APP 契约。'}});
   let view;const update=async(operation,values)=>view=await invoke('update_task_production',{input:{taskId:task.id,expectedRevision:view?.record?.revision??0,operation,data:values}});
   const write=(file,text)=>{const target=path.join(task.workspacePath,file);fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,text);};
-  await update('initialize',{questionMode:'no-followup'});assert.equal(view.record.workflowVersion,'2.9.0');
+  await update('initialize',{questionMode:'no-followup'});assert.equal(view.record.workflowVersion,'2.10.0');
   write('artifacts/requirements.md','# 合成测试需求\n只验证按钮设计送审，不是游戏验收。');
   await update('submit-document',{kind:'requirements',path:'artifacts/requirements.md'});
   view=await invoke('decide_task_production',{input:{taskId:task.id,expectedRevision:view.record.revision,kind:'requirements',documentHash:view.record.documents.requirements.sha256,accepted:true,feedback:'Synthetic fixture only'}});
@@ -63,6 +63,6 @@ if(action==='init'){
   await page.getByRole('navigation',{name:'制作阶段'}).getByRole('button',{name:/资源美术/}).waitFor();
   assert.equal(await page.getByRole('button',{name:'导出程序问题汇总（MD）',exact:true}).count(),0);
   await page.screenshot({path:path.join(root,'native-design-review.png')});
-  fs.writeFileSync(path.join(root,'result.json'),JSON.stringify({passed:true,taskId:task.id,release:build.releaseLabel,workflow:'2.9.0',designSubmittedWithoutPlayer:true,issueStillOpen:true,approvals:1,scope:'synthetic native APP fixture'},null,2));
+  fs.writeFileSync(path.join(root,'result.json'),JSON.stringify({passed:true,taskId:task.id,release:build.releaseLabel,workflow:'2.10.0',designSubmittedWithoutPlayer:true,issueStillOpen:true,approvals:1,scope:'synthetic native APP fixture'},null,2));
   console.log('Native design submission contract passed.');await browser.close();
 }else throw Error('Use init or run');

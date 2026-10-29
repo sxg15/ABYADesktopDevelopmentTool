@@ -67,7 +67,7 @@ pub(super) fn record(r: &mut ProductionRecord, root: &Path, data: &Value) -> App
             super::art_design::apply(r, root, "save-art-realization", &check, false)?;
         }
     }
-    r.workbench.execution.validation_runs.insert(id.into(),json!({"id":id,"version":version,"purpose":if fixture{"fixture"}else{"candidate"},"scopeHash":autonomy::scope(r),"cycle":r.cycle,"inputHash":hash,"checks":checks,"artChecks":art,"at":now()}));
+    r.workbench.execution.validation_runs.insert(id.into(),json!({"id":id,"workUnitId":r.workbench.execution.active_unit_id,"version":version,"purpose":if fixture{"fixture"}else{"candidate"},"scopeHash":autonomy::scope(r),"cycle":r.cycle,"inputHash":hash,"checks":checks,"artChecks":art,"at":now()}));
     if completion::enabled(r)
         && let Some(u) = r
             .workbench

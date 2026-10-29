@@ -3,6 +3,7 @@ mod autonomy;
 mod completion;
 mod completion_repair;
 mod preflight_recovery;
+mod progress_budget;
 mod review_handoff;
 mod stage_contracts;
 mod verification_package;

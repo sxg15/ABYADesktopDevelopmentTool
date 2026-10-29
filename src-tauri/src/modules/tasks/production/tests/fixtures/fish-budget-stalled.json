@@ -1,0 +1,737 @@
+{
+  "note": "Sanitized actual fish queue; no game contents or credentials. Routes are placeholders.",
+  "units": [
+    {
+      "id": "goal-bootstrap-f8895080ae5bfb644956daeff0fcb8f6f812afc3bf9ef5c5fad672194ec209e5",
+      "kind": "implementation",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 446503,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "7a36c760ad2707070f5914c71a387461766b06ed2ebbd2c4a85cf92a7b440582"
+    },
+    {
+      "id": "fish-c1-01",
+      "kind": "deployment",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 806974,
+      "deferReasonCode": "",
+      "dependsOn": [
+        "goal-bootstrap-f8895080ae5bfb644956daeff0fcb8f6f812afc3bf9ef5c5fad672194ec209e5"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "c421cbb282b37950d6e26bf5105a07d3ba26daea066e2216e2fa92779214453f"
+    },
+    {
+      "id": "fish-c1-02",
+      "kind": "implementation",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 3269098,
+      "deferReasonCode": "",
+      "dependsOn": [
+        "fish-c1-01"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "2030c39acc9f9c46b578b93094714ac3fb91905612c972e25ac5d1cbd9ec75cd"
+    },
+    {
+      "id": "fish-c1-03",
+      "kind": "implementation",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 1860664,
+      "deferReasonCode": "",
+      "dependsOn": [
+        "fish-c1-02"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "2a8ce2f1ca78c5320f9d323f417484b7d344afa07e81822860df5ba3927be944"
+    },
+    {
+      "id": "fish-c1-04",
+      "kind": "implementation",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 1265085,
+      "deferReasonCode": "",
+      "dependsOn": [
+        "fish-c1-03"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "a4227fb12fb6c7c91825ceacc92cb0d538f57b64b0bfa3a45a0cee504b46a0fc"
+    },
+    {
+      "id": "fish-c1-05",
+      "kind": "implementation",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 3648174,
+      "deferReasonCode": "budget-exhausted",
+      "dependsOn": [
+        "fish-c1-04"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "0f7861ad252fc29cdce05bed40d276002ecc5a6e1e186e74de869d51d63efae6"
+    },
+    {
+      "id": "fish-c1-06",
+      "kind": "deployment",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 631461,
+      "deferReasonCode": "",
+      "dependsOn": [
+        "fish-c1-04"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "114d422da924ac328271839a1cf4be973fda2f496d6bebcdccb24e23486f79cc"
+    },
+    {
+      "id": "fish-c1-07",
+      "kind": "validation",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 762280,
+      "deferReasonCode": "",
+      "dependsOn": [
+        "fish-c1-06"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "bde1242f0845d322a9cdad5f350ac4852030f2523ef6970820b25411bf73757f"
+    },
+    {
+      "id": "fish-c1-08",
+      "kind": "deployment",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 212033,
+      "deferReasonCode": "",
+      "dependsOn": [
+        "fish-c1-07"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "794e38728b202d26537076af00d7a5b5232190be838e043d444adfc2ce10b40a"
+    },
+    {
+      "id": "fish-c1-09",
+      "kind": "implementation",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 533261,
+      "deferReasonCode": "",
+      "dependsOn": [
+        "goal-bootstrap-f8895080ae5bfb644956daeff0fcb8f6f812afc3bf9ef5c5fad672194ec209e5"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "c310b79be78765082db12465583af9d821c408ffb5d23dc9e67d04477f9b4601"
+    },
+    {
+      "id": "fish-c1-10",
+      "kind": "implementation",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 3607345,
+      "deferReasonCode": "budget-exhausted",
+      "dependsOn": [
+        "fish-c1-07",
+        "fish-c1-09",
+        "fish-c1-15"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "cb7d8d616fee2ce959687f692fb46cef3493a6efad674fc7039d47139d8537d2"
+    },
+    {
+      "id": "fish-c1-11",
+      "kind": "implementation",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 3604009,
+      "deferReasonCode": "budget-exhausted",
+      "dependsOn": [
+        "fish-c1-02",
+        "fish-c1-09"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": ""
+    },
+    {
+      "id": "fish-c1-12",
+      "kind": "validation",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 3640880,
+      "deferReasonCode": "budget-exhausted",
+      "dependsOn": [
+        "fish-c1-07",
+        "fish-c1-09"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": ""
+    },
+    {
+      "id": "fish-c1-13",
+      "kind": "validation",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 2541243,
+      "deferReasonCode": "",
+      "dependsOn": [
+        "fish-c1-07",
+        "fish-c1-09"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "e28fc39124f2c047ad8375f4a2202b98f0e0866f6d6865ea52a73c68715b94d7"
+    },
+    {
+      "id": "fish-c1-14",
+      "kind": "validation",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 3714993,
+      "deferReasonCode": "budget-exhausted",
+      "dependsOn": [
+        "fish-c1-07",
+        "fish-c1-09"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "df69682755b6b9589c193ef23524a312a3fb0dae61e549b91b9bc98cff6feb9b"
+    },
+    {
+      "id": "fish-c1-15",
+      "kind": "deployment",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 654968,
+      "deferReasonCode": "",
+      "dependsOn": [
+        "fish-c1-07",
+        "fish-c1-09",
+        "fish-c1-13"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "b87923f2b6ebfbf8430eeaf16d86af1919390519a7516f76ad925a1c5231aac1"
+    },
+    {
+      "id": "fish-c1-16",
+      "kind": "validation",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 3604674,
+      "deferReasonCode": "budget-exhausted",
+      "dependsOn": [
+        "fish-c1-15"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "e3dc47770c976227477fe0e3708dbb1d82f909916e504a018e9d3db4db852222"
+    },
+    {
+      "id": "fish-c1-17",
+      "kind": "deployment",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 0,
+      "deferReasonCode": "dependency",
+      "dependsOn": [
+        "fish-c1-08",
+        "fish-c1-16"
+      ],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 0,
+      "resultHash": ""
+    },
+    {
+      "id": "handoff-repair-a073e04449daf366f22316220dcf4203ea296fc49db23297c8b0ad700e38e8d2",
+      "kind": "handoff-repair",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 802800,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [
+        "fish-architecture-component-contract"
+      ],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "e70680783729a69eadfb813e684c86bf0befd3ca54353e65327ac66121c3bd8c"
+    },
+    {
+      "id": "repair-5deabf3c1ce6cd6c0da6bbd9c9edbcf8c80a0db2b1c8d38447a7823880148a71",
+      "kind": "repair-plan",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 196641,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "0fd558b699b1e047c53741b231ea1c39cc8e06e47a5a4eb6f193891138fc1d36"
+    },
+    {
+      "id": "repair-a3025c5ba35ddff4e83a37e141a726e99ec5a48f2f0a7c595e03bf5bb59afde1",
+      "kind": "repair-plan",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 206455,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "61041f1eb12264bde8cbfbc0bc99a7be12610dfef6537a8014453d6cf5988244"
+    },
+    {
+      "id": "handoff-repair-cf509899439de4d8dd649f77d6a5f3c5dd05fb6fa6b57e38a229dc48f60976f4",
+      "kind": "handoff-repair",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 1159632,
+      "deferReasonCode": "budget-exhausted",
+      "dependsOn": [],
+      "issueIds": [
+        "fish-architecture-component-contract"
+      ],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": ""
+    },
+    {
+      "id": "repair-67354848a1be55795990dffb48ac3e3fdffc6904e3d960e74529ea87e79f816a",
+      "kind": "repair-plan",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 607848,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "bbe8f7f9fe8f2d17f67ad2f07d34fbbfa0670425316dd0e6b51a257bc6f60593"
+    },
+    {
+      "id": "repair-0e3bd1fd1b1a702b674383236131534244a2deed1d8e5c6570a8133d0490f067",
+      "kind": "repair-plan",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 1519641,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "e6356d3dd29cf0aea402ee72accb69275be6cec87d8b0da90c79d3c13408e259"
+    },
+    {
+      "id": "repair-bc2685fe927d5a8b590f2424bc9d10ed1f3b4937d6d57819fec7054e7e1fad7f",
+      "kind": "repair-plan",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 351846,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "6f9a584b560539fa40432d571a0af082156d289012f9641c6b844df405d53a42"
+    },
+    {
+      "id": "repair-bed3c52e2aea43e5ec4e922b8eea132e4f989a0df016e4813142cdc3120c3688",
+      "kind": "repair-plan",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 312588,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "f87d22d6666df45ba54cd9d6f83e00dfa8325aa21037e7b8ae5bfcad88e3eef0"
+    },
+    {
+      "id": "handoff-repair-95e128141dc8536c46664535ca8ee0281969012333f7e3f6fdfb70270251d4ae",
+      "kind": "handoff-repair",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 451386,
+      "deferReasonCode": "budget-exhausted",
+      "dependsOn": [
+        "fish-c1-16"
+      ],
+      "issueIds": [
+        "fish-architecture-component-contract",
+        "fish-focus-public-contract"
+      ],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 0,
+      "resultHash": "853d4fc9dbea3c34ab9981125ae4ed3b51486881229ac007c9d5bee5ff64bf9e"
+    },
+    {
+      "id": "repair-81c31a70f5b09820a84d2db67d8e28e0a42cc10a61035b6d49f13a83a13ed3a6",
+      "kind": "repair-plan",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 374325,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [
+        "fish-architecture-component-contract",
+        "fish-focus-public-contract"
+      ],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "f130e4df55d2443d02a093d1bd90de16013d3c24537869864efb4d082fbf7430"
+    },
+    {
+      "id": "repair-ef5a2dee708084a6ae62bf43c6adf3ad1aa0d1633aa6572325303fa3664ab44e",
+      "kind": "repair-plan",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 236528,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "43a94c93485d40662eb81c25418010838d814c9781f3e12fcc4c274aa17d53e3"
+    },
+    {
+      "id": "handoff-repair-77cf3d2603bad5eecfb06e63e7e0fe3ea9efbcb0bc1e7d5884d1b4d2f4fafa1c",
+      "kind": "handoff-repair",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 795140,
+      "deferReasonCode": "repairable",
+      "dependsOn": [],
+      "issueIds": [
+        "fish-focus-public-contract"
+      ],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "2ddccafc6f90b7248b450ed0a9abbc5637a34a3b3e09a68ab9bbf9c5bf898096"
+    },
+    {
+      "id": "repair-f4e297cda09481efe6782ec801709939e962ebb0c4e6ff3740a9aee5aa0a3edb",
+      "kind": "repair-plan",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 185313,
+      "deferReasonCode": "budget-exhausted",
+      "dependsOn": [],
+      "issueIds": [
+        "fish-focus-public-contract"
+      ],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": ""
+    },
+    {
+      "id": "handoff-repair-29aa21e1cead66ce7a746c71727b74b67c032856de7bfb759e9e2ddb6440c652",
+      "kind": "handoff-repair",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 9935,
+      "deferReasonCode": "budget-exhausted",
+      "dependsOn": [],
+      "issueIds": [
+        "fish-focus-public-contract",
+        "fish-native-escape-menu-conflict"
+      ],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": ""
+    },
+    {
+      "id": "final-1-f3cac76a1cd9d83fed125629330fba9bc63278b556d1a7eedd2af22878c63b58",
+      "kind": "finalization",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 1020698,
+      "deferReasonCode": "external-condition",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "eb74a09bfd609901db9493f71b56b3a5f787600e635caf03000d1566a44c73c9"
+    },
+    {
+      "id": "handoff-repair-8c8effd04acd170a831fe0a44f40885ce1881aaf5d011b8426309f252f2df34c",
+      "kind": "handoff-repair",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 10538,
+      "deferReasonCode": "budget-exhausted",
+      "dependsOn": [],
+      "issueIds": [
+        "fish-focus-public-contract",
+        "fish-native-escape-menu-conflict"
+      ],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": ""
+    },
+    {
+      "id": "final-1-c908f60af9e41a5586c2794cc020571739801d8882e03e18610321f58caccacf",
+      "kind": "finalization",
+      "status": "deferred",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 303971,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": ""
+    },
+    {
+      "id": "diagnose-fa604985-a1a0-4c0a-824a-49b30a9b0f9e",
+      "kind": "repair-plan",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 288033,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "f75855439e8ec77b6b2a1fcc066ac6ada0bdba9759718060009ac9178c245ba8"
+    },
+    {
+      "id": "diagnose-8c5ee823-1e6a-4cb1-a4c0-2ef47fb0c828",
+      "kind": "repair-plan",
+      "status": "succeeded",
+      "goalId": "work:implementation:1:8",
+      "cycle": 1,
+      "scopeHash": "f669df68474fc6fc27d9dd1d73776d4c23cfde162e4f9537ee888f70215fda80",
+      "elapsedMs": 172999,
+      "deferReasonCode": "",
+      "dependsOn": [],
+      "issueIds": [],
+      "routes": [
+        "Historical route; reconcile original results before execution"
+      ],
+      "route": 0,
+      "attempts": 1,
+      "resultHash": "842a79f96a6057fb133a62c6276931fb0d0b5cc2788042637c3d19588d2d4945"
+    }
+  ],
+  "activeGoalId": "work:implementation:1:8"
+}

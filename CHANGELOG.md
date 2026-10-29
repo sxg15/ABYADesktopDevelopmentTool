@@ -1,5 +1,13 @@
 # 验证续接与 CLI 长请求（2026-10-26）
 
+## 2026-10-30 — Evidence-backed continuation 2.10.0
+
+- Preserve elapsed-time accounting while allowing finite continuation credits for saved implementation and verified progress, plus one bounded settlement opportunity.
+- Isolate diagnostic budget families rather than charging every attached issue; unchanged reports and repeated IDs cannot generate progress credits.
+- Explicit migration restores budget-exhausted original work to bounded settlement without replacing tasks, approvals, results or history.
+- Autonomous Lua continuation no longer stops merely because the UI projects unresolved issues as a blocked stage; human decisions and user cancellation remain authoritative.
+- Keep core-package and source-defect-only playtest gates unchanged.
+
 ## 2026-10-27 — Playtest handoff 2.9.0
 
 - Automatically queue Lua repair for ordinary defects, missing checks and unfinished work; a core package alone cannot advance to playtest.

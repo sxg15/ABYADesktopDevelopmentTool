@@ -46,6 +46,9 @@ fn keys(r: &ProductionRecord, u: &autonomy::WorkUnit) -> Vec<String> {
 }
 pub(super) fn exhausted(r: &ProductionRecord, u: &autonomy::WorkUnit) -> bool {
     let extra = running_ms(u);
+    if super::progress_budget::enabled(r) {
+        return super::progress_budget::exhausted(r, u, extra);
+    }
     u.elapsed_ms.saturating_sub(u.budget_epoch_ms) + extra >= limit(r, "workMinutes", 60) * 60_000
         || keys(r, u).iter().any(|k| {
             r.workbench
@@ -84,6 +87,7 @@ pub(super) fn account(r: &mut ProductionRecord) {
         unit.route_elapsed_ms += elapsed;
         unit.attempt_started_at.clear();
     }
+    super::progress_budget::refresh(r);
 }
 pub(super) fn migrate_budget(r: &mut ProductionRecord) {
     if r.current_stage != "implementation" {
@@ -179,7 +183,19 @@ impl TaskService {
         }) else {
             return Ok(false);
         };
-        if unit.kind == "recovery" || exhausted(&r, unit) {
+        let exhausted_now = if super::progress_budget::enabled(&r) {
+            let mut next = r.clone();
+            account(&mut next);
+            next.workbench
+                .execution
+                .units
+                .iter()
+                .find(|u| u.id == unit.id)
+                .is_none_or(|u| exhausted(&next, u))
+        } else {
+            exhausted(&r, unit)
+        };
+        if unit.kind == "recovery" && !super::progress_budget::enabled(&r) || exhausted_now {
             return Ok(false);
         }
         self.production_commit(task, r.revision, |r| {
@@ -240,6 +256,13 @@ impl TaskService {
             return Ok(false);
         }
         // Reporting a unit early must not allow the same native turn to run forever.
+        let turn_ms = (limit(&r, "turnMinutes", 15)
+            + if super::progress_budget::enabled(&r) {
+                limit(&r, "checkpointGraceMinutes", 3)
+            } else {
+                0
+            })
+            * 60_000;
         // This clock spans the dispatch, while operation accounting stops at the report.
         let dispatch_expired = r.workbench.execution.active_unit_id.is_some()
             && r.workbench
@@ -251,8 +274,7 @@ impl TaskService {
                 .and_then(|e| e["at"].as_str())
                 .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
                 .is_some_and(|at| {
-                    Utc::now().signed_duration_since(at).num_milliseconds()
-                        >= limit(&r, "turnMinutes", 15) * 60_000
+                    Utc::now().signed_duration_since(at).num_milliseconds() >= turn_ms
                 });
         if dispatch_expired {
             return Ok(true);
@@ -260,7 +282,7 @@ impl TaskService {
         Ok(r.workbench.execution.units.iter().any(|u| {
             u.status == "running"
                 && Some(&u.id) == r.workbench.execution.active_unit_id.as_ref()
-                && (running_ms(u) >= limit(&r, "turnMinutes", 15) * 60_000
+                && (running_ms(u) >= turn_ms
                     || u.kind == "recovery"
                         && u.route_elapsed_ms + running_ms(u)
                             >= limit(&r, "routeMinutes", 15) * 60_000

@@ -25,6 +25,10 @@ pub struct ExecutionLedger {
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WorkUnit {
+    pub progress_seen: std::collections::BTreeSet<String>,
+    pub budget_grants: Vec<Value>,
+    pub execution_limit_ms: i64,
+    pub settlement_used: bool,
     pub validation_failures: std::collections::BTreeSet<String>,
     pub milestone: String,
     pub validation_outcome: String,

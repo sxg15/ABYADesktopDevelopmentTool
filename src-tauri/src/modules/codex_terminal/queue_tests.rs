@@ -1131,6 +1131,27 @@ fn all_stage_types_share_automatic_rules_and_human_waits_remain_gates() {
 }
 
 #[test]
+fn autonomous_lua_issue_projection_does_not_block_dispatch_after_a_completed_turn() {
+    let f = Fixture::new();
+    let mut view = f.service.tasks.production_get(&f.task).unwrap();
+    let r = view.record.as_mut().unwrap();
+    r.current_stage = "implementation".into();
+    r.stages.clear();
+    r.stages
+        .insert("implementation".into(), "in-progress".into());
+    r.policy["implementationExecution"] = json!({"mode":"autonomous"});
+    view.stage_statuses
+        .insert("implementation".into(), "blocked".into());
+    assert!(auto_progress::eligible(&view));
+    view.record
+        .as_mut()
+        .unwrap()
+        .stages
+        .insert("plan".into(), "awaiting-confirmation".into());
+    assert!(!auto_progress::eligible(&view));
+}
+
+#[test]
 fn automatic_dispatch_does_not_queue_behind_a_newer_manual_turn() {
     let f = Fixture::new();
     finish_auto_fixture(&f, "first", true);

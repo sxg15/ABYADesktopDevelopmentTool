@@ -369,3 +369,5 @@ record-validation-run 的 purpose=fixture 写独立验证索引，不改候选�
 生成包的压缩及读回校验位于数据库事务外，CAS 失败不会登记过期包；真实生成失败返回 packageWarning，不重放已经提交的检查。试玩副本放在工作区根的短目录 .abya-play-runs/<UUID>/Archives，用任务 owner 标记和内部 data-root 覆盖隔离，兼容旧 Player。
 
 Workflow 2.9: production current includes reviewHandoffDeficits (issue/check/work IDs). save-self-test may use blockedByIssueIds only to explain failed/blocked checks by current confirmed abya-source defects. All other gaps stay in Lua; core packages alone cannot advance. The APP diagnostic ZIP includes diagnosis.json, report.md, evidence and inclusion/omission manifest.
+
+Workflow 2.10: production current workUnits includes elapsedMs, executionLimitMs, budgetGrants and settlementUsed. Credits are APP-owned, not agent-writable. Saved implementation/current reviewed checks/owned fixture validation may earn finite continuation, without accepting fixtures as candidates. Upgrade grants exhausted original units one bounded settlement; IDs and total elapsed time remain intact.

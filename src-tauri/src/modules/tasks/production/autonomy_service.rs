@@ -21,7 +21,7 @@ impl TaskService {
                 u.status == "succeeded",
             )
         });
-        let current_units:Vec<_>=ordered.iter().map(|u|json!({"id":u.id,"goalId":u.goal_id,"title":u.title,"kind":u.kind,"status":u.status,"dependsOn":u.depends_on,"definitionRevision":u.definition_revision,"milestone":u.milestone,"deferReasonCode":u.defer_reason_code,"nextCondition":u.next_condition,"repairFor":u.repair_for})).collect();
+        let current_units:Vec<_>=ordered.iter().map(|u|json!({"id":u.id,"goalId":u.goal_id,"title":u.title,"kind":u.kind,"status":u.status,"dependsOn":u.depends_on,"definitionRevision":u.definition_revision,"milestone":u.milestone,"deferReasonCode":u.defer_reason_code,"nextCondition":u.next_condition,"repairFor":u.repair_for,"elapsedMs":u.elapsed_ms,"executionLimitMs":u.execution_limit_ms,"budgetGrants":u.budget_grants,"settlementUsed":u.settlement_used})).collect();
         Ok(
             json!({"taskId":task,"revision":r.revision,"cycle":r.cycle,"stage":r.current_stage,
             "workflowVersion":r.workflow_version,"implementationPolicy":r.policy["implementationExecution"],
@@ -54,6 +54,14 @@ impl TaskService {
                 .database
                 .with_connection(|c| load(c, task))?
                 .ok_or_else(conflict)?;
+            let mut progress_probe = r.clone();
+            if super::progress_budget::reassess(&mut progress_probe) {
+                self.production_commit(task, r.revision, |r| {
+                    super::progress_budget::reassess(r);
+                    Ok(())
+                })?;
+                continue;
+            }
             if !autonomy::autonomous_implementation(&r)
                 || ((r.workbench.execution.state == "settledWithGaps"
                     || completion::blocked_state(&r.workbench.execution.state))
@@ -375,6 +383,11 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
             }
         })
         .map(|(i, _)| i);
+    if let Some(index) = next {
+        let id = r.workbench.execution.units[index].id.clone();
+        super::progress_budget::initialize(r, &id);
+    }
+    let ledger = &mut r.workbench.execution;
     ledger.last_event = event_id.into();
     if let Some(index) = next {
         let unit = &mut ledger.units[index];

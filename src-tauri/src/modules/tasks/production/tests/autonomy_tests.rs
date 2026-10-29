@@ -295,7 +295,7 @@ fn explicit_23_migration_preserves_identity_approvals_results_and_no_auto_start(
         .unwrap()
         .record
         .unwrap();
-    assert_eq!(r.workflow_version, "2.9.0");
+    assert_eq!(r.workflow_version, "2.10.0");
     assert_eq!(r.workbench.active_goal_id, before.workbench.active_goal_id);
     assert_eq!(r.current_version, before.current_version);
     assert_eq!(

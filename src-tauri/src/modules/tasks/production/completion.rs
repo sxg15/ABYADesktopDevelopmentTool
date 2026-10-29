@@ -235,12 +235,41 @@ impl TaskService {
         goal: &str,
         intent: &str,
     ) -> AppResult<()> {
-        let r = self.production_get(task)?.record.ok_or_else(conflict)?;
+        let mut r = self.production_get(task)?.record.ok_or_else(conflict)?;
+        if r.workbench.active_goal_id.as_deref() != Some(goal) {
+            return Err(conflict());
+        }
+        let mut probe = r.clone();
+        if super::progress_budget::reassess(&mut probe) {
+            self.production_commit(task, r.revision, |r| {
+                super::progress_budget::reassess(r);
+                Ok(())
+            })?;
+            r = self.production_get(task)?.record.ok_or_else(conflict)?;
+        }
         if !enabled(&r) || !blocked_state(&r.workbench.execution.state) {
             return Ok(());
         }
         if r.workbench.active_goal_id.as_deref() != Some(goal) {
             return Err(conflict());
+        }
+        if super::progress_budget::enabled(&r)
+            && r.workbench.execution.units.iter().any(|u| {
+                relevant(&r).contains(&u.id)
+                    && u.status == "pending"
+                    && u.depends_on.iter().all(|id| {
+                        r.workbench
+                            .execution
+                            .units
+                            .iter()
+                            .any(|d| &d.id == id && d.status == "succeeded")
+                    })
+            })
+        {
+            return self.production_commit(task, r.revision, |r| {
+                r.workbench.execution.state = "ready".into();
+                Ok(())
+            });
         }
         let key = format!("manual:{}", signature(&r));
         let id = format!("diagnose-{intent}");
