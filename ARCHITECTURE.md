@@ -1,5 +1,11 @@
 # Architecture
 
+MCP edition development takes place in an independent checkout. The new
+`desktop-mcp` module owns protocol/session authorization and receives a domain
+dispatch callback; it never launches an ABYA CLI. Startup wiring and PB native
+transport are separate migration milestones. Do not treat inherited CLI
+Publish bytes or protocol-only tests as a qualified MCP release.
+
 The application uses capability modules with a one-way dependency flow:
 
 `foundation -> application modules -> Tauri command adapters -> React features`

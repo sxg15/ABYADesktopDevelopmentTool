@@ -1,5 +1,19 @@
 # LLM Maintenance Contract
 
+## MCP branch exception (user instruction, 2026-10-31)
+
+Develop the MCP edition only on branch MCP in this independent worktree.
+Do not switch, stage, commit, reset, clean, build into, or publish over the
+original CLI checkout. Do not merge MCP-specific changes into CLI/dev/main.
+Shared fixes may be transferred as reviewed, scoped commits. Preserve the
+snapshot provenance recorded in docs/MCP_IMPLEMENTATION.md. The CLI-only
+branch/release instructions below apply to the CLI edition, not MCP.
+Keep Codex CLI/app-server; ABYA business operations must use native MCP,
+never a hidden CLI wrapper or fallback. Use distinct application identity,
+data/workspace roots, ports, notification identity and release artifacts.
+An inherited CLI Publish directory is not an MCP release and must not launch
+from this branch. Native end-to-end qualification is required before release.
+
 Release branch policy (user clarification, 2026-10-15): all development happens
 on CLI. Before editing, inspect the working tree, fetch origin/CLI and origin/dev,
 switch to CLI, and integrate both latest remote branches into CLI. Preserve local

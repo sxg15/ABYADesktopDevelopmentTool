@@ -13,7 +13,7 @@ pub struct DesktopConnection {
 pub fn descriptor_path() -> AppResult<PathBuf> {
     let root = std::env::var_os("LOCALAPPDATA")
         .ok_or_else(|| AppError::validation("Windows user storage is unavailable."))?;
-    Ok(PathBuf::from(root).join("ABYA Desktop Development Tool/Data/cli-connection.json"))
+    Ok(PathBuf::from(root).join("ABYA Desktop Development Tool MCP/Data/cli-connection.json"))
 }
 
 pub fn publish(endpoint: &str, token: &str) -> AppResult<()> {

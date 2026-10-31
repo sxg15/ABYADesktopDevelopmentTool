@@ -1,5 +1,14 @@
 # 验证续接与 CLI 长请求（2026-10-26）
 
+## 2026-10-31 — MCP independent branch (in development, not released)
+
+- Preserve the CLI working tree; snapshot its 2.11 candidate into an independent MCP worktree.
+- Separate MCP application identity, storage/workspaces and default ports; disable implicit CLI data migration.
+- Refuse to launch inherited CLI release bytes from the MCP branch launcher.
+- Remove the inherited CLI Publish package from this branch; no MCP release binary exists yet.
+- Native MCP transport and PB qualification remain pending; this is not a pure-MCP release claim.
+- Add an unwired native MCP gateway with task-bound leases, protocol negotiation and structured tool dispatch; integration is still pending.
+
 ## 2026-10-30 — 自主执行契约 2.11.0（候选，尚未发布）
 
 - 普通失败在同一工作项内复核和换路径，停止派生 repair-plan/handoff-repair 链；保留未知写入对账及原 ID。

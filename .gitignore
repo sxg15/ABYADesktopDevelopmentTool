@@ -48,3 +48,6 @@ marker.txt
 *.njsproj
 *.sln
 *.sw?
+
+/target-mcp/
+/mcp-*.log

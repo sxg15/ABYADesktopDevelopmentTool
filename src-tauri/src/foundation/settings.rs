@@ -276,11 +276,11 @@ impl SettingsService {
 }
 
 fn default_desktop_cli_port() -> u16 {
-    47600
+    47700
 }
 
 fn default_game_gateway_port() -> u16 {
-    47610
+    47710
 }
 
 fn default_true() -> bool {

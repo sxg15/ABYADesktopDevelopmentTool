@@ -1,6 +1,12 @@
 {
   "modules": [
     {
+      "id": "desktop-mcp",
+      "paths": ["src-tauri/src/modules/desktop_mcp/"],
+      "skill": "skills/desktop-mcp/SKILL.md",
+      "dependsOn": ["foundation"]
+    },
+    {
       "id": "foundation",
       "paths": [
         "src-tauri/src/foundation/",

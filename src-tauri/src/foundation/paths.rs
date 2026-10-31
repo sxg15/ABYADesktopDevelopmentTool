@@ -16,8 +16,8 @@ pub struct AppPaths {
 
 impl AppPaths {
     pub fn legacy_workspace_root() -> Option<PathBuf> {
-        std::env::var_os("LOCALAPPDATA")
-            .map(|p| PathBuf::from(p).join("ABYA Desktop Development Tool/Workspaces"))
+        // Importing a CLI task is explicit; discovery must never migrate its data.
+        None
     }
     pub fn discover() -> AppResult<Self> {
         let local = std::env::var_os("LOCALAPPDATA")
@@ -26,8 +26,14 @@ impl AppPaths {
         let user = std::env::var_os("USERPROFILE")
             .map(PathBuf::from)
             .ok_or_else(|| AppError::new("pathUnavailable", "USERPROFILE is unavailable.", ""))?;
-        let data_dir = local.join("ABYA Desktop Development Tool").join("Data");
-        let paths = Self {
+        let paths = Self::from_roots(&local, &user);
+        paths.ensure()?;
+        Ok(paths)
+    }
+
+    fn from_roots(local: &Path, user: &Path) -> Self {
+        let data_dir = local.join("ABYA Desktop Development Tool MCP").join("Data");
+        Self {
             database_path: data_dir.join("app.db"),
             bootstrap_logs_dir: data_dir.join("InstanceLogs"),
             reports_dir: data_dir.join("Reports"),
@@ -39,11 +45,9 @@ impl AppPaths {
                 .join("ABYA_PB")
                 .join("Data")
                 .join("Archives"),
-            default_workspace_root: user.join("ABYA Desktop Development ToolWorkspaces"),
+            default_workspace_root: user.join("ABYA Desktop Development Tool MCP Workspaces"),
             data_dir,
-        };
-        paths.ensure()?;
-        Ok(paths)
+        }
     }
 
     fn ensure(&self) -> AppResult<()> {
@@ -69,5 +73,27 @@ impl AppPaths {
 
     pub fn display(path: &Path) -> String {
         path.to_string_lossy().into_owned()
+    }
+}
+
+#[cfg(test)]
+mod edition_tests {
+    use super::*;
+    #[test]
+    fn mcp_discovery_does_not_reuse_or_migrate_cli_storage() {
+        let local = Path::new("C:/fixture/Local");
+        let user = Path::new("C:/fixture/User");
+        let paths = AppPaths::from_roots(local, user);
+        assert!(
+            !paths
+                .data_dir
+                .starts_with(local.join("ABYA Desktop Development Tool"))
+        );
+        assert_ne!(
+            paths.default_workspace_root,
+            user.join("ABYA Desktop Development ToolWorkspaces")
+        );
+        assert!(AppPaths::legacy_workspace_root().is_none());
+        assert_eq!(paths.database_path.parent(), Some(paths.data_dir.as_path()));
     }
 }

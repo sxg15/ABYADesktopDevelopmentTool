@@ -57,9 +57,12 @@ impl SystemNotifications {
             Sha256::digest(paths.data_dir.to_string_lossy().to_lowercase().as_bytes())
         );
         let identity = if test {
-            format!("com.abya.desktop-development-tool.test.{}", &digest[..16])
+            format!(
+                "com.abya.desktop-development-tool.mcp.test.{}",
+                &digest[..16]
+            )
         } else {
-            "com.abya.desktop-development-tool".into()
+            "com.abya.desktop-development-tool.mcp".into()
         };
         let status = Arc::new(Mutex::new(PlatformNotificationStatus {
             available: false,
@@ -220,9 +223,9 @@ impl Native {
             test,
         };
         let name = if test {
-            "ABYA Development Tool (测试通知)"
+            "ABYA Development Tool MCP (测试通知)"
         } else {
-            "ABYA Development Tool"
+            "ABYA Development Tool MCP"
         };
         let key = RegKey::predef(HKEY_CURRENT_USER);
         let (app_key, _) = key
@@ -516,13 +519,16 @@ mod tests {
         assert_eq!(marker["schema"], "abya-notification-fixture/v1");
         let data = root
             .join("Local")
-            .join("ABYA Desktop Development Tool")
+            .join("ABYA Desktop Development Tool MCP")
             .join("Data");
         let digest = format!(
             "{:x}",
             Sha256::digest(data.to_string_lossy().to_lowercase().as_bytes())
         );
-        let identity = format!("com.abya.desktop-development-tool.test.{}", &digest[..16]);
+        let identity = format!(
+            "com.abya.desktop-development-tool.mcp.test.{}",
+            &digest[..16]
+        );
         unsafe {
             RoInitialize(RO_INIT_MULTITHREADED).unwrap();
         }

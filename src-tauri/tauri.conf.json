@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ABYA Desktop Development Tool",
+  "productName": "ABYA Desktop Development Tool MCP",
   "version": "0.4.0",
-  "identifier": "com.abya.desktop-development-tool",
+  "identifier": "com.abya.desktop-development-tool.mcp",
   "build": {
     "beforeDevCommand": "npm run build:cli && npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "ABYA Desktop Development Tool",
+        "title": "ABYA Desktop Development Tool · MCP",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,

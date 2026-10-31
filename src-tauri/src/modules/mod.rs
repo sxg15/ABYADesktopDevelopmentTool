@@ -1,6 +1,7 @@
 pub mod archive_transfer;
 pub mod codex_terminal;
 pub mod desktop_cli;
+pub mod desktop_mcp;
 pub mod development_terminal;
 pub mod game_archives;
 pub mod game_clients;
