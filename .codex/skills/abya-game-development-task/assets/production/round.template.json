@@ -1,6 +1,6 @@
 {
   "schema": "abya.game-development-round/v1",
-  "workflowVersion": "2.10.0",
+  "workflowVersion": "2.11.0",
   "taskId": null,
   "number": null,
   "status": "not-started",

@@ -23,6 +23,16 @@ pub(super) fn record(r: &mut ProductionRecord, root: &Path, data: &Value) -> App
         }
     }
     let hash = format!("{:x}", Sha256::digest(serde_json::to_vec(data)?));
+    let required: std::collections::BTreeSet<String> = data["checks"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|c| c["id"].as_str())
+        .filter(|id| {
+            !super::acceptance_contract::enabled(r) || super::acceptance_contract::required(r, id)
+        })
+        .map(str::to_owned)
+        .collect();
     if let Some(old) = r.workbench.execution.validation_runs.get(id) {
         return if old["inputHash"] == hash {
             Ok(())
@@ -78,6 +88,9 @@ pub(super) fn record(r: &mut ProductionRecord, root: &Path, data: &Value) -> App
     {
         for c in checks {
             if let Some(id) = c["id"].as_str() {
+                if !required.contains(id) {
+                    continue;
+                }
                 if c["status"] == "failed" || c["status"] == "blocked" {
                     u.validation_failures.insert(id.into());
                 } else {

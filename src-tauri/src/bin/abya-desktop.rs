@@ -43,6 +43,8 @@ fn command(group: &str, action: &str) -> Option<&'static str> {
         ("runtime", "status") => "game_runtime_get_state",
         ("runtime", "wait") => "game_instance_wait_for_cli",
         ("runtime", "list") => "game_runtime_list_tools",
+        ("runtime", "qualify-player") => "game_runtime_qualify_player",
+        ("runtime", "baseline") => "development_production_runtime_baseline",
         ("runtime", "run" | "describe" | "search") => "game_runtime_call_tool",
         ("desktop", "info") => "desktop_get_capabilities",
         ("archive", "list") => "game_archive_list",

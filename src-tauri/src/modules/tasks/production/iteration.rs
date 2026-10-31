@@ -5,6 +5,7 @@ pub(super) fn enabled(r: &ProductionRecord) -> bool {
 }
 
 pub(super) fn save_test(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
+    super::scoped_evidence::validate_check(r, data)?;
     if !enabled(r) {
         return Err(AppError::validation(
             "旧任务继续使用固定轮次，须明确升级后使用必要自测。",
@@ -22,16 +23,58 @@ pub(super) fn save_test(r: &mut ProductionRecord, root: &Path, data: &Value) -> 
     if status == "passed" {
         validation::evidence_refs(r, root, &data["evidenceIds"], &version)?;
     }
-    if status == "not-applicable" && (id != "authority" || r.player_mode != "single") {
+    if status == "not-applicable" && !super::acceptance_contract::not_applicable(r, root, data)? {
         return Err(AppError::validation(
             "只有单人任务的多人权限检查可标记不适用。",
         ));
     }
     let mut entry = data.clone();
+    if super::acceptance_contract::enabled(r) {
+        let outcome = data["outcome"].as_str().unwrap_or(match status {
+            "passed" => "passed",
+            "not-applicable" => "not-applicable",
+            "blocked" => "verification-unavailable",
+            _ => "verification-failed",
+        });
+        let consistent = match status {
+            "passed" => outcome == "passed",
+            "not-applicable" => outcome == "not-applicable",
+            "blocked" => ["not-tested", "verification-unavailable"].contains(&outcome),
+            _ => ["verification-failed", "functional-failure"].contains(&outcome),
+        };
+        if !consistent {
+            return Err(AppError::validation("检查状态与实际观察类型不一致。"));
+        }
+        if outcome == "functional-failure" {
+            validation::evidence_refs(r, root, &data["evidenceIds"], &version)?;
+        }
+        entry["outcome"] = json!(outcome);
+    }
     entry["version"] = json!(version);
     entry["cycle"] = json!(r.cycle);
     entry["recordedAt"] = json!(now());
     r.self_tests.push(entry);
+    if super::acceptance_contract::enabled(r)
+        && super::acceptance_contract::required(r, id)
+        && let Some(u) = r
+            .workbench
+            .execution
+            .units
+            .iter_mut()
+            .find(|u| Some(&u.id) == r.workbench.execution.active_unit_id.as_ref())
+    {
+        if matches!(status, "failed" | "blocked") {
+            u.validation_failures.insert(id.into());
+        } else {
+            u.validation_failures.remove(id);
+        }
+        u.validation_outcome = if u.validation_failures.is_empty() {
+            "passed"
+        } else {
+            "failed"
+        }
+        .into();
+    }
     Ok(())
 }
 
@@ -61,10 +104,31 @@ pub(super) fn ready(r: &ProductionRecord, root: &Path) -> AppResult<()> {
         }
         validation::evidence_refs(r, root, &check["evidenceIds"], version)?;
     }
+    if super::acceptance_contract::enabled(r) {
+        for (id, _) in r
+            .workbench
+            .execution
+            .acceptance_contract
+            .iter()
+            .filter(|(id, _)| super::acceptance_contract::required(r, id))
+        {
+            let check = r
+                .self_tests
+                .iter()
+                .rev()
+                .find(|t| t["id"] == *id && t["version"] == version && t["cycle"] == r.cycle)
+                .ok_or_else(|| AppError::validation(format!("缺少需求关联检查：{id}")))?;
+            if check["status"] != "passed" {
+                return Err(AppError::validation(format!("需求关联检查未通过：{id}")));
+            }
+            validation::evidence_refs(r, root, &check["evidenceIds"], version)?;
+        }
+    }
     Ok(())
 }
 
 pub(super) fn reuse_evidence(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
+    super::scoped_evidence::verify_reuse(r, data)?;
     if !enabled(r) {
         return Err(AppError::validation("旧轮次证据不允许以复用代替本轮执行。"));
     }
@@ -87,6 +151,12 @@ pub(super) fn reuse_evidence(r: &mut ProductionRecord, root: &Path, data: &Value
         return Err(AppError::validation("来源证据未审阅、过期或已变化。"));
     }
     let mut e = old.clone();
+    if let Some(binding) = r.workbench.execution.evidence_bindings.get(source).cloned() {
+        r.workbench
+            .execution
+            .evidence_bindings
+            .insert(id.into(), binding);
+    }
     e.id = id.into();
     e.version = validation::version(r)?.into();
     e.recorded_at = now();

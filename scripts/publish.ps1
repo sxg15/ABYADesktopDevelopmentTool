@@ -5,10 +5,11 @@ $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 if (@($Staging, $WorkflowStaging, $RecoveryStaging, $ContinuationStaging, $UiStaging, $Validation, $RecorderStaging).Where({ $_ }).Count -gt 1) { throw 'Choose only one staging destination.' }
 $publishName = if ($RecorderStaging) { "Publish-Staging-Recorder" } elseif ($Validation) { "Publish-Staging-Validation" } elseif ($UiStaging) { "Publish-Staging-UI" } elseif ($ContinuationStaging) { "Publish-Staging-Continuation" } elseif ($RecoveryStaging) { "Publish-Staging-Recovery" } elseif ($WorkflowStaging) { "Publish-Staging-Workflow" } elseif ($Staging) { "Publish-Staging-Bot" } else { "Publish" }
+if ($publishName -eq 'Publish') { throw 'Workflow 2.11 requires an isolated candidate and native game pilots. Build with -WorkflowStaging, then promote the same validated candidate with scripts/promote-workflow.ps1.' }
 $publish = Join-Path $root $publishName
 $running = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith("$publish\", [StringComparison]::OrdinalIgnoreCase) }
 if ($running) { throw "Close the running package before replacing it: $publish" }
-$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } elseif ($UiStaging) { 'guidance-action-panel-20261012' } else { 'lua-progress-budget-20261030' }
+$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } elseif ($UiStaging) { 'guidance-action-panel-20261012' } else { 'delivery-first-20261030' }
 $env:ABYA_BUILD_UTC = [DateTime]::UtcNow.ToString('O')
 $packageVersion = (Get-Content -Raw -LiteralPath (Join-Path $root 'package.json') | ConvertFrom-Json).version
 $llmDirectories = @(".codex")
@@ -159,6 +160,7 @@ try {
     finally { $cliAlgorithm.Dispose() }
 } finally { $cliStream.Dispose() }
 $manifest = [ordered]@{
+    sourceFingerprint = (& (Join-Path $runtime 'node.exe') (Join-Path $root 'scripts/source-fingerprint.mjs')).Trim()
     product = "ABYA Desktop Development Tool"
     version = $packageVersion
     workflowVersion = (Get-Content (Join-Path $root ".codex/skills/abya-game-development-task/assets/production/workflow-policy.json") -Raw -Encoding UTF8 | ConvertFrom-Json).workflowVersion

@@ -18,6 +18,10 @@ Own fixed Node/script execution, PID mapping, stable conversation sessions, boun
 
 ## Public Contracts
 
+Workflow 2.11 checkpoint previews launch isolated verified snapshots, including a retained older candidate, without mutating formal acceptance or the current candidate. Launch failure cleans up only instances created by that request. Player qualification reads reports directly from the owned instance, rejects incomplete/empty/failed reports and validates full build fingerprints; discovered tools are separate from verified checks. Baselines never exempt current-game acceptance.
+
+New-policy agent launches use a task-owned authoring data root and enforce the task's captured Player pin. Existing policies keep their original launch behavior. The bridge does not let a game agent replace its engine simply by supplying another executable path; explicit APP-controlled platform maintenance is separate.
+
 RuntimeBridgeService reads live managed PID from InstanceService and the task workspace from TaskService. Each CLI invocation passes --instance, --json and an operation-owned output directory. ABYA_CLI_DESKTOP_INSTANCE_ID must match the host status. No endpoints or tokens are cached by this module. JSON arguments travel through stdin without shell interpretation. Images are written under artifacts/runtime/<instance>/<operation>. Output is capped at 16 MiB, stderr is drained with a 64 KiB cap. Writes are never automatically retried. Cancellation sends the game cancel request before terminating a lingering child and returns outcome_unknown. External and stopped instances are rejected. Readiness reports CLI connectivity; the task Skill must additionally verify archive/level and required capability availability.
 
 ## Dependencies

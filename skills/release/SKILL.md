@@ -2,13 +2,7 @@
 
 ## Current scope
 
-Workflow 2.10 separates retained elapsed time from finite evidence-backed execution credits. progressBudgetVersion=1 grants 20-minute slices (at most six, at most two source-only) for new saved Lua/level/UI content, current reviewed checks, owned validation or resolved dependencies; timestamps and prose do not qualify. One 15-minute settlement and a three-minute tool-free checkpoint grace preserve unfinished output. Explicit upgrade gives budget-exhausted original units one audited settlement, retaining IDs, approvals, elapsed time and uncertain-write reconciliation. Diagnostic families share credits for the same issue set, not every attached issue independently; a focus issue cannot exhaust an unrelated menu fix. Autonomous Lua dispatch ignores the cosmetic blocked projection, while human approvals and user pause remain gates.
-
-Workflow 2.9 enforces reviewHandoffVersion=1: unresolved ordinary issues, missing/failed checks and unfinished work stay in Lua with bounded automatic handoff-repair. Only confirmed abya-source diagnosis bound to current Player/evidence may cross; blocked checks link blockedByIssueIds. Core package does not waive this gate. Playtest shows cross-stage source-defect cards and selected diagnostic ZIP; upgrades preserve original IDs, approvals, budgets and packages and return premature legacy handoffs to Lua without starting execution.
-
-Workflow 2.8 adds a scoped completion loop: current-goal dependency closure, evidence-based wake signals, audited work revision, automatic repair plans, per-output finalization and honest repairRequired/externalBlocked outcomes. No candidate completion without a hash-bound playable ZIP and current lua/input/core-loop/save-reload evidence. Fixture validation remains separate. Upgrade preserves budgets, IDs and approvals; explicit resume retains the original goal and cannot replay uncertain writes. Package compression runs outside the database mutex.
-
-Workflow 2.7 release validates design-without-Player, retained human/material gates, isolated authorization expiry/revocation, runtime contract diagnostics, migration and prior transport regressions. Native/model evidence is distinguished from synthetic fixtures. A complete-game 3–4 hour result requires measured game pilots; unit tests do not prove it. Match the Player contract to its actual build before distributing that Player. Preserve the official package until candidate validation and no running destination process.
+Workflow 2.11 is a candidate until representative native game pilots pass. Build an isolated staging package; component tests, rule-understanding probes and externally hand-repaired games do not establish autonomous workflow success. Record first-playable time, active execution, verification, recovery, human waiting and failures. Preserve the live package and pinned tasks until promotion is supported by the validated candidate and matching pilot artifacts. See [release criteria](../../docs/EXECUTION_REFACTOR_20261030.md).
 
 ## Purpose
 
@@ -49,10 +43,10 @@ The initial v24.11.1 license comes from nodejs/node tag v24.11.1, file LICENSE.
 
 publish.ps1 -Validation builds Publish-Staging-Validation without replacing an active package.
 Historical staging switches remain mutually exclusive development destinations. Every build embeds
-version from the package (currently 0.3.0), release stage-workspace-20261009 and UTC build time; manifest workflow version is
-read from the UTF-8 policy (1.3.0). Live processes under the destination block replacement.
-After isolated validation, promote-validated.ps1 verifies APP/CLI hashes, stages a complete copy,
-backs up Publish, atomically renames the replacement and creates ABYA 开发工具.lnk through Explorer.
+the current package version, release label and UTC build time; manifest workflow version is
+read from the UTF-8 policy. Live processes under the destination block replacement.
+For workflow 2.11 use promote-workflow.ps1 after native validation; older
+promote-validated.ps1 is a historical procedure, not the current release entry.
 Keep release backups; promotion never copies or replaces user databases. The stable user entry is
 the shortcut/Publish, not a staging directory. Real-model tests use isolated data/workspaces and
 ABYA_TEST_MODE=1. Preserve pinned user Skills unless explicitly upgrading through TaskService with
@@ -74,8 +68,11 @@ CLI exit codes and provider resource parity. These synthetic checker tests are
 not Bot gameplay or real Player acceptance evidence.
 `scripts/publish.ps1 -Staging` runs the same checks/build/copy/manifest pipeline
 into the fixed repository-local Publish-Staging-Bot directory, allowing package
-validation while the normal Publish executable is in use. The default remains
-Publish; both destinations retain the same resolved-path deletion boundary.
+validation while the normal Publish executable is in use. Workflow 2.11 uses
+`-WorkflowStaging` followed by `promote-workflow.ps1 -PilotReport <report>`;
+direct replacement of Publish is refused. Promotion verifies the complete candidate,
+runtime source fingerprint, repeated native pilots and that the formal APP is closed,
+then keeps the previous package in a rollback directory. No rebuild occurs after testing.
 
 The Codex root also ship `abya-import-task-template/SKILL.md` and its
 standalone Node `scripts/import-template.mjs`. Import accepts an original Skill

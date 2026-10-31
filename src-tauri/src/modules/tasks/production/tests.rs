@@ -1,7 +1,9 @@
 mod autonomy_tests;
 mod completion_tests;
+mod execution_loop_tests;
 mod progress_budget_tests;
 mod review_handoff_tests;
+mod validation_impact_tests;
 use super::*;
 mod art_design_tests;
 mod art_library_tests;
@@ -1133,7 +1135,10 @@ fn explicit_upgrade_preserves_approvals_and_round_history_without_inventing_self
     let old = f.record();
     let view = f.service.production_upgrade(&f.id, old.revision).unwrap();
     let r = view.record.unwrap();
-    assert_eq!(r.workflow_version, "2.10.0");
+    assert_eq!(
+        r.workflow_version,
+        policy()["workflowVersion"].as_str().unwrap()
+    );
     assert_eq!(r.cycle, old.cycle);
     assert_eq!(r.approvals.len(), old.approvals.len());
     assert_eq!(r.documents["plan"].sha256, old.documents["plan"].sha256);

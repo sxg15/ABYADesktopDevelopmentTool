@@ -35,6 +35,8 @@ impl TaskService {
             "workUnitCount":ledger.units.iter().filter(|u|u.cycle==r.cycle&&u.scope_hash==scope_hash).count(),
             "workUnits":current_units, "workUnitsTruncated":false, "verificationPackage":ledger.verification_package,
             "reviewHandoffDeficits":super::review_handoff::deficits(&r),
+            "executionBudget":if super::execution_loop::enabled(&r){json!({"mode":"shared-goal","usedMs":super::execution_loop::goal_used(&r,r.workbench.active_goal_id.as_deref().unwrap_or("")),"limitMs":super::execution_loop::goal_limit(&r),"settlementMinutes":super::autonomy_budget::limit(&r,"settlementMinutes",15)})}else{Value::Null},
+            "technicalQueue":ledger.technical_queue,"acceptanceContract":ledger.acceptance_contract,"runtimeBaselines":ledger.runtime_baselines,
             "issueCount":r.issues.iter().filter(|i|i["status"]!="resolved").count(),
             "issues":r.issues.iter().filter(|i|i["status"]!="resolved").take(16).map(|i|json!({"id":i["id"],"status":i["status"],"repairTarget":i["repairTarget"],"description":i["description"].as_str().unwrap_or("").chars().take(300).collect::<String>(),"handling":{"mode":i["executionHandling"]["mode"],"reason":i["executionHandling"]["reason"].as_str().unwrap_or("").chars().take(200).collect::<String>(),"impact":i["executionHandling"]["impact"].as_str().unwrap_or("").chars().take(200).collect::<String>()}})).collect::<Vec<_>>(),
             "pendingQuestions":r.question_groups.iter().filter(|g|g.status=="pending").map(|g|&g.id).collect::<Vec<_>>(),
@@ -162,10 +164,12 @@ fn finish_available_work(r: &mut ProductionRecord, root: &Path) -> AppResult<()>
     );
     r.workbench.execution.summary =
         json!({"at":now(),"version":r.current_version,"units":units,"issues":issues});
+    super::execution_loop::settle_queue(r);
     // The scheduler, rather than the model remembering a final tool call, guarantees closure.
     autonomy::conclude(r, root, &json!({"summary":summary}))
 }
 fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResult<()> {
+    let in_place = super::execution_loop::enabled(r);
     if r.workbench.goals.is_empty() {
         super::workbench::observe(r, None);
     }
@@ -173,6 +177,9 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
     let loop_enabled = completion::enabled(r);
     let relevant = completion::relevant(r);
     super::autonomy_budget::account(r);
+    if advance && in_place {
+        super::execution_loop::checkpoint(r);
+    }
     let route_ms = super::autonomy_budget::limit(r, "routeMinutes", 15) * 60_000;
     let attempt_limit = super::autonomy_budget::limit(r, "routeAttemptLimit", 2) as u32;
     let exhausted: Vec<_> = r
@@ -228,6 +235,7 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         });
     }
     if advance
+        && !in_place
         && let Some(unit) = ledger
             .units
             .iter_mut()
@@ -301,6 +309,7 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         completion::ensure_repair(r);
         super::review_handoff::ensure_repairs(r);
     }
+    super::execution_loop::reopen_finalization(r);
     let relevant = completion::relevant(r);
     let sig = completion::signature(r);
     let final_id = if loop_enabled {
@@ -333,6 +342,7 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
             .all(|u| u.status != "running")
         && !ledger.units.iter().any(|u| {
             u.id == final_id
+                || in_place && u.kind == "finalization" && u.goal_id == goal
                 || loop_enabled
                     && u.kind == "finalization"
                     && u.goal_id == goal
@@ -353,6 +363,11 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
         }
         ledger.units.push(WorkUnit {input_signature:sig,kind:"finalization".into(),scope_hash:scope_hash.clone(),id:final_id.clone(),goal_id:r.workbench.active_goal_id.clone().unwrap_or_default(),cycle:r.cycle,
             title:"恢复正式候选、核对实际自测并汇总缺口".into(),routes:vec!["先完成测试夹具清理或通过activate-version恢复已验证的冻结候选；2.8没有候选时，优先完成真实输入及核心循环接入，捕获candidate并核对lua/input/core-loop/save-reload证据，调用build-verification-package。需要继续实现时登记具体工作项后报告本项暂缓，由APP继续派发；不得仅写缺口清单结束。核对已完成的真实回执并登记版本适用的必要自测，禁止重放已完成测试。满足原门槛再complete-stage；缺口如实保留，能完成的版本核对与材料登记不能因其他项暂缓而省略。".into(),"核对已有产出、候选与全部必要自测。2.9只有确证PB源码缺陷可携带进入试玩，普通缺陷及未测项须自动修复；conclude-implementation不会凭核心包放行。不伪造通过。".into()],status:"pending".into(),updated_at:now(),..Default::default()});
+    }
+    if in_place && let Some(finalizer) = ledger.units.iter_mut().find(|u| u.id == final_id) {
+        finalizer.title = "核对已保存成果、必要验收与当前验证包".into();
+        finalizer.routes=vec!["读取当前成果与需求关联检查，只补尚缺的保存、读回和验证包。调用 build-verification-package 保留实际可玩成果；全部正式条件满足再结束阶段，其他情况如实收束并保留技术待补项。不重新审计整个平台，不重复已通过且仍有效的测试。".into()];
+        finalizer.route = 0;
     }
     let next = ledger
         .units

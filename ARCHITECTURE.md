@@ -4,6 +4,13 @@ The application uses capability modules with a one-way dependency flow:
 
 `foundation -> application modules -> Tauri command adapters -> React features`
 
+Workflow 2.11 is opt-in through the pinned inPlaceRecoveryVersion policy. TaskService owns
+same-unit recovery, scoped acceptance/evidence contracts, a shared goal budget, explicit
+technical outcomes and immutable playable-checkpoint previews. RuntimeBridge records
+scope-limited Player baselines from owned-instance native reports; discovered capabilities
+do not imply verified behavior. Codex controls delivery and bounded continuation, while
+APP-only approvals remain unchanged. Existing 2.10 tasks do not migrate on ordinary reads.
+
 Tauri commands are transport adapters. They validate input, call a service, and
 return a DTO. They must not contain SQL, process construction, MCP protocol
 logic, or log parsing.

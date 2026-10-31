@@ -200,7 +200,7 @@ impl TaskService {
         }
         versions::verify(&r.version_details)?;
         let (hash, bytes) = files::hash_file(&path)?;
-        let descriptor = json!({"reportHash":report_hash(&r),"path":relative,"sha256":hash,"bytes":bytes,"version":r.current_version,"cycle":r.cycle,"scopeHash":autonomy::scope(&r),
+        let descriptor = json!({"sourceRevision":r.revision,"reportHash":report_hash(&r),"path":relative,"sha256":hash,"bytes":bytes,"version":r.current_version,"cycle":r.cycle,"scopeHash":autonomy::scope(&r),
             "archiveHash":r.version_details["archiveHash"],"playerBuildHash":r.version_details["playerBuildHash"],"status":"core-verified","createdAt":now()});
         self.production_commit(task, expected, |record| {
             record.workbench.execution.verification_package = descriptor;

@@ -4,6 +4,13 @@ use sha2::{Digest, Sha256};
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ExecutionLedger {
+    pub stage_recovery: BTreeMap<String, Value>,
+    pub goal_budget_epochs: BTreeMap<String, i64>,
+    pub evidence_bindings: BTreeMap<String, Value>,
+    pub preview_sessions: Vec<Value>,
+    pub technical_queue: BTreeMap<String, Value>,
+    pub acceptance_contract: BTreeMap<String, Value>,
+    pub runtime_baselines: BTreeMap<String, Value>,
     pub condition_signals: BTreeMap<String, Value>,
     pub verification_package: Value,
     pub preflight: super::preflight_recovery::PreflightRecovery,
@@ -25,6 +32,12 @@ pub struct ExecutionLedger {
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WorkUnit {
+    pub unreported_turns: u32,
+    pub recovery_rounds: u32,
+    pub recovery_history: Vec<Value>,
+    pub recovery_strategy: String,
+    pub stop_reason: String,
+    pub observation: Value,
     pub progress_seen: std::collections::BTreeSet<String>,
     pub budget_grants: Vec<Value>,
     pub execution_limit_ms: i64,
@@ -366,6 +379,9 @@ fn save_unit(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
     Ok(())
 }
 fn report_unit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
+    if super::execution_loop::enabled(r) {
+        super::execution_loop::validate_observation(data)?;
+    }
     let id = mutation::text(data, "id")?;
     let status = mutation::text(data, "status")?;
     let reason = mutation::text(data, "reason")?;
@@ -455,6 +471,8 @@ fn report_unit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult
         unit.status = "deferred".into();
     }
     unit.reason = reason.into();
+    unit.unreported_turns = 0;
+    unit.observation = data.get("observation").cloned().unwrap_or_default();
     unit.result_paths = paths;
     unit.result_hash = format!("{:x}", digest.finalize());
     unit.condition_hash = conditions;
@@ -471,6 +489,11 @@ fn report_unit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult
     }
     let actual_status = unit.status.clone();
     event(ledger, &actual_status, Some(id), reason);
+    if actual_status == "succeeded" {
+        super::execution_loop::complete(r, id);
+    } else {
+        super::execution_loop::recover(r, id);
+    }
     Ok(())
 }
 fn handling(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {

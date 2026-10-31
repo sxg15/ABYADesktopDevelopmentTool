@@ -2,15 +2,7 @@
 
 ## Current scope
 
-Workflow 2.10 separates retained elapsed time from finite evidence-backed execution credits. progressBudgetVersion=1 grants 20-minute slices (at most six, at most two source-only) for new saved Lua/level/UI content, current reviewed checks, owned validation or resolved dependencies; timestamps and prose do not qualify. One 15-minute settlement and a three-minute tool-free checkpoint grace preserve unfinished output. Explicit upgrade gives budget-exhausted original units one audited settlement, retaining IDs, approvals, elapsed time and uncertain-write reconciliation. Diagnostic families share credits for the same issue set, not every attached issue independently; a focus issue cannot exhaust an unrelated menu fix. Autonomous Lua dispatch ignores the cosmetic blocked projection, while human approvals and user pause remain gates.
-
-Workflow 2.9 enforces reviewHandoffVersion=1: unresolved ordinary issues, missing/failed checks and unfinished work stay in Lua with bounded automatic handoff-repair. Only confirmed abya-source diagnosis bound to current Player/evidence may cross; blocked checks link blockedByIssueIds. Core package does not waive this gate. Playtest shows cross-stage source-defect cards and selected diagnostic ZIP; upgrades preserve original IDs, approvals, budgets and packages and return premature legacy handoffs to Lua without starting execution.
-
-Workflow 2.8 adds a scoped completion loop: current-goal dependency closure, evidence-based wake signals, audited work revision, automatic repair plans, per-output finalization and honest repairRequired/externalBlocked outcomes. No candidate completion without a hash-bound playable ZIP and current lua/input/core-loop/save-reload evidence. Fixture validation remains separate. Upgrade preserves budgets, IDs and approvals; explicit resume retains the original goal and cannot replay uncertain writes. Package compression runs outside the database mutex.
-
-Workflow 2.7: stage_contracts owns effective issue gates for resources/plan. Agent prose cannot create a design gate; actual questions, planner feedback, material hashes and approval validators remain authoritative. category/owningStage and requested blocked operations retain diagnosis history. Explicit compatible upgrade preserves approvals/IDs/history and corrects obsolete technical blocking disposition without marking an issue fixed.
-APP-only prototype authorization clones a saved archive to artifacts/prototypes, binds stage/cycle/requirement-plan scope and expires after 30 minutes. Revocation affects future dispatch; no agent grant operation exists. Authoring requires approved requirements/plan or that grant. No policy record and pinned older policies retain compatibility. Fixture/candidate separation and honest implementation convergence remain unchanged.
-UI hides programmer export when the filtered programmer issue set is empty. Prototype controls are optional and disclose saved-source copying, expiry and independence from approvals.
+Workflow 2.11 uses one work unit for bounded recovery, preserves original IDs and cumulative time, separates observation from diagnosis, and shares a 180-minute Lua-goal allocation plus a 15-minute finalization window. Explicit migration records a new allocation epoch without erasing history; ordinary retries do not reset it. Additional checks bind approved text or real integrity defects; optional failures do not expand gates. Scoped evidence requires unchanged build/dependencies and rejects unknown impact. Playable previews use verified historical snapshots in isolated copies, never acceptance. See [implementation and release criteria](../../docs/EXECUTION_REFACTOR_20261030.md). Pinned earlier policies retain their behavior.
 
 ## Purpose
 
@@ -22,6 +14,10 @@ Owns task CRUD, task status transitions, task workspace allocation, and
 task-to-instance history relationships.
 
 ## Public Contracts
+
+Model-reported permission causes do not themselves stop 2.11 recovery; native approval and authorization controls remain authoritative. A dependency deferral waits only for an actual unfinished dependency, never for a label on a ready work item. Unknown write outcomes remain unreplayed and explicitly reconciled.
+
+The 2.11 impact mapper preserves full file fingerprints and only recognizes PBUI v1 Layout-only changes and parsed archive LastEditTime changes. Binding/code/unknown-schema changes are never ignored. Layout changes require fresh input/visual/save-reload checks. Explicit dependency projections may support logic evidence reuse, but cannot cross build/scope changes, required retest categories or check identities.
 
 Client retention (2026-10-16): pinned_player_paths reads current versionDetails.playerSource
 from all persisted task production records, including completed/archived tasks. It performs

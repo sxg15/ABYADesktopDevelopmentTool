@@ -14,7 +14,7 @@ pub struct AcceptanceSpec {
     pub require_ui: bool,
 }
 
-fn launch_path(value: String) -> String {
+pub(super) fn launch_path(value: String) -> String {
     if let Some(path) = value.strip_prefix(r"\\?\UNC\") {
         return format!(r"\\{path}");
     }

@@ -321,6 +321,17 @@ async fn get_task_acceptance(
         .map_err(foundation::AppError::internal)?
 }
 
+#[tauri::command]
+async fn start_task_preview(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    let bridge = state.runtime_bridge.clone();
+    tauri::async_runtime::spawn_blocking(move || bridge.start_preview(&task_id))
+        .await
+        .map_err(foundation::AppError::internal)?
+}
+
 #[tauri::command(async)]
 fn read_production_media(
     task_id: String,
@@ -1280,6 +1291,7 @@ pub fn run() {
             start_production_prototype,
             resume_workbench_goal,
             start_task_acceptance,
+            start_task_preview,
             get_task_acceptance,
             read_production_media,
             submit_production_feedback,

@@ -36,6 +36,7 @@ pub(super) fn apply(
         return Err(AppError::validation("data 必须为对象。"));
     }
     match operation {
+        "register-acceptance-check" => super::acceptance_contract::register(r, root, data),
         "record-validation-run" => super::validation_runs::record(r, root, data),
         "record-work-signal" => super::completion::record_signal(r, root, data),
         "save-work-unit"
@@ -375,6 +376,7 @@ pub(super) fn set_version(r: &mut ProductionRecord, root: &Path, data: &Value) -
 }
 
 fn evidence(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
+    super::scoped_evidence::bind(r, data)?;
     let mut version = r
         .current_version
         .clone()
@@ -474,11 +476,17 @@ fn evidence(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
 }
 
 fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
+    super::acceptance_contract::validate_platform(r, data)?;
     if let Some(status) = data.get("diagnosisStatus") {
-        if status != "suspected" && status != "confirmed" {
+        let excluded = super::execution_loop::enabled(r) && status == "excluded";
+        if status != "suspected" && status != "confirmed" && !excluded {
             return Err(AppError::validation(
                 "diagnosisStatus 必须为 suspected 或 confirmed。",
             ));
+        }
+        if excluded {
+            text(&data["diagnosis"], "exclusionReason")?;
+            validation::evidence_refs(r, root, &data["evidenceIds"], validation::version(r)?)?;
         }
         if status == "confirmed" {
             for key in ["reproduction", "comparison", "rootCause"] {

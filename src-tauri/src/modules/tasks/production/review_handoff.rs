@@ -76,9 +76,23 @@ pub(super) fn deficits(r: &ProductionRecord) -> Vec<String> {
     checks.extend(
         latest
             .iter()
+            .filter(|(id, _)| {
+                !super::acceptance_contract::enabled(r)
+                    || super::acceptance_contract::required(r, id)
+            })
             .filter(|(_, t)| t["status"] == "failed" || t["status"] == "blocked")
             .map(|(id, _)| *id),
     );
+    if super::acceptance_contract::enabled(r) {
+        checks.extend(
+            r.workbench
+                .execution
+                .acceptance_contract
+                .iter()
+                .filter(|(id, _)| super::acceptance_contract::required(r, id))
+                .map(|(id, _)| id.as_str()),
+        );
+    }
     for id in checks {
         let passed = latest.get(id).is_some_and(|t| {
             t["status"] == "passed"
@@ -143,6 +157,9 @@ pub(super) fn deficits(r: &ProductionRecord) -> Vec<String> {
 
 /// Add one bounded repair obligation per material condition, never per summary rewrite.
 pub(super) fn ensure_repairs(r: &mut ProductionRecord) {
+    if super::execution_loop::enabled(r) {
+        return;
+    }
     if !enabled(r) {
         return;
     }

@@ -1077,7 +1077,16 @@ fn repeated_progress_and_draft_only_changes_do_not_create_endless_turns() {
     f.service
         .auto_complete_locked(&f.task, &f.conversation, &turn, true)
         .unwrap();
-    assert_eq!(f.calls.lock().len(), 1);
+    assert_eq!(f.calls.lock().len(), 2);
+    let last = f.turns.lock().last().unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    finish_auto_fixture(&f, &last, true);
+    f.service
+        .auto_complete_locked(&f.task, &f.conversation, &last, true)
+        .unwrap();
+    assert_eq!(f.calls.lock().len(), 2);
     let task = f.service.tasks.get(&f.task).unwrap();
     let q = continuation_queue::read(&conversation_directory(
         Path::new(&task.workspace_path),
@@ -1085,7 +1094,19 @@ fn repeated_progress_and_draft_only_changes_do_not_create_endless_turns() {
     ))
     .unwrap()
     .unwrap();
-    assert_eq!(q.status, "needsResume");
+    assert_eq!(q.status, "settled");
+    assert_eq!(
+        f.service
+            .tasks
+            .production_get(&f.task)
+            .unwrap()
+            .record
+            .unwrap()
+            .workbench
+            .execution
+            .state,
+        "technicalReview"
+    );
     assert_eq!(
         f.service
             .continue_after_revision(&f.task, &f.conversation, None)
@@ -1093,7 +1114,7 @@ fn repeated_progress_and_draft_only_changes_do_not_create_endless_turns() {
             .status,
         S::Started
     );
-    assert_eq!(f.calls.lock().len(), 2);
+    assert_eq!(f.calls.lock().len(), 3);
 }
 #[test]
 fn all_stage_types_share_automatic_rules_and_human_waits_remain_gates() {

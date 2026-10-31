@@ -1,5 +1,14 @@
 # 桌面 CLI 命令契约
 
+## 执行契约 2.11
+
+- `production update` 新增 `register-acceptance-check`：id、expected、basis、required；必要检查引用批准文档 quote 或实际缺陷 issueId，可选优化不扩大门槛。
+- `report-work-unit` 的 observation 区分实际观察与暂定归因；普通失败沿原 ID 自动恢复，不派生修复规划链。
+- `runtime qualify-player` 输入 taskId、instanceId、testIds，后端读取真实原生报告及完整构建指纹，保存限定范围的共享基线；不接受调用者填写通过结果或构建哈希。
+- `runtime baseline` 读取与任务固定或 APP 已选 Player 实际指纹匹配的基线，无基线返回空，不诊断平台缺陷。
+- 已固定 Player 的新策略任务不能由 agent 随意换包；明确维护和升级仍由 APP 用户控制。新任务的编辑数据使用独立目录。
+- 可玩检查点预览是 APP 动作，与正式试玩/验收分开；CLI 没有人工批准入口。
+
 ## 阶段契约（2.7）
 
 新任务启用 stageContractsVersion=1；旧任务保持固定策略，APP 显式升级时保留批准、成果及历史。

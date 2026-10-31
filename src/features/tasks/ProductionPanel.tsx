@@ -8,7 +8,7 @@ import {
   type IntakeQuestionGroup,
 } from "../../shared/production";
 import { errorMessage } from "../../shared/api";
-import { productionText, stageName, statusName } from "./productionText";
+import { productionText, stageName, statusName, testOutcomeName } from "./productionText";
 import "./production.css";
 import { ProductionTiming } from "./ProductionTiming";
 import { AcceptanceLauncher } from "./AcceptanceLauncher";
@@ -757,7 +757,7 @@ export function ProductionPanel({
           {["plan", "review", "delivery"].includes(stage) && <FeedbackPanel key={`feedback:${taskId}`} taskId={taskId} record={{...r,artifacts:view.artifacts ?? r.artifacts}} active={active} en={en}
             actions={view.actions?.feedback} recheckActions={view.actions?.recheck} onDismiss={() => setVisualFeedback(undefined)} selectedArtifact={visualFeedback} onUpdated={setView} onContinue={async (message, revision) => onContinue?.(message, undefined, revision)} />}
           {stage === "review" && modern && <section className="production-card"><h4>{en ? "Required checks" : "当前版本必要自测"}</h4>
-            {(r.selfTests ?? []).filter(c => c.version === r.currentVersion).map((c, i) => <p key={i}>{c.id} · {statusName(c.status, locale)} · {c.observations}</p>)}
+            {(r.selfTests ?? []).filter(c => c.version === r.currentVersion).map((c, i) => <p key={i}>{c.id} · {testOutcomeName(c.outcome,c.status,locale)} · {c.observations}</p>)}
             <p>{en ? "Play, give feedback, and accept the final candidate when satisfied. There is no fixed round count." : "现在可以试玩并反馈；修改后复验，满意后确认交付。没有固定迭代轮数。"}</p></section>}
           {stage === "review" && (!modern || r.rounds.length > 0) && (
             <section className="production-card">

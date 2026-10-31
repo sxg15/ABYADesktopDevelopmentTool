@@ -226,6 +226,13 @@ impl CodexTerminalService {
         } else if production
             .record
             .as_ref()
+            .is_some_and(|r| r.workbench.execution.state == "technicalReview")
+            && continuation_queue::waiting(Some(production)).is_none()
+        {
+            "technicalReview"
+        } else if production
+            .record
+            .as_ref()
             .is_some_and(|r| r.workbench.execution.state == "repairRequired")
         {
             "repairRequired"
