@@ -63,3 +63,21 @@ The interrupted PB build completed; focused Unity validation passed 56 tests, in
 MCP transport, capability access and focus parity. Lua parity/AOT checks passed with
 31 unrelated historical planned mappings. Windows launcher verification passed nine
 package tests. Final MCP gameplay pilots remain pending; no release promotion occurred.
+
+APP source commit: `01ab11a` (pushed to origin/MCP). PB scoped source changeset:
+`12028` on `/MCP-AI-App-20261031`. Unrelated PB import/build noise was excluded.
+Final candidate executable SHA-256:
+`ec0b016daaa2ec811bb9c1ccbfc3fb5ee7e7f55addc8a700d712a2bb1ae9ee70`.
+Final source fingerprint:
+`e7793fb5d1bd10da299b6cca2a4c721188f76f5ac452fd7f48f1acea1bec2d92`.
+528 candidate runtime files verified. Final Player smoke passed again after CLI
+server removal. Native client disconnect/timeout and candidate invalid-argument/stale
+revision probes passed; these component probes are not gameplay completion.
+
+Fresh native pilot root: `C:/ABYA-MCP-Pilot-20261102`.
+Fish task: `5449bf95-63e5-4cbf-b43a-dec40ffdf0bd`.
+Native conversation: `01a19b3d-45a4-79a2-b94d-6f9a0b189582`.
+The pilot uses fixed original gameplay/art input and the independent MCP Player,
+with all game writes delegated to the native APP workflow. It has not yet qualified
+for release. Resume by reading `runs/fish-1/run.json` and the current APP state;
+never recreate the task or overwrite approved artifacts to force a passing result.
