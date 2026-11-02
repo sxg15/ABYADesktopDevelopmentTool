@@ -2,7 +2,13 @@
 
 ## Current scope
 
-Workflow 2.11 is a candidate until representative native game pilots pass. Build an isolated staging package; component tests, rule-understanding probes and externally hand-repaired games do not establish autonomous workflow success. Record first-playable time, active execution, verification, recovery, human waiting and failures. Preserve the live package and pinned tasks until promotion is supported by the validated candidate and matching pilot artifacts. See [release criteria](../../docs/EXECUTION_REFACTOR_20261030.md).
+2026-11-02 用户在本对话明确改为“可以先发布一个新的版本”，授权先发布本次已完成专项验证的完整包。
+该次授权仅对应 APP SHA-256 `16e1cda59c727e6209a849e5ac3bac9a6ca092fcce93f65dc6e8221413880e28`
+及 inventory SHA-256 `12b01884941ac8e297ae1982cd782e19719be1c3a1a4bf8fa724dfa3f830e135`。
+此包已先行进入正式 Publish，旧版保留于 logs/publish-backups；六次完整原生试跑继续，不能记为已通过。
+这是一项有记录的用户授权例外，不改变标准 promote-workflow.ps1 的完整试跑门槛，也不授权后续包自动豁免。
+
+Standard workflow qualification requires representative native game pilots. Component tests, rule-understanding probes and externally hand-repaired games do not establish autonomous workflow success. Record first-playable time, active execution, verification, recovery, human waiting and failures. Except for the specific user-authorized release above, preserve the live package and pinned tasks until promotion is supported by the validated candidate and matching pilot artifacts. See [release criteria](../../docs/EXECUTION_REFACTOR_20261030.md).
 
 ## Purpose
 
