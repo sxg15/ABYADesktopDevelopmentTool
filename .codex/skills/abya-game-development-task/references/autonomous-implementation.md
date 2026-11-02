@@ -1,6 +1,6 @@
 # 自主执行契约（2.11）
 
-先看 production current 的当前策略。未启用 inPlaceRecoveryVersion=1 的固定旧任务按 [旧执行协议](legacy-execution-2.10.md)，不混用恢复规则。
+先通过 development_production_current 核对当前 MCP 策略。旧 CLI 任务须先复制工作区并显式迁移，不自动接管旧任务或加载 CLI 执行协议。
 
 ## 交付结果
 
@@ -52,9 +52,9 @@ save-self-test 的 outcome 分别记录 not-tested / verification-unavailable / 
 
 ## 工具与证据
 
-使用任务托管 CLI/实例，按实际 schema 调用。只读可有界重试，写入保留稳定 request ID。
+使用任务托管 MCP/实例，按实际 schema 调用。只读可有界重试，写入保留稳定 request ID。
 同对象、版本、环境和检查目的的有效结果复用。先读已有回执，只补未覆盖部分，不重复全量查询或整局测试。
-使用 [运行测试执行器](runtime-scenarios.md) 管理输入、等待、证据和失败分类，不为每个游戏重新搭建 CLI/轮询框架。
+使用 [运行测试执行器](runtime-scenarios.md) 管理输入、等待、证据和失败分类，不为每个游戏重新搭建 工具传输/轮询框架。
 Player 基线只证明列明且实际验证的能力，不证明任意玩法无缺陷，也不免除本游戏验证。
 candidate 与 fixture 分开，证据绑定实际构建、存档、运行和批准范围。接口细节按需读取 [任务资料](production-records.md)。
 

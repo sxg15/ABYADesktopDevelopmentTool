@@ -1,5 +1,7 @@
 # Game Connections Skill
 
+MCP edition: runtime readiness and endpoint naming use MCP; instance ownership and archive/log channels remain separate from the tool protocol.
+
 ## Settings fixture compatibility (2026-10-14)
 
 Gateway tests construct AppSettings with the default local game-client selection. The
@@ -43,7 +45,7 @@ then payload. A session must advertise `archive-transfer-v1`; managed and
 external sessions may both use this capability.
 
 The LAN gateway intentionally has no authentication, encryption, pairing,
-token, or approval. Desktop CLI remains a separate authenticated loopback-only
+token, or approval. Desktop MCP remains a separate authenticated loopback-only
 server and must never be routed through this gateway.
 
 ## Dependencies

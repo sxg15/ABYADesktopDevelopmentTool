@@ -1,5 +1,12 @@
 # 验证续接与 CLI 长请求（2026-10-26）
 
+## 2026-10-31 — MCP transport migration (qualification pending)
+
+- Wire the APP MCP gateway and per-thread Codex MCP configuration; remove the ABYA command binary, pipe transport and Node CLI tree.
+- Replace runtime subprocess calls with native authenticated MCP, scoped identity checks, cancellation notifications and preserved operation receipts.
+- PB native MCP is isolated in its own Plastic workspace; real Player transport (Lua, catalog, screenshot) and actual Codex MCP discovery/call passed. Full native game qualification is separate.
+- Remove persisted global transport secrets; explicit connection reset revokes owned leases, while ordinary restart retains them. Retired ABYA server configurations are disabled only inside managed task threads.
+
 ## 2026-10-31 — MCP independent branch (in development, not released)
 
 - Preserve the CLI working tree; snapshot its 2.11 candidate into an independent MCP worktree.

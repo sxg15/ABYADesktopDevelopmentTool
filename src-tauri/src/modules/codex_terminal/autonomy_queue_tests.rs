@@ -78,7 +78,7 @@ fn resource_runtime_failure_dispatches_scoped_recovery_without_approving_art() {
         CodexActivityStatus::Failed,
         "Waiting for the game Runtime CLI",
         "",
-        "desktopCli",
+        "desktopMcp",
     );
     save_workflow(&dir, &w, "runtimeFailure").unwrap();
     f.service
@@ -267,7 +267,7 @@ fn semantic_progress_reports_are_not_unfinished_native_tools() {
         CodexActivityStatus::Progress,
         "Progress summary",
         "",
-        "desktopCliReport",
+        "desktopMcpReport",
     );
     workflow.record_activity(
         "reported",
@@ -276,7 +276,7 @@ fn semantic_progress_reports_are_not_unfinished_native_tools() {
         CodexActivityStatus::Started,
         "Declared milestone",
         "",
-        "desktopCliReport",
+        "desktopMcpReport",
     );
     save_workflow(&dir, &workflow, "semanticFixture").unwrap();
     assert!(!auto_progress::pending_tools(&workflow));
@@ -291,7 +291,7 @@ fn semantic_progress_reports_are_not_unfinished_native_tools() {
         CodexActivityStatus::Started,
         "Actual running tool",
         "",
-        "desktopCli",
+        "desktopMcp",
     );
     assert!(auto_progress::pending_tools(&workflow));
 }

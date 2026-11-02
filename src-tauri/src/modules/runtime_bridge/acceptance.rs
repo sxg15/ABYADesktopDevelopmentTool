@@ -100,7 +100,7 @@ impl RuntimeBridgeService {
     }
 
     fn check_instance(&self, id: &str, spec: &AcceptanceSpec, host: bool) -> AppResult<()> {
-        self.wait_for_cli(id, Duration::from_secs(35))
+        self.wait_for_mcp(id, Duration::from_secs(35))
             .map_err(|error| {
                 self.instances
                     .read_launch_report(id)

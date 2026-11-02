@@ -2,9 +2,21 @@
   "modules": [
     {
       "id": "desktop-mcp",
-      "paths": ["src-tauri/src/modules/desktop_mcp/"],
+      "paths": [
+        "src-tauri/src/modules/desktop_mcp/"
+      ],
       "skill": "skills/desktop-mcp/SKILL.md",
-      "dependsOn": ["foundation"]
+      "dependsOn": [
+        "foundation",
+        "development-tasks",
+        "codex-terminal",
+        "game-instances",
+        "game-runtime-bridge",
+        "game-logs",
+        "game-connections",
+        "game-archives",
+        "archive-transfer"
+      ]
     },
     {
       "id": "foundation",
@@ -159,27 +171,6 @@
         "foundation",
         "game-connections",
         "game-instances"
-      ]
-    },
-    {
-      "id": "desktop-cli",
-      "paths": [
-        "src-tauri/src/modules/desktop_cli/",
-        "src/features/settings/",
-        "src-tauri/src/bin/"
-      ],
-      "skill": "skills/desktop-cli/SKILL.md",
-      "dependsOn": [
-        "foundation",
-        "development-tasks",
-        "development-terminal",
-        "codex-terminal",
-        "game-instances",
-        "game-connections",
-        "game-runtime-bridge",
-        "game-logs",
-        "game-archives",
-        "archive-transfer"
       ]
     },
     {

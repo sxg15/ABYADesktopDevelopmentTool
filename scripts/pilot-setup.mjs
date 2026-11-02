@@ -8,12 +8,12 @@ const [action,directory,arg,repeatText='1']=process.argv.slice(2),root=path.reso
 if(action==='init'){
  if(fs.existsSync(root))throw Error('Use a fresh isolated pilot root');
  const player=fs.realpathSync(arg);assert.ok(player.toLowerCase().endsWith('.exe'));
- const data=path.join(root,'Local','ABYA Desktop Development Tool','Data');fs.mkdirSync(data,{recursive:true});
- saveJson(path.join(root,'pilot-root.json'),{schema:'abya.workflow-pilot-root/v1',debugPort:9254,player,createdAt:new Date().toISOString()});
+ const data=path.join(root,'Local','ABYA Desktop Development Tool MCP','Data');fs.mkdirSync(data,{recursive:true});
+ saveJson(path.join(root,'pilot-root.json'),{schema:'abya.workflow-pilot-root/v1',debugPort:9258,player,createdAt:new Date().toISOString()});
  const db=new DatabaseSync(path.join(data,'app.db'));
  db.exec('CREATE TABLE settings(key TEXT PRIMARY KEY,value_json TEXT NOT NULL,updated_at TEXT NOT NULL)');
  const put=db.prepare('INSERT INTO settings VALUES(?,?,?)');
- put.run('application',JSON.stringify({locale:'zh-CN',gameExecutablePath:player,workspaceRootPath:path.join(root,'Workspaces'),desktopCliPort:44061,gameGatewayPort:44062,lanBroadcastEnabled:false}),new Date().toISOString());
+ put.run('application',JSON.stringify({locale:'zh-CN',gameExecutablePath:player,workspaceRootPath:path.join(root,'Workspaces'),desktopMcpPort:47760,gameGatewayPort:47761,lanBroadcastEnabled:false}),new Date().toISOString());
  put.run('taskNotifications',JSON.stringify({enabled:false}),new Date().toISOString());db.close();
  console.log(JSON.stringify({initialized:root,player}));
 }else if(action==='create'){
@@ -30,10 +30,10 @@ if(action==='init'){
   state.appSha256=appHash;state.packageInventorySha256=inventoryHash;
   if(state.specSha256&&state.specSha256!==hashFile(arg))throw Error('Pilot specification changed; keep the existing run and start an independent repetition');
   state.specSha256=hashFile(arg);saveJson(stateFile,state);
-  const title=`2.11 隔离实测 · ${spec.title} · ${repeat}`;
+  const title=`MCP 隔离实测 · ${spec.title} · ${repeat}`;
   if(!state.task){
    const matches=(await api.invoke('list_tasks')).filter(t=>t.title===title);assert.ok(matches.length<=1);
-   state.task=matches[0]??await api.invoke('create_task',{input:{title,description:`这是已授权的工作流原生隔离测试，非用户正式项目。固定规格通过输入附件提供，分别是玩法要求、美术参考和旧方案参考；旧文件中的历史流程/旧版本状态不覆盖当前2.11策略。不要删减玩法范围，不复制已有游戏实现，不访问其他任务存档。可复用 inputs/assets 的合法素材，必须在本任务通过托管CLI实际制作、运行验证与产包。按当前七阶段流程提交成果；需求、美术和计划将在隔离APP按固定规格审查，不自行批准。${spec.description??''}`}});
+   state.task=matches[0]??await api.invoke('create_task',{input:{title,description:`这是已授权的工作流原生隔离测试，非用户正式项目。固定规格通过输入附件提供，分别是玩法要求、美术参考和旧方案参考；旧文件中的历史流程/旧版本状态不覆盖当前2.11策略。不要删减玩法范围，不复制已有游戏实现，不访问其他任务存档。可复用 inputs/assets 的合法素材，必须在本任务通过原生 MCP实际制作、运行验证与产包。按当前七阶段流程提交成果；需求、美术和计划将在隔离APP按固定规格审查，不自行批准。${spec.description??''}`}});
    saveJson(stateFile,state);
   }
   assert.ok(path.resolve(state.task.workspacePath).toLowerCase().startsWith(path.join(root,'Workspaces').toLowerCase()+path.sep));

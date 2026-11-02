@@ -29,7 +29,7 @@ export interface AppSettings {
   gameClient?: import("./gameClients").GameClientSelection;
   workspaceRootPath: string;
   locale: string;
-  desktopCliPort: number;
+  desktopMcpPort: number;
   gameGatewayPort: number;
   preferredAdapterId: string;
   lanBroadcastEnabled: boolean;
@@ -277,7 +277,7 @@ export interface RuntimeBridgeState {
   gameVersion: string;
   platform: string;
   capabilities: string[];
-  cliAvailable: boolean;
+  mcpAvailable: boolean;
   serverName: string;
   serverVersion: string;
   instructions: string;
@@ -347,7 +347,7 @@ export interface RuntimeLogEvent {
   raw: unknown;
 }
 
-export interface DesktopCliState {
+export interface DesktopMcpState {
   running: boolean;
   endpoint: string;
   port: number;

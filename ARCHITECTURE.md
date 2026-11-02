@@ -2,8 +2,8 @@
 
 MCP edition development takes place in an independent checkout. The new
 `desktop-mcp` module owns protocol/session authorization and receives a domain
-dispatch callback; it never launches an ABYA CLI. Startup wiring and PB native
-transport are separate migration milestones. Do not treat inherited CLI
+dispatch callback; it never launches an ABYA CLI. Startup wires this gateway to domain services; runtime-bridge calls PB through native
+authenticated MCP HTTP. Do not treat inherited CLI
 Publish bytes or protocol-only tests as a qualified MCP release.
 
 The application uses capability modules with a one-way dependency flow:
@@ -27,7 +27,7 @@ service interfaces and serializable DTOs.
 
 SQLite owns durable tasks, instance history, settings, log sessions, log
 events, notification receipts, and archive transfer records. Live process handles, Windows Job
-Objects, WebSocket sessions, CLI operation cancellation state, active transfer
+Objects, WebSocket sessions, MCP operation cancellation state, active transfer
 cancellation channels, temporary ZIP packages, and open network connections
 remain in memory or disposable application data.
 
@@ -40,7 +40,7 @@ APP-only answers and document decisions remain in TaskService; CodexTerminalServ
 their continuation without approving documents. TaskControlState projects native/connection/queue
 and human-wait states for both UI surfaces. Application startup establishes normal Windows data
 context and per-data-directory instance ownership before opening SQLite. Release identity is embedded
-and verified against the installed manifest; validated packages are promoted to a stable Publish entry.
+and verified against the installed manifest; validated packages are promoted to a stable Publish-MCP entry.
 
 Autonomous implementation (policy 2.4) separates issue severity, runnable dependency
 work and acceptance readiness. TaskService owns durable work units, bounded recovery,
@@ -81,7 +81,7 @@ The production workflow is owned by development-tasks. SQLite task_production an
 task_production_history are authoritative; artifacts/game-development JSON/HTML
 are exports, distinct from terminal workflow projections. Revision-checked mutations
 manage documents, evidence, issues, versions and rounds. Only a Tauri user action
-can decide document approvals (requirements/resources/plan/delivery in 2.1); CLI cannot approve or fabricate acceptance.
+can decide document approvals (requirements/resources/plan/delivery in 2.1); MCP agents cannot approve or fabricate acceptance.
 
 Document approval validity is projected independently of stage progress. APP feedback
 closure may restore an unchanged current-cycle art approval and reopen only the plan
@@ -101,7 +101,7 @@ in exported reports. Material checks do not establish aesthetic or semantic qual
 The tasks module also owns art_library_cases and checked media snapshots under the
 database's ArtLibrary directory, independent of task deletion. AI prepares drafts;
 Tauri-only collection records explicit planner satisfaction, separately from runtime
-verification. CLI searches/reads curated cases and materializes fixed versions into
+verification. MCP searches/reads curated cases and materializes fixed versions into
 task-local reference files with borrow/adapt/avoid decisions. Imported packages retain
 external provenance; no import, collection or approval operation is exposed to agents.
 Portable game-art-design and its generic interface-design reference ship inside the
@@ -129,7 +129,7 @@ multiplayer template and Codex. Task-owned artifacts/bot-integration
 contains the plan, before/current/candidate/reloaded definition snapshots and
 version-bound verification materials. Standalone bundled Node modules validate
 update scope, artifacts and explicit evidence assertions without game writes.
-Game operations still use desktop-cli. Candidate staging is reversible and
+Game operations use desktop-mcp. Candidate staging is reversible and
 followed by full architecture validation before bindings/save. Workflow turn
 completion is separate from Bot runtime acceptance and user task acceptance.
 The checker is not a backend-enforced completion gate or an atomic version lock.
@@ -144,7 +144,7 @@ resume implicitly. Local deletion first archives native history. Native sync
 failures retain the local conversation list and are displayed explicitly.
 
 Workflow v1.2 persists intake groups, answer revisions and explicit player mode in the
-production record. Only APP actions submit human answers; CLI publishes questions with
+production record. Only APP actions submit human answers; MCP publishes questions with
 an authenticated conversation binding. Drafts survive restart, and answers do not approve
 documents. Native-bound continuation retains a delivery receipt to prevent blind retries.
 Delivery receipts are reconciled against native turn state. Interrupted/failed latest attempts
@@ -176,7 +176,12 @@ notification receipts fall back to task navigation; historical timing remains
 read-only. Explicit Skill upgrades validate/back up only supported Codex pins,
 retaining previous records in revision history and leaving retired files intact.
 
-`desktop-cli` exposes authenticated non-MCP command dispatch. Managed terminal CLIs use a local-only Windows named pipe, restricted client SIDs, and revocable in-memory session capabilities bound to provider/task/conversation. Foundation owns transport and session-capability primitives; provider services issue and revoke capabilities without depending on desktop-cli. Desktop retains the long-term credential; sandbox CLIs never decrypt it. Normal same-user standalone CLI access retains the DPAPI-backed HTTP route; managed pipe failures never fall back to it. Each command validates ownership and records sanitized activities. Runtime operations start bundled Abya CLI with managed PID and launch identity. No MCP adapter exists.
+`desktop-mcp` exposes native MCP on authenticated loopback HTTP. Foundation issues
+revocable task/conversation leases; only the APP can choose that context. Each call
+rechecks ownership and records sanitized activities. The runtime bridge directly uses
+PB MCP with exact process identity, durable write receipts and scoped cancellation.
+Codex CLI/app-server remains the model provider. No ABYA CLI executable, pipe route,
+legacy command HTTP endpoint or business subprocess fallback remains.
 
 New default workspaces live under USERPROFILE/ABYA Desktop Development ToolWorkspaces. On terminal open, tasks in the former LOCALAPPDATA default root are copied to that compatible root before updating their database path. Original files remain as a recovery copy. Only inactive task terminals may migrate; custom roots and reparse points are not migrated automatically.
 
@@ -184,7 +189,7 @@ New default workspaces live under USERPROFILE/ABYA Desktop Development ToolWorks
 discovery datagrams, owns WebSocket sessions, and correlates archive transfer
 messages and frames. It emits typed connection and log events through an
 application coordinator. It does not persist instances or logs and never
-exposes the loopback-only desktop or runtime CLI endpoints.
+exposes the loopback-only desktop or runtime MCP endpoints.
 
 `game-archives` is the sole owner of `Main.PBArc` discovery and complete-folder
 validation. `archive-transfer` consumes immutable archive snapshots and the
@@ -196,7 +201,7 @@ matching Skill update is incomplete.
 
 `game-clients` owns the fixed sxg15/PlatverseOutput GitHub integration, current-user
 encrypted account storage, Release/asset management and bounded Windows Unity ZIP
-installations. Its credentials are independent of game connections and desktop CLI.
+installations. Its credentials are independent of game connections and desktop MCP.
 Browser OAuth uses a registered public client ID with Device Flow. Settings owns login UI;
 the manager routes unsigned users there. Native-only device/access/refresh secrets, serialized
 refresh and generation-checked commits prevent late authorization from undoing logout.

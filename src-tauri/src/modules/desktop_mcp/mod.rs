@@ -5,3 +5,10 @@ mod sessions;
 mod tests;
 pub use protocol::McpGateway;
 pub use sessions::McpLeases;
+
+mod registry;
+mod service;
+mod tools;
+pub use service::{
+    DesktopMcpDependencies, DesktopMcpGameDependencies, DesktopMcpService, DesktopMcpState,
+};

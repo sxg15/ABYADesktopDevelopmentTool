@@ -1,13 +1,9 @@
 use super::{AppError, AppResult, Database};
-use base64::{Engine as _, engine::general_purpose::STANDARD};
 use chrono::Utc;
-use rand::{Rng, distr::Alphanumeric};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use windows_dpapi::{Scope, decrypt_data, encrypt_data};
 
 const SETTINGS_KEY: &str = "application";
-const TOKEN_ENTROPY: &[u8] = b"ABYA Desktop Development Tool CLI";
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -48,9 +44,7 @@ pub struct AppSettings {
     pub game_client: GameClientSelection,
     pub workspace_root_path: String,
     pub locale: String,
-    pub desktop_cli_port: u16,
-    #[serde(skip_serializing)]
-    pub desktop_cli_token: String,
+    pub desktop_mcp_port: u16,
     pub game_gateway_port: u16,
     pub preferred_adapter_id: String,
     pub lan_broadcast_enabled: bool,
@@ -68,10 +62,8 @@ struct StoredSettings {
     workspace_root_path: String,
     #[serde(default)]
     locale: String,
-    #[serde(default = "default_desktop_cli_port")]
-    desktop_cli_port: u16,
-    #[serde(default)]
-    encrypted_desktop_cli_token: String,
+    #[serde(default = "default_desktop_mcp_port")]
+    desktop_mcp_port: u16,
     #[serde(default = "default_game_gateway_port")]
     game_gateway_port: u16,
     #[serde(default)]
@@ -126,11 +118,6 @@ impl SettingsService {
             }
         })?;
         if let Some(stored) = stored {
-            let token = if stored.encrypted_desktop_cli_token.is_empty() {
-                generate_token()
-            } else {
-                decrypt_token(&stored.encrypted_desktop_cli_token)?
-            };
             let settings = AppSettings {
                 game_client: {
                     let mut selection = stored.game_client;
@@ -151,8 +138,7 @@ impl SettingsService {
                     stored.workspace_root_path
                 },
                 locale: stored.locale,
-                desktop_cli_port: stored.desktop_cli_port,
-                desktop_cli_token: token,
+                desktop_mcp_port: stored.desktop_mcp_port,
                 game_gateway_port: stored.game_gateway_port,
                 preferred_adapter_id: stored.preferred_adapter_id,
                 lan_broadcast_enabled: stored.lan_broadcast_enabled,
@@ -170,8 +156,7 @@ impl SettingsService {
             game_client: GameClientSelection::default(),
             workspace_root_path: self.default_workspace_root.to_string_lossy().into_owned(),
             locale: String::new(),
-            desktop_cli_port: default_desktop_cli_port(),
-            desktop_cli_token: generate_token(),
+            desktop_mcp_port: default_desktop_mcp_port(),
             game_gateway_port: default_game_gateway_port(),
             preferred_adapter_id: String::new(),
             lan_broadcast_enabled: true,
@@ -183,9 +168,9 @@ impl SettingsService {
 
     pub fn save(&self, settings: &AppSettings) -> AppResult<()> {
         let _guard = self.gate.lock();
-        if settings.desktop_cli_port < 1024 {
+        if settings.desktop_mcp_port < 1024 {
             return Err(AppError::validation(
-                "Desktop CLI port must be between 1024 and 65535.",
+                "Desktop MCP port must be between 1024 and 65535.",
             ));
         }
         if settings.game_gateway_port < 1024 {
@@ -193,9 +178,9 @@ impl SettingsService {
                 "Game gateway port must be between 1024 and 65535.",
             ));
         }
-        if settings.desktop_cli_port == settings.game_gateway_port {
+        if settings.desktop_mcp_port == settings.game_gateway_port {
             return Err(AppError::validation(
-                "Desktop CLI and the game gateway must use different ports.",
+                "Desktop MCP and the game gateway must use different ports.",
             ));
         }
         let workspace_root = if settings.workspace_root_path.trim().is_empty() {
@@ -212,8 +197,7 @@ impl SettingsService {
             game_client: settings.game_client.clone(),
             workspace_root_path: workspace_root.to_string_lossy().into_owned(),
             locale: settings.locale.trim().to_string(),
-            desktop_cli_port: settings.desktop_cli_port,
-            encrypted_desktop_cli_token: encrypt_token(&settings.desktop_cli_token)?,
+            desktop_mcp_port: settings.desktop_mcp_port,
             game_gateway_port: settings.game_gateway_port,
             preferred_adapter_id: settings.preferred_adapter_id.trim().to_string(),
             lan_broadcast_enabled: settings.lan_broadcast_enabled,
@@ -251,14 +235,6 @@ impl SettingsService {
         Ok(settings)
     }
 
-    pub fn regenerate_token(&self) -> AppResult<AppSettings> {
-        let _guard = self.gate.lock();
-        let mut settings = self.get()?;
-        settings.desktop_cli_token = generate_token();
-        self.save(&settings)?;
-        Ok(settings)
-    }
-
     /// Caller validates the managed installation; preserve all other freshly read settings.
     pub fn update_game_client(
         &self,
@@ -275,7 +251,7 @@ impl SettingsService {
     }
 }
 
-fn default_desktop_cli_port() -> u16 {
+fn default_desktop_mcp_port() -> u16 {
     47700
 }
 
@@ -287,23 +263,22 @@ fn default_true() -> bool {
     true
 }
 
-fn generate_token() -> String {
-    rand::rng()
-        .sample_iter(&Alphanumeric)
-        .take(48)
-        .map(char::from)
-        .collect()
-}
-
-pub fn encrypt_token(token: &str) -> AppResult<String> {
-    let encrypted = encrypt_data(token.as_bytes(), Scope::User, Some(TOKEN_ENTROPY))
-        .map_err(AppError::internal)?;
-    Ok(STANDARD.encode(encrypted))
-}
-
-pub fn decrypt_token(encoded: &str) -> AppResult<String> {
-    let encrypted = STANDARD.decode(encoded).map_err(AppError::internal)?;
-    let decrypted =
-        decrypt_data(&encrypted, Scope::User, Some(TOKEN_ENTROPY)).map_err(AppError::internal)?;
-    String::from_utf8(decrypted).map_err(AppError::internal)
+#[cfg(test)]
+mod mcp_settings_tests {
+    use super::*;
+    #[test]
+    fn obsolete_corrupt_transport_secret_is_not_required_or_persisted() {
+        let stored: StoredSettings = serde_json::from_value(serde_json::json!({
+            "encryptedDesktopMcpToken":"not-valid-dpapi",
+            "encryptedDesktopCliToken":"retired",
+            "workspaceRootPath":"C:/isolated",
+            "desktopMcpPort":47700
+        }))
+        .unwrap();
+        let saved = serde_json::to_value(stored).unwrap();
+        assert!(saved.get("encryptedDesktopMcpToken").is_none());
+        assert!(saved.get("encryptedDesktopCliToken").is_none());
+        assert_eq!(saved["workspaceRootPath"], "C:/isolated");
+        assert_eq!(saved["desktopMcpPort"], 47700);
+    }
 }

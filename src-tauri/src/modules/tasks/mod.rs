@@ -148,7 +148,7 @@ impl TaskService {
         if source.parent() != Some(legacy) {
             return Ok(task);
         }
-        if crate::foundation::cli_sessions::task_active(task_id) {
+        if crate::foundation::mcp_sessions::task_active(task_id) {
             return Err(AppError::validation(
                 "Stop this task's terminals before repairing its legacy workspace.",
             ));

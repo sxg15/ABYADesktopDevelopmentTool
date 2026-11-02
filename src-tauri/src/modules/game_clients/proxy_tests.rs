@@ -1,6 +1,6 @@
 //! 在独立进程中重定向 HKCU，验证系统代理而不改变用户代理设置。
 use super::{github::GitHub, oauth::OAuth};
-use crate::foundation::cli_transport::Connection;
+
 use std::{
     io::{BufRead, BufReader, Read, Write},
     net::TcpListener,
@@ -137,18 +137,22 @@ fn verify_routes() {
         assert!(!request.to_ascii_lowercase().contains("authorization:"));
     }
 
-    // 系统代理已启用且没有排除本机地址，CLI 仍须直接访问本机服务。
+    // 系统代理已启用且没有排除本机地址，MCP 仍须直接访问本机服务。
     let (local, request) = server(vec![
         "HTTP/1.1 200 OK\r\nContent-Length: 11\r\nConnection: close\r\n\r\n{\"ok\":true}".into(),
     ]);
-    let result = Connection::Http {
-        endpoint: format!("http://{local}/api/v1/command"),
-        token: "local-fixture".into(),
-    }
-    .request(&serde_json::json!({}), Duration::from_secs(3))
-    .unwrap();
+    let result: serde_json::Value =
+        crate::foundation::mcp_http::blocking_client(Duration::from_secs(3))
+            .unwrap()
+            .post(format!("http://{local}/mcp"))
+            .bearer_auth("local-fixture")
+            .json(&serde_json::json!({}))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
     assert_eq!(result["ok"], true);
-    assert!(request.join().unwrap()[0].starts_with("POST /api/v1/command "));
+    assert!(request.join().unwrap()[0].starts_with("POST /mcp "));
 
     // 关闭系统代理后，新建下载客户端恢复直连并保留二进制响应。
     settings.set_value("ProxyEnable", &0_u32).unwrap();

@@ -88,7 +88,7 @@ pub(crate) fn build_launch_contract(
         format!("--abya-launch-mode={}", profile.mode.as_db()),
         format!("--abya-launch-report={report_path}"),
         format!("--abya-launch-exit-on-failure={}", profile.exit_on_failure),
-        "--abya-cli-autostart=true".into(),
+        "--abya-mcp-autostart=true".into(),
         format!("--abya-devtool-endpoint={gateway_endpoint}"),
         format!("--abya-devtool-instance-id={instance_id}"),
         "--abya-devtool-protocol=1".into(),
@@ -230,8 +230,8 @@ mod tests {
         assert!(joined.contains("--abya-launch-mode=offline"));
         assert!(joined.contains("--abya-launch-archive-guid=archive"));
         assert!(joined.contains("--abya-launch-level-guid=level"));
-        assert!(joined.contains("--abya-cli-autostart=true"));
-        assert!(!joined.contains("--abya-mcp-"));
+        assert!(joined.contains("--abya-mcp-autostart=true"));
+        assert!(!joined.contains("--abya-cli-"));
 
         let _ = std::fs::remove_dir_all(archive_root);
     }

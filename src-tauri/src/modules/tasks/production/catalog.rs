@@ -186,7 +186,7 @@ impl TaskService {
         id: &str,
         expected_revision: u64,
     ) -> AppResult<super::ProductionView> {
-        if crate::foundation::cli_sessions::task_active(id) {
+        if crate::foundation::mcp_sessions::task_active(id) {
             return Err(AppError::validation(
                 "请先停止此任务的终端，再升级流程版本。",
             ));

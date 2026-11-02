@@ -40,7 +40,7 @@ export function verifyPilot(reportPath,executable){
   if(!pack||pack.version!==record.currentVersion||pack.status!=='core-verified')throw Error('No current verified package');
   if(sha(owned(root,run.packagePath))!==pack.sha256)throw Error('Current package is missing or changed');
   const workflow=json(workflowPath);
-  if(workflow.taskId!==run.taskId||workflow.observability!=='native'||!workflow.turns?.some(t=>t.activities?.some(a=>a.source==='desktopCli'&&a.status==='completed')))
+  if(workflow.taskId!==run.taskId||workflow.observability!=='native'||!workflow.turns?.some(t=>t.activities?.some(a=>a.source==='desktopMcp'&&a.status==='completed')))
    throw Error('Native execution evidence is missing');
   if(!run.caseId||!run.requirementsSha256||!run.planSha256||record.documents?.requirements?.sha256!==run.requirementsSha256||record.documents?.plan?.sha256!==run.planSha256)
    throw Error('Pilot scope does not match its approved documents');

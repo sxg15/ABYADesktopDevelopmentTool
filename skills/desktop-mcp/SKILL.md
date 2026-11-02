@@ -1,22 +1,39 @@
 # Desktop MCP
 
-Owns the native loopback MCP gateway, task-bound credentials, protocol sessions
-and tool dispatch. This replaces the ABYA business CLI; it must never spawn
-that CLI or silently call its HTTP endpoint.
+## Purpose
+Expose ABYA workflows through native local MCP while retaining Codex as the AI host.
 
-The current compatibility implementation negotiates MCP 2025-11-25 explicitly,
-serves JSON responses on POST /mcp, and exposes only its supplied tool catalog.
-The APP provisions credentials bound to a validated Codex task/conversation;
-MCP callers cannot mint credentials or select their authorization context.
-Initialization, session ownership, protocol headers and revocation are checked.
-The business dispatcher must independently revalidate task/instance ownership.
+## Ownership
+Own loopback MCP serving, task-scoped authentication, protocol sessions, tool schemas
+and dispatch into existing domain services. No ABYA CLI subprocess or fallback route.
 
-Business operation IDs are separate from JSON-RPC IDs. The result carries
-abya/operationId metadata. Unknown writes are reconciled through operation
-receipts, never automatically replayed. Protocol disconnect or cancellation
-does not by itself prove a business operation stopped.
+## Public Contracts
+POST /mcp negotiates 2025-11-25, requires a task/conversation credential issued by
+foundation, and checks initialized session ownership and protocol headers. Credentials
+are revoked with the native executor; callers cannot select authorization context.
+The service starts on the MCP edition's separate port. The former CLI HTTP route and
+named-pipe server are removed. The catalog is in registry.rs; tools.rs revalidates
+ownership, stage contracts, operation receipts and APP-only decision boundaries.
 
-Status: transport implementation in development. The gateway is not wired into
-startup yet. CLI retirement, Codex registration, native PB MCP, progress/cancel
-integration and full release qualification remain outstanding. Do not claim
-that a passing protocol test proves a pure-MCP production workflow.
+Business IDs are distinct from JSON-RPC IDs. abya/operationId metadata identifies the
+business operation. Runtime writes use durable receipts and never replay unknown
+outcomes. Cancellation is a request, not evidence that side effects were rolled back.
+Codex receives per-thread MCP configuration, not a shell executable or CLI credential.
+New connections must not invalidate an already initialized session for the same task.
+
+## Dependencies
+foundation, development-tasks, codex-terminal, game-instances, game-runtime-bridge,
+game-connections, game-archives, archive-transfer and logs.
+
+## Validation
+Protocol/session rejection tests, business ownership tests, native Codex MCP discovery,
+real PB MCP calls and end-to-end workflow validation. Mock transport tests do not
+establish gameplay completion. Full native qualification is pending until recorded.
+
+## LLM Maintenance Rule
+Update this Skill and the catalog/documentation whenever tools, authorization,
+protocol support or workflow mapping change. Never reintroduce a CLI fallback.
+
+Runtime calls accept a stable requestId UUID; results expose abyaOperationId in text and metadata. MCP cancellation is scoped by protocol session/request and reaches only that owned runtime operation. Conversation binding is automatic and is not an advertised tool.
+
+Explicit connection reset stops serving and revokes current leases before restart; ordinary restart preserves same-endpoint leases. Reset requires reopening owned conversations for fresh credentials. No global reusable bearer token is stored.

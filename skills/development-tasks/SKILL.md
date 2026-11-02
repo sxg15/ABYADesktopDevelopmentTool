@@ -1,5 +1,7 @@
 # Development Tasks Skill
 
+MCP edition: task toolTransport is mcp. All ABYA production mutations and runtime operations use MCP; no CLI fallback or legacy command wrapper is part of the task contract.
+
 ## Current scope
 
 Workflow 2.11 uses one work unit for bounded recovery, preserves original IDs and cumulative time, separates observation from diagnosis, and shares a 180-minute Lua-goal allocation plus a 15-minute finalization window. Explicit migration records a new allocation epoch without erasing history; ordinary retries do not reset it. Additional checks bind approved text or real integrity defects; optional failures do not expand gates. Scoped evidence requires unchanged build/dependencies and rejects unknown impact. Playable previews use verified historical snapshots in isolated copies, never acceptance. See [implementation and release criteria](../../docs/EXECUTION_REFACTOR_20261030.md). Pinned earlier policies retain their behavior.
@@ -169,7 +171,7 @@ channel and PTY handles before process-tree termination so ConPTY output
 cannot block webview IPC. Windows `taskkill` waits at most two seconds
 before falling back to the PTY killer.
 
-Desktop CLI exposes list, create, update, and status operations by delegating to
+Desktop MCP exposes list, create, update, and status operations by delegating to
 `TaskService`. MCP status filtering is an orchestration concern and does not
 change task persistence rules.
 
@@ -221,7 +223,7 @@ short/narrow layouts and continued terminal visibility with the real TasksView f
 When changing task fields, lifecycle rules, persistence, commands, or tests,
 update this Skill in the same change.
 
-Runtime image paths in completed CLI activity details are previewable in the existing workflow drawer. Image bytes are read only through a backend path check restricted to the selected task runtime artifact directory.
+Runtime image paths in completed MCP activity details are previewable in the existing workflow drawer. Image bytes are read only through a backend path check restricted to the selected task runtime artifact directory.
 
 
 ## On-demand history

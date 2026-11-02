@@ -4,12 +4,13 @@ $pilotRoot=(Resolve-Path -LiteralPath $Root).Path
 $marker=Get-Content -LiteralPath (Join-Path $pilotRoot 'pilot-root.json') -Raw | ConvertFrom-Json
 if($marker.schema -ne 'abya.workflow-pilot-root/v1'){throw 'Not an owned pilot root'}
 $repository=(Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$package=Join-Path $repository 'Publish-Staging-Workflow'
-$executable=Join-Path $package 'ABYA Desktop Development Tool.exe'
-& (Join-Path $package 'runtime/node.exe') (Join-Path $repository 'scripts/portable-package.mjs') --package $package
+$package=Join-Path $repository 'Publish-Staging-MCP'
+$executable=Join-Path $package 'ABYA Desktop Development Tool MCP.exe'
+node (Join-Path $repository 'scripts/portable-package.mjs') --package $package
 if($LASTEXITCODE -ne 0){throw 'Candidate inventory failed'}
 $manifest=Get-Content -LiteralPath (Join-Path $package 'build-manifest.json') -Raw | ConvertFrom-Json
-if($manifest.workflowVersion -ne '2.11.0' -or $manifest.releaseLabel -ne 'delivery-first-20261030'){throw 'Wrong candidate'}
+if($manifest.edition -ne 'mcp' -or $manifest.toolTransport -ne 'mcp'){throw 'Not an MCP candidate'}
+if($manifest.workflowVersion -ne '2.11.0' -or $manifest.releaseLabel -ne 'mcp-native-20261031'){throw 'Wrong candidate'}
 if(Get-NetTCPConnection -State Listen -LocalPort $marker.debugPort -ErrorAction SilentlyContinue){throw 'Pilot debug port is already in use'}
 $env:ABYA_TEST_MODE='1'
 $env:LOCALAPPDATA=Join-Path $pilotRoot 'Local'

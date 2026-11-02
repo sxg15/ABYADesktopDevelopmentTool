@@ -73,7 +73,7 @@ pub(super) fn due(r: &ProductionRecord) -> bool {
     preflight_recovery_active(r) && elapsed(&r.workbench.execution.preflight) >= 10 * 60_000
 }
 impl TaskService {
-    /// Authorization comes from a native-observed desktopCli runtime failure or
+    /// Authorization comes from a native-observed desktopMcp runtime failure or
     /// the explicit user resume path, never from semantic progress/issue prose.
     pub fn production_prepare_preflight_recovery(
         &self,

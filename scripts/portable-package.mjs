@@ -5,18 +5,17 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 const inventoryName = 'package-files.json';
-const required = ['ABYA Desktop Development Tool.exe', 'abya-desktop.exe', 'build-manifest.json',
-  'runtime/node.exe', 'runtime/LICENSE.txt', 'tools/abya/bin/abya.mjs', 'tools/ffmpeg/source.json',
-  'tools/ffmpeg/runtime/bin/ffmpeg.exe', 'tools/ffmpeg/runtime/bin/ffprobe.exe', 'tools/ffmpeg/runtime/LICENSE.txt',
-  '.codex/skills/abya-game-development-task/SKILL.md'];
+const required = ['ABYA Desktop Development Tool MCP.exe','build-manifest.json',
+  'tools/ffmpeg/source.json','tools/ffmpeg/runtime/bin/ffmpeg.exe','tools/ffmpeg/runtime/bin/ffprobe.exe',
+  'tools/ffmpeg/runtime/LICENSE.txt','.codex/skills/abya-game-development-task/SKILL.md'];
 const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
 function checkedPath(root, relative) {
   if (typeof relative !== 'string' || !relative || relative.includes('\\') || path.posix.isAbsolute(relative)
     || relative.split('/').some(p => !p || p === '.' || p === '..') || relative.includes(':')) throw new Error(`Invalid package path: ${relative}`);
   const leaf = path.posix.basename(relative);
   if (/^(auth\.json|cli-connection\.json|id_rsa|id_ed25519|\.env.*)$/i.test(leaf) || /\.(db|sqlite)(?:$|[.-])/i.test(leaf)) throw new Error(`Private data cannot be distributed: ${relative}`);
-  const allowed = ['ABYA Desktop Development Tool.exe','abya-desktop.exe','build-manifest.json',inventoryName,'.codex/README.md'].includes(relative)
-    || ['runtime/','tools/abya/','tools/ffmpeg/','.codex/skills/'].some(prefix => relative.startsWith(prefix));
+  const allowed = ['ABYA Desktop Development Tool MCP.exe','build-manifest.json',inventoryName,'.codex/README.md'].includes(relative)
+    || ['tools/ffmpeg/','.codex/skills/'].some(prefix => relative.startsWith(prefix));
   if (!allowed) throw new Error(`Unexpected package content: ${relative}`);
   let current = root;
   for (const part of relative.split('/')) {
@@ -35,7 +34,7 @@ function filesIn(root, skipBrowserState = false) {
   const result = [];
   function visit(folder) {
     for (const entry of fs.readdirSync(folder, {withFileTypes:true})) {
-      if (skipBrowserState && folder === root && entry.name === 'ABYA Desktop Development Tool.exe.WebView2') continue;
+      if (skipBrowserState && folder === root && entry.name === 'ABYA Desktop Development Tool MCP.exe.WebView2') continue;
       const full = path.join(folder, entry.name);
       if (entry.isSymbolicLink()) throw new Error(`Package link found: ${full}`);
       if (entry.isDirectory()) visit(full);
@@ -51,7 +50,8 @@ export async function verifyPackage(root, {write = false, quick = false, tracked
   const files = filesIn(root, !write);
   for (const file of required) if (!files.includes(file)) throw new Error(`Missing runtime file: ${file}`);
   const release = readJson(path.join(root, 'build-manifest.json'));
-  for (const [file, expected] of [[release.executable,release.sha256],[release.cliExecutable,release.cliSha256]]) {
+  if(release.edition!=='mcp'||release.toolTransport!=='mcp'||release.cliExecutable||release.cliSha256)throw Error('Not a pure MCP package');
+  for (const [file, expected] of [[release.executable,release.sha256]]) {
     const absolute = checkedPath(root, file);
     if (!expected || (await hashFile(absolute)).toLowerCase() !== expected.toLowerCase()) throw new Error(`Release hash mismatch: ${file}`);
   }
@@ -88,7 +88,7 @@ export async function verifyPackage(root, {write = false, quick = false, tracked
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
-  let root = path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../Publish');
+  let root = path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../Publish-Staging-MCP');
   const options = {};
   for (let index=0;index<args.length;index++) {
     const flag=args[index];

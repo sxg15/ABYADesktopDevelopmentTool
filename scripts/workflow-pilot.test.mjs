@@ -20,7 +20,7 @@ function fixture(t){
    policy:{selfTestChecks:['lua']},documents:{requirements:{sha256:'req'},plan:{sha256:'plan'}},
    selfTests:[{id:'lua',status:'passed',version:'v1',cycle:1}],
    workbench:{execution:{verificationPackage:{version:'v1',status:'core-verified',sha256:hash(path.join(root,pkg))}}}});
-  put(path.join(root,workflow),{taskId,observability:'native',turns:[{activities:[{source:'desktopCli',status:'completed'}]}]});
+  put(path.join(root,workflow),{taskId,observability:'native',turns:[{activities:[{source:'desktopMcp',status:'completed'}]}]});
   report.runs.push({appSha256:report.appSha256,packageInventorySha256:report.packageInventorySha256,caseId:`case-${Math.floor(index/2)}`,taskId,nativeSessionId:`native-${index}`,mode:'native-gameplay',result:'passed',externalImplementation:false,interventions:[],
    startedAt:'2026-10-30T00:00:00Z',firstPlayableAt:'2026-10-30T00:30:00Z',completedAt:'2026-10-30T01:00:00Z',requirementsSha256:'req',planSha256:'plan',
    production:{path:production,sha256:hash(path.join(root,production))},workflow:{path:workflow,sha256:hash(path.join(root,workflow))},packagePath:pkg});

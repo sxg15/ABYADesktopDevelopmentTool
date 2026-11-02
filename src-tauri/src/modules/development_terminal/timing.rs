@@ -100,7 +100,7 @@ pub fn task_timing(tasks: &TaskService, task_id: &str) -> AppResult<Value> {
                         }
                         for activity in turn["activities"].as_array().into_iter().flatten() {
                             if activity["kind"] == "analysis"
-                                || activity["source"] == "desktopCliReport"
+                                || activity["source"] == "desktopMcpReport"
                             {
                                 continue;
                             }

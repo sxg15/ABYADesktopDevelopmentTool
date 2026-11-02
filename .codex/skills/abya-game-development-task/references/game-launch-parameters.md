@@ -37,9 +37,9 @@
 | `--abya-launch-report` | 启动状态 JSON 文件，状态为 `resolving`、`launching`、`ready` 或 `failed`。 |
 | `--abya-launch-exit-on-failure` | 启动失败时是否以退出码 `1` 关闭。 |
 
-## Runtime CLI 参数
+## Runtime MCP 参数
 
-桌面使用 --abya-cli-autostart=true，CLI 自动发现托管 PID 并验证桌面实例身份。
+桌面使用 --abya-mcp-autostart=true，MCP 客户端自动发现托管 PID 并验证桌面实例身份。
 临时凭证由游戏生成，不出现在 AI 参数或日志中。开发授权仅在桌面启动的进程启用。
 
 ## 桌面开发工具连接
@@ -53,7 +53,7 @@
 --abya-devtool-instance-id=<instance-id>
 ```
 
-WebSocket 用于结构化日志和存档传输；Runtime CLI 使用独立的 loopback HTTP
+WebSocket 用于结构化日志和存档传输；Runtime MCP 使用独立的 loopback HTTP
 连接。
 
 ## IGP 托管

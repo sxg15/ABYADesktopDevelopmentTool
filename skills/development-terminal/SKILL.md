@@ -1,5 +1,7 @@
 # Development Terminal Skill
 
+MCP edition: native Codex conversation flow is retained; ABYA tool activities originate in MCP dispatch. Shell business CLI injection is retired.
+
 ## Terminal freeze recovery (2026-10-22)
 Input queue is capped at 1 MiB and has a four-second acknowledgement watchdog. Any uncertain/error write halts the queue; timeout is not cancellation or permission to send the next chunk. Disposal drops unsent chunks before a rebuilt terminal opens. Explicit 重建终端连接 calls the APP-only idle-checked endpoint and recreates xterm/queue only on success, with no automatic input or inference. Existing Pause/Force stop remain available for active or unconfirmed execution.
 
@@ -180,7 +182,7 @@ command.
 When changing shared terminal UI, provider contracts, workflow schemas,
 sanitization, or persistence, update this Skill in the same change.
 
-Desktop semantic activity sources are desktopCli and desktopCliReport. Older source names remain displayable in existing journals. Runtime file artifacts are returned through CLI output and inspected by the selected provider.
+Desktop semantic activity sources are desktopMcp and desktopMcpReport. Older source names remain displayable in existing journals. Runtime file artifacts are returned through MCP content and inspected by the selected provider.
 
 ## Paste and archived conversations
 The terminal intercepts Ctrl+V/Shift+V before forwarding keystrokes. Read native clipboard via the typed adapter; text requires bracketed-paste readiness and strips control sequences, images alone forward the provider image-paste key. Right-click paste follows the same routing. Serialized Unicode-safe chunks stay below the backend IPC input limit. No automatic Enter is sent. Register/remove listeners with the terminal lifecycle. Codex rows expose archive/restore and active/archived filters; archived rows never mount a terminal. Empty active lists do not create replacements when archived records exist. Refresh revisions prevent stale reads from undoing an archive. Refocus/manual refresh reconcile native state; failures preserve local history and show errors.
@@ -190,7 +192,7 @@ The Codex project-folder icon opens a read-only task path and one-time saved-pro
 
 ## Stage workspace update
 
-The existing top conversation steps remain the per-turn plan surface. CLI conversation report can carry a validated plan (1-16 unique named steps, at most one inProgress). Plans preserve activity-linked historical IDs on edits. All-plan-completed does not imply native turn completed. Stage navigation and conversation plans remain separate. Execution settings are displayed above the terminal and use typed provider APIs, with pending edits, failure feedback and explicit next-turn timing.
+The existing top conversation steps remain the per-turn plan surface. MCP conversation report can carry a validated plan (1-16 unique named steps, at most one inProgress). Plans preserve activity-linked historical IDs on edits. All-plan-completed does not imply native turn completed. Stage navigation and conversation plans remain separate. Execution settings are displayed above the terminal and use typed provider APIs, with pending edits, failure feedback and explicit next-turn timing.
 
 ## Workflow timing
 

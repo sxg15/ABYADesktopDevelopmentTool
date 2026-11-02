@@ -249,7 +249,7 @@ impl CodexTerminalService {
             .find(|t| t.id == turn)
             .is_some_and(|t| {
                 t.activities.iter().any(|a| {
-                    a.source == "desktopCli"
+                    a.source == "desktopMcp"
                         && a.kind == CodexActivityKind::GameInstance
                         && a.status == CodexActivityStatus::Failed
                 })
@@ -367,7 +367,7 @@ pub(super) fn pending_tools(workflow: &CodexWorkflowSnapshot) -> bool {
         .find(|t| Some(&t.id) == workflow.current_turn_id.as_ref())
         .is_some_and(|t| {
             t.activities.iter().any(|a| {
-                a.source != "desktopCliReport"
+                a.source != "desktopMcpReport"
                     && a.kind != CodexActivityKind::Analysis
                     && matches!(
                         a.status,

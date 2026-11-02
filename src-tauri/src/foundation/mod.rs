@@ -12,10 +12,9 @@ pub use settings::{
 
 pub mod build_info;
 pub mod change_signal;
-pub mod cli_environment;
-pub mod cli_sessions;
-pub mod cli_transport;
 pub mod clipboard;
+pub mod mcp_http;
+pub mod mcp_sessions;
 pub mod notifications;
 pub mod secrets;
 pub mod single_instance;

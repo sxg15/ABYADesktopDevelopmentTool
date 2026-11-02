@@ -247,7 +247,7 @@ impl InstanceService {
         let restore_foreground = capture_foreground_window();
         let mut command = CommandWrap::with_new(&executable, |command| {
             command
-                .env("ABYA_CLI_DEVELOPMENT", "1")
+                .env("ABYA_MCP_DEVELOPMENT", "1")
                 .args(&args)
                 .stdout(Stdio::from(stdout))
                 .stderr(Stdio::from(stderr));

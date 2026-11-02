@@ -12,7 +12,7 @@ import { api, errorMessage } from "../../shared/api";
 import type {
   AppPaths,
   AppSettings,
-  DesktopCliState,
+  DesktopMcpState,
   GameConnectionState,
   LanInterface,
 } from "../../shared/types";
@@ -50,7 +50,7 @@ export function SettingsView({
   const [workspaceRoot, setWorkspaceRoot] = useState("");
   const [selectedLocale, setSelectedLocale] = useState<Locale>(locale);
   const [paths, setPaths] = useState<AppPaths>();
-  const [cli, setCli] = useState<DesktopCliState>();
+  const [cli, setCli] = useState<DesktopMcpState>();
   const [gateway, setGateway] = useState<GameConnectionState>();
   const [interfaces, setInterfaces] = useState<LanInterface[]>([]);
   const [gatewayPort, setGatewayPort] = useState(47610);
@@ -78,7 +78,7 @@ export function SettingsView({
 
   async function refreshState() {
     try {
-      setCli(await api.desktopCliState());
+      setCli(await api.desktopMcpState());
       setGateway(await api.gameConnectionState());
     } catch (error) {
       notify(errorMessage(error), true);
@@ -124,7 +124,7 @@ export function SettingsView({
 
   async function restart() {
     try {
-      setCli(await api.restartDesktopCli());
+      setCli(await api.restartDesktopMcp());
     } catch (error) {
       notify(errorMessage(error), true);
     }
@@ -280,7 +280,7 @@ export function SettingsView({
 
       <section className="settings-section">
         <div className="settings-section-header">
-          <h2>{t("desktopCli")}</h2>
+          <h2>{t("desktopMcp")}</h2>
           <span className={cli?.running ? "status-ok" : "status-muted"}>{cli?.running ? t("running") : t("stopped")}</span>
         </div>
         <p>{t("cliConnectionHelp")}</p>

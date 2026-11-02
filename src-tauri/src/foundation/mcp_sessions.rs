@@ -9,7 +9,7 @@ use std::{
 
 #[derive(Default)]
 struct Registry {
-    pipe: String,
+    endpoint: String,
     leases: HashMap<String, Lease>,
     blocked: HashSet<String>,
 }
@@ -23,15 +23,19 @@ fn registry() -> &'static Mutex<Registry> {
     REGISTRY.get_or_init(Default::default)
 }
 
-pub fn activate(pipe: String) {
-    *registry().lock() = Registry {
-        pipe,
-        leases: HashMap::new(),
-        blocked: HashSet::new(),
-    };
+pub fn activate(endpoint: String) {
+    let mut state = registry().lock();
+    if state.endpoint == endpoint {
+        return;
+    }
+    state.endpoint = endpoint;
+    state.leases.clear();
 }
 pub fn deactivate() {
-    *registry().lock() = Registry::default();
+    let mut state = registry().lock();
+    state.endpoint.clear();
+    state.leases.clear();
+    // Transport reset never authorizes a paused or stopped conversation to resume.
 }
 pub fn revoke(provider: &str, conversation: &str) {
     let mut state = registry().lock();
@@ -67,10 +71,10 @@ fn environment_in(
     {
         return vec![];
     }
-    if state.pipe.is_empty() {
+    if state.endpoint.is_empty() {
         return vec![];
     }
-    let pipe = state.pipe.clone();
+    let endpoint = state.endpoint.clone();
     let context = json!({"provider":provider,"taskId":task,"conversationId":conversation});
     let key = format!("{provider}:{conversation}");
     let lease = state.leases.entry(key).or_insert_with(|| Lease {
@@ -92,10 +96,18 @@ fn environment_in(
         lease.expires = Instant::now() + Duration::from_secs(12 * 3600);
     }
     vec![
-        ("ABYA_DESKTOP_PIPE".into(), pipe),
-        ("ABYA_DESKTOP_PID".into(), std::process::id().to_string()),
-        ("ABYA_DESKTOP_SESSION_TOKEN".into(), lease.token.clone()),
+        ("ABYA_MCP_URL".into(), endpoint),
+        ("ABYA_MCP_SESSION_TOKEN".into(), lease.token.clone()),
     ]
+}
+/// MCP 身份来自 APP 签发的有效租约，不接受工具参数指定的授权上下文。
+pub fn mcp_context(token: &str) -> Option<Value> {
+    let state = registry().lock();
+    state
+        .leases
+        .values()
+        .find(|lease| authorize_in(&state, token, &lease.context))
+        .map(|lease| lease.context.clone())
 }
 pub fn authorize(token: &str, context: &Value) -> bool {
     authorize_in(&registry().lock(), token, context)
@@ -170,7 +182,7 @@ mod fence_tests {
     #[test]
     fn owned_heartbeat_keeps_token_stable_but_never_revives_expiry_or_revocation() {
         let mut r = Registry {
-            pipe: "test".into(),
+            endpoint: "test".into(),
             ..Default::default()
         };
         let env = environment_in(&mut r, "codex", "task", "chat");
@@ -189,7 +201,7 @@ mod fence_tests {
     #[test]
     fn revoked_conversation_cannot_reissue_lease_until_new_session_authorized() {
         let mut state = Registry {
-            pipe: "test-pipe".into(),
+            endpoint: "test-endpoint".into(),
             ..Default::default()
         };
         let first = environment_in(&mut state, "codex", "task", "chat");

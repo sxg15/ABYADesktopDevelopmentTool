@@ -3,7 +3,7 @@ use serde_json::{Value, json};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct CliCommand {
+pub(crate) struct McpTool {
     name: &'static str,
     description: &'static str,
     input_schema: Value,
@@ -20,7 +20,7 @@ struct ToolAnnotations {
     open_world_hint: bool,
 }
 
-pub(crate) fn tools() -> Vec<CliCommand> {
+pub(crate) fn tools() -> Vec<McpTool> {
     vec![
         tool(
             "development_production_start_acceptance",
@@ -199,7 +199,7 @@ pub(crate) fn tools() -> Vec<CliCommand> {
         ),
         tool(
             "desktop_get_capabilities",
-            "Returns the desktop CLI capability summary and registered tool names. Never returns authentication tokens.",
+            "Returns the desktop MCP capability summary and registered tool names. Never returns authentication tokens.",
             "Get desktop capabilities",
             object_schema(json!({}), &[]),
             read_only(),
@@ -263,26 +263,8 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             reversible_write(),
         ),
         tool(
-            "development_conversation_bind",
-            "Binds this initialized CLI conversation context to one task-owned Codex conversation so subsequent desktop tool calls can be recorded in its active plan step.",
-            "Bind development conversation",
-            object_schema(
-                json!({
-                    "provider": {
-                        "type": "string",
-                        "enum": ["codex"],
-                        "default": "codex"
-                    },
-                    "taskId": { "type": "string", "minLength": 1 },
-                    "conversationId": { "type": "string", "minLength": 1 }
-                }),
-                &["taskId", "conversationId"],
-            ),
-            reversible_write(),
-        ),
-        tool(
             "development_conversation_activity_report",
-            "Reports a sanitized semantic activity milestone for the conversation bound to this CLI context. Bind the conversation first.",
+            "Reports a sanitized semantic activity milestone for the conversation bound to this MCP context. The APP binds the conversation automatically.",
             "Report conversation activity",
             object_schema(
                 json!({
@@ -396,10 +378,10 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             read_only(),
         ),
         tool(
-            "game_instance_wait_for_cli",
-            "Waits until the selected managed instance Runtime CLI accepts initialization and returns non-secret server information.",
-            "Wait for game Runtime CLI",
-            wait_for_cli_schema(),
+            "game_instance_wait_for_mcp",
+            "Waits until the selected managed instance Runtime MCP accepts initialization and returns non-secret server information.",
+            "Wait for game Runtime MCP",
+            wait_for_mcp_schema(),
             read_only_open_world(),
         ),
         tool(
@@ -411,23 +393,23 @@ pub(crate) fn tools() -> Vec<CliCommand> {
         ),
         tool(
             "game_runtime_get_state",
-            "Checks the selected managed instance loopback Runtime CLI and returns non-secret connection and server metadata.",
-            "Get game CLI state",
+            "Checks the selected managed instance loopback Runtime MCP and returns non-secret connection and server metadata.",
+            "Get game MCP state",
             instance_id_schema(),
             read_only_open_world(),
         ),
         tool(
             "game_runtime_list_tools",
-            "Lists tools advertised over the selected managed instance's authenticated loopback Runtime CLI.",
-            "List game Runtime CLI tools",
+            "Lists tools advertised over the selected managed instance's authenticated loopback Runtime MCP.",
+            "List game Runtime MCP tools",
             instance_id_schema(),
             read_only_open_world(),
         ),
         tool(
             "game_runtime_call_tool",
-            "Calls one tool on the selected instance Runtime CLI and preserves all returned text and image file references. Inspect the tool schema first.",
-            "Call game Runtime CLI tool",
-            game_cli_call_schema(),
+            "Calls one tool on the selected instance Runtime MCP and preserves all returned text and image file references. Inspect the tool schema first.",
+            "Call game Runtime MCP tool",
+            game_mcp_call_schema(),
             unknown_game_mutation(),
         ),
         tool(
@@ -516,8 +498,8 @@ fn tool(
     title: &'static str,
     input_schema: Value,
     annotations: ToolAnnotations,
-) -> CliCommand {
-    CliCommand {
+) -> McpTool {
+    McpTool {
         name,
         description,
         input_schema,
@@ -631,7 +613,7 @@ fn wait_for_state_schema() -> Value {
     )
 }
 
-fn wait_for_cli_schema() -> Value {
+fn wait_for_mcp_schema() -> Value {
     object_schema(
         json!({
             "instanceId": { "type": "string", "minLength": 1 },
@@ -646,12 +628,13 @@ fn wait_for_cli_schema() -> Value {
     )
 }
 
-fn game_cli_call_schema() -> Value {
+fn game_mcp_call_schema() -> Value {
     object_schema(
         json!({
             "instanceId": { "type": "string", "minLength": 1 },
             "toolName": { "type": "string", "minLength": 1 },
-            "arguments": { "type": "object", "default": {} }
+            "arguments": { "type": "object", "default": {} },
+            "requestId": {"type":"string","format":"uuid","description":"Stable operation identity for receipt lookup and uncertain-write reconciliation; do not reuse for a different action."}
         }),
         &["instanceId", "toolName"],
     )

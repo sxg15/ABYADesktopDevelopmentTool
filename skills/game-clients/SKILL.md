@@ -1,5 +1,7 @@
 # Game Clients
 
+MCP edition: local connection proxy regression checks use the shared MCP HTTP client. Remote GitHub download and OAuth proxy behavior is retained.
+
 ## Purpose
 
 Manage sxg15/PlatverseOutput GitHub Releases and install user-selected Windows Unity clients.
@@ -158,3 +160,5 @@ authorization by the account owner is a separate acceptance step; do not automat
 Update this Skill, shared settings/app-shell/desktop-cli Skills and changelog with contract
 changes. No automatic remote Release deletion or forced update. User-authorized selection
 includes removal of unused managed older packages, with the usage/ownership guards above.
+
+MCP migration removes the obsolete global CLI token rotation race test; activation still preserves freshly read unrelated settings. MCP lease reset does not mutate settings or selected Player.

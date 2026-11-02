@@ -51,3 +51,9 @@ marker.txt
 
 /target-mcp/
 /mcp-*.log
+
+/Publish-MCP/**/*.db
+/Publish-MCP/**/auth.json
+/Publish-MCP/**/.env*
+
+/ReleaseBackups-MCP/

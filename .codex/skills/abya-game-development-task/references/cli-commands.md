@@ -1,40 +1,38 @@
-# ABYA CLI 工作流
+# ABYA MCP 工具映射
 
-使用环境变量 ABYA_DESKTOP_CLI 指定的可执行文件。参数均为 JSON 对象，
-通过 --input-file 文件路径或 -（stdin）传递；--json 返回单个 JSON 文档。
-先运行 doctor 和 capabilities。capabilities 返回准确的命令 ID、参数 schema 与风险说明。
-不要根据名称猜参数。下面左侧为命令，右侧为目录中的命令 ID。
+本分支保留 Codex 会话驱动，ABYA 业务操作只通过已配置的 abya MCP 服务。
+不执行 abya-desktop、tools/abya、旧 HTTP 命令端点或调用这些入口的脚本。
+工具 schema 以当前 MCP 目录为准；参数是 JSON 对象，不是 Shell 命令。
 
-| CLI | 命令 ID |
-| --- | --- |
-| task list/create/update/status | development_task_list/create/update/set_status |
-| production get/update/version/report | development_production_get/update/version/report；确认由 APP 用户操作，不能通过 CLI 批准 |
-| skill list/read | development_skill_list/read |
-| recording tools/start/get/stop | game_recording_tools/start/get/stop；实时视频，无音频 |
-| conversation bind/report | development_conversation_bind/activity_report |
-| instance list/get/launch/stop/window/wait/launch-report | game_instance_list/get/launch/stop/set_window_visibility/wait_for_state/get_launch_report |
-| runtime status/wait/list/run/cancel | game_runtime_get_state / game_instance_wait_for_cli / game_runtime_list_tools / game_runtime_call_tool / game_runtime_cancel |
-| archive list/targets/sources/transfer/get/cancel | game_archive_list / game_archive_transfer_target_list/source_list/start/get/cancel |
-| log start/stop/sources/sessions/query | game_log_collection_start/stop / game_log_source_list/session_list/query |
+| 工作 | MCP 工具 |
+|---|---|
+| 当前工作 | development_production_current |
+| 完整制作记录 | development_production_get |
+| 登记文档、问题、证据、自测、工作项 | development_production_update |
+| 分批登记与原收据查询 | development_production_batch / development_production_receipt |
+| 保存实际版本 | development_production_version / development_production_activate_version |
+| 运行基线 | development_production_runtime_baseline / game_runtime_qualify_player |
+| 实例管理 | game_instance_list / game_instance_launch / game_instance_stop |
+| 实例就绪与启动报告 | game_instance_wait_for_mcp / game_instance_get_launch_report |
+| 当前 PB 工具目录 | game_runtime_list_tools |
+| 调用 PB 原生 MCP 工具 | game_runtime_call_tool |
+| 查询原操作与请求取消 | game_runtime_operation_receipt / game_runtime_cancel |
+| 查看和登记计划活动 | development_conversation_activity_report |
+| 保存报告 | development_production_report |
+| 开始正式试玩 | development_production_start_acceptance |
 
-runtime run 的输入为 {"instanceId":"桌面实例 ID","toolName":"能力 ID","arguments":{}}。
-调用 read_me_first 后，动态发现能力；搜索、描述分别调用 capability_search 和 capability_describe。
-桌面服务负责映射真实 PID、稳定会话、请求 ID、截图目录及运行时 CLI。
-实例 ID 不等同于 PID；禁止直接控制其他任务的实例。
+APP 自动绑定当前任务、会话及提供方；不要将其他任务的 ID 放入参数。
+新实例先用 game_runtime_call_tool 调用 read_me_first；按需调用 capability_search、
+capability_describe 发现真实工具和参数，再调用具体能力。禁止按名称猜字段。
+MCP 网关会再次核对实例归属及阶段权限，PB 内部按开发能力白名单授权。
 
-示例（参数文件由 AI 写入当前任务工作目录）：
+MCP 连通不等于游戏已初始化；检查实际存档、关卡及必要能力的就绪状态。
+工具 isError 与内部 valid/ready/assertions 分别核对；截图返回后必须实际查看。
+写入结果未知时先查原操作收据和目标状态，不自动重放或制造第二个任务。
+审批、回答策划问题、关闭人工反馈和接受作品仍由 APP 用户入口完成。
 
-~~~powershell
-& $env:ABYA_DESKTOP_CLI runtime run --input-file ./runtime-request.json --json
-~~~
+原说明中 production update 等简写表示对应业务操作，请使用上表的 MCP 工具，
+operation/data 等业务参数保持不变。文件读写、离线数据检查可使用 Codex 自带能力，
+但不能用它们绕过 MCP 去启动游戏、写入运行实例或改制作状态数据库。
 
-所有截图返回绝对文件路径，必须用当前 provider 的图片读取能力打开；生成路径不代表视觉验收完成。
-窗口保持后台渲染。通过 instance window 显示窗口以供人工检查，再恢复后台。
-需要取消时调用 runtime cancel，传入 instanceId 和 operationId；取消请求不保证回滚。
-保存日志、状态断言、Lua/APC 追踪及图片，完成原有单机或独立 Host + Client 验收。
-
-流程2.0验收入口：
-- production start-acceptance → development_production_start_acceptance，启动任务当前版本的可试玩实例。
-- production acceptance-status → development_production_acceptance_status，读取进度、版本与实例。
-两者绑定当前任务；启动前验证保存版本，不会使用全局旧运行包替代任务运行包。
-策划关闭反馈和接受作品没有Agent CLI入口。
+对运行写入可提供稳定的 requestId（UUID）；返回的 abyaOperationId 用于查询原操作。未知结果先查询收据与实际状态，不能换新 ID 直接重放。

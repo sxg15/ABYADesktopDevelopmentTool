@@ -8,7 +8,7 @@ import type { AppSettings } from "../../shared/types";
 import { translator } from "../../i18n";
 
 const t = translator("zh-CN");
-const base: AppSettings = { gameExecutablePath: "D:\\Clients\\old\\Game.exe", gameClient: { ...emptyClientSelection(), source: "remote", installationId: "old", executableRelativePath: "Game.exe", storageRoot: "D:\\Clients" }, workspaceRootPath: "D:\\Work", locale: "zh-CN", desktopCliPort: 47600, gameGatewayPort: 47610, preferredAdapterId: "adapter", lanBroadcastEnabled: false, toolId: "test" };
+const base: AppSettings = { gameExecutablePath: "D:\\Clients\\old\\Game.exe", gameClient: { ...emptyClientSelection(), source: "remote", installationId: "old", executableRelativePath: "Game.exe", storageRoot: "D:\\Clients" }, workspaceRootPath: "D:\\Work", locale: "zh-CN", desktopMcpPort: 47600, gameGatewayPort: 47610, preferredAdapterId: "adapter", lanBroadcastEnabled: false, toolId: "test" };
 const newer: ClientInstallation = { id: "new", releaseId: 2, tagName: "v2", prerelease: false, publishedAt: "2026-10-16", assetId: 20, assetName: "Windows.zip", assetUpdatedAt: "2026-10-16", sha256: "fixture", digestVerified: true, directory: "D:\\Clients\\new", storageRoot: "D:\\Clients", executableCandidates: ["Game.exe"], installedAt: "2026-10-16" };
 const candidate = (): ClientUpdate => ({ releaseId: 2, tagName: "v2", currentTag: "v1", key: "2:20:first", preferredAssetId: 20,
   assets: [{ id: 20, name: "Windows.zip", size: 4096, digest: null, updatedAt: "2026-10-16", state: "uploaded" }] });

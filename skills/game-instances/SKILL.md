@@ -1,5 +1,7 @@
 # Game Instances Skill
 
+MCP edition: managed launches use --abya-mcp-autostart=true and ABYA_MCP_DEVELOPMENT=1; no MCP autostart flag is passed. Instance ownership, storage isolation and stopping rules are unchanged.
+
 ## Owned acceptance data roots (2.8)
 Frozen candidates run from TaskService-validated workspace-root/.abya-play-runs/<UUID>/Archives copies. An owner marker binds every run to its task; short paths avoid legacy Player MAX_PATH failures. The acceptance orchestrator alone passes an internal data-root override; ordinary CLI/UI profiles cannot select arbitrary roots. This makes older Players discover the exact run copy without changing the candidate, global archive collection, or Player fingerprint.
 
@@ -48,7 +50,7 @@ and deleting unselected managed packages. Existing LAN Host and task pin precede
 `LaunchReportResult`, `WindowVisibilityMode`, and instance lifecycle commands.
 
 Launch profiles expose only typed choices. They generate user IDs, user names,
-reports, bootstrap log paths, per-instance CLI launch identity, and the
+reports, bootstrap log paths, per-instance MCP launch identity, and the
 selected LAN gateway endpoint. Canonical modes are `editor`, `offline`,
 `lan-host`, `lan-client`, and `igp-hosted`; legacy `normal`, `host`, and
 `clientOnly` values deserialize as compatibility aliases. Ordinary desktop
@@ -56,7 +58,7 @@ launch does not expose IGP secrets and rejects `igp-hosted` without an
 independently secured in-memory IGP context.
 
 Managed launches use production `--abya-launch-*` archive, level, report, and
-LAN parameters. They pass the desktop WebSocket connection arguments and --abya-cli-autostart=true. The child receives ABYA_CLI_DEVELOPMENT=1 in its process environment. The game generates the runtime endpoint and token; the desktop retains no runtime connection secret. Runtime commands resolve the live managed PID and verify the desktop launch identity.
+LAN parameters. They pass the desktop WebSocket connection arguments and --abya-mcp-autostart=true. The child receives ABYA_MCP_DEVELOPMENT=1 in its process environment. The game generates the runtime endpoint and token; the desktop retains no runtime connection secret. Runtime commands resolve the live managed PID and verify the desktop launch identity.
 
 New launches default to `background`: the Unity Player remains windowed and
 rendering, while a Windows PID-scoped controller preserves each visible
@@ -93,7 +95,7 @@ archive parsing, identity allocation, or local multiplayer behavior.
 ## Dependencies
 
 Depends on foundation, task contracts, and the game-connections endpoint.
-Runtime CLI and log protocols remain outside this module.
+Runtime MCP and log protocols remain outside this module.
 
 ## Validation
 
@@ -108,7 +110,7 @@ The native smoke test uses an owned brief non-activating fixture, checks actual
 encoding/dimensions and is run explicitly. Visual QA must inspect decoded frames;
 an earlier off-screen probe generated black frames and is not a passing capture.
 
-Test exact production launch and desktop-connection arguments, CLI autostart and absence of legacy launch arguments,
+Test exact production launch and desktop-connection arguments, MCP autostart and absence of legacy launch arguments,
 Host port allocation, archive parsing, LAN client Host selection, launch
 report bounds, wait timeouts, background launch defaults, legacy visible
 profile compatibility, PID-scoped off-screen/restore behavior, foreground

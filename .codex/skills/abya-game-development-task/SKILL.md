@@ -13,7 +13,7 @@ description: 在 ABYA 桌面任务内制作玩法或执行指定制作阶段；�
 |---|---|
 | 当前阶段目标与确认点 | [制作阶段](references/production-stages.md) |
 | Lua 实现、自动恢复、验收边界 | [自主执行契约](references/autonomous-implementation.md) |
-| 实际游戏操作及保存 | [运行与实现](references/runtime-authoring.md)、[CLI 映射](references/cli-commands.md) |
+| 实际游戏操作及保存 | [运行与实现](references/runtime-authoring.md)、[MCP 工具映射](references/cli-commands.md) |
 | 登记文档、问题、版本与证据 | [任务资料](references/production-records.md) |
 | 用户试玩反馈修改 | [反馈迭代](references/whole-experience-review.md) |
 | 美术设计、参考与实机还原 | [游戏美术](references/game-art-design/SKILL.md)、[美术记录](references/art-design-records.md) |
@@ -34,8 +34,8 @@ description: 在 ABYA 桌面任务内制作玩法或执行指定制作阶段；�
 
 ## 执行边界
 
-游戏操作使用 ABYA_DESKTOP_CLI 和任务托管 Runtime CLI，沿用原会话与工作项 ID。
-首次需要操作时核对 doctor/capabilities/conversation bind，新实例读 read_me_first；后续复用已确认上下文，版本或能力变化才重新发现。
+游戏操作使用 已配置的 abya MCP 服务 和任务托管 Runtime MCP，沿用原会话与工作项 ID。
+首次使用已配置的 abya MCP 工具读取 development_production_current；任务和会话身份由 APP 凭据绑定，不由模型重绑。新实例通过 game_runtime_call_tool 调用 read_me_first。禁止使用旧 ABYA CLI、包装脚本或旧 HTTP 命令端点。
 schema 是当前调用依据，历史示例不是当前能力的保证。没有托管上下文时准确记录缺失条件，不绕过实例归属。
 未知写入先核对原请求和实际状态，不能直接重发；用户暂停与原生权限控制保留。
 技术失败、验证不可用、未验证和已确诊缺陷分开记录。细节见自主执行契约；普通技术问题不转成策划“继续”请求。

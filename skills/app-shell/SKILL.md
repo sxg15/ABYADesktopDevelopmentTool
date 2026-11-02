@@ -1,5 +1,7 @@
 # App Shell Skill
 
+MCP edition: settings and runtime projections use MCP connection state and labels. The existing stage layout and user decision flow remain unchanged.
+
 ## v5 workbench (2026-10-21)
 The approved v5 workbench supersedes the historical teal/two-column card presentation. Preserve all five global destinations and four task tabs. Use charcoal navigation, cream canvas and warm orange actions; blue remains informational. Task switching can disclose the list. Guidance remains above the workbench. Keep native terminal components mounted and IME behavior intact.
 
@@ -180,7 +182,7 @@ Destructive instance and log-session actions use explicit localized
 confirmation text and icon controls. Controls remain disabled while the target
 is running or collecting.
 
-Settings includes desktop CLI connection status, restart and reset actions. It does not display credentials or legacy client configuration templates.
+Settings includes desktop MCP connection status, restart and reset actions. It does not display credentials or legacy client configuration templates.
 
 Settings also exposes game gateway status, port, private IPv4 adapter
 selection, LAN broadcast enablement, advertised endpoints, connected count,

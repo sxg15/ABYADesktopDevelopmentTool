@@ -1,5 +1,7 @@
 # Codex Terminal Skill
 
+MCP edition: per-thread abya MCP configuration replaces ABYA CLI environment injection. Native MCP initialize/ack replaces the workspace CLI doctor subprocess. Codex CLI/app-server and user permission settings remain in use.
+
 ## Current scope
 
 Workflow 2.11 dispatches short outcome-oriented prompts and resumes ordinary failures in the original work unit. Time checkpoints do not invent functional failures. Other stages get bounded material-progress continuations; narration and plan wording are not progress. Explicit user pause, uncertain-send reconciliation, original native identity and APP human decisions remain authoritative. Technical-review outcomes are distinct from requests for the planner to click Continue. See [execution contract implementation](../../docs/EXECUTION_REFACTOR_20261030.md).
@@ -48,11 +50,13 @@ failure. Dead executors can be cleaned up. Continue recreates that conversation'
 resumes its original ID with fresh scoped environment, and checks returned identity.
 A detached turn still running must be paused before replacing its executor.
 
-Fresh start/resume injects ABYA_DESKTOP_CLI, task/provider/conversation/workspace and the
-in-memory pipe capability/PID into the tool-executing backend, not just the remote TUI.
-No implicit permission override or permanent token; explicit user settings are described below. Reopen runs the existing sandbox doctor
-preflight; the managed instructions require actual tool-context doctor before operations.
-A preflight alone is not proof that a later model executor received the environment.
+Fresh start/resume registers task-scoped abya MCP URL and Authorization in the native
+app-server thread configuration. Credentials remain in memory, never in model shell env.
+Only workspace/task/conversation metadata enters the shell. Per-thread overrides disable
+the retired abya-desktop and ai-game-developer ABYA servers to avoid cross-edition tools;
+the user configuration file and other MCP servers remain unchanged. MCP initialize/ack is the
+preflight; actual native MCP calls are required to prove model connectivity. Codex CLI,
+login, sandbox, approvals and user permission settings remain unchanged.
 
 Persist developer instructions in new threads without hidden inference. Agent turns publish
 plans for multi-step work. Native plan/item/turn events update the shared workflow, using

@@ -5,36 +5,6 @@ use super::{
 use std::fs;
 
 #[test]
-fn activation_and_token_rotation_cannot_overwrite_each_others_settings() {
-    let root = Temp::new();
-    let service = service(&root);
-    let selected = installed(&service, &root, package(&[]));
-    for _ in 0..8 {
-        let gate = std::sync::Arc::new(std::sync::Barrier::new(3));
-        let selecting = service.clone();
-        let id = selected.id.clone();
-        let ready = gate.clone();
-        let selection = std::thread::spawn(move || {
-            ready.wait();
-            selecting.activate(&id, "Windows/Game.exe").unwrap()
-        });
-        let rotating = service.settings.clone();
-        let ready = gate.clone();
-        let rotation = std::thread::spawn(move || {
-            ready.wait();
-            rotating.regenerate_token().unwrap()
-        });
-        gate.wait();
-        let chosen = selection.join().unwrap();
-        let rotated = rotation.join().unwrap();
-        let saved = service.settings.get().unwrap();
-        assert_eq!(saved.game_client.installation_id, selected.id);
-        assert_eq!(saved.game_executable_path, chosen.game_executable_path);
-        assert_eq!(saved.desktop_cli_token, rotated.desktop_cli_token);
-    }
-}
-
-#[test]
 fn activation_preserves_unrelated_settings_and_removes_only_unselected_owned_packages() {
     let root = Temp::new();
     let other_root = Temp::new();
@@ -57,7 +27,7 @@ fn activation_preserves_unrelated_settings_and_removes_only_unselected_owned_pac
         before.game_client.local_executable_path
     );
     assert_eq!(after.locale, before.locale);
-    assert_eq!(after.desktop_cli_token, before.desktop_cli_token);
+    assert_eq!(after.desktop_mcp_port, before.desktop_mcp_port);
     assert!(!after.lan_broadcast_enabled);
     let report = service.maintain(&[], &[]).unwrap();
     assert_eq!(report.removed, 1);

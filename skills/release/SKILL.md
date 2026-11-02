@@ -1,158 +1,47 @@
-# Release Skill
-
-## Current scope
-
-Workflow 2.11 is a candidate until representative native game pilots pass. Build an isolated staging package; component tests, rule-understanding probes and externally hand-repaired games do not establish autonomous workflow success. Record first-playable time, active execution, verification, recovery, human waiting and failures. Preserve the live package and pinned tasks until promotion is supported by the validated candidate and matching pilot artifacts. See [release criteria](../../docs/EXECUTION_REFACTOR_20261030.md).
+# MCP Release
 
 ## Purpose
-
-Own repeatable checks and portable Windows release output.
+Build and qualify an independent Windows MCP edition without modifying CLI releases.
 
 ## Ownership
-
-Owns dependency scripts, Tauri release configuration, `Publish` layout, build
-manifest generation, project LLM content publishing, and repository policy
-checks.
-Owns the minimal vendored portable-pty 0.9.0 patch and retained MIT license in src-tauri/vendor.
-It removes only Windows cursor inheritance for independent embedded terminals. Keep provenance,
-review the patch on dependency upgrades, and run the no-frontend-cursor-reply regression test.
+Own MCP staging/promotion scripts, package inventory, branch isolation, candidate/source
+fingerprints and native pilot gates. Retain the portable-pty patch and upstream license.
 
 ## Public Contracts
+Develop and commit only on MCP. Never integrate this edition into CLI/dev/main automatically.
+Build into Publish-Staging-MCP using scripts/publish-mcp.ps1; publish only into Publish-MCP.
+The candidate contains the GUI, bundled .codex Skills and licensed FFmpeg runtime. No
+abya-desktop.exe, tools/abya or bundled Node. Codex CLI/app-server remains an installed
+provider prerequisite alongside WebView2 and a compatible native MCP Player.
 
-### Repository distribution (2026-10-13)
-Track the complete official Publish package and the root ABYA 开发工具.cmd launcher.
-The launcher resolves paths relative to itself, uses bundled Node for a quick package
-check and starts the GUI through Explorer. --check verifies every inventory hash.
-Do not share developer-specific .lnk files, user databases, account state or credentials.
-Publish has a path allowlist in .gitignore; package-files.json lists all runtime files.
-portable-package.mjs rejects private/unexpected files, links, traversal, missing files,
-hash mismatches and oversized normal-Git payloads. --require-tracked catches ignored
-or forgotten release files. Publish bytes use -text attributes to survive clone intact.
-All completed CLI source and verified distribution changes must also reach dev,
-under the CLI-to-dev policy above (2026-10-15). Do not update main.
-Validate a fresh checkout in a different path, including spaces/non-ASCII characters.
-The application is ready to open without build tools; per-user AI login, game Player
-selection and the Windows WebView2 dependency remain machine prerequisites.
-Rebuilds regenerate the inventory. Staging packages, generated logs and superseded
-release directories remain disposable; recycle only inspected inactive paths. Retain
-database recovery snapshots and current user state outside Git.
-Distribute Node's matching upstream LICENSE with its executable. If the installed
-Node directory lacks LICENSE, the checked-in runtime license can be reused only
-when the package's nodeVersion exactly matches the selected Node executable version.
-The initial v24.11.1 license comes from nodejs/node tag v24.11.1, file LICENSE.
+The manifest must declare edition=mcp, toolTransport=mcp and the pinned MCP protocol.
+Validate all listed hashes, required files and absence of unexpected content/reparse links.
+The launch script validates the inventory without Node. User data, accounts and credentials
+are excluded. Existing CLI publish/promote entry points must refuse use on this edition.
 
-publish.ps1 -Validation builds Publish-Staging-Validation without replacing an active package.
-Historical staging switches remain mutually exclusive development destinations. Every build embeds
-the current package version, release label and UTC build time; manifest workflow version is
-read from the UTF-8 policy. Live processes under the destination block replacement.
-For workflow 2.11 use promote-workflow.ps1 after native validation; older
-promote-validated.ps1 is a historical procedure, not the current release entry.
-Keep release backups; promotion never copies or replaces user databases. The stable user entry is
-the shortcut/Publish, not a staging directory. Real-model tests use isolated data/workspaces and
-ABYA_TEST_MODE=1. Preserve pinned user Skills unless explicitly upgrading through TaskService with
-backups. Real-model test output contains identifiers and metrics only; credentials stay in memory.
+Run npm run check, cargo fmt, Clippy and Rust tests before candidate build. Protocol mocks
+and transport smoke are necessary but cannot qualify autonomous game production.
+Promotion requires matching executable/resource/source fingerprints and the native pilot
+report: three game families, two independent runs each, actual verified packages, measured
+four-hour target and fault evidence. No external gameplay edits, database bypass or hidden
+manual intervention can qualify a run. Record active time and human waiting separately.
 
-`npm run check`, `npm run build:portable`, the release executable, and
-`Publish/build-manifest.json`. The project-root `.codex/` directory is required
-and its complete contents are copied into portable output. It must contain
-`skills/abya-game-development-task/SKILL.md`; checks and publishing fail when
-the bundled task Skill is absent. The published managed Skill
-also includes its gameplay architecture reference and versioned JSON template.
-The Codex bundle additionally require the Bot workflow/artifact references,
-plan/report schemas and templates, and all four validator modules. Publishing
-preflights these files and copies them with the complete provider root.
-check:skills runs scripts/bot-workflow.check.mjs: update-scope preservation,
-numeric enum readback compatibility, stale/missing/foreign evidence rejection,
-independent-client and difficulty coverage, current archive/Player fingerprints,
-CLI exit codes and provider resource parity. These synthetic checker tests are
-not Bot gameplay or real Player acceptance evidence.
-`scripts/publish.ps1 -Staging` runs the same checks/build/copy/manifest pipeline
-into the fixed repository-local Publish-Staging-Bot directory, allowing package
-validation while the normal Publish executable is in use. Workflow 2.11 uses
-`-WorkflowStaging` followed by `promote-workflow.ps1 -PilotReport <report>`;
-direct replacement of Publish is refused. Promotion verifies the complete candidate,
-runtime source fingerprint, repeated native pilots and that the formal APP is closed,
-then keeps the previous package in a rollback directory. No rebuild occurs after testing.
-
-The Codex root also ship `abya-import-task-template/SKILL.md` and its
-standalone Node `scripts/import-template.mjs`. Import accepts an original Skill
-folder, destination tool root, slug, display name and summary. It preserves
-resources and optional frontmatter, rewrites name/description and `$old-name`
-references, and writes an `abya-task-template.json` v1 identity marker.
-Template IDs use `abya-task-template-<slug>` (at most 64 lowercase ASCII
-letters/digits/hyphens). Both destinations are preflighted and staged before
-installation, with rollback on installation failure. Source links, overlapping
-paths, nested provider/git/dependency folders and unmarked collisions fail.
-Same-source imports update idempotently; a different source needs `--replace`.
-The original source is never modified or executed. Import into repository
-roots for durable releases; update an existing Publish separately when needed.
-Direct portable imports survive until a subsequent source-based release.
-
-The importer additionally accepts `--kind art` (default remains `task`) for
-`abya-art-template-<slug>` and `abya-art-template.json`, kind
-`abya-art-template`. Both kinds share preflight, identity protection, staging,
-rollback and binary resource preservation. Imported art instructions defer to
-task font requirements and the art choice confirmed in the execution plan. Checks validate
-both namespaces and resource completeness; importer and task deployment tests cover
-both kinds. The comic-arcade-ui bundle includes its complete source artwork,
-preview HTML, PNG kit, design tokens, references and optional generation script.
-
-`check:skills` verifies the importer entry and template identities/metadata and runs the importer behavioral tests. Zero templates is valid.
-Publishing copies all template resources through the existing complete-root
-copy, and fails on missing importer resources or malformed template metadata.
+scripts/promote-mcp.ps1 stages and verifies an exact candidate, preserves its own rollback,
+and refuses active destination processes. It never changes user databases or CLI paths.
+No MCP release is claimed until this gate passes. Check source provenance in
+[implementation record](../../docs/MCP_IMPLEMENTATION.md).
 
 ## Dependencies
-
-Workflow content has one canonical source in .codex. check:skills verifies
-policy identities, templates, resource links and the complete design trees.
-There is no provider-mirroring script or sync:workflow command. Task-service
-tests verify real deployment and preserve existing pinned task records.
-Production resources in assets/production and conditional references ship
-through the existing complete-directory copy. These checks do not run an AI model
-or establish gameplay acceptance. Backend production gates have separate Rust
-tests; UI approval and record browsing have frontend tests.
-
-scripts/setup-recorder.ps1 downloads the pinned BtbN LGPL shared FFmpeg archive,
-checks its published SHA-256 and preserves the complete license/source manifest.
-The runtime is an ignored reproducible dependency under tools/ffmpeg/runtime;
-publishing requires it and copies it with source.json into the portable tools
-directory. -WorkflowStaging writes Publish-Staging-Workflow, preserving the
-in-use normal Publish executable and its resources. It is mutually exclusive
-with the older -Staging switch. Validate the bundled ffmpeg/ffprobe and the
-native owned-window smoke test separately from a real Unity gameplay task.
-
-May invoke frontend and Rust checks. It must not contain product business logic.
-Cargo dependency changes for the LAN WebSocket gateway must remain compatible
-with the portable no-bundle release. The embedded terminal adds the
-`portable-pty` Rust dependency and `@xterm/xterm` plus `@xterm/addon-fit`
-frontend packages. Windows Codex discovery also uses `winreg` to read current
-persisted PATH values when the launching shell has a stale environment. These
-dependencies and frontend assets must remain bundled into the same single
-portable executable.
+Foundation build identity, module contracts, native Player and Codex provider.
 
 ## Validation
-
-Verify the release build succeeds, no installer is generated, the executable
-opens, the Codex provider choices render in the packaged application,
-the complete project-root `.codex/` contents appear under `Publish/.codex`,
-and the published bundle contains the managed ABYA
-task Skill and architecture resources, stale published LLM files are removed on repeat builds, no
-authentication/session/log/cache content is introduced, and the manifest
-checksum matches.
-
-The publish script computes SHA-256 through .NET cryptography APIs so it also
-works in Windows PowerShell environments where `Get-FileHash` is unavailable.
+Package boundary tests, source fingerprint, negative release gates, actual Codex MCP calls,
+Player transport and multi-game native pilot evidence. Full qualification status is recorded
+explicitly, separate from component test counts.
 
 ## LLM Maintenance Rule
+Update this Skill, CHANGELOG and package checks with any release behavior change. Historical
+CLI release/Node requirements do not apply to this isolated branch.
 
-When changing build commands, dependencies, release contents, or validation
-policy, update this Skill in the same change.
-
-Pure CLI releases additionally ship abya-desktop.exe, tools/abya and runtime/node.exe (Node 20+). The publish script runs Rust formatting, Clippy and tests, builds the CLI, then builds the existing desktop application. The embedded Abya CLI is a versioned source snapshot; refresh and test it with every runtime CLI change.
-
-
-## On-demand history
-
-Read the matching section in [historical contracts](../../docs/skill-history/20261026/release.md) only when changing that surface. New current-scope rules override historical versions.
-
-Workflow continuity 2.6 (2026-10-26), Autonomous recovery 2.5 (2026-10-24), Terminal freeze recovery (2026-10-22), Automatic progress and Markdown (2026-10-22), Memory warning release (2026-10-22), v5 workbench (2026-10-21), Approved art recovery release (2026-10-20), Game UI design reference library (2026-10-20), Reference conversion and collage specimen (2026-10-20), Reliable pause/interruption (2026-10-20), Art implementation calibration (2026-10-20), Current-turn interruption (2026-10-19), One-click terminal continuation (2026-10-19), 内存保护与追溯（2026-10-19）, Compact task guidance package (2026-10-19), Codex-only package (2026-10-19), Task detail scrolling (2026-10-19), Contextual visual refinement (2026-10-17), Game client system proxy (2026-10-17), Retained UI refinement and integrated library (2026-10-17), Game art design workflow 2.2 (2026-10-16), Unified art workflow (2026-10-16), Desktop workspace styling (2026-10-16), Remote client update flow (2026-10-16), Task header description (2026-10-16), Runtime instance discovery (2026-10-16), Programmer issue Markdown export (2026-10-15), Required development branch order (2026-10-15 clarification), Art reference upload (2026-10-15), Game client integration into dev (2026-10-15), Long conversation transport release (2026-10-15), Dev acceptance UI fix (2026-10-14), Programmer alert release (2026-10-13), Game client download fix (2026-10-15), Game client manager (2026-10-14), Terminal IME release (2026-10-13), Session recovery release (2026-10-13), Sandbox regression validation, Conversation integration validation, Stage workspace update, Workflow 2.0 release, Workflow 2.1 interaction release, Conversation startup release (2026-10-13), Background task notifications (2026-10-14), Issue repair release (2026-10-13), Task isolation and subprocess resume release (2026-10-22), Workbench pane sizing (2026-10-22), Autonomous implementation 2.4 release (2026-10-23).
+MCP pilot setup/launch uses independent roots and debug port 9258. Native Rust fault probes
+are source-fingerprint matched component evidence, explicitly not AI game-repair proof.

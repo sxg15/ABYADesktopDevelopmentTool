@@ -36,7 +36,7 @@ pub struct RuntimeBridgeState {
     pub game_version: String,
     pub platform: String,
     pub capabilities: Vec<String>,
-    pub cli_available: bool,
+    pub mcp_available: bool,
     pub server_name: String,
     pub server_version: String,
     pub instructions: String,
@@ -93,8 +93,8 @@ impl RuntimeBridgeService {
         if self.in_flight.fetch_add(1, Ordering::SeqCst) >= 8 {
             self.in_flight.fetch_sub(1, Ordering::SeqCst);
             return Err(AppError::new(
-                "runtimeCliBusy",
-                "At most eight CLI operations may run concurrently.",
+                "runtimeMcpBusy",
+                "At most eight MCP requests may run concurrently.",
                 "not_executed",
             ));
         }
@@ -229,7 +229,7 @@ impl RuntimeBridgeService {
                 .unwrap_or("")
                 .into(),
             connected: result.is_ok(),
-            cli_available: result.is_ok(),
+            mcp_available: result.is_ok(),
             runtime_instance_id: instance
                 .as_ref()
                 .and_then(|v| v.runtime_instance_id.clone())
@@ -250,7 +250,7 @@ impl RuntimeBridgeService {
                 .as_ref()
                 .map(|v| v.runtime_capabilities.clone())
                 .unwrap_or_default(),
-            server_name: "Abya CLI".into(),
+            server_name: "Abya MCP".into(),
             server_version: "1".into(),
             instructions: String::new(),
             last_error: result.err().map(|e| e.message).unwrap_or_default(),
@@ -325,7 +325,7 @@ impl RuntimeBridgeService {
         flag.store(true, Ordering::SeqCst);
         Ok(json!({"cancelRequested":true,"outcome":"unknown_until_verified"}))
     }
-    pub fn wait_for_cli(&self, id: &str, timeout: Duration) -> AppResult<RuntimeBridgeState> {
+    pub fn wait_for_mcp(&self, id: &str, timeout: Duration) -> AppResult<RuntimeBridgeState> {
         let start = Instant::now();
         loop {
             let state = self.state(id);
@@ -333,7 +333,7 @@ impl RuntimeBridgeService {
                 return Ok(state);
             }
             if start.elapsed() >= timeout {
-                return Err(AppError::new("runtimeCliTimeout", state.last_error, ""));
+                return Err(AppError::new("runtimeMcpTimeout", state.last_error, ""));
             }
             std::thread::sleep(Duration::from_millis(200));
         }

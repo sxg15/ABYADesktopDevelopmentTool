@@ -31,7 +31,7 @@ const view = (onOpenSettings = vi.fn()) => render(<GameClientsView t={t} notify=
 
 beforeEach(() => {
   onClientSaved.mockReset();
-  providerSettings = { gameExecutablePath: "C:\\Local.exe", gameClient: emptyClientSelection(), workspaceRootPath: "D:\\Work", locale: "zh-CN", desktopCliPort: 47600, gameGatewayPort: 47610, preferredAdapterId: "", lanBroadcastEnabled: true, toolId: "fixture" };
+  providerSettings = { gameExecutablePath: "C:\\Local.exe", gameClient: emptyClientSelection(), workspaceRootPath: "D:\\Work", locale: "zh-CN", desktopMcpPort: 47600, gameGatewayPort: 47610, preferredAdapterId: "", lanBroadcastEnabled: true, toolId: "fixture" };
   state = { repository: "sxg15/PlatverseOutput", account: { login: "fixture", canManage: true, remembered: true }, installations: [], defaultStorageRoot: "D:\\Clients", operation };
   vi.spyOn(clientApi, "state").mockImplementation(async () => structuredClone(state));
   vi.spyOn(clientApi, "operation").mockResolvedValue(operation);
@@ -232,9 +232,9 @@ it("shows a non-file download response separately and preserves the selected gam
 
 it("saves the source, local fallback and remote selection together only on Save", async () => {
   state.installations = [record];
-  const settings: AppSettings = { gameExecutablePath: "C:\\Old.exe", workspaceRootPath: "D:\\Work", locale: "zh-CN", desktopCliPort: 47600,
+  const settings: AppSettings = { gameExecutablePath: "C:\\Old.exe", workspaceRootPath: "D:\\Work", locale: "zh-CN", desktopMcpPort: 47600,
     gameGatewayPort: 47610, preferredAdapterId: "", lanBroadcastEnabled: true, toolId: "fixture" };
-  vi.spyOn(api, "desktopCliState").mockResolvedValue({ running: false } as never);
+  vi.spyOn(api, "desktopMcpState").mockResolvedValue({ running: false } as never);
   vi.spyOn(api, "gameConnectionState").mockResolvedValue({ running: false, advertisedAddresses: [] } as never);
   vi.spyOn(api, "listLanInterfaces").mockResolvedValue([]);
   vi.spyOn(api, "paths").mockResolvedValue({ dataDir: "D:\\Fixture" } as never);

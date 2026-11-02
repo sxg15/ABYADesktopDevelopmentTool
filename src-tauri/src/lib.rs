@@ -13,8 +13,8 @@ use modules::codex_terminal::{
     CodexConversation, CodexTerminalAvailability, CodexTerminalEvent, CodexTerminalService,
     CodexTerminalState, CodexWorkflowSnapshot,
 };
-use modules::desktop_cli::{
-    DesktopCliDependencies, DesktopCliGameDependencies, DesktopCliService, DesktopCliState,
+use modules::desktop_mcp::{
+    DesktopMcpDependencies, DesktopMcpGameDependencies, DesktopMcpService, DesktopMcpState,
 };
 use modules::game_archives::{ArchiveCatalogService, ArchiveOption, TransferableArchive};
 use modules::game_clients::GameClientService;
@@ -52,7 +52,7 @@ struct AppState {
     instances: InstanceService,
     runtime_bridge: RuntimeBridgeService,
     logs: LogService,
-    desktop_cli: DesktopCliService,
+    desktop_mcp: DesktopMcpService,
     task_notifications: TaskNotificationService,
 }
 
@@ -168,26 +168,27 @@ fn update_settings(
     state
         .tasks
         .set_workspace_root(PathBuf::from(&settings.workspace_root_path));
-    state.desktop_cli.start(&settings)?;
+    state.desktop_mcp.start(&settings)?;
     state.connections.start(&settings)?;
     Ok(settings)
 }
 
 #[tauri::command]
-fn regenerate_desktop_cli_token(state: State<'_, AppState>) -> AppResult<AppSettings> {
-    let settings = state.settings.regenerate_token()?;
-    state.desktop_cli.start(&settings)?;
+fn regenerate_desktop_mcp_token(state: State<'_, AppState>) -> AppResult<AppSettings> {
+    let settings = state.settings.get()?;
+    state.desktop_mcp.stop();
+    state.desktop_mcp.start(&settings)?;
     Ok(settings)
 }
 
 #[tauri::command]
-fn get_desktop_cli_state(state: State<'_, AppState>) -> DesktopCliState {
-    state.desktop_cli.state()
+fn get_desktop_mcp_state(state: State<'_, AppState>) -> DesktopMcpState {
+    state.desktop_mcp.state()
 }
 
 #[tauri::command]
-fn restart_desktop_cli(state: State<'_, AppState>) -> AppResult<DesktopCliState> {
-    state.desktop_cli.start(&state.settings.get()?)
+fn restart_desktop_mcp(state: State<'_, AppState>) -> AppResult<DesktopMcpState> {
+    state.desktop_mcp.start(&state.settings.get()?)
 }
 
 #[tauri::command]
@@ -1204,11 +1205,11 @@ pub fn run() {
                 instances: instances.clone(),
                 logs: logs.clone(),
             }));
-            let desktop_cli = DesktopCliService::new(DesktopCliDependencies::new(
+            let desktop_mcp = DesktopMcpService::new(DesktopMcpDependencies::new(
                 settings.clone(),
                 tasks.clone(),
                 codex_terminal.clone(),
-                DesktopCliGameDependencies::new(
+                DesktopMcpGameDependencies::new(
                     instances.clone(),
                     runtime_bridge.clone(),
                     logs.clone(),
@@ -1218,7 +1219,7 @@ pub fn run() {
                 ),
             ));
             connections.start(&current_settings)?;
-            desktop_cli.start(&current_settings)?;
+            desktop_mcp.start(&current_settings)?;
             let changed_handle = app.handle().clone();
             let activated_handle = app.handle().clone();
             let task_notifications = TaskNotificationService::new(
@@ -1255,7 +1256,7 @@ pub fn run() {
                 instances,
                 runtime_bridge,
                 logs,
-                desktop_cli,
+                desktop_mcp,
                 task_notifications: task_notifications.clone(),
             });
             task_notifications.start();
@@ -1324,9 +1325,9 @@ pub fn run() {
             get_build_info,
             get_settings,
             update_settings,
-            regenerate_desktop_cli_token,
-            get_desktop_cli_state,
-            restart_desktop_cli,
+            regenerate_desktop_mcp_token,
+            get_desktop_mcp_state,
+            restart_desktop_mcp,
             list_lan_interfaces,
             get_game_connection_state,
             restart_game_connections,
@@ -1414,7 +1415,7 @@ pub fn run() {
                 state.codex_terminal.stop_all();
                 state.instances.stop_all();
                 state.connections.stop();
-                state.desktop_cli.stop();
+                state.desktop_mcp.stop();
                 finished.store(true, Ordering::SeqCst);
                 handle.exit(0);
             });

@@ -6,6 +6,8 @@ use std::io::Read;
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BuildInfo {
+    pub edition: String,
+    pub tool_transport: String,
     pub version: String,
     pub release: String,
     pub built_at: String,
@@ -34,7 +36,9 @@ pub fn read(paths: &AppPaths) -> AppResult<BuildInfo> {
                 hash.update(&block[..n]);
             }
             let actual = format!("{:x}", hash.finalize());
-            if value["releaseLabel"] == env!("ABYA_RELEASE_ID")
+            if value["edition"] == "mcp"
+                && value["toolTransport"] == "mcp"
+                && value["releaseLabel"] == env!("ABYA_RELEASE_ID")
                 && value["version"] == env!("CARGO_PKG_VERSION")
                 && value["sha256"]
                     .as_str()
@@ -45,6 +49,8 @@ pub fn read(paths: &AppPaths) -> AppResult<BuildInfo> {
         }
     }
     Ok(BuildInfo {
+        edition: "mcp".into(),
+        tool_transport: "mcp".into(),
         version: env!("CARGO_PKG_VERSION").into(),
         release: env!("ABYA_RELEASE_ID").into(),
         built_at: env!("ABYA_BUILD_UTC").into(),

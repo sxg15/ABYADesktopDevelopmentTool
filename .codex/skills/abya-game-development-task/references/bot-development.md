@@ -6,7 +6,7 @@ Bot 是服务端执行 Lua 策略的正常玩法参与者；复用现有 IUser�
 
 ## 可行性与设计
 
-通过 ABYA_DESKTOP_CLI 的 doctor、capabilities 及托管实例的 read_me_first 获取真实契约；
+通过 已配置的 abya MCP 服务 的 doctor、capabilities 及托管实例的 read_me_first 获取真实契约；
 主流程在同一实例/版本取得的有效结果直接复用，变化或证据不足时再查。
 用 runtime describe 或 runtime run 包装 capability_describe 查询精确参数；不恢复 MCP 入口。
 确认 editor_get_bot_definitions、editor_set_bot_definitions、架构 snapshot/validate/lint、
@@ -70,7 +70,7 @@ OnThink 非阻塞、每次有限消费消息；处理无动作、目标消失、
 16 个 Bot 的平台总上限属于平台认证范围，不为每款小容量游戏追加该项验收；仅在用户明确要求、平台维护或当前构建的反例涉及该能力时另行验证。
 四档使用同输入或可复现随机条件比较，至少一档覆盖完整实机对局，报告其他档位未覆盖部分。
 游戏规则不同，接受断言必须按玩法生成；不能用固定心跳、提交数或 Running 状态代替。
-保存原始 CLI 数据与日志，在报告中用 JSON Pointer 明确断言位置，不能另编一个成功 JSON 作证据。
+保存原始 MCP 数据与日志，在报告中用 JSON Pointer 明确断言位置，不能另编一个成功 JSON 作证据。
 验收前对实际存档全目录和 Player 构建（exe、Data 与运行库）计算摘要，并绑定 run.json 的批次、实例、provider。
 Player 或 Bot 定义、规则、观察/动作通道变化后复验相关范围。旧报告始终绑定原完整存档，不能只改哈希冒充新版本通过。
 2.11 可按自主执行契约，将完整且未被改动的原报告作为源证据，核对检查的实际依赖后登记复用；未知影响仍复验。旧策略及本地材料校验器继续校验各自原始完整版本，不以新文件覆盖旧报告。

@@ -18,22 +18,33 @@ CLI tools and fallback paths. Work only on MCP in its independent checkout.
 
 ## Implementation milestones
 
-1. Independent branch and edition identity — implemented; storage isolation test passes.
-2. Native APP MCP protocol/session core — implemented; two focused tests pass.
-   Startup/business-dispatch wiring remains pending.
-3. Codex task-scoped MCP registration; remove ABYA CLI injection — pending.
-4. Native PB MCP client, ownership, receipts and long-operation recovery — pending.
-5. PB native MCP transport and development allowlist in a separate PB workspace — pending.
-6. Replace CLI-dependent task scripts, docs, runtime checks and packaging — pending.
-7. Protocol/fault tests and real end-to-end game creation without ABYA CLI — pending.
+1. Independent edition, paths, ports and package identity — implemented.
+2. Native APP MCP serving and domain dispatch — implemented; scoped authentication,
+   cancellation, stable operation IDs and protocol tests pass.
+3. Codex task-scoped registration — implemented. Installed Codex 0.156.1 reports
+   `abya` connected with the actual APP tool catalog. Actual native inference completed a read-only
+   development_task_list call and returned the isolated task title.
+4. Native Rust PB MCP client — implemented, with exact process identity, private
+   discovery, image artifacts, bounded transport and unknown-write receipts.
+5. Native PB MCP host — implemented in the independent Plastic workspace.
+6. ABYA business CLI binaries/wrappers removed; Skills and packaging migrated.
+7. Real Player transport smoke — passed: 241 capabilities, Lua return value and
+   screenshot roundtrip. This reused a fixture and is not fresh-game completion.
+8. Complete native autonomous game pilots and release promotion — pending.
+
+The first real Player smoke evidence is stored at
+`C:/ABYA-MCP-Qualification-20261031/transport-smoke`. Component validation on this
+revision: npm checks passed; Rust 347 passed, 11 explicitly ignored integration tests.
+Final candidate source/package fingerprints must be rechecked after remaining edits.
 
 ## PB evidence and migration constraints
 
 The inspected PB workspace is Plastic SCM, changeset 11806. A separate branch
-`/MCP-AI-App-20261031` and partial workspace `D:/Unity项目/AbyaPB-MCP` were created
-from that changeset. The original PB workspace was not switched. Its current
-RuntimeCapabilityHost starts CliCapabilityHttpServer; Player access rejects
-InternalMcp. Mcp-prefixed types alone do not establish a usable MCP endpoint.
+`/MCP-AI-App-20261031` and workspace `D:/Unity项目/AbyaPB-MCP` were created
+from that changeset. The original PB workspace was not switched. The baseline
+RuntimeCapabilityHost started CliCapabilityHttpServer and rejected InternalMcp in Player.
+The MCP workspace now starts the native MCP server and rejects ExternalCli; actual
+Player smoke establishes that this is a serving transport, not just renamed types.
 Do not change or switch the active PB workspace. Prepare a separate workspace
 and branch/profile before implementing its transport. Validate the actual
 Player build; share the existing capability registry/dispatcher, not CLI HTTP.
@@ -45,3 +56,10 @@ Protocol versions must be explicitly matched with the installed Codex client.
 
 No MCP release is claimed at this milestone. Do not publish inherited binaries,
 overwrite the CLI Publish directory, or merge this branch wholesale into dev.
+
+## 2026-11-02 resume
+
+The interrupted PB build completed; focused Unity validation passed 56 tests, including
+MCP transport, capability access and focus parity. Lua parity/AOT checks passed with
+31 unrelated historical planned mappings. Windows launcher verification passed nine
+package tests. Final MCP gameplay pilots remain pending; no release promotion occurred.

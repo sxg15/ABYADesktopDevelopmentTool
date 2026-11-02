@@ -1,5 +1,7 @@
 # Foundation Skill
 
+MCP edition: mcp_sessions owns revocable task credentials and heartbeat fences. mcp_http supplies non-proxied local clients. The CLI connection descriptor and named-pipe client were removed; no CLI credential is exported to model shell tools.
+
 ## Current scope
 
 MCP edition (development): separate MCP data/workspace roots and ports; no
@@ -26,7 +28,7 @@ process, log, or MCP business workflows.
 
 Workflow 2.11 shared production DTOs expose optional pinned-policy flags, preview provenance and technical-queue entries. Missing fields preserve old records. The preview API is distinct from formal acceptance; UI projections never manufacture a successful verification or human approval.
 
-The standalone CLI HTTP transport explicitly disables proxies: its validated 127.0.0.1
+The native MCP HTTP transport explicitly disables proxies: its validated 127.0.0.1
 endpoint and bearer token must stay on the local connection even when the application
 enables reqwest system-proxy support for remote GitHub requests. Named pipes are unchanged.
 
@@ -65,7 +67,12 @@ visibility modes used by Tauri commands and React features. Business rules and
 Windows HWND control remain owned by `game-instances`.
 
 Durable data lives below
-`%LOCALAPPDATA%\ABYA Desktop Development Tool\Data`. Desktop CLI secrets are encrypted for the current Windows user with DPAPI. Legacy settings are read without reusing the old token, then saved in the new schema. Public settings never serialize the CLI token. cli_environment publishes an encrypted connection descriptor and resolves the bundled CLI/Node paths. The versioned runtime-table
+`%LOCALAPPDATA%\ABYA Desktop Development Tool MCP\Data`. mcp_sessions issues
+revocable in-memory task/conversation credentials. Global persisted MCP tokens are removed; authorization uses only owned ephemeral leases.
+Public settings expose neither tokens
+nor runtime descriptors. mcp_http disables proxy/redirect for local transport. No CLI
+connection descriptor, CLI executable resolution or automatic CLI data import remains.
+The versioned runtime-table
 migration preserves existing task, instance, log-session, and event IDs while
 generalizing instances into managed and external origins with separate process
 and connection states. `AppPaths.archive_transfers_dir` stores temporary
@@ -109,3 +116,5 @@ update this Skill in the same change.
 Read the matching section in [historical contracts](../../docs/skill-history/20261026/foundation.md) only when changing that surface. New current-scope rules override historical versions.
 
 Owned CLI lease heartbeat (2026-10-26), Workflow 2.5 shared diagnosis (2026-10-24), Terminal freeze recovery (2026-10-22), System memory warning (2026-10-22), Workbench adapters (2026-10-21), Art approval and recheck projections (2026-10-20), 内存保护适配接口（2026-10-19）, Codex-only provider contract (2026-10-19), Workspace library contracts (2026-10-17), Art design contracts (2026-10-16), Game client selection (2026-10-14), Managed sandbox transport, User-initiated clipboard access, Stage workspace update, Workflow 2.0 shared contracts, Review availability contracts (2026-10-12), Background task notifications (2026-10-14), Execution ownership contracts (2026-10-22), Autonomous implementation presentation (2026-10-23).
+
+Transport deactivation clears leases and endpoint but retains paused/stopped conversation fences; only an explicit lifecycle reopen authorizes a fresh session.

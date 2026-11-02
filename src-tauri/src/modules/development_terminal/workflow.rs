@@ -712,7 +712,7 @@ mod tests {
             CodexActivityStatus::Started,
             "Run smoke test",
             "starting",
-            "desktopCliReport",
+            "desktopMcpReport",
         );
         workflow.record_activity(
             "turn",
@@ -721,7 +721,7 @@ mod tests {
             CodexActivityStatus::Completed,
             "Run smoke test",
             "passed",
-            "desktopCliReport",
+            "desktopMcpReport",
         );
 
         assert_eq!(workflow.turns[0].activities.len(), 1);

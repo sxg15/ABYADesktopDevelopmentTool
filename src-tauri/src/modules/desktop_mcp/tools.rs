@@ -1,4 +1,4 @@
-use super::{DesktopCliDependencies, registry};
+use super::{DesktopMcpDependencies, registry};
 use crate::foundation::{AppError, AppResult};
 use crate::modules::archive_transfer::StartArchiveTransferInput;
 use crate::modules::codex_terminal::{CodexActivityKind, CodexActivityStatus};
@@ -30,7 +30,7 @@ struct PlayerQualificationInput {
 
 #[derive(Clone)]
 pub(crate) struct DesktopToolDispatcher {
-    dependencies: DesktopCliDependencies,
+    dependencies: DesktopMcpDependencies,
     conversation_bindings: Arc<Mutex<HashMap<String, ConversationBinding>>>,
 }
 
@@ -42,7 +42,7 @@ pub(crate) struct ToolCallResult {
 }
 
 impl DesktopToolDispatcher {
-    pub(crate) fn new(dependencies: DesktopCliDependencies) -> Self {
+    pub(crate) fn new(dependencies: DesktopMcpDependencies) -> Self {
         Self {
             dependencies,
             conversation_bindings: Default::default(),
@@ -123,6 +123,13 @@ impl DesktopToolDispatcher {
                     ));
                 }
             }
+        }
+        if arguments
+            .get("conversationId")
+            .and_then(Value::as_str)
+            .is_some_and(|id| id != input.conversation_id)
+        {
+            return ToolCallResult::error(AppError::validation("Conversation context mismatch."));
         }
         if name == "game_instance_list" {
             arguments["taskId"] = json!(input.task_id);
@@ -295,7 +302,7 @@ impl DesktopToolDispatcher {
                     "arguments": arguments,
                     "isError": result.is_error,
                     "artifacts": result.content.iter().filter(|v|v["type"]=="image")
-                        .filter_map(|v|v["path"].as_str()).collect::<Vec<_>>()
+                        .filter_map(|v|v["_meta"]["abya/artifactPath"].as_str().or_else(||v["path"].as_str())).collect::<Vec<_>>()
                 }),
                 if result.is_error {
                     CodexActivityStatus::Failed
@@ -308,7 +315,7 @@ impl DesktopToolDispatcher {
 
     fn bind_conversation(&self, session_id: Option<&str>, arguments: Value) -> AppResult<Value> {
         let session_id = session_id.ok_or_else(|| {
-            AppError::validation("An validated CLI context is required for conversation binding.")
+            AppError::validation("A validated MCP context is required for conversation binding.")
         })?;
         let input: ConversationBindInput = decode(arguments)?;
         let conversation = match input.provider {
@@ -330,7 +337,7 @@ impl DesktopToolDispatcher {
 
     fn report_activity(&self, session_id: Option<&str>, arguments: Value) -> AppResult<Value> {
         let session_id = session_id.ok_or_else(|| {
-            AppError::validation("An validated CLI context is required for activity reporting.")
+            AppError::validation("A validated MCP context is required for activity reporting.")
         })?;
         let (provider, task_id, conversation_id) = self
             .conversation_bindings
@@ -398,7 +405,7 @@ impl DesktopToolDispatcher {
     fn invoke(&self, name: &str, arguments: Value) -> AppResult<Value> {
         if !arguments.is_object() {
             return Err(AppError::validation(
-                "Desktop CLI tool arguments must be an object.",
+                "Desktop MCP tool arguments must be an object.",
             ));
         }
         match name {
@@ -808,12 +815,12 @@ impl DesktopToolDispatcher {
                     validated_timeout(input.timeout_ms)?,
                 )?)
             }
-            "game_instance_wait_for_cli" => {
+            "game_instance_wait_for_mcp" => {
                 let input: WaitForCliInput = decode(arguments)?;
                 serialize(
                     self.dependencies
                         .runtime_bridge
-                        .wait_for_cli(&input.instance_id, validated_timeout(input.timeout_ms)?)?,
+                        .wait_for_mcp(&input.instance_id, validated_timeout(input.timeout_ms)?)?,
                 )
             }
             "game_instance_get_launch_report" => {
@@ -901,8 +908,8 @@ impl DesktopToolDispatcher {
                 })?)
             }
             _ => Err(AppError::new(
-                "unknownDesktopCliTool",
-                format!("Desktop CLI tool was not found: {name}"),
+                "unknownDesktopMcpTool",
+                format!("Desktop MCP tool was not found: {name}"),
                 "",
             )),
         }
@@ -916,16 +923,16 @@ impl DesktopToolDispatcher {
     ) -> AppResult<crate::modules::runtime_bridge::RuntimeToolResult> {
         if !arguments.is_object() {
             return Err(AppError::validation(
-                "Desktop CLI tool arguments must be an object.",
+                "Desktop MCP tool arguments must be an object.",
             ));
         }
-        let input: GameCliCallInput = decode(arguments)?;
+        let input: GameMcpCallInput = decode(arguments)?;
         if input.tool_name.trim().is_empty() {
-            return Err(AppError::validation("Game CLI tool name is required."));
+            return Err(AppError::validation("Game MCP tool name is required."));
         }
         if !input.arguments.is_object() {
             return Err(AppError::validation(
-                "Game CLI tool arguments must be an object.",
+                "Game MCP tool arguments must be an object.",
             ));
         }
         self.dependencies.runtime_bridge.call_tool_scoped(
@@ -953,7 +960,7 @@ impl ToolCallResult {
         let text = serde_json::to_string(&error).unwrap_or_else(|_| {
             json!({
                 "code": "internal",
-                "message": "Desktop CLI tool failed.",
+                "message": "Desktop MCP tool failed.",
                 "detail": error.to_string()
             })
             .to_string()
@@ -969,7 +976,7 @@ fn decode<T: DeserializeOwned>(arguments: Value) -> AppResult<T> {
     serde_json::from_value(arguments).map_err(|error| {
         AppError::new(
             "invalidToolArguments",
-            "Desktop CLI tool arguments are invalid.",
+            "Desktop MCP tool arguments are invalid.",
             error.to_string(),
         )
     })
@@ -1112,7 +1119,9 @@ struct WaitForCliInput {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct GameCliCallInput {
+struct GameMcpCallInput {
+    #[serde(default, rename = "requestId")]
+    _request_id: Option<String>,
     instance_id: String,
     tool_name: String,
     #[serde(default = "empty_object")]
@@ -1184,7 +1193,7 @@ mod tests {
     use crate::foundation::{AppPaths, Database, SettingsService};
     use crate::modules::archive_transfer::ArchiveTransferService;
     use crate::modules::codex_terminal::CodexTerminalService;
-    use crate::modules::desktop_cli::DesktopCliGameDependencies;
+    use crate::modules::desktop_mcp::DesktopMcpGameDependencies;
     use crate::modules::game_archives::ArchiveCatalogService;
     use crate::modules::game_connections::GameConnectionService;
     use crate::modules::instances::InstanceService;
@@ -1239,11 +1248,11 @@ mod tests {
             connections.clone(),
         );
         Fixture {
-            dispatcher: DesktopToolDispatcher::new(DesktopCliDependencies::new(
+            dispatcher: DesktopToolDispatcher::new(DesktopMcpDependencies::new(
                 settings,
                 tasks.clone(),
                 codex_terminal.clone(),
-                DesktopCliGameDependencies::new(
+                DesktopMcpGameDependencies::new(
                     instances,
                     runtime_bridge,
                     logs,
@@ -1263,11 +1272,11 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Requires ABYA_CLI_SMOKE_PLAYER, ABYA_CLI_SMOKE_ARCHIVE and ABYA_CLI_SMOKE_OUTPUT"]
-    fn real_player_cli_pipeline_with_codex_context() {
-        let executable = std::env::var("ABYA_CLI_SMOKE_PLAYER").unwrap();
-        let archive_source = PathBuf::from(std::env::var("ABYA_CLI_SMOKE_ARCHIVE").unwrap());
-        let output = PathBuf::from(std::env::var("ABYA_CLI_SMOKE_OUTPUT").unwrap());
+    #[ignore = "Requires ABYA_MCP_SMOKE_PLAYER, ABYA_MCP_SMOKE_ARCHIVE and ABYA_MCP_SMOKE_OUTPUT"]
+    fn real_player_mcp_pipeline_with_codex_context() {
+        let executable = std::env::var("ABYA_MCP_SMOKE_PLAYER").unwrap();
+        let archive_source = PathBuf::from(std::env::var("ABYA_MCP_SMOKE_ARCHIVE").unwrap());
+        let output = PathBuf::from(std::env::var("ABYA_MCP_SMOKE_OUTPUT").unwrap());
         std::fs::create_dir_all(&output).unwrap();
         std::fs::write(
             output.join("summary.json"),
@@ -1306,7 +1315,7 @@ mod tests {
         let task = fixture
             .tasks
             .create(TaskInput {
-                title: "CLI migration smoke".into(),
+                title: "MCP transport smoke".into(),
                 description: String::new(),
             })
             .unwrap();
@@ -1323,7 +1332,7 @@ mod tests {
             Some(context.clone()),
             &Uuid::new_v4().to_string(),
             "game_instance_launch",
-            json!({"taskId":task.id,"name":"CLI verification","executablePath":executable,
+            json!({"taskId":task.id,"name":"MCP verification","executablePath":executable,
                 "mode":"editor","exitOnFailure":false,"width":800,"height":600,
                 "archive":{"archiveGuid":archive.archive_guid,"archivePath":archive_path,"archiveName":archive.archive_name,"levelGuid":"","levelName":""}}),
         );
@@ -1338,9 +1347,9 @@ mod tests {
         let _stop = StopInstance(deps.instances.clone(), instance_id.clone());
         let ready = deps
             .runtime_bridge
-            .wait_for_cli(&instance_id, Duration::from_secs(120));
+            .wait_for_mcp(&instance_id, Duration::from_secs(120));
         if let Err(error) = &ready {
-            panic!("CLI readiness failed: {error}");
+            panic!("MCP readiness failed: {error}");
         }
         let startup = std::time::Instant::now();
         loop {
@@ -1402,12 +1411,16 @@ mod tests {
                 let image = result
                     .content
                     .iter()
-                    .find_map(|v| v["path"].as_str())
+                    .find_map(|v| {
+                        v["_meta"]["abya/artifactPath"]
+                            .as_str()
+                            .or_else(|| v["path"].as_str())
+                    })
                     .expect("Screenshot file missing");
                 std::fs::copy(image, output.join("runtime.png")).unwrap();
             }
         }
-        if std::env::var("ABYA_CLI_SMOKE_STAGE_CONTRACTS").as_deref() == Ok("1") {
+        if std::env::var("ABYA_MCP_SMOKE_STAGE_CONTRACTS").as_deref() == Ok("1") {
             let validate = tools
                 .iter()
                 .find(|t| t["name"] == "editor_gameplay_architecture_validate")
@@ -1499,7 +1512,7 @@ mod tests {
             let prototype = grant["instanceId"].as_str().unwrap().to_owned();
             let _prototype_stop = StopInstance(deps.instances.clone(), prototype.clone());
             deps.runtime_bridge
-                .wait_for_cli(&prototype, Duration::from_secs(120))
+                .wait_for_mcp(&prototype, Duration::from_secs(120))
                 .unwrap();
             let start = std::time::Instant::now();
             while deps
@@ -1543,7 +1556,7 @@ mod tests {
             std::fs::write(output.join("stage-contracts.json"),"{\"schema\":\"abya.stage-contract-smoke/v1\",\"passed\":true,\"realPlayer\":true,\"syntheticTask\":true}").unwrap();
         }
         // 可选的人机就绪检查走真实托管 Player；只读定义与 API，不生成或保存玩法。
-        let bot_prerequisites = std::env::var("ABYA_CLI_SMOKE_BOTS").as_deref() == Ok("1");
+        let bot_prerequisites = std::env::var("ABYA_MCP_SMOKE_BOTS").as_deref() == Ok("1");
         if bot_prerequisites {
             for required in [
                 "editor_get_bot_definitions",
@@ -1600,7 +1613,7 @@ mod tests {
                 }
             }
         }
-        let multiplayer = std::env::var("ABYA_CLI_SMOKE_MULTIPLAYER").as_deref() == Ok("1");
+        let multiplayer = std::env::var("ABYA_MCP_SMOKE_MULTIPLAYER").as_deref() == Ok("1");
         if multiplayer {
             deps.instances.stop(&instance_id).unwrap();
             let mut peers: Vec<String> = Vec::new();
@@ -1624,7 +1637,7 @@ mod tests {
                 let id = result_json(launched)["id"].as_str().unwrap().to_string();
                 peer_guards.push(StopInstance(deps.instances.clone(), id.clone()));
                 deps.runtime_bridge
-                    .wait_for_cli(&id, Duration::from_secs(120))
+                    .wait_for_mcp(&id, Duration::from_secs(120))
                     .unwrap();
                 let start = std::time::Instant::now();
                 loop {
@@ -1782,7 +1795,7 @@ mod tests {
         let fixture = fixture();
         let unknown = fixture.dispatcher.call("missing_tool", json!({}));
         assert!(unknown.is_error);
-        assert_eq!(result_json(unknown)["code"], "unknownDesktopCliTool");
+        assert_eq!(result_json(unknown)["code"], "unknownDesktopMcpTool");
 
         let invalid = fixture
             .dispatcher

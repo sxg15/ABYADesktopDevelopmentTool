@@ -514,37 +514,17 @@ pub(super) fn codex_process_command(codex: &ResolvedCodex) -> Command {
 // Per-thread values must reach the process that executes tools, not only the remote TUI.
 // Dotted overrides preserve unrelated user environment entries and permission settings.
 fn managed_thread_config(cwd: &str, task_id: &str, conversation_id: &str) -> Value {
-    let cli = crate::foundation::cli_environment::desktop_cli_path()
-        .to_string_lossy()
-        .into_owned();
-    let values = [
-        ("ABYA_DESKTOP_CLI", cli.as_str()),
-        ("ABYA_DEVELOPMENT_TASK_ID", task_id),
-        ("ABYA_DEVELOPMENT_CONVERSATION_ID", conversation_id),
-        ("ABYA_DEVELOPMENT_PROVIDER", "codex"),
-        ("ABYA_DEVELOPMENT_WORKSPACE", cwd),
-    ];
-    Value::Object(
-        values
-            .into_iter()
-            .map(|(key, value)| {
-                (
-                    format!("shell_environment_policy.set.{key}"),
-                    Value::String(value.into()),
-                )
-            })
-            .chain(
-                crate::foundation::cli_sessions::environment("codex", task_id, conversation_id)
-                    .into_iter()
-                    .map(|(key, value)| {
-                        (
-                            format!("shell_environment_policy.set.{key}"),
-                            Value::String(value),
-                        )
-                    }),
-            )
-            .collect(),
-    )
+    let env = crate::foundation::mcp_sessions::environment("codex", task_id, conversation_id);
+    let get = |key: &str| {
+        env.iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default()
+    };
+    json!({"mcp_servers.abya-desktop.enabled":false,"mcp_servers.ai-game-developer.enabled":false,"mcp_servers.abya":{"url":get("ABYA_MCP_URL"),"http_headers":{"Authorization":format!("Bearer {}",get("ABYA_MCP_SESSION_TOKEN"))},"tool_timeout_sec":720},
+        "shell_environment_policy.set.ABYA_DEVELOPMENT_WORKSPACE":cwd,
+        "shell_environment_policy.set.ABYA_DEVELOPMENT_TASK_ID":task_id,
+        "shell_environment_policy.set.ABYA_DEVELOPMENT_CONVERSATION_ID":conversation_id})
 }
 
 fn developer_instruction_item(developer_instructions: &str) -> Value {
@@ -816,19 +796,15 @@ mod tests {
             "conversation-b"
         );
         assert!(
-            first["shell_environment_policy.set.ABYA_DESKTOP_CLI"]
-                .as_str()
-                .unwrap()
-                .ends_with("abya-desktop.exe")
-        );
-        assert!([5, 8].contains(&first.as_object().unwrap().len()));
-        assert!(
             first
-                .as_object()
-                .unwrap()
-                .keys()
-                .all(|key| key.starts_with("shell_environment_policy.set.ABYA_"))
+                .get("shell_environment_policy.set.ABYA_DESKTOP_CLI")
+                .is_none()
         );
+        assert_eq!(first["mcp_servers.abya"]["tool_timeout_sec"], 720);
+        assert_eq!(first["mcp_servers.abya-desktop.enabled"], false);
+        assert_eq!(first["mcp_servers.ai-game-developer.enabled"], false);
+        assert!(first.get("approval_policy").is_none());
+        assert!(first.get("sandbox_mode").is_none());
     }
 
     #[test]

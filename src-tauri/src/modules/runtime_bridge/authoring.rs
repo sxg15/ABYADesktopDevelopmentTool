@@ -218,7 +218,7 @@ impl RuntimeBridgeService {
             profile,
         })?;
         let grant = (|| {
-            self.wait_for_cli(&instance.id, Duration::from_secs(90))?;
+            self.wait_for_mcp(&instance.id, Duration::from_secs(90))?;
             let started = Instant::now();
             loop {
                 let report = self.instances.read_launch_report(&instance.id)?;

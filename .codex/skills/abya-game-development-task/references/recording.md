@@ -1,13 +1,13 @@
 # 实际运行录像
 
-只在需要完整循环、巡检或动作录像时读取。先用 recording tools 确认随包组件可用。
+只在需要完整循环、巡检或动作录像时读取。先用 game_recording_tools 确认随包组件可用。
 录制目标必须是当前任务正在运行的受管实例；使用 PID 对应的游戏窗口，不录整个桌面。
 
-1. 确认已保存、加载当前版本；必要时先 production version。停止无关自动输入。
-2. recording start --input-file <JSON> --json：参数 instanceId，可选 maxSeconds（5—7200，默认3600）。
+1. 确认已保存、加载当前版本；必要时先 development_production_version。停止无关自动输入。
+2. game_recording_start：参数 instanceId，可选 maxSeconds（5—7200，默认3600）。
 3. 记录返回 id、sourceVersion 和相对 path；运行真实输入完成目标过程。
-4. recording get 读取状态和帧数；失败或黑屏须处理，帧数增长不代表画面正确。
-5. recording stop 正常结束，只有 completed 且画面经检查的内容才作为完成证据。
+4. game_recording_get 读取状态和帧数；失败或黑屏须处理，帧数增长不代表画面正确。
+5. game_recording_stop 正常结束，只有 completed 且画面经检查的内容才作为完成证据。
 
 当前方式是 Windows 窗口实时录屏、15 fps、H.264 MP4，不含音频。录制期间会临时显示
 游戏窗口，不抢焦点，结束后恢复原可见状态。不要遮挡、最小化或调整录制窗口尺寸。

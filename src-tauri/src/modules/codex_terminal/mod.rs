@@ -181,38 +181,6 @@ pub struct CodexTerminalService {
 }
 
 impl CodexTerminalService {
-    #[cfg(test)]
-    pub(crate) fn preflight_for_test(
-        &self,
-        task: &str,
-        conversation: &str,
-    ) -> AppResult<Option<AppError>> {
-        let (codex, record) = self.validate_open_request(task, conversation)?;
-        preflight::check(
-            &codex,
-            Path::new(&record.workspace_path),
-            task,
-            conversation,
-        )
-    }
-    #[cfg(test)]
-    pub(crate) fn failed_workspace_probe_for_test(
-        &self,
-        task: &str,
-        conversation: &str,
-        runner: PathBuf,
-    ) -> AppResult<Option<AppError>> {
-        let record = self.tasks.get(task)?;
-        preflight::check(
-            &ResolvedCodex {
-                path: runner,
-                kind: CodexLaunchKind::CommandScript,
-            },
-            Path::new(&record.workspace_path),
-            task,
-            conversation,
-        )
-    }
     pub fn new(tasks: TaskService) -> AppResult<Self> {
         let service = Self {
             tasks,
@@ -452,7 +420,7 @@ impl CodexTerminalService {
             status,
             summary,
             detail,
-            "desktopCliReport",
+            "desktopMcpReport",
         )
     }
 
@@ -479,7 +447,7 @@ impl CodexTerminalService {
             status,
             &summary,
             &sanitize_detail(arguments),
-            "desktopCli",
+            "desktopMcp",
         )
     }
 
@@ -574,7 +542,7 @@ impl CodexTerminalService {
             let _publication = gate.publication.lock();
             gate.check(generation)?;
             let generation = gate.invalidate();
-            crate::foundation::cli_sessions::allow_new_session("codex", conversation_id);
+            crate::foundation::mcp_sessions::allow_new_session("codex", conversation_id);
             generation
         };
         let mut attempt = resume_failure::OpenAttempt::new();
@@ -614,7 +582,7 @@ impl CodexTerminalService {
         if let Some(server) = &attempt.server {
             server.stop();
             self.runtime_servers.lock().remove(conversation);
-            crate::foundation::cli_sessions::revoke("codex", conversation);
+            crate::foundation::mcp_sessions::revoke("codex", conversation);
         }
     }
 
@@ -646,7 +614,7 @@ impl CodexTerminalService {
         match preflight::check(&codex, &working_directory, task_id, conversation_id) {
             Ok(warning) => attempt.warning = warning,
             Err(error) => {
-                crate::foundation::cli_sessions::revoke("codex", conversation_id);
+                crate::foundation::mcp_sessions::revoke("codex", conversation_id);
                 return Err(error);
             }
         }
@@ -1369,7 +1337,7 @@ impl CodexTerminalService {
                 sessions.lock().remove(&conversation_id);
                 // Closing a remote TUI detaches; its native turn may still be running.
                 if !remote_bound {
-                    crate::foundation::cli_sessions::revoke("codex", &conversation_id);
+                    crate::foundation::mcp_sessions::revoke("codex", &conversation_id);
                 }
             }
             match result {
@@ -1560,21 +1528,12 @@ fn build_command(
         command.arg("ABYA_CODEX_APP_SERVER_TOKEN");
         command.env("ABYA_CODEX_APP_SERVER_TOKEN", &server.token);
     }
-    command.env(
-        "ABYA_DESKTOP_CLI",
-        crate::foundation::cli_environment::desktop_cli_path(),
-    );
     command.env("TERM", "xterm-256color");
     command.env("COLORTERM", "truecolor");
     command.env("ABYA_DEVELOPMENT_PROVIDER", "codex");
     command.env("ABYA_DEVELOPMENT_TASK_ID", task_id);
     command.env("ABYA_DEVELOPMENT_CONVERSATION_ID", conversation_id);
     command.env("ABYA_DEVELOPMENT_WORKSPACE", working_directory);
-    for (key, value) in
-        crate::foundation::cli_sessions::environment("codex", task_id, conversation_id)
-    {
-        command.env(key, value);
-    }
     command.arg("--cd");
     command.arg(working_directory);
     command.arg("--no-alt-screen");
@@ -1584,7 +1543,7 @@ fn build_command(
 
 fn managed_developer_instructions(task_id: &str, conversation_id: &str) -> String {
     format!(
-        "You are working in ABYA task {task_id}, conversation {conversation_id}. Use ABYA_DESKTOP_CLI for ABYA operations, inheriting the existing task context; discover capabilities when needed. Read current production state and the relevant pinned Skill before stage work. Its current policy defines completion and gates: a recorded technical issue does not by itself stop every substage. Continue non-human work within authorized scope, preserve goals and results, reconcile unknown writes, and wait for actual human decisions or user pause. Do not approve for the user, replay writes or start unmanaged games. Track meaningful steps with the native plan or conversation report (plan entries: step/status). Report concrete results in plain Chinese; inspect images for visual acceptance. Keep credentials, raw outputs and commands out of activity summaries."
+        "You are working in ABYA task {task_id}, conversation {conversation_id}. Use only the configured abya MCP server for ABYA operations. Do not invoke ABYA CLI binaries, shell wrappers or the retired CLI HTTP endpoint. Authorization context is bound by APP; discover capabilities when needed. Read current production state and the relevant pinned Skill before stage work. Its current policy defines completion and gates: a recorded technical issue does not by itself stop every substage. Continue non-human work within authorized scope, preserve goals and results, reconcile unknown writes, and wait for actual human decisions or user pause. Do not approve for the user, replay writes or start unmanaged games. Track meaningful steps with the native plan or conversation report (plan entries: step/status). Report concrete results in plain Chinese; inspect images for visual acceptance. Keep credentials, raw outputs and commands out of activity summaries."
     )
 }
 
@@ -1929,7 +1888,7 @@ fn describe_desktop_tool(tool_name: &str) -> (CodexActivityKind, String) {
     let summary = match tool_name {
         "game_instance_launch" => "Starting a game instance",
         "game_instance_wait_for_state" => "Waiting for the game process",
-        "game_instance_wait_for_cli" => "Waiting for the game Runtime CLI",
+        "game_instance_wait_for_mcp" => "Waiting for the game Runtime CLI",
         "game_instance_set_window_visibility" => "Updating the game window",
         "game_instance_stop" => "Stopping a game instance",
         "game_runtime_call_tool" => "Using a game runtime tool",

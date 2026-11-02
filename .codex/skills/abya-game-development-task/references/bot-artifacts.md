@@ -42,7 +42,7 @@ archiveHash 对实际存档的全部文件路径及内容摘要计算，包括�
 - instanceId、role、capturedAt（UTC ISO 时间）：实际采集实例及时间，晚于 startedAt。
 - definitionId、botId、difficulty：策略定义、真实用户身份与 Easy/Medium/Hard/Hell。
 - kind：gameplay（玩法状态）、diagnostics（Bot 诊断）或 strategy（受控策略样本）。
-- data：实际 CLI 返回/解析的数据；保留原始返回文件用于追溯，不人工填造观察值。
+- data：实际 MCP 返回/解析的数据；保留原始返回文件用于追溯，不人工填造观察值。
 
 静态捕获至少包含 target、definitionsHash、archiveHash、data。
 在同一已保存内容上重做 Lua/API、架构 validate/lint，分别存文件，successPointer 指向实际成功布尔值。
@@ -65,7 +65,7 @@ uncovered 记录未承诺的额外范围；不能用它豁免必测用例。
 ## 本地执行
 
 Node 20+；使用桌面随包 runtime/node.exe 或已安装 Node。S 为当前 provider 的本 Skill scripts 目录。
-这些只读脚本操作任务文件；游戏发现、写入、启动和停止仍必须通过 ABYA_DESKTOP_CLI。
+这些只读脚本操作任务文件；游戏发现、写入、启动和停止仍必须通过 已配置的 abya MCP 服务。
 ```powershell
 node "$S/validate-bot-artifacts.mjs" --root "$R" --mode prewrite
 node "$S/validate-bot-artifacts.mjs" --mode archive-hash --archive "$ArchiveDirectory"

@@ -28,9 +28,10 @@ export async function connectPilot(directory){
   return response.data;
  };
  const paths=await invoke('get_app_paths'),build=await invoke('get_build_info');
- assert.equal(path.resolve(paths.dataDir).toLowerCase(),path.join(root,'Local','ABYA Desktop Development Tool','Data').toLowerCase());
+ assert.equal(path.resolve(paths.dataDir).toLowerCase(),path.join(root,'Local','ABYA Desktop Development Tool MCP','Data').toLowerCase());
  assert.equal(build.testEnvironment,true);assert.equal(build.verification,'verified');
- assert.equal(build.release,'delivery-first-20261030');
+ assert.equal(build.release,'mcp-native-20261031');
+ assert.equal(build.edition,'mcp');assert.equal(build.toolTransport,'mcp');
  const manifest=readJson(path.join(path.dirname(build.executable),'build-manifest.json'));
  assert.equal(manifest.workflowVersion,'2.11.0');
  return {root,marker,browser,page,invoke,build,paths};

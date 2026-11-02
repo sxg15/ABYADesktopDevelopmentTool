@@ -56,6 +56,14 @@ async fn protocol_requires_owned_initialized_session_and_does_not_dispatch_rejec
         StatusCode::NOT_FOUND
     );
     let ready = json!({"jsonrpc":"2.0","method":"notifications/initialized"});
+    let malformed = json!({"jsonrpc":"2.0","id":3,"method":"notifications/initialized"});
+    protocol::handle(State(gateway.clone()), headers.clone(), Json(malformed)).await;
+    assert_eq!(
+        protocol::handle(State(gateway.clone()), headers.clone(), Json(call.clone()))
+            .await
+            .status(),
+        StatusCode::NOT_FOUND
+    );
     assert_eq!(
         protocol::handle(State(gateway.clone()), headers.clone(), Json(ready))
             .await
@@ -81,4 +89,92 @@ async fn protocol_requires_owned_initialized_session_and_does_not_dispatch_rejec
         StatusCode::OK
     );
     assert_eq!(calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn cancellation_is_scoped_and_reaches_the_original_operation() {
+    use std::time::{Duration, Instant};
+    let entered = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let cancelled = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let observed_cancel = cancelled.clone();
+    let started = entered.clone();
+    let flag = cancelled.clone();
+    let operation = uuid::Uuid::new_v4().to_string();
+    let expected = operation.clone();
+    let gateway = McpGateway::new(
+        vec![json!({"name":"game_runtime_call_tool"})],
+        move |_, _, _, _| {
+            started.store(true, Ordering::SeqCst);
+            let deadline = Instant::now() + Duration::from_secs(5);
+            while !flag.load(Ordering::SeqCst) && Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            json!({"content":[],"isError":true})
+        },
+    )
+    .with_cancel(move |_, instance, op| {
+        assert_eq!(instance, "owned");
+        assert_eq!(op, expected);
+        cancelled.store(true, Ordering::SeqCst);
+    });
+    let token=gateway.leases.issue(json!({"provider":"codex","taskId":uuid::Uuid::new_v4(),"conversationId":uuid::Uuid::new_v4()})).unwrap();
+    let session = gateway.leases.begin(&token).unwrap();
+    assert!(gateway.leases.ready(&token, &session, true));
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        "authorization",
+        HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
+    );
+    headers.insert("mcp-session-id", HeaderValue::from_str(&session).unwrap());
+    headers.insert(
+        "mcp-protocol-version",
+        HeaderValue::from_static("2025-11-25"),
+    );
+    let call = json!({"jsonrpc":"2.0","id":77,"method":"tools/call","params":{"name":"game_runtime_call_tool","arguments":{"instanceId":"owned","requestId":operation}}});
+    let owner = gateway.clone();
+    let owned_headers = headers.clone();
+    let running =
+        tokio::spawn(
+            async move { protocol::handle(State(owner), owned_headers, Json(call)).await },
+        );
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while !entered.load(Ordering::SeqCst) && Instant::now() < deadline {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(entered.load(Ordering::SeqCst));
+    let other_token=gateway.leases.issue(json!({"provider":"codex","taskId":uuid::Uuid::new_v4(),"conversationId":uuid::Uuid::new_v4()})).unwrap();
+    let other_session = gateway.leases.begin(&other_token).unwrap();
+    assert!(gateway.leases.ready(&other_token, &other_session, true));
+    let mut other = headers.clone();
+    other.insert(
+        "authorization",
+        HeaderValue::from_str(&format!("Bearer {other_token}")).unwrap(),
+    );
+    other.insert(
+        "mcp-session-id",
+        HeaderValue::from_str(&other_session).unwrap(),
+    );
+    protocol::handle(
+        State(gateway.clone()),
+        other,
+        Json(json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":77}})),
+    )
+    .await;
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    assert!(!observed_cancel.load(Ordering::SeqCst));
+    let reply = protocol::handle(
+        State(gateway),
+        headers,
+        Json(json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":77}})),
+    )
+    .await;
+    assert_eq!(reply.status(), StatusCode::ACCEPTED);
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(2), running)
+            .await
+            .unwrap()
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
 }

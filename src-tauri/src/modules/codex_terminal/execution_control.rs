@@ -293,7 +293,7 @@ impl CodexTerminalService {
                 return Err(AppError::validation("原会话关联已变化，未执行停止。"));
             }
             if operation == "forceStop" {
-                crate::foundation::cli_sessions::revoke("codex", conversation);
+                crate::foundation::mcp_sessions::revoke("codex", conversation);
             } else if server.is_alive() {
                 self.queue_tasks
                     .lock()
@@ -337,7 +337,7 @@ impl CodexTerminalService {
         let (server, session) = {
             let _publication = gate.publication.lock();
             gate.check(generation)?;
-            crate::foundation::cli_sessions::revoke("codex", conversation);
+            crate::foundation::mcp_sessions::revoke("codex", conversation);
             (
                 self.runtime_handle(conversation),
                 self.sessions.lock().get(conversation).cloned(),
@@ -392,7 +392,7 @@ impl CodexTerminalService {
             return Err(error);
         }
         self.runtime_servers.lock().remove(conversation);
-        crate::foundation::cli_sessions::revoke("codex", conversation);
+        crate::foundation::mcp_sessions::revoke("codex", conversation);
         Ok(())
     }
 }

@@ -1,11 +1,9 @@
 use parking_lot::Mutex;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+#[cfg(test)]
+use std::time::Duration;
+use std::{collections::HashMap, sync::Arc, time::Instant};
 
 struct Lease {
     context: Value,
@@ -27,6 +25,7 @@ fn key(token: &str) -> String {
 }
 impl McpLeases {
     /// Provisioned by the APP, never through an agent-callable MCP tool.
+    #[cfg(test)]
     pub fn issue(&self, context: Value) -> Option<String> {
         for field in ["taskId", "conversationId"] {
             uuid::Uuid::parse_str(context[field].as_str()?).ok()?;
@@ -48,6 +47,7 @@ impl McpLeases {
         );
         Some(token)
     }
+    #[cfg(test)]
     pub fn revoke(&self, conversation: &str) {
         let mut s = self.0.lock();
         s.leases
@@ -63,10 +63,16 @@ impl McpLeases {
             .filter(|l| l.expires > Instant::now())
             .map(|l| l.context.clone())
     }
+    #[cfg(test)]
     pub(super) fn begin(&self, token: &str) -> Option<String> {
         self.context(token)?;
+        self.begin_authenticated(token)
+    }
+    pub(super) fn begin_authenticated(&self, token: &str) -> Option<String> {
         let mut s = self.0.lock();
-        s.sessions.retain(|_, v| v.owner != key(token));
+        if s.sessions.len() >= 4096 {
+            return None;
+        }
         let id = uuid::Uuid::new_v4().to_string();
         s.sessions.insert(
             id.clone(),
@@ -77,10 +83,14 @@ impl McpLeases {
         );
         Some(id)
     }
+    #[cfg(test)]
     pub(super) fn ready(&self, token: &str, session: &str, initialize: bool) -> bool {
         if self.context(token).is_none() {
             return false;
         }
+        self.ready_authenticated(token, session, initialize)
+    }
+    pub(super) fn ready_authenticated(&self, token: &str, session: &str, initialize: bool) -> bool {
         let mut s = self.0.lock();
         let Some(v) = s
             .sessions
