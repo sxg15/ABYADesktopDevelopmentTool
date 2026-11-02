@@ -394,6 +394,51 @@ fn player_pin_and_authoring_data_are_task_owned() {
 }
 
 #[test]
+fn generic_bootstrap_checks_approval_and_isolates_tasks_without_upgrading_policy() {
+    let f = Fixture::new();
+    assert!(f.service.production_bootstrap_root(&f.id).is_err());
+    f.plan();
+    let before = f.record();
+    let root = f.service.production_bootstrap_root(&f.id).unwrap();
+    let archive = root.join("Archives/blank");
+    std::fs::create_dir_all(&archive).unwrap();
+    assert_eq!(
+        Some(root.clone()),
+        f.service
+            .production_owned_archive_root(&f.id, &archive.to_string_lossy())
+            .unwrap()
+    );
+    assert_eq!(root, f.service.production_bootstrap_root(&f.id).unwrap());
+    assert_eq!(before.revision, f.record().revision);
+    assert_eq!(before.policy, f.record().policy);
+    let other = f
+        .service
+        .create(TaskInput {
+            title: "Independent scoped task".into(),
+            description: "Test fixture".into(),
+        })
+        .unwrap();
+    let other_root = f.service.production_bootstrap_root(&other.id).unwrap();
+    assert_ne!(root, other_root);
+    let id = uuid::Uuid::new_v4().to_string();
+    assert_ne!(
+        f.service
+            .production_creation_receipt_path(&f.id, &id)
+            .unwrap(),
+        f.service
+            .production_creation_receipt_path(&other.id, &id)
+            .unwrap()
+    );
+    assert!(
+        f.service
+            .production_creation_receipt_path(&f.id, "../escape")
+            .is_err()
+    );
+    std::fs::write(root.join("owner.json"), br#"{"taskId":"foreign"}"#).unwrap();
+    assert!(f.service.production_bootstrap_root(&f.id).is_err());
+}
+
+#[test]
 fn baseline_round_trip_supports_full_catalog_but_returns_bounded_context() {
     let f = setup();
     let r = f.record();

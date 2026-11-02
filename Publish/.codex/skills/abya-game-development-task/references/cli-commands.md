@@ -15,6 +15,7 @@
 | instance list/get/launch/stop/window/wait/launch-report | game_instance_list/get/launch/stop/set_window_visibility/wait_for_state/get_launch_report |
 | runtime status/wait/list/run/cancel | game_runtime_get_state / game_instance_wait_for_cli / game_runtime_list_tools / game_runtime_call_tool / game_runtime_cancel |
 | archive list/targets/sources/transfer/get/cancel | game_archive_list / game_archive_transfer_target_list/source_list/start/get/cancel |
+| archive create/creation-status | game_archive_create / game_archive_creation_status；通用任务空白初始化及回执查询 |
 | log start/stop/sources/sessions/query | game_log_collection_start/stop / game_log_source_list/session_list/query |
 
 runtime run 的输入为 {"instanceId":"桌面实例 ID","toolName":"能力 ID","arguments":{}}。

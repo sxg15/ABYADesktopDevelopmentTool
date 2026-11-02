@@ -1,5 +1,13 @@
 # Desktop CLI
 
+## 通用空白存档（2026-11-02）
+archive create / game_archive_create：creationId(UUID)、name、author，executablePath 可省略沿用 APP 设置；taskId 从已认证会话绑定。
+用于任意开发任务，通过 Player 原生功能新建并加载空白存档；不要求调用者提供存档路径或虚构 GUID。
+archive creation-status / game_archive_creation_status 按同任务 creationId 查询回执，不执行写入。
+仅 status=ready、created/loaded=true 表示初始化成功，instanceRunning 单独表达当前存活。
+重复 creationId 返回原结果，变更参数拒绝；未知结果先通过返回的 instanceId / 操作 ID 读回核对，禁止重新生成 ID 盲重试。
+scripts/archive-bootstrap-smoke.mjs 在显式 ABYA_ARCHIVE_QA_ROOT 隔离环境验证两个普通任务的创建、隔离、重复请求、越权拒绝和普通冷加载。先 setup，再 create A/B、verify、cold、cold-check、cleanup。只读等待区分 CLI 连通与场景就绪；该专项不证明完整游戏自主制作通过。
+
 ## 原生键盘输入（2026-11-02）
 `instance native-key` 对应 `game_instance_native_key`，输入 instanceId、key、holdMs（40–1000）。
 复用会话任务归属校验，须处于已批准的实现/修改阶段；人工试玩实例禁止输入。只支持游戏单键，不支持系统快捷键。

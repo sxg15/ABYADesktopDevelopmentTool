@@ -25,6 +25,9 @@ Objects, WebSocket sessions, CLI operation cancellation state, active transfer
 cancellation channels, temporary ZIP packages, and open network connections
 remain in memory or disposable application data.
 
+通用空白初始化由 runtime-bridge 编排：tasks 验证批准并分配任务数据根/回执，instances 提供仅内部可用的无存档菜单启动。
+当前 Player 的原生创建/加载接口生成真实存档和关卡，桥接读回核对归属后绑定实例。普通启动校验不放宽，未知创建不自动重发。
+
 Codex continuation intents are durable per conversation. Per-conversation gates serialize normal dispatch and ownership checks. Force stop bypasses
 the normal gate and fences stale workers by generation; readonly polling never waits on it.
 A revisioned execution-attempt journal binds existing goals to native turns and process

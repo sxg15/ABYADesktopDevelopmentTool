@@ -383,6 +383,10 @@ impl TaskService {
         if r.as_ref().is_none_or(|r| !enabled(r)) {
             return Ok(None);
         }
+        self.owned_authoring_data_root(task).map(Some)
+    }
+
+    pub(super) fn owned_authoring_data_root(&self, task: &str) -> AppResult<PathBuf> {
         uuid::Uuid::parse_str(task).map_err(|_| conflict())?;
         let root = self.production_workspace(task)?;
         let data = files::safe_path(
@@ -402,7 +406,7 @@ impl TaskService {
                 serde_json::to_vec(&json!({"taskId":task,"purpose":"authoring"}))?,
             )?;
         }
-        Ok(Some(data))
+        Ok(data)
     }
 
     /// 明确恢复只重排原项；历史轮次入账，总目标额度不重置。

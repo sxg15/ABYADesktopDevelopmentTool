@@ -62,7 +62,12 @@ impl RuntimeBridgeService {
             .tasks
             .production_authoring_guard(&input.task_id, &path)?;
         if permit.is_none() {
-            let data = self.tasks.production_authoring_data_root(&input.task_id)?;
+            let mut data = self.tasks.production_authoring_data_root(&input.task_id)?;
+            if data.is_none() {
+                data = self
+                    .tasks
+                    .production_owned_archive_root(&input.task_id, &path)?;
+            }
             return self.instances.launch_with_data_root(input, data);
         }
         if input.profile.mode != LaunchMode::Editor {

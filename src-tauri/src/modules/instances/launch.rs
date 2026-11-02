@@ -34,6 +34,54 @@ pub(crate) fn build_launch_contract(
     inherited_host_port: Option<u16>,
     gateway_endpoint: &str,
 ) -> AppResult<LaunchContract> {
+    build_contract(
+        instance_id,
+        instance_name,
+        profile,
+        paths,
+        inherited_host_port,
+        gateway_endpoint,
+        false,
+    )
+}
+
+/// 仅供任务初始化器使用；不发送游戏端要求已有存档的启动参数。
+pub(crate) fn build_bootstrap_contract(
+    instance_id: &str,
+    instance_name: &str,
+    profile: &LaunchProfile,
+    paths: &AppPaths,
+    inherited_host_port: Option<u16>,
+    gateway_endpoint: &str,
+) -> AppResult<LaunchContract> {
+    if profile.mode != LaunchMode::Editor
+        || profile.archive.is_some()
+        || profile.host_instance_id.is_some()
+    {
+        return Err(AppError::validation(
+            "初始化只能使用无存档、无房主的编辑器环境。",
+        ));
+    }
+    build_contract(
+        instance_id,
+        instance_name,
+        profile,
+        paths,
+        inherited_host_port,
+        gateway_endpoint,
+        true,
+    )
+}
+
+fn build_contract(
+    instance_id: &str,
+    instance_name: &str,
+    profile: &LaunchProfile,
+    paths: &AppPaths,
+    inherited_host_port: Option<u16>,
+    gateway_endpoint: &str,
+    bootstrap: bool,
+) -> AppResult<LaunchContract> {
     if !(640..=7680).contains(&profile.width) || !(480..=4320).contains(&profile.height) {
         return Err(AppError::validation(
             "Resolution must be between 640x480 and 7680x4320.",
@@ -46,7 +94,9 @@ pub(crate) fn build_launch_contract(
             "Background instances require windowed rendering.",
         ));
     }
-    validate_archive(profile.mode, profile.archive.as_ref())?;
+    if !bootstrap {
+        validate_archive(profile.mode, profile.archive.as_ref())?;
+    }
     if !gateway_endpoint.starts_with("ws://") {
         return Err(AppError::validation(
             "The selected LAN adapter did not provide a WebSocket endpoint.",
@@ -106,6 +156,9 @@ pub(crate) fn build_launch_contract(
     }
     if let Some(archive) = &profile.archive {
         append_archive_args(&mut args, archive);
+    }
+    if bootstrap {
+        args.retain(|arg| !arg.starts_with("--abya-launch-"));
     }
     let sanitized_args = args.clone();
     Ok(LaunchContract {
@@ -179,6 +232,61 @@ mod tests {
             default_workspace_root: root.join("workspaces"),
             data_dir: root,
         }
+    }
+
+    #[test]
+    fn bootstrap_keeps_managed_identity_without_archive_launch_options() {
+        let profile = LaunchProfile {
+            mode: LaunchMode::Editor,
+            window_mode: WindowMode::Windowed,
+            visibility_mode: WindowVisibilityMode::Background,
+            width: 1280,
+            height: 720,
+            archive: None,
+            host_instance_id: None,
+            exit_on_failure: false,
+            language: String::new(),
+        };
+        assert!(
+            build_launch_contract(
+                "id",
+                "blank",
+                &profile,
+                &paths(),
+                None,
+                "ws://127.0.0.1/game"
+            )
+            .is_err()
+        );
+        let result = build_bootstrap_contract(
+            "id",
+            "blank",
+            &profile,
+            &paths(),
+            None,
+            "ws://127.0.0.1/game",
+        )
+        .unwrap();
+        assert!(!result.args.iter().any(|s| s.starts_with("--abya-launch-")));
+        assert!(result.args.contains(&"--abya-cli-autostart=true".into()));
+        assert!(
+            result
+                .args
+                .contains(&"--abya-devtool-instance-id=id".into())
+        );
+        let mut invalid = profile;
+        invalid.mode = LaunchMode::Offline;
+        assert!(
+            build_bootstrap_contract(
+                "id",
+                "blank",
+                &invalid,
+                &paths(),
+                None,
+                "ws://127.0.0.1/game"
+            )
+            .is_err()
+        );
     }
 
     #[test]

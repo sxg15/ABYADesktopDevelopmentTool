@@ -1,5 +1,17 @@
 # Game Runtime CLI Bridge
 
+## 通用任务空白初始化（2026-11-02）
+archive create 编排独立数据根的托管启动、当前 Player 原生 editor_create_archive / editor_load_archive 及真实读回。
+不复制已有游戏、不生成猜测 PBArc、不改 Player；返回真实 instanceId、archiveGuid、levelGuid、archivePath。
+普通任务可用；完整制作流程仅 implementation/review 且需求/计划已批准可用，实际写入前重验授权与运行包固定。
+creationId 是任务内稳定 UUID，参数变化拒绝；重复请求只返回持久回执和实例是否存活，不再次启动或创建。
+原子回执在 artifacts/archive-creation 下，逐步保留实例与 Runtime 操作 ID。创建派发后的错误保守记 outcome-unknown，保留实例和数据供对账。
+创建派发前的错误只停止本次实例，其他实例不受影响。已停止的成功实例用返回 archive 字段通过普通 instance launch 重新打开。
+普通任务及旧策略重开本工具创建的存档时，复用经过 owner 校验的同一私有数据根，不退回全局存档目录。
+初始化后才给实例绑定读回的真实存档选择，普通版本登记可沿用该选择；启动时未伪造 Player 的存档就绪报告。
+Player 须支持托管自动跳过启动页，以及主菜单的存档创建/加载能力。创建前实际 describe 两个入口的 available；旧包未支持时明确拒绝，不模拟按键或放宽普通编辑权限。
+同时预检 editor_load_archive 的 openStartLevel 布尔参数，初始化明确传 true，直接加载原生开始关卡；没有该契约的 Player 在创建前拒绝。
+
 2026-11-02：旧流程的已验证包也使用独立 preview 启动，不再混用正式验收入口。
 当前包无 sourceRevision 时必须完整核验当前版本；历史包仍须校验来源、范围、指纹与证据。
 

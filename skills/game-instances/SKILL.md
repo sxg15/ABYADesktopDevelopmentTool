@@ -1,5 +1,11 @@
 # Game Instances Skill
 
+## 任务初始化会话（2026-11-02）
+内部 launch_bootstrap 只接受 Editor、无存档、无 Host 及任务服务验证的数据根。
+保留托管身份、CLI、自有进程与窗口生命周期，省略全部 --abya-launch-*，从 Player 原生菜单初始化。
+此开关不暴露给普通 launch 配置；普通 Editor/Offline/Host 仍要求有效已有存档。
+游戏原生创建和加载并读回后，bind_created_archive 只补齐同任务、存活的空 Editor 实例，不覆盖已有存档选择。
+
 ## Windows 原生按键（2026-11-02）
 `native_key` 仅控制存活托管进程的窗口，以 SendInput 扫描码发送一次按下/松开，holdMs 为40–1000。
 仅允许 Escape/Enter/Space/W/A/S/D/方向键，拒绝系统组合键；核对前台目标，检测用户按键与焦点变化，结束时松键。

@@ -1,6 +1,7 @@
 mod acceptance_contract;
 mod authoring;
 mod autonomy;
+mod bootstrap;
 mod completion;
 mod completion_repair;
 mod execution_loop;

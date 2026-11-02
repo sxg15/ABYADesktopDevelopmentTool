@@ -17,6 +17,11 @@ Existing parser source:
 
 ## Managed Launch Arguments
 
+通用空白初始化使用内部菜单启动：不发送任何 --abya-launch-*，保留 --abya-devtool-*、CLI 自启和独立 --abya-data-root。
+Player 的主菜单须开放创建/加载能力；editor_load_archive 须提供可选布尔 openStartLevel。初始化传 true 直接打开真实开始关卡，普通调用省略时保留人工选关。桌面在写入前检查此契约，创建后以 editor_get_archive 读回 GUID、路径和已加载关卡。
+在当前 Player 就绪后调用原生 editor_create_archive（不选模板）和 editor_load_archive，再读回真实存档/关卡身份。
+普通已有存档启动仍按下述契约；初始化没有伪造 Player 的已有存档启动报告。
+
 Every desktop-managed instance receives:
 
 ```text

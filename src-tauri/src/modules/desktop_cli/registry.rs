@@ -327,6 +327,26 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             read_only(),
         ),
         tool(
+            "game_archive_create",
+            "为当前开发任务创建并加载空白存档，不需要已有存档或实例。使用任务独立数据根与固定Player，由游戏原生接口生成真实存档/关卡。Player须支持托管免按键启动和主菜单创建/加载；先核对实际能力，不支持时明确拒绝。完整流程须已批准计划。creationId必须预先生成并保留；重复调用只返回原回执，未知结果不重发。仅status=ready且created/loaded为true代表初始化成功，之后通过instanceId使用普通Runtime工具。实例停止后可用返回的archive字段正常启动。",
+            "创建任务空白存档与编辑器",
+            object_schema(
+                json!({"taskId":{"type":"string"},"creationId":{"type":"string","format":"uuid"},"name":{"type":"string","minLength":1,"maxLength":80},"author":{"type":"string","minLength":1,"maxLength":120},"executablePath":{"type":"string"}}),
+                &["creationId", "name", "author"],
+            ),
+            process_create(),
+        ),
+        tool(
+            "game_archive_creation_status",
+            "读取当前任务指定creationId的初始化回执与实例存活状态，不启动进程、不重发创建。outcome-unknown时按回执中的实例及Runtime操作ID核对真实存档。",
+            "查询存档初始化结果",
+            object_schema(
+                json!({"taskId":{"type":"string"},"creationId":{"type":"string","format":"uuid"}}),
+                &["creationId"],
+            ),
+            read_only(),
+        ),
+        tool(
             "game_archive_transfer_target_list",
             "Lists connected managed and external game instances that advertise archive-transfer-v1.",
             "List archive transfer targets",

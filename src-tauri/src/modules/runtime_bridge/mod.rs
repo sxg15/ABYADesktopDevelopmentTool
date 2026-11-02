@@ -1,5 +1,7 @@
 mod acceptance;
+mod archive_creation;
 mod authoring;
+pub use archive_creation::CreateArchiveInput;
 mod baseline;
 mod operation_receipts;
 mod operation_trace;

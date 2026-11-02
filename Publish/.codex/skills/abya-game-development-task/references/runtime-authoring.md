@@ -7,6 +7,14 @@
 
 ## 托管实例预检
 
+从零开始且本任务无存档/实例时，先查 capabilities 是否提供 game_archive_create。
+使用 `archive create`，输入稳定 creationId(UUID)、本任务存档 name 和 author；不需要自行写 PBArc 或复制别的游戏。
+工具先确认当前 Player 支持主菜单创建和 `editor_load_archive.openStartLevel`，再创建并直接打开开始关卡；兼容性不足应报告运行包缺口，不能绕过工具手写存档。
+APP 按任务隔离数据根，调用已选 Player 的原生创建/加载能力。完整流程在计划批准后使用，局部普通任务沿用原授权。
+保存创建回执；只有 status=ready、created/loaded=true 才继续使用返回 instanceId 和 archive 的真实身份。
+超时或 outcome-unknown 用 `archive creation-status`（同 creationId）查询，再按实例/原操作回执对账，不能新造 ID 盲重发。
+重复创建 ID 只读回原结果；实例已退出时用返回的 archive 字段通过普通 instance launch 重新打开，不重新创建。
+
 实例 get 返回的 memory 可查看采样、压力状态和事件报告。触发保护时先读取报告，
 核对请求编号、采样时段、Codex 活动及取消/退出结果；不要盲目重发写操作或绕过架构校验。
 not_executed 与 outcome_unknown 不同：后者必须查询原请求及实际状态。报告只说明

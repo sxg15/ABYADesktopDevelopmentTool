@@ -1,7 +1,7 @@
 use super::{
-    GameInstance, InstanceOrigin, InstanceRuntimeInfo, InstanceStopResult, LaunchInstanceInput,
-    LaunchMode, LaunchReportResult, ProcessState, WindowMode, WindowVisibilityMode,
-    build_launch_contract, validate_executable,
+    ArchiveSelection, GameInstance, InstanceOrigin, InstanceRuntimeInfo, InstanceStopResult,
+    LaunchInstanceInput, LaunchMode, LaunchReportResult, ProcessState, WindowMode,
+    WindowVisibilityMode, build_launch_contract, validate_executable,
 };
 use crate::foundation::{AppError, AppPaths, AppResult, Database};
 use crate::modules::game_connections::{ConnectionRegistration, GameConnectionService, GameHello};
@@ -126,8 +126,26 @@ impl InstanceService {
     /// Used only by the owned acceptance orchestrator with TaskService-validated run directories.
     pub(crate) fn launch_with_data_root(
         &self,
+        input: LaunchInstanceInput,
+        data_root: Option<PathBuf>,
+    ) -> AppResult<GameInstance> {
+        self.launch_internal(input, data_root, false)
+    }
+
+    /// 只接受初始化器分配的独立数据根，普通启动入口没有此开关。
+    pub(crate) fn launch_bootstrap(
+        &self,
+        input: LaunchInstanceInput,
+        data_root: PathBuf,
+    ) -> AppResult<GameInstance> {
+        self.launch_internal(input, Some(data_root), true)
+    }
+
+    fn launch_internal(
+        &self,
         mut input: LaunchInstanceInput,
         data_root: Option<PathBuf>,
+        bootstrap: bool,
     ) -> AppResult<GameInstance> {
         let _launch_guard = self.launch_gate.lock();
         let memory_warning = self.memory.launch_warning();
@@ -178,7 +196,11 @@ impl InstanceService {
         validate_executable(input.executable_path.trim())?;
         let id = Uuid::new_v4().to_string();
         let gateway_endpoint = self.connections.preferred_endpoint()?;
-        let contract = build_launch_contract(
+        let contract = (if bootstrap {
+            super::launch::build_bootstrap_contract
+        } else {
+            build_launch_contract
+        })(
             &id,
             name,
             &input.profile,
@@ -337,6 +359,39 @@ impl InstanceService {
             timed_out: !stopped,
             process_alive: self.live.lock().contains_key(id),
         })
+    }
+
+    /// 创建并读回成功后补齐初始空会话的真实存档选择，不覆盖已有目标。
+    pub(crate) fn bind_created_archive(
+        &self,
+        id: &str,
+        task: &str,
+        archive: ArchiveSelection,
+    ) -> AppResult<GameInstance> {
+        let instance = self.read(id)?;
+        if instance.task_id.as_deref() != Some(task)
+            || instance.origin != InstanceOrigin::Managed
+            || instance.mode != Some(LaunchMode::Editor)
+        {
+            return Err(AppError::validation("初始化实例归属或模式不匹配。"));
+        }
+        self.runtime_pid(id)?;
+        let mut profile = instance
+            .profile
+            .ok_or_else(|| AppError::validation("缺少初始化配置。"))?;
+        if profile.archive.is_some() {
+            return Err(AppError::validation("已有存档选择，不能用初始化覆盖。"));
+        }
+        profile.archive = Some(archive);
+        let json = serde_json::to_string(&profile)?;
+        self.database.with_connection(|c| {
+            c.execute(
+                "UPDATE game_instances SET launch_profile_json=?2 WHERE id=?1",
+                rusqlite::params![id, json],
+            )?;
+            Ok(())
+        })?;
+        self.read(id)
     }
 
     pub fn set_window_visibility(

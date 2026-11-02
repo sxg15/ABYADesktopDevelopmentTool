@@ -50,6 +50,8 @@ fn command(group: &str, action: &str) -> Option<&'static str> {
         ("runtime", "run" | "describe" | "search") => "game_runtime_call_tool",
         ("desktop", "info") => "desktop_get_capabilities",
         ("archive", "list") => "game_archive_list",
+        ("archive", "create") => "game_archive_create",
+        ("archive", "creation-status") => "game_archive_creation_status",
         ("archive", "targets") => "game_archive_transfer_target_list",
         ("archive", "sources") => "game_archive_transfer_source_list",
         ("archive", "transfer") => "game_archive_transfer_start",

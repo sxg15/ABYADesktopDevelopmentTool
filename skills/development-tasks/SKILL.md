@@ -2,6 +2,11 @@
 
 ## Current scope
 
+通用 archive create 为当前任务分配 .abya-authoring/<taskId> 独立数据根和 UUID 回执，不绑定具体玩法或测试项目。
+完整流程须已批准需求/计划且处于 implementation/review；未启用制作流程的普通任务沿用任务级授权。
+旧策略不因初始化而升级。目录 owner.json 及路径边界必须通过；不同任务即使用相同 creationId 也不共享回执。
+production_owned_archive_root 为位于该任务私有 Archives 内的已有存档提供同一数据根，允许普通任务安全冷加载本工具的成果；不创建或改变其他存档。
+
 2026-11-02：Lua 阶段与顶部指引共享试玩包判断，核心已验证版本显示“可试玩”，独立列明待确认/已确认问题。
 试玩包、独立启动与诊断修复入口集中；旧流程也可预览已校验包，不强制升级。
 APP-only workbench `enter-playtest` 按 revision/current version 校验包与批准，执行停止后允许用户带未完成项进入 review。

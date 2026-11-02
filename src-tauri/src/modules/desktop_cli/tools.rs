@@ -127,7 +127,10 @@ impl DesktopToolDispatcher {
         if name == "game_instance_list" {
             arguments["taskId"] = json!(input.task_id);
         }
-        if name.starts_with("development_production_") || name.starts_with("development_skill_") {
+        if name.starts_with("development_production_")
+            || name.starts_with("development_skill_")
+            || matches!(name, "game_archive_create" | "game_archive_creation_status")
+        {
             arguments["taskId"] = json!(input.task_id);
         }
         if name == "development_production_update" && arguments["operation"] == "publish-questions"
@@ -266,7 +269,12 @@ impl DesktopToolDispatcher {
                 )
             })()
         } else {
-            self.invoke(name, arguments, operation_id)
+            self.invoke(
+                name,
+                arguments,
+                operation_id,
+                session_id.unwrap_or("desktop"),
+            )
         };
         let result = match invoked {
             Ok(value) => ToolCallResult::success(value),
@@ -395,7 +403,13 @@ impl DesktopToolDispatcher {
         }
     }
 
-    fn invoke(&self, name: &str, arguments: Value, operation_id: &str) -> AppResult<Value> {
+    fn invoke(
+        &self,
+        name: &str,
+        arguments: Value,
+        operation_id: &str,
+        session: &str,
+    ) -> AppResult<Value> {
         if !arguments.is_object() {
             return Err(AppError::validation(
                 "Desktop CLI tool arguments must be an object.",
@@ -748,6 +762,28 @@ impl DesktopToolDispatcher {
                         .archive_transfers
                         .cancel(&input.transfer_id)?,
                 )
+            }
+            "game_archive_create" => {
+                let mut input: crate::modules::runtime_bridge::CreateArchiveInput =
+                    decode(arguments)?;
+                if input.executable_path.trim().is_empty() {
+                    input.executable_path = self.dependencies.settings.get()?.game_executable_path;
+                }
+                self.dependencies
+                    .runtime_bridge
+                    .create_archive(input, session, operation_id)
+            }
+            "game_archive_creation_status" => {
+                #[derive(Deserialize)]
+                #[serde(rename_all = "camelCase", deny_unknown_fields)]
+                struct CreationStatus {
+                    task_id: String,
+                    creation_id: String,
+                }
+                let input: CreationStatus = decode(arguments)?;
+                self.dependencies
+                    .runtime_bridge
+                    .archive_creation_status(&input.task_id, &input.creation_id)
             }
             "game_instance_launch" => {
                 let input: CliLaunchInput = decode(arguments)?;

@@ -1,5 +1,17 @@
 # 桌面 CLI 命令契约
 
+## 通用空白存档初始化
+
+`archive create` / `game_archive_create`：输入 `creationId`（预先保存的 UUID）、`name`、`author`，可选 `executablePath`；任务身份来自当前会话。
+适用于任意开发任务，无需传存档路径或关卡 GUID。完整流程须已确认需求与计划；未启用流程的普通任务沿用任务级授权。
+工具只在任务专属数据根启动托管 Player，通过真实 `editor_create_archive`（无模板）和 `editor_load_archive` 创建/加载，读回真实身份后绑定实例。
+Player 须支持托管免按键初始化和主菜单存档创建/加载。工具先核对运行时能力，旧包不支持时返回未执行原因，不模拟按键或伪造创建。
+仅 `status=ready` 且 `created=true`、`loaded=true` 表示本次初始化成功；`instanceRunning` 另行说明当前实例是否存活。
+返回 `instanceId` 和 `archive`（archivePath/archiveGuid/levelGuid 等），后续使用普通 Runtime 工具；实例退出后用该 archive 正常 launch。
+`archive creation-status` / `game_archive_creation_status`：输入同一 `creationId`，读取原子回执与存活状态。
+相同 ID/参数只返回原结果，相同 ID 改参数拒绝；`outcome-unknown` 不自动重发，不新造 ID 绕过。原实例、创建/加载操作 ID 和存档成果保留供对账。
+普通 launch 的已有存档校验不放宽；只有内部初始化器省略 --abya-launch-*，并强制使用任务数据根。没有手写 PBArc、复制其他任务游戏或升级任务策略。
+
 ## 托管原生键盘
 
 `instance native-key --input-file ... --json`：`{"instanceId":"...","key":"Escape","holdMs":100}`。
