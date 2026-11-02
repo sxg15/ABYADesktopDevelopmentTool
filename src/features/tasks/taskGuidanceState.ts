@@ -1,3 +1,4 @@
+import { playableState } from "./playableState";
 import type { ProductionView, TaskControlState } from "../../shared/production";
 import type { TerminalWorkflowSnapshot } from "../../shared/types";
 import type { AttentionTarget, TaskAttentionSnapshot } from "../../shared/notifications";
@@ -48,18 +49,23 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
   const set = (value: Partial<GuidanceModel>) => Object.assign(model, value);
   const primary = items[0];
   if (!active) set({key:"closed",title:text("任务已结束", "Task ended"),instruction:text("可以查看已保存的成果与历史记录。", "Saved results and history remain available."),detail:text("恢复任务后才能继续操作。", "Reactivate the task to continue."),action:"none",destination:""});
-  else if (programmerIssues.length) set({key:`programmer:${programmerIssues.map(i=>i.id).join(",")}`,tone:"programmer",attention:true,action:"stage",
+  else if (programmerIssues.length&&!playableState(r).available) set({key:`programmer:${programmerIssues.map(i=>i.id).join(",")}`,tone:"programmer",attention:true,action:"stage",
     title:text(programmerIssues.every(i=>programmerIssue(i)?.suspected) ? "疑似 ABYA 程序问题 · 需要排查" : "ABYA 程序缺陷 · 需要程序修复", "ABYA source/build issue · programmer required"),
     instruction:text(`Lua 执行阶段有 ${programmerIssues.length} 项源码／构建包问题需要程序处理。`, `${programmerIssues.length} source/build issues need programmer attention during Lua implementation.`),
     destination:text("处理位置：Lua 阶段的问题与阻塞", "Review in: Lua issues and blockers"),button:text("查看程序待修复问题", "View programmer issues"),
     detail:text("请程序排查或修复后提供更新的构建包，复验通过再继续受影响步骤。", "Investigate or fix, provide an updated build, and recheck before resuming affected steps.")});
-  else if (primary) set({
+  else if (primary&&!(stage==="implementation"&&playableState(r).available&&["failed","disconnected","needsReview"].includes(primary.kind))) set({
     ...primary[en ? "en" : "zh"], key: primary.key, tone: primary.tone, attention: true,
     action: primary.target.action, target: primary.target, stage: primary.target.stage,
     stageLabel: stageName(primary.target.stage, primary.stageName, en ? "en-US" : undefined),
     groupId: primary.target.groupId ?? undefined,
     reviewKind: primary.kind === "review" ? primary.target.stage : undefined,
   });
+  else if (stage==="implementation"&&playableState(r).available) set({key:"playable",tone:"neutral",action:"stage",attention:false,
+    title:text("已有可试玩版本，建议先体验","A playable version is available"),
+    instruction:text("可以先试玩，也可以让 AI 继续诊断修复。剩余问题已列在试玩版本下方。","Play now or ask AI to diagnose and repair. Remaining issues are listed with the version."),
+    detail:text("可试玩不等于已验收；你也可以手动进入试玩与修改阶段。","Playable does not mean accepted. You may choose to enter playtest and changes."),
+    destination:text("查看位置：Lua 实现","Open: Implementation"),button:text("查看试玩版本","View playable version")});
   else if (["repairRequired","externalBlocked","technicalReview"].includes(state)&&r?.policy?.implementationExecution?.inPlaceRecoveryVersion===1) set({
     key:"technical-review",tone:"neutral",action:"stage",attention:false,
     title:text("技术处理已收束，成果已保留","Technical work settled; results retained"),
@@ -86,7 +92,7 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
   else if (view && ["ready", "notStarted"].includes(state)) set({key:state,title:text(state === "notStarted" ? "任务尚未开始执行" : "本轮回复已结束", state === "notStarted" ? "Task not started" : "This response has ended"),instruction:text("AI 当前未在执行，请前往终端继续或输入需求。", "AI is idle. Open the terminal to continue or provide a request."),detail:text("如果出现新的阶段待办，这里会显示明确入口。", "New stage actions will appear here."),button:text("前往终端继续", "Continue in terminal")});
   if(currentControl?.autonomyNotice && !["running","waitingForResponse","queued","pausing","paused","stopFailed"].includes(state)) {
     model.detail=en?"Native permissions may require manual confirmation. Check execution settings before autonomous implementation; permissions are never changed automatically.":currentControl.autonomyNotice;
-    if(!primary&&!["workSettled","closed"].includes(state)){model.title=text("自主执行前核对原生权限", "Check native permissions before autonomous execution");model.button=text("前往终端执行设置", "Open terminal settings");model.action="terminal";model.destination=text("处理位置：终端 · 执行设置", "Open in: Terminal · execution settings");}
+    if(!primary&&model.key!=="playable"&&!["workSettled","closed"].includes(state)){model.title=text("自主执行前核对原生权限", "Check native permissions before autonomous execution");model.button=text("前往终端执行设置", "Open terminal settings");model.action="terminal";model.destination=text("处理位置：终端 · 执行设置", "Open in: Terminal · execution settings");}
   }
   model.additional = Math.max(0, items.length - (primary && model.tone !== "programmer" ? 1 : 0));
   if(active&&!primary&&r?.workbench?.execution?.preflight?.stage===stage&&r.workbench.execution.preflight.state==="exhausted"
@@ -97,7 +103,7 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
       detail:text("查看具体恢复条件或补充新信息，无需反复点击继续。", "Review the required conditions or provide new information."),
       destination:text("查看位置：当前阶段的问题", "Open in: Current stage issues"),button:text("查看预检问题", "View preflight issues")});
   }
-  if(active&&stage==="implementation"&&!autonomous&&view?.availableUpdate&&!primary&&!["running","waitingForResponse","queued","pausing","stopFailed"].includes(state)) {
+  if(active&&stage==="implementation"&&!playableState(r).available&&!autonomous&&view?.availableUpdate&&!primary&&!["running","waitingForResponse","queued","pausing","stopFailed"].includes(state)) {
     set({key:"workflow-upgrade",tone:"neutral",action:"stage",attention:true,
       title:text("本任务仍使用旧执行规则", "This task still uses legacy execution rules"),
       instruction:text(`本任务流程 ${r?.workflowVersion} 尚未启用 Lua 自主执行；更新 APP 不会自动迁移任务。`, `Task workflow ${r?.workflowVersion} has not enabled autonomous execution.`),

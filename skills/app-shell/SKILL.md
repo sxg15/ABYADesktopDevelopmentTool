@@ -1,5 +1,10 @@
 # App Shell Skill
 
+## 可试玩工作区（2026-11-02）
+已确认的局部改版沿用米色/橙色：顶部可试玩指引、Lua 阶段“可试玩”、集中试玩版本/问题/三个按钮与手动进入试玩入口。
+可试玩阶段采用连续滚动以免分隔条将操作截在小面板内；其他阶段保留原上下分区和草稿。
+技术与执行记录折叠，所有未解决项与历史保留；执行状态独立于作品可玩性。
+
 ## v5 workbench (2026-10-21)
 The approved v5 workbench supersedes the historical teal/two-column card presentation. Preserve all five global destinations and four task tabs. Use charcoal navigation, cream canvas and warm orange actions; blue remains informational. Task switching can disclose the list. Guidance remains above the workbench. Keep native terminal components mounted and IME behavior intact.
 

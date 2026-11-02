@@ -1,5 +1,15 @@
 # 桌面 CLI 命令契约
 
+## 托管原生键盘
+
+`instance native-key --input-file ... --json`：`{"instanceId":"...","key":"Escape","holdMs":100}`。
+对应 game_instance_native_key。只接受 Escape/Enter/Space/W/A/S/D/ArrowUp/ArrowDown/ArrowLeft/ArrowRight，40–1000 毫秒。
+必须使用本任务的托管测试实例且已批准实现；人工试玩实例拒绝输入。工具显示并激活窗口，发送扫描码后松键，保留焦点供观察，整组验证结束后再用 window 命令还原显示。
+返回 requestId、receiptPath、status、input.downSent/upSent/focusLost/completed；中断时先读回执，不自动重发。
+`instance native-key-result` 输入 instanceId 与 requestId，按任务/实例归属读取原始回执，started 表示结果未知。
+Windows 系统注入不是物理硬件来源证明；须再观察游戏状态、平台/游戏菜单、恢复清键及实图，才能判断暂停/恢复是否通过。
+APP 的 enter-playtest 是用户专属动作，不在 CLI 暴露，不等于通过检查或批准交付。
+
 ## 执行契约 2.11
 
 - `production update` 新增 `register-acceptance-check`：id、expected、basis、required；必要检查引用批准文档 quote 或实际缺陷 issueId，可选优化不扩大门槛。

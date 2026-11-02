@@ -1,5 +1,11 @@
 # Desktop CLI
 
+## 原生键盘输入（2026-11-02）
+`instance native-key` 对应 `game_instance_native_key`，输入 instanceId、key、holdMs（40–1000）。
+复用会话任务归属校验，须处于已批准的实现/修改阶段；人工试玩实例禁止输入。只支持游戏单键，不支持系统快捷键。
+输出原始按下/松开、焦点、完成状态及持久回执路径；禁止自动重试，发送成功不等于游戏行为通过。
+`instance native-key-result` / `game_instance_native_key_result` 按 instanceId、requestId 读取原回执，保留任务归属校验；started 不代表可重放。
+
 ## Current scope
 
 Workflow 2.8 adds a scoped completion loop: current-goal dependency closure, evidence-based wake signals, audited work revision, automatic repair plans, per-output finalization and honest repairRequired/externalBlocked outcomes. No candidate completion without a hash-bound playable ZIP and current lua/input/core-loop/save-reload evidence. Fixture validation remains separate. Upgrade preserves budgets, IDs and approvals; explicit resume retains the original goal and cannot replay uncertain writes. Package compression runs outside the database mutex.

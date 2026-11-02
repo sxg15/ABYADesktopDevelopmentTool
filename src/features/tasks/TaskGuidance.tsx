@@ -59,7 +59,7 @@ export function TaskGuidance({ taskId, active, control, workflow, en = false, on
   const Icon = model.tone === "programmer" ? TriangleAlert : model.tone === "waiting" ? LoaderCircle : model.tone === "terminal" ? Terminal
     : model.tone === "error" ? Unplug : model.action === "question" ? MessageCircleQuestion
       : model.tone === "human" ? ClipboardCheck : CircleHelp;
-  return <div className="task-guidance-shell"><section className={`task-guidance tone-${model.tone}${emphasize ? " guidance-emphasis" : ""}`} aria-label={en ? "What to do next" : "当前操作指引"}>
+  return <div className="task-guidance-shell"><section className={`task-guidance tone-${model.tone}${model.key==="playable"?" guidance-playable":""}${emphasize ? " guidance-emphasis" : ""}`} aria-label={en ? "What to do next" : "当前操作指引"}>
     <div className="guidance-main" role="status" aria-live="polite" aria-atomic="true">
       <span className="guidance-icon"><Icon aria-hidden="true" size={26} /></span>
       <div className="guidance-copy"><div className="guidance-eyebrow">

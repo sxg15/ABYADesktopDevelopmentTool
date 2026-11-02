@@ -1,5 +1,7 @@
 # Foundation Skill
 
+2026-11-02：共享 ProductionIssue 增加可选 playerSummary，表达面向玩家的具体影响；原始 description、诊断和证据继续保留。
+
 ## Current scope
 
 Workflow 2.9 enforces reviewHandoffVersion=1: unresolved ordinary issues, missing/failed checks and unfinished work stay in Lua with bounded automatic handoff-repair. Only confirmed abya-source diagnosis bound to current Player/evidence may cross; blocked checks link blockedByIssueIds. Core package does not waive this gate. Playtest shows cross-stage source-defect cards and selected diagnostic ZIP; upgrades preserve original IDs, approvals, budgets and packages and return premature legacy handoffs to Lua without starting execution.

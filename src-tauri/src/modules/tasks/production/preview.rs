@@ -1,21 +1,51 @@
 use super::*;
 
 impl TaskService {
+    /// 原生输入仅用于已批准实现的测试实例，不操作用户正在试玩的副本。
+    pub fn production_native_input_guard(&self, task: &str, instance: &str) -> AppResult<()> {
+        if self.get_readonly(task)?.status != TaskStatus::Active {
+            return Err(conflict());
+        }
+        let r = self.production_get(task)?.record.ok_or_else(conflict)?;
+        if !["implementation", "review"].contains(&r.current_stage.as_str()) {
+            return Err(AppError::validation("原生输入仅用于实现或修改阶段的验证。"));
+        }
+        let root = self.production_workspace(task)?;
+        validation::approved(&r, &root, "requirements")?;
+        validation::approved(&r, &root, "plan")?;
+        if r.acceptance_sessions
+            .iter()
+            .chain(r.workbench.execution.preview_sessions.iter())
+            .any(|s| {
+                s["instanceIds"]
+                    .as_array()
+                    .is_some_and(|ids| ids.iter().any(|id| id == instance))
+            })
+        {
+            return Err(AppError::validation(
+                "这是人工试玩实例，AI 不能向该窗口发送输入。请使用独立测试实例。",
+            ));
+        }
+        Ok(())
+    }
     /// 从包生成时的记录读取最后可玩版本，不切换当前候选，也不修改验收状态。
-    fn preview_record(&self, task: &str) -> AppResult<ProductionRecord> {
+    pub(super) fn preview_record(&self, task: &str) -> AppResult<ProductionRecord> {
         if self.get_readonly(task)?.status != TaskStatus::Active {
             return Err(conflict());
         }
         let current = self.production_get(task)?.record.ok_or_else(conflict)?;
-        if !execution_loop::enabled(&current) {
-            return Err(AppError::validation("当前任务未启用独立预览。"));
-        }
         let root = self.production_workspace(task)?;
         validation::approved(&current, &root, "requirements")?;
         validation::approved(&current, &root, "plan")?;
         let pack = &current.workbench.execution.verification_package;
         if pack["version"].as_str() == current.current_version.as_deref() {
             verification_package::core_ready(&current, &root)?;
+            // 旧任务的包没有历史来源时，只允许完整校验当前候选后预览。
+            if pack["sourceRevision"].as_u64().is_none()
+                && verification_package::valid(&current, &root)
+            {
+                return Ok(current);
+            }
         }
         let revision = pack["sourceRevision"]
             .as_u64()

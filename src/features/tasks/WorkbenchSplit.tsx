@@ -7,7 +7,7 @@ function savedRatio() {
   catch { return defaultRatio; }
 }
 // A layout preference only: resizing never remounts the form or writes task records.
-export function WorkbenchSplit({ children, en }: { children: [ReactNode, ReactNode]; en: boolean }) {
+export function WorkbenchSplit({ children, en, continuous=false }: { children: [ReactNode, ReactNode]; en: boolean; continuous?:boolean }) {
   const root = useRef<HTMLDivElement>(null), divider = useRef<HTMLDivElement>(null);
   const [ratio, setRatio] = useState(savedRatio), [usable, setUsable] = useState(0), [dragging, setDragging] = useState(false);
   const drag = useRef<{ id: number; offset: number; original: number } | undefined>(undefined);
@@ -65,10 +65,10 @@ export function WorkbenchSplit({ children, en }: { children: [ReactNode, ReactNo
     event.preventDefault();
   }
   const label = en ? "Resize results and answers" : "调整成果区和回答区高度";
-  return <div ref={root} className={`wb-main wb-split${dragging ? " is-resizing" : ""}`}
-    style={{ gridTemplateRows: `minmax(0, ${rendered}fr) 24px minmax(0, ${1 - rendered}fr)` }}>
+  return <div ref={root} className={`wb-main wb-split${continuous ? " wb-playable-flow" : ""}${dragging ? " is-resizing" : ""}`}
+    style={continuous?undefined:{ gridTemplateRows: `minmax(0, ${rendered}fr) 24px minmax(0, ${1 - rendered}fr)` }}>
     {children[0]}
-    <div ref={divider} className="wb-divider" role="separator" tabIndex={0} aria-orientation="horizontal"
+    <div ref={divider} hidden={continuous} className="wb-divider" role="separator" tabIndex={0} aria-orientation="horizontal"
       aria-label={label} aria-describedby={description} aria-valuemin={Math.round(minimum * 100)} aria-valuemax={Math.round(maximum * 100)}
       aria-valuenow={Math.round(rendered * 100)} aria-valuetext={en ? `Results ${Math.round(rendered * 100)}%, answers ${Math.round((1 - rendered) * 100)}%` : `成果区 ${Math.round(rendered * 100)}%，回答区 ${Math.round((1 - rendered) * 100)}%`}
       title={en ? "Drag to resize; double-click to reset" : "上下拖动调整高度，双击恢复默认"}

@@ -1,5 +1,15 @@
 # 可复用运行测试
 
+## Windows 真实输入通道验证
+
+桌面 capabilities 提供 `game_instance_native_key` 时，可通过 `instance native-key` 向独立托管测试窗口发送扫描码按下/松开。
+参数 instanceId、key（如 Escape）、holdMs（40–1000）。这是 Windows 系统注入输入，不是虚拟 Unity/Rewired 动作，也不是物理硬件来源证明。
+仅在批准的实现/修改阶段使用，不能操作用户人工试玩的窗口；同一写请求不盲目重试，先读 receiptPath 核对 downSent/upSent/completed/focusLost。
+回执可通过 `instance native-key-result`（instanceId、requestId）读取；started 表示结果未知。成功发送后窗口保留前台供取证，整组验证结束再还原显示。
+按键回执之后读取真实游戏状态、输入映射、游戏及平台菜单和实图；恢复后检查清键。发送成功不代替这些行为断言。
+不需要为了使用桌面端输入工具替换游戏 Player。旧任务可通过实时 capabilities 发现新能力，保留原策略与预算。
+保存问题时可填写 playerSummary，用日常语言说明具体操作、影响与确认程度，不将未验证写为确定故障。
+
 初始化异常时先保存完整原日志；用 [日志摘要工具](../scripts/summarize-runtime-log.mjs)
 归并重复异常并保留首次位置、末次位置、次数和有限堆栈。先查第一条异常与启动报告，
 再查退出清理错误；最后100条日志可能只覆盖刷屏的几百毫秒，不能替代整个启动过程。

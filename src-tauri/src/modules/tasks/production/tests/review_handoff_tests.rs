@@ -17,6 +17,108 @@ fn setup() -> Fixture {
     }
     f
 }
+
+#[test]
+fn user_playtest_handoff_preserves_defects_and_does_not_approve_delivery() {
+    let f = setup();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.player_mode = "single".into();
+            Ok(())
+        })
+        .unwrap();
+    f.apply(
+        "save-issue",
+        json!({"id":"pause","stage":"implementation","kind":"defect",
+        "status":"open","description":"Escape still unverified","repairTarget":"lua"}),
+    )
+    .unwrap();
+    f.service
+        .production_build_package(&f.id, f.record().revision)
+        .unwrap();
+    let before = f.record();
+    assert!(f.apply("enter-playtest", json!({"version":"v1"})).is_err());
+    f.service
+        .production_workbench(ProductionMutation {
+            task_id: f.id.clone(),
+            expected_revision: before.revision,
+            operation: "enter-playtest".into(),
+            data: json!({"version":"v1"}),
+        })
+        .unwrap();
+    let after = f.record();
+    assert_eq!(after.current_stage, "review");
+    assert_eq!(after.stages["implementation"], "playable");
+    assert_eq!(after.issues, before.issues);
+    assert_eq!(after.self_tests, before.self_tests);
+    assert_eq!(
+        serde_json::to_value(&after.approvals).unwrap(),
+        serde_json::to_value(before.approvals).unwrap()
+    );
+    assert!(review_handoff::gate(&after, &f.workspace).is_err());
+    let mut migrated = after.clone();
+    review_handoff::migrate(&mut migrated);
+    assert_eq!(migrated.current_stage, "review");
+}
+
+#[test]
+fn user_handoff_rejects_missing_packages_stale_revisions_and_active_execution() {
+    let f = setup();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.player_mode = "single".into();
+            Ok(())
+        })
+        .unwrap();
+    let enter = |revision| {
+        f.service.production_workbench(ProductionMutation {
+            task_id: f.id.clone(),
+            expected_revision: revision,
+            operation: "enter-playtest".into(),
+            data: json!({"version":"v1"}),
+        })
+    };
+    assert!(enter(f.record().revision).is_err());
+    f.service
+        .production_build_package(&f.id, f.record().revision)
+        .unwrap();
+    assert!(enter(f.record().revision - 1).is_err());
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.workbench.attempts.push(WorkbenchAttempt {
+                status: "running".into(),
+                ..Default::default()
+            });
+            Ok(())
+        })
+        .unwrap();
+    assert!(enter(f.record().revision).is_err());
+    assert_eq!(f.record().current_stage, "implementation");
+}
+
+#[test]
+fn native_input_rejects_manual_playtest_instances() {
+    let f = setup();
+    assert!(
+        f.service
+            .production_native_input_guard(&f.id, "test-instance")
+            .is_ok()
+    );
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.workbench
+                .execution
+                .preview_sessions
+                .push(json!({"instanceIds":["manual-instance"]}));
+            Ok(())
+        })
+        .unwrap();
+    assert!(
+        f.service
+            .production_native_input_guard(&f.id, "manual-instance")
+            .is_err()
+    );
+}
 fn source(f: &Fixture) -> Value {
     json!({"id":"engine","stage":"implementation","kind":"defect","status":"open",
         "description":"Synthetic engine defect","repairTarget":"abya-source","diagnosisStatus":"confirmed",

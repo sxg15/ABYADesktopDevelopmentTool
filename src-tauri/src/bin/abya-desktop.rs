@@ -36,6 +36,8 @@ fn command(group: &str, action: &str) -> Option<&'static str> {
         ("instance", "launch") => "game_instance_launch",
         ("instance", "stop") => "game_instance_stop",
         ("instance", "window") => "game_instance_set_window_visibility",
+        ("instance", "native-key") => "game_instance_native_key",
+        ("instance", "native-key-result") => "game_instance_native_key_result",
         ("instance", "wait") => "game_instance_wait_for_state",
         ("instance", "launch-report") => "game_instance_get_launch_report",
         ("runtime", "receipt") => "game_runtime_operation_receipt",

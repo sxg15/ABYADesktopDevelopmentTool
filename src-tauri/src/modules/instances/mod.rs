@@ -1,4 +1,6 @@
+mod keyboard;
 mod launch;
+pub use keyboard::NativeKeyInput;
 mod memory;
 mod memory_models;
 mod memory_probe;

@@ -4,8 +4,32 @@ impl TaskService {
     /// APP-owned input. This cannot approve a document or close a defect.
     pub fn production_workbench(&self, input: ProductionMutation) -> AppResult<ProductionView> {
         let task = self.get(&input.task_id)?;
+        let preview = if input.operation == "enter-playtest" {
+            Some(self.preview_spec(&input.task_id)?)
+        } else {
+            None
+        };
         self.production_commit(&input.task_id, input.expected_revision, |r| {
             match input.operation.as_str() {
+                "enter-playtest" => {
+                    let source = preview.as_ref().ok_or_else(conflict)?;
+                    if r.current_stage != "implementation"
+                        || Some(&source.version) != r.current_version.as_ref()
+                        || input.data["version"].as_str() != r.current_version.as_deref()
+                        || r.workbench.attempts.iter().any(|a| matches!(a.status.as_str(),
+                            "running" | "sending" | "queued" | "reconciling"))
+                    {
+                        return Err(AppError::validation("请先停止执行，并核对当前候选的试玩包。"));
+                    }
+                    // 用户主动转入反馈迭代；保留失败检查、问题、预算和原始工作项。
+                    r.stages.insert("implementation".into(), "playable".into());
+                    r.stages.insert("review".into(), "awaiting-feedback".into());
+                    r.current_stage = "review".into();
+                    r.workbench.execution.state = "paused".into();
+                    r.workbench.execution.active_unit_id = None;
+                    autonomy::event(&mut r.workbench.execution, "user-entered-playtest", None,
+                        "用户选择带着待处理项进入试玩与修改；未批准交付或更改检查结果。");
+                }
                 "revoke-prototype" => {
                     let id=mutation::text(&input.data,"id")?;
                     let grant=r.workbench.prototype_grants.iter_mut().find(|g|g["id"]==id)

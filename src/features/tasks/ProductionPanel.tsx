@@ -1,3 +1,4 @@
+import { playableState } from "./playableState";
 import { useEffect, useRef, useState } from "react";
 import { BookOpen, Check, ClipboardList, Code2, FileText, FolderOpen, Gamepad2, Layers, MessageCircleQuestion, PackageCheck, Palette, Route, TriangleAlert, Wrench } from "lucide-react";
 import {
@@ -336,7 +337,7 @@ export function ProductionPanel({
                 key={item.id}
                 aria-pressed={stage === item.id}
                 aria-current={r.currentStage === item.id ? "step" : undefined}
-                aria-label={`${index + 1} ${label(item.id)} ${statusName(states[item.id], locale)}`}
+                aria-label={`${index + 1} ${label(item.id)} ${item.id==="implementation"&&playableState(r).available?(en?"Playable":"可试玩"):statusName(states[item.id], locale)}`}
                 title={label(item.id)}
                 className={`production-stage-button ${stage === item.id ? "selected" : ""} stage-${states[item.id]}`}
                 onClick={() => select(item.id)}

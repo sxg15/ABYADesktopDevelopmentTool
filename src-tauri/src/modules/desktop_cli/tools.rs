@@ -266,7 +266,7 @@ impl DesktopToolDispatcher {
                 )
             })()
         } else {
-            self.invoke(name, arguments)
+            self.invoke(name, arguments, operation_id)
         };
         let result = match invoked {
             Ok(value) => ToolCallResult::success(value),
@@ -395,7 +395,7 @@ impl DesktopToolDispatcher {
         }
     }
 
-    fn invoke(&self, name: &str, arguments: Value) -> AppResult<Value> {
+    fn invoke(&self, name: &str, arguments: Value, operation_id: &str) -> AppResult<Value> {
         if !arguments.is_object() {
             return Err(AppError::validation(
                 "Desktop CLI tool arguments must be an object.",
@@ -787,6 +787,39 @@ impl DesktopToolDispatcher {
                     self.dependencies
                         .instances
                         .set_window_visibility(&input.instance_id, input.visibility_mode)?,
+                )
+            }
+            "game_instance_native_key" => {
+                let input: crate::modules::instances::NativeKeyInput = decode(arguments)?;
+                let instance = self.dependencies.instances.read(&input.instance_id)?;
+                if instance.name.starts_with("预览 ") || instance.name.starts_with("验收 ") {
+                    return Err(AppError::validation("人工试玩窗口不接受 AI 原生输入。"));
+                }
+                let task = instance
+                    .task_id
+                    .as_deref()
+                    .ok_or_else(|| AppError::validation("非任务托管实例。"))?;
+                self.dependencies
+                    .tasks
+                    .production_native_input_guard(task, &input.instance_id)?;
+                serialize(
+                    self.dependencies
+                        .instances
+                        .native_key(input, operation_id)?,
+                )
+            }
+            "game_instance_native_key_result" => {
+                #[derive(Deserialize)]
+                #[serde(rename_all = "camelCase", deny_unknown_fields)]
+                struct ReceiptInput {
+                    instance_id: String,
+                    request_id: String,
+                }
+                let input: ReceiptInput = decode(arguments)?;
+                serialize(
+                    self.dependencies
+                        .instances
+                        .native_key_result(&input.instance_id, &input.request_id)?,
                 )
             }
             "game_instance_stop" => {

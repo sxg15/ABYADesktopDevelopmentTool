@@ -3,6 +3,15 @@ import { taskGuidanceState } from "./taskGuidanceState";
 import type { ProductionView, TaskControlState } from "../../shared/production";
 import { attentionFixture } from "../../shared/notifications.test-fixtures";
 const view = {policy:{stages:[]},actions:{review:{},feedback:{}},record:undefined} as unknown as ProductionView;
+it("shows playable guidance for a stopped old-policy task without erasing human decisions",()=>{
+ const input={...view,record:{taskId:"task",currentStage:"implementation",currentVersion:"v1",cycle:1,issues:[],
+  selfTests:["lua","input","core-loop","save-reload"].map(id=>({id,status:"passed",version:"v1",cycle:1})),
+  workbench:{execution:{verificationPackage:{path:"artifacts/package.zip",version:"v1",status:"core-verified"}}}}} as unknown as ProductionView;
+ const guide=taskGuidanceState("task",true,input,{taskId:"task",state:"repairRequired"} as TaskControlState,undefined,false);
+ expect(guide.key).toBe("playable");expect(guide.title).toContain("建议先体验");expect(guide.button).toBe("查看试玩版本");
+ input.record!.selfTests!.push({id:"input",status:"failed",version:"v1",cycle:1,observations:"counterexample",recordedAt:"now"});
+ expect(taskGuidanceState("task",true,input,{taskId:"task",state:"repairRequired"} as TaskControlState,undefined,false).key).toBe("repairRequired");
+});
 it("keeps technical settlement distinct from a planner Continue request",()=>{
  const r={...view,record:{taskId:"task",currentStage:"implementation",issues:[],policy:{implementationExecution:{mode:"autonomous",inPlaceRecoveryVersion:1}}},policy:{stages:[],implementationExecution:{mode:"autonomous",inPlaceRecoveryVersion:1}}} as unknown as ProductionView;
  const guide=taskGuidanceState("task",true,r,{taskId:"task",state:"technicalReview"} as TaskControlState,undefined,false);

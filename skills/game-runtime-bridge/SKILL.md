@@ -1,5 +1,8 @@
 # Game Runtime CLI Bridge
 
+2026-11-02：旧流程的已验证包也使用独立 preview 启动，不再混用正式验收入口。
+当前包无 sourceRevision 时必须完整核验当前版本；历史包仍须校验来源、范围、指纹与证据。
+
 ## Owned acceptance data roots (2.8)
 Frozen candidates run from TaskService-validated workspace-root/.abya-play-runs/<UUID>/Archives copies. An owner marker binds every run to its task; short paths avoid legacy Player MAX_PATH failures. The acceptance orchestrator alone passes an internal data-root override; ordinary CLI/UI profiles cannot select arbitrary roots. This makes older Players discover the exact run copy without changing the candidate, global archive collection, or Player fingerprint.
 

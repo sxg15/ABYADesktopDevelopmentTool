@@ -1,3 +1,4 @@
+import { playableIssues } from "./playableState";
 import { TriangleAlert } from "lucide-react";
 import type { ProductionRecord } from "../../shared/production";
 import { ProgrammerIssueExport } from "./ProgrammerIssueExport";
@@ -12,6 +13,7 @@ export function confirmedSourceDefect(r: ProductionRecord, id: string) {
 }
 
 export function PlaytestIssues({record:r,en}:{record:ProductionRecord;en:boolean}) {
+  if(r.stages?.implementation==="playable")return <section className="playtest-issues"><h2>{en?"Open playtest items":"带入试玩的待处理项"}</h2>{playableIssues(r,en).map(i=><article key={i.id}><h3>{i.title}</h3><p>{i.description}</p></article>)}</section>;
   const issues = r.issues.filter(i => i.kind !== "suggestion" && confirmedSourceDefect(r,i.id));
   const pending = r.issues.filter(i => i.status !== "resolved" && i.kind !== "suggestion" && !confirmedSourceDefect(r,i.id));
   if (!issues.length && !pending.length) return null;

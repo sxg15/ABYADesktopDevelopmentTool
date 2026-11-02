@@ -1,3 +1,4 @@
+import { playableState } from "./playableState";
 import type {ProductionRecord,TaskControlState} from "../../shared/production";
 const labels:Record<string,string>={repairRequired:"尚未形成可玩包，等待修复恢复",externalBlocked:"存在明确外部条件，查看下一步",ready:"准备执行",running:"AI 正在自主推进",waitingDependencies:"可执行工作已收敛，等待相关条件",settledWithGaps:"本轮执行已结束，存在未完成或未验证项",settled:"本轮工作已收敛",paused:"已暂停",pending:"等待依赖 / 待执行",succeeded:"工作项已完成",failed:"自动恢复中",deferred:"已暂缓","awaiting-condition":"结果待对账 / 等待条件"};
 export function AutonomousExecution({record,en,control}:{record:ProductionRecord;en:boolean;control?:TaskControlState}) {
@@ -11,7 +12,7 @@ export function AutonomousExecution({record,en,control}:{record:ProductionRecord
  const units=ledger.units.filter(u=>u.cycle===record.cycle&&(!ledger.scopeHash||u.scopeHash===ledger.scopeHash)),active=units.find(u=>u.id===ledger.activeUnitId);
  const technical=Object.values(ledger.technicalQueue??{}).filter(item=>item.status==="open");
  return <section className="goal-execution" aria-label={en?"Autonomous implementation":"Lua 自主执行"}>
-  <strong>{status}</strong>
+  <strong>{playableState(record).available&&["repairRequired","externalBlocked"].includes(ledger.state)?(en?"Playable version retained; issues remain":"已有可试玩版本，仍有待处理项"):status}</strong>
   {technical.length>0&&<p>{en?`${technical.length} items retained for technical handling; no acceptance implied.`:`${technical.length} 项保留在技术处理队列，不代表验收通过。`}{ledger.verificationPackage?.status==="core-verified"&&(en?" A playable checkpoint is available separately.":"已有可玩检查点可单独预览。")}</p>}
   <p>{active?`${active.title} · ${en?"Route":"当前路线"} ${active.route+1} / ${active.routes.length}`:en?"Results and deferred work are preserved. Convergence does not imply acceptance.":"已有成果、替代方案和暂缓项均保留；收敛不代表验收通过。"}</p>
   <details><summary>{en?"Work queue & remaining items":"工作队列与待补项"} · {units.filter(u=>u.status==="succeeded").length}/{units.length}</summary>

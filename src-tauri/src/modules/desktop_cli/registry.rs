@@ -382,6 +382,26 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             reversible_write(),
         ),
         tool(
+            "game_instance_native_key",
+            "向本任务托管测试窗口发送一次 Windows 扫描码按下/松开（40–1000ms）。仅支持 Escape/Enter/Space/W/A/S/D/方向键；切换前台，遇到用户按键或焦点变化停止。禁止人工试玩窗口。不自动重试；回执不代表游戏处理通过。",
+            "托管游戏原生键盘输入",
+            object_schema(
+                json!({"instanceId":{"type":"string"},"key":{"type":"string","enum":["Escape","Enter","Space","W","A","S","D","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"]},"holdMs":{"type":"integer","minimum":40,"maximum":1000}}),
+                &["instanceId", "key", "holdMs"],
+            ),
+            destructive(),
+        ),
+        tool(
+            "game_instance_native_key_result",
+            "读取本任务托管实例的原生按键原始回执。started 表示结果未知，不允许自动重发。",
+            "读取原生按键回执",
+            object_schema(
+                json!({"instanceId":{"type":"string"},"requestId":{"type":"string","format":"uuid"}}),
+                &["instanceId", "requestId"],
+            ),
+            read_only(),
+        ),
+        tool(
             "game_instance_stop",
             "Stops log collection, requests process-tree exit, force-terminates when needed, waits for termination, and reports the observed outcome.",
             "Stop game instance",

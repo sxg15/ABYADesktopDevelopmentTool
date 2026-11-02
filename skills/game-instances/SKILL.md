@@ -1,5 +1,14 @@
 # Game Instances Skill
 
+## Windows 原生按键（2026-11-02）
+`native_key` 仅控制存活托管进程的窗口，以 SendInput 扫描码发送一次按下/松开，holdMs 为40–1000。
+仅允许 Escape/Enter/Space/W/A/S/D/方向键，拒绝系统组合键；核对前台目标，检测用户按键与焦点变化，结束时松键。
+成功后保留测试窗口前台/可见，供调用者读取状态与截图；自动恢复焦点会触发游戏失焦暂停，故须在整组验证结束后用 window 命令还原显示。
+Reports/KeyboardInputs/<requestId>.json 保存请求占位及结果，同 requestId 不重放；异常或中断先查回执。
+native_key_result 以 UUID 和实例 ID 读取回执，拒绝其他实例记录；实例停止后仍可读取。
+回执是 Windows 系统注入输入，不是物理硬件来源证明，也不是游戏验证通过；需配合游戏状态、画面及继续后的清键验证。
+CLI 层验证任务归属和批准，拒绝人工试玩/验收实例；测试应使用单独托管实例。
+
 ## Owned acceptance data roots (2.8)
 Frozen candidates run from TaskService-validated workspace-root/.abya-play-runs/<UUID>/Archives copies. An owner marker binds every run to its task; short paths avoid legacy Player MAX_PATH failures. The acceptance orchestrator alone passes an internal data-root override; ordinary CLI/UI profiles cannot select arbitrary roots. This makes older Players discover the exact run copy without changing the candidate, global archive collection, or Player fingerprint.
 

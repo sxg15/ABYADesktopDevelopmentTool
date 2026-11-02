@@ -2,6 +2,12 @@
 
 ## Current scope
 
+2026-11-02：Lua 阶段与顶部指引共享试玩包判断，核心已验证版本显示“可试玩”，独立列明待确认/已确认问题。
+试玩包、独立启动与诊断修复入口集中；旧流程也可预览已校验包，不强制升级。
+APP-only workbench `enter-playtest` 按 revision/current version 校验包与批准，执行停止后允许用户带未完成项进入 review。
+implementation 记为 playable，保留自测、问题、工作项、预算与批准；最终交付门槛不变，CLI 不提供此人工决定。
+问题可提供 playerSummary（面向玩家的影响说明）；没有可信摘要时保留“待确认”及原始技术记录，不推断已确诊。
+
 Workflow 2.11 uses one work unit for bounded recovery, preserves original IDs and cumulative time, separates observation from diagnosis, and shares a 180-minute Lua-goal allocation plus a 15-minute finalization window. Explicit migration records a new allocation epoch without erasing history; ordinary retries do not reset it. Additional checks bind approved text or real integrity defects; optional failures do not expand gates. Scoped evidence requires unchanged build/dependencies and rejects unknown impact. Playable previews use verified historical snapshots in isolated copies, never acceptance. See [implementation and release criteria](../../docs/EXECUTION_REFACTOR_20261030.md). Pinned earlier policies retain their behavior.
 
 ## Purpose
