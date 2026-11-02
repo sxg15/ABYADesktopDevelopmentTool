@@ -1,11 +1,15 @@
+mod acceptance_contract;
 mod authoring;
 mod autonomy;
 mod completion;
 mod completion_repair;
+mod execution_loop;
 mod preflight_recovery;
 mod progress_budget;
 mod review_handoff;
+mod scoped_evidence;
 mod stage_contracts;
+mod validation_impact;
 mod verification_package;
 pub use preflight_recovery::{
     preflight_recovery_active, preflight_recovery_manual, preflight_recovery_resumable,
@@ -23,6 +27,8 @@ mod art_library_package;
 mod art_library_requests;
 mod art_recovery;
 mod art_references;
+mod preview;
+mod runtime_baseline;
 pub use acceptance::AcceptanceSpec;
 mod catalog;
 mod files;

@@ -46,6 +46,9 @@ fn keys(r: &ProductionRecord, u: &autonomy::WorkUnit) -> Vec<String> {
 }
 pub(super) fn exhausted(r: &ProductionRecord, u: &autonomy::WorkUnit) -> bool {
     let extra = running_ms(u);
+    if super::execution_loop::enabled(r) {
+        return super::execution_loop::budget_exhausted(r, u, extra);
+    }
     if super::progress_budget::enabled(r) {
         return super::progress_budget::exhausted(r, u, extra);
     }

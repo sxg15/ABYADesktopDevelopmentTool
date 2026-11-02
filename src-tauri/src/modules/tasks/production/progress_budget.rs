@@ -138,6 +138,26 @@ fn markers(r: &ProductionRecord, u: &autonomy::WorkUnit) -> BTreeSet<String> {
     result
 }
 pub(super) fn initialize(r: &mut ProductionRecord, id: &str) {
+    if super::execution_loop::enabled(r) {
+        if let Some(u) = r.workbench.execution.units.iter().find(|u| u.id == id) {
+            let remaining = if u.kind == "finalization" {
+                (autonomy_budget::limit(r, "settlementMinutes", 15) * 60_000 - u.elapsed_ms).max(0)
+            } else {
+                (super::execution_loop::goal_limit(r)
+                    - super::execution_loop::goal_used(r, &u.goal_id))
+                .max(0)
+            };
+            let u = r
+                .workbench
+                .execution
+                .units
+                .iter_mut()
+                .find(|u| u.id == id)
+                .unwrap();
+            u.execution_limit_ms = u.elapsed_ms + remaining;
+        }
+        return;
+    }
     if !enabled(r) {
         return;
     }
@@ -160,6 +180,9 @@ pub(super) fn initialize(r: &mut ProductionRecord, id: &str) {
     u.execution_limit_ms = limit;
 }
 pub(super) fn refresh(r: &mut ProductionRecord) {
+    if super::execution_loop::enabled(r) {
+        return;
+    }
     if !enabled(r) {
         return;
     }
@@ -176,6 +199,9 @@ pub(super) fn refresh(r: &mut ProductionRecord) {
     else {
         return;
     };
+    if super::execution_loop::budget_exhausted(r, u, 0) {
+        return;
+    }
     let members: Vec<_> = r
         .workbench
         .execution
@@ -289,6 +315,9 @@ pub(super) fn migrate(r: &mut ProductionRecord) {
 /// Reconsider a parked original unit only when persisted material progress earned
 /// credits. This does not resume native execution or reconcile unknown writes.
 pub(super) fn reassess(r: &mut ProductionRecord) -> bool {
+    if super::execution_loop::enabled(r) {
+        return false;
+    }
     if !enabled(r) || !autonomy::autonomous_implementation(r) {
         return false;
     }

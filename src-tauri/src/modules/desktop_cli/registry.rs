@@ -431,6 +431,26 @@ pub(crate) fn tools() -> Vec<CliCommand> {
             unknown_game_mutation(),
         ),
         tool(
+            "game_runtime_qualify_player",
+            "Record a scope-limited Player baseline from actual reports on an owned instance. Discovered tools are not automatically verified.",
+            "Record Player baseline",
+            object_schema(
+                json!({"taskId":{"type":"string"},"instanceId":{"type":"string"},"testIds":{"type":"array","minItems":1,"maxItems":16,"items":{"type":"string"}}}),
+                &["taskId", "instanceId", "testIds"],
+            ),
+            reversible_write(),
+        ),
+        tool(
+            "development_production_runtime_baseline",
+            "Read the shared observed baseline matching the task's exact Player fingerprint. Does not approve gameplay.",
+            "Read Player baseline",
+            object_schema(
+                json!({"taskId":{"type":"string"},"query":{"type":"string","maxLength":256}}),
+                &["taskId"],
+            ),
+            read_only(),
+        ),
+        tool(
             "game_log_collection_start",
             "Resumes structured log batches from a connected managed or external game source.",
             "Start game log collection",

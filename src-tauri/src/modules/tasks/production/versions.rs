@@ -49,6 +49,9 @@ fn player_roots(path: &Path) -> AppResult<Vec<PathBuf>> {
     }
     Ok(roots)
 }
+pub(super) fn player_fingerprint(path: &Path) -> AppResult<String> {
+    digest(&player_roots(path)?)
+}
 pub(super) fn inventory(roots: &[PathBuf]) -> AppResult<Vec<(String, PathBuf, u64, u128)>> {
     let mut result = Vec::new();
     for (index, root) in roots.iter().enumerate() {
@@ -211,7 +214,10 @@ impl TaskService {
             archive
         };
         let player = sources.player_path.canonicalize()?;
-        let content = super::version_snapshots::manifest(&archive)?;
+        let mut content = super::version_snapshots::manifest(&archive)?;
+        if super::execution_loop::enabled(&record) {
+            super::validation_impact::enrich(&archive, &mut content)?;
+        }
         let mut details = json!({"id":id,"archiveGuid":sources.archive_guid,"levelGuid":sources.level_guid,"instanceId":sources.instance_id,
             "archiveSource":archive,"playerSource":player,"archiveHash":digest(&[archive])?,"playerBuildHash":digest(&player_roots(&player)?)?});
         details["frozenSnapshot"] = json!(freeze);
@@ -220,7 +226,12 @@ impl TaskService {
         details["cycle"] = json!(record.cycle);
         details["editableArchiveSource"] = json!(editable);
         details["contentManifest"] = content.clone();
-        details["validationImpact"] = super::version_snapshots::difference(
+        let difference = if super::execution_loop::enabled(&record) {
+            super::validation_impact::difference
+        } else {
+            super::version_snapshots::difference
+        };
+        details["validationImpact"] = difference(
             &record.version_details["contentManifest"],
             &content,
             record.version_details["playerBuildHash"] != details["playerBuildHash"],

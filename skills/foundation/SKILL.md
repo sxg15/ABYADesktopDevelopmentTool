@@ -20,6 +20,8 @@ process, log, or MCP business workflows.
 
 ## Public Contracts
 
+Workflow 2.11 shared production DTOs expose optional pinned-policy flags, preview provenance and technical-queue entries. Missing fields preserve old records. The preview API is distinct from formal acceptance; UI projections never manufacture a successful verification or human approval.
+
 The standalone CLI HTTP transport explicitly disables proxies: its validated 127.0.0.1
 endpoint and bearer token must stay on the local connection even when the application
 enables reqwest system-proxy support for remote GitHub requests. Named pipes are unchanged.

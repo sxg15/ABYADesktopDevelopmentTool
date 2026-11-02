@@ -20,6 +20,14 @@ use uuid::Uuid;
 
 type ConversationBinding = (TerminalProvider, String, String);
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct PlayerQualificationInput {
+    task_id: String,
+    instance_id: String,
+    test_ids: Vec<String>,
+}
+
 #[derive(Clone)]
 pub(crate) struct DesktopToolDispatcher {
     dependencies: DesktopCliDependencies,
@@ -246,7 +254,21 @@ impl DesktopToolDispatcher {
             self.complete_recorded_tool(binding, &activity_id, name, &activity_arguments, &result);
             return result;
         }
-        let result = match self.invoke(name, arguments) {
+        let invoked = if name == "game_runtime_qualify_player" {
+            (|| -> AppResult<Value> {
+                let input: PlayerQualificationInput = decode(arguments)
+                    .map_err(|e| AppError::new("invalid_request", e.message, "not_executed"))?;
+                self.dependencies.runtime_bridge.qualify_player(
+                    &input.task_id,
+                    &input.instance_id,
+                    &input.test_ids,
+                    session_id.unwrap_or("desktop"),
+                )
+            })()
+        } else {
+            self.invoke(name, arguments)
+        };
+        let result = match invoked {
             Ok(value) => ToolCallResult::success(value),
             Err(error) => ToolCallResult::error(error),
         };
@@ -811,6 +833,23 @@ impl DesktopToolDispatcher {
                 self.dependencies
                     .runtime_bridge
                     .list_tools(&input.instance_id)
+            }
+            "development_production_runtime_baseline" => {
+                let task = arguments["taskId"]
+                    .as_str()
+                    .ok_or_else(|| AppError::validation("taskId is required."))?;
+                let view = self.dependencies.tasks.production_get(task)?;
+                let selected = view
+                    .record
+                    .as_ref()
+                    .and_then(|r| r.version_details["playerSource"].as_str())
+                    .map(str::to_owned)
+                    .unwrap_or(self.dependencies.settings.get()?.game_executable_path);
+                self.dependencies.tasks.runtime_baseline_for_player(
+                    task,
+                    std::path::Path::new(&selected),
+                    arguments["query"].as_str().unwrap_or(""),
+                )
             }
             "game_log_collection_start" => {
                 let input: InstanceIdInput = decode(arguments)?;

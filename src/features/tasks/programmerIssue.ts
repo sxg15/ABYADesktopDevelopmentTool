@@ -6,6 +6,7 @@ export function affectsLua(issue: ProductionIssue) {
 }
 
 export function programmerIssue(issue: ProductionIssue, en = false) {
+  if(issue.diagnosisStatus==="excluded")return undefined;
   if (issue.repairTarget === "abya-source" || issue.repairTarget === "abya-build") {
     const confirmed=issue.diagnosisStatus==="confirmed";
     return {suspected:!confirmed,label:confirmed?(en?"Confirmed platform issue":"已确认平台问题"):(en?"Runtime issue · cause unconfirmed":"运行异常 · 原因待确认")};

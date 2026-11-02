@@ -25,6 +25,7 @@ export function useTaskControl(taskId:string,conversationId:string|undefined,pro
 }
 export function controlText(state:TaskControlState|undefined) {
   if(!state)return "正在核对任务状态";
+  if(state.state==="technicalReview")return "当前阶段资料已保留，未完成项进入技术处理队列；无需反复点击继续";
   const text:Record<string,string>={workSettled:"当前可执行工作已收敛，缺口与替代方案已保留；无需反复点击继续",interrupted:"子流程被中断，可继续原子流程；ID、成果和历史已保留",queued:"操作已保存，当前回复结束后继续，无需重复提交",running:"AI 正在处理当前任务，当前无需操作",waitingForResponse:"正在等待 AI 输出，当前无需操作",
     stopFailed:state.lastError||"自动续接已禁止，但当前执行尚未确认停止；请重试或强制停止此会话",
     awaitingInput:"当前执行已中断，终端保持连接，可直接输入新指令",
@@ -35,6 +36,7 @@ export function controlText(state:TaskControlState|undefined) {
   return (text[state.state]??"正在核对任务状态")+(["running","waitingForResponse","queued"].includes(state.state)&&elapsed>=30?` · 上次进展 ${elapsed} 秒前`:"");
 }
 export function controlLabel(state:TaskControlState|undefined) {
+  if(state?.state==="technicalReview")return "成果已保留，技术待处理";
   const labels:Record<string,string>={workSettled:"可执行工作已收敛",interrupted:"被中断",waitingForTerminal:"终端待处理",running:"运行中",waitingForResponse:"等待响应",queued:"已排队",paused:"已暂停",pausing:"暂停中",
     stopFailed:"停止失败",
     awaitingInput:"等待新指令",

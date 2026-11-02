@@ -36,6 +36,35 @@ pub(super) fn eligible(view: &ProductionView) -> bool {
 fn progress(view: &ProductionView, workflow: &CodexWorkflowSnapshot) -> String {
     use sha2::{Digest, Sha256};
     let r = view.record.as_ref().expect("eligible production");
+    if r.policy["implementationExecution"]["inPlaceRecoveryVersion"] == 1 {
+        let documents: Vec<_> = r
+            .documents
+            .iter()
+            .map(|(kind, d)| (kind, &d.sha256))
+            .collect();
+        let media: std::collections::BTreeSet<_> = r
+            .artifacts
+            .iter()
+            .filter(|a| {
+                matches!(a["kind"].as_str(), Some("image" | "video"))
+                    || a["path"].as_str().is_some_and(|p| p.ends_with(".lua"))
+            })
+            .filter_map(|a| a["sha256"].as_str())
+            .collect();
+        return format!(
+            "{:x}",
+            Sha256::digest(
+                json!([
+                    r.current_stage,
+                    r.stages,
+                    documents,
+                    media,
+                    r.version_details["archiveHash"]
+                ])
+                .to_string()
+            )
+        );
+    }
     let updates: Vec<_> = r
         .stage_updates
         .iter()
@@ -260,6 +289,25 @@ impl CodexTerminalService {
             return Ok(());
         }
         let fingerprint = progress(&view, &workflow);
+        let contract = view
+            .record
+            .as_ref()
+            .is_some_and(|r| r.policy["implementationExecution"]["inPlaceRecoveryVersion"] == 1);
+        if contract
+            && !autonomous
+            && !self
+                .tasks
+                .production_stage_checkpoint(task, turn, &fingerprint)?
+        {
+            if let Some(run) = self.auto_progress.lock().get_mut(conversation) {
+                run.handled = true;
+            }
+            if let Some(mut request) = continuation_queue::read(&directory)? {
+                request.status = "settled".into();
+                continuation_queue::save(&directory, &mut request)?;
+            }
+            return Ok(());
+        }
         let stalled = {
             let mut runs = self.auto_progress.lock();
             let Some(run) = runs.get_mut(conversation) else {
@@ -269,7 +317,8 @@ impl CodexTerminalService {
                 return Ok(());
             }
             run.handled = true;
-            let stalled = !autonomous
+            let stalled = !contract
+                && !autonomous
                 && !view
                     .record
                     .as_ref()

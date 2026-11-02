@@ -1,6 +1,7 @@
 use super::*;
 use sha2::{Digest, Sha256};
 const ALLOWED: &[&str] = &[
+    "register-acceptance-check",
     "revise-work-unit",
     "classify-work-unit",
     "reconcile-work-unit",

@@ -16,6 +16,8 @@ Own authenticated loopback command dispatch, schemas, task/conversation validati
 
 ## Public Contracts
 
+`runtime qualify-player` reads completed native test reports and the discovered catalog from an owned running instance, checks the actual complete Player fingerprint before/after, and records only the reported validation scope. `runtime baseline` reads the shared baseline for the task-pinned or selected Player; it never approves a game. No caller-supplied build hash, source path or test verdict is accepted. Workflow 2.11 also exposes register-acceptance-check through existing production mutations; approvals remain APP-only.
+
 Standalone loopback HTTP calls use foundation's no-proxy transport, including when Windows
 proxy settings lack a localhost exclusion. Managed named-pipe transport remains unchanged.
 Local HTTP server fixtures also disable proxies so tests never depend on a running proxy.

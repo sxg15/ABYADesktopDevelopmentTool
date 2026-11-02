@@ -1,5 +1,6 @@
 mod acceptance;
 mod authoring;
+mod baseline;
 mod operation_receipts;
 mod operation_trace;
 mod process;

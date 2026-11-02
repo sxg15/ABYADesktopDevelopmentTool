@@ -24,6 +24,23 @@ CLI 连接、轮询、断言和回执管理。运行目录必须在当前任务�
 
 ## 输入格式
 
+新场景可以使用 schema `abya.runtime-scenario/v2`，必须包含至少一项实际可观察断言。
+只读步骤可设置 readRetries=0–2；执行器先通过实际 capability 描述核对 ReadOnly，不能仅靠自填标签重复写入。
+回执区分 invocationRejected、verificationUnavailable、assertionFailed、needsReconciliation。
+明确的派发前参数/身份拒绝不等于未知写入；未知写入仍先对账，任何分类均不自动诊断 PB 缺陷。
+
+## Player 基线
+
+在任务托管终端使用 `node <scripts/player-baseline.mjs> read`，读取与实际选定 Player 完整指纹匹配的共享基线。
+默认只返回摘要和详细资料路径，避免把完整能力目录塞入上下文；`read focus` 等关键词最多返回 20 项匹配的能力摘要，实际参数仍从当前实例按需发现。
+基线不存在时不构成游戏故障；使用当前能力目录和最小验证继续，不在每个项目重新审计整个 PB。
+发布包资格验证任务可在运行实例仍存在时执行 `node <scripts/player-baseline.mjs> record <实例ID> <已完成测试ID...>`。
+后端直接读取原生报告，拒绝空断言、未完成或失败报告，并核对前后完整构建指纹。
+记录包括实际能力目录与列明的运行验证；已发现能力不代表全部已测试，基线不替代当前游戏的要求验收。
+同构建基线可供其他任务按需读取，源码调查须有当前构建上的可复现反例，不能仅凭能力发现失败。
+
+## 场景输入示例
+
 ```json
 {
   "schema": "abya.runtime-scenario/v1",

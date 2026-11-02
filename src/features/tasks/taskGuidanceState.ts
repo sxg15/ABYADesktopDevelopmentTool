@@ -60,6 +60,12 @@ export function taskGuidanceState(taskId: string, active: boolean, view: Product
     groupId: primary.target.groupId ?? undefined,
     reviewKind: primary.kind === "review" ? primary.target.stage : undefined,
   });
+  else if (["repairRequired","externalBlocked","technicalReview"].includes(state)&&r?.policy?.implementationExecution?.inPlaceRecoveryVersion===1) set({
+    key:"technical-review",tone:"neutral",action:"stage",attention:false,
+    title:text("技术处理已收束，成果已保留","Technical work settled; results retained"),
+    instruction:text("未完成项保留在技术队列；已有可玩检查点可以独立预览。","Unfinished work remains in the technical queue. Verified checkpoints can be previewed independently."),
+    detail:text("这不代表验收通过，也不需要反复点击继续。新的有效条件或明确处理后可恢复原工作。","This is not acceptance and does not require repeated Continue clicks. Resume with a material change or an explicit resolution."),
+    destination:text("查看位置：当前成果与技术记录","Open: Results and technical records"),button:text("查看成果与待补项","View results and remaining work")});
   else if (["repairRequired","externalBlocked"].includes(state)) set({key:state,tone:"neutral",action:"stage",attention:true,
     title:text(state==="repairRequired"?"尚未形成可试玩包":"存在需要处理的外部条件",state==="repairRequired"?"No playable package yet":"External condition required"),
     instruction:text("已有代码、验证记录和历史版本均保留，当前实现尚未成功结束。","Code, evidence and prior versions are retained; implementation has not completed successfully."),

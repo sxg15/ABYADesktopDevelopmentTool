@@ -3,6 +3,11 @@ import { taskGuidanceState } from "./taskGuidanceState";
 import type { ProductionView, TaskControlState } from "../../shared/production";
 import { attentionFixture } from "../../shared/notifications.test-fixtures";
 const view = {policy:{stages:[]},actions:{review:{},feedback:{}},record:undefined} as unknown as ProductionView;
+it("keeps technical settlement distinct from a planner Continue request",()=>{
+ const r={...view,record:{taskId:"task",currentStage:"implementation",issues:[],policy:{implementationExecution:{mode:"autonomous",inPlaceRecoveryVersion:1}}},policy:{stages:[],implementationExecution:{mode:"autonomous",inPlaceRecoveryVersion:1}}} as unknown as ProductionView;
+ const guide=taskGuidanceState("task",true,r,{taskId:"task",state:"technicalReview"} as TaskControlState,undefined,false);
+ expect(guide.attention).toBe(false);expect(guide.title).toContain("成果已保留");expect(guide.detail).toContain("不需要反复点击继续");
+});
 it("offers migration for a stopped legacy Lua task without claiming a confirmed PB defect",()=>{
  const legacy={...view,availableUpdate:true,record:{taskId:"task",workflowVersion:"2.3.0",currentStage:"implementation",issues:[{id:"pb",repairTarget:"abya-build",status:"open",stage:"implementation"}]}} as unknown as ProductionView;
  const guide=taskGuidanceState("task",true,legacy,{taskId:"task",state:"paused"} as TaskControlState,undefined,false);

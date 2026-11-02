@@ -31,6 +31,7 @@ pub(super) fn relevant(r: &ProductionRecord) -> BTreeSet<String> {
         .iter()
         .filter(|u| {
             u.cycle == r.cycle
+                && (!super::execution_loop::enabled(r) || u.status != "superseded")
                 && u.scope_hash == scope
                 && (!enabled(r) || Some(&u.goal_id) == r.workbench.active_goal_id.as_ref())
         })
@@ -95,6 +96,9 @@ pub(super) fn is_repairable(u: &WorkUnit) -> bool {
 }
 /// One diagnostic dispatch for each actual failed result/definition; a summary rewrite cannot buy another.
 pub(super) fn ensure_repair(r: &mut ProductionRecord) {
+    if super::execution_loop::enabled(r) {
+        return;
+    }
     let ids = relevant(r);
     let scope = autonomy::scope(r);
     let target = r
@@ -238,6 +242,9 @@ impl TaskService {
         let mut r = self.production_get(task)?.record.ok_or_else(conflict)?;
         if r.workbench.active_goal_id.as_deref() != Some(goal) {
             return Err(conflict());
+        }
+        if super::execution_loop::enabled(&r) {
+            return self.production_resume_in_place(task);
         }
         let mut probe = r.clone();
         if super::progress_budget::reassess(&mut probe) {

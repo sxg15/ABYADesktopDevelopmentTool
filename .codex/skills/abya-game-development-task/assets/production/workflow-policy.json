@@ -1,6 +1,6 @@
 {
   "schema": "abya.game-development-policy/v1",
-  "workflowVersion": "2.10.0",
+  "workflowVersion": "2.11.0",
   "stageContractsVersion": 1,
   "artDesignVersion": 1,
   "preflightRecovery": {"enabled":true,"stages":["resources","plan"],"attempts":2,"turnMinutes":10},
@@ -209,6 +209,8 @@
     "authority"
   ],
   "implementationExecution": {
+    "inPlaceRecoveryVersion": 1,
+    "goalMinutes": 180,
     "completionLoopVersion": 1,
     "progressBudgetVersion": 1,
     "progressSliceMinutes": 20,

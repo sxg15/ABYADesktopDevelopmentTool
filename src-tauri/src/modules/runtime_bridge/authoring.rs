@@ -47,6 +47,10 @@ impl RuntimeBridgeService {
     ) -> AppResult<crate::modules::instances::GameInstance> {
         if input.profile.mode != LaunchMode::LanClient {
             crate::modules::instances::validate_executable(input.executable_path.trim())?;
+            self.tasks.production_check_player_pin(
+                &input.task_id,
+                std::path::Path::new(input.executable_path.trim()),
+            )?;
         }
         let path = input
             .profile
@@ -58,7 +62,8 @@ impl RuntimeBridgeService {
             .tasks
             .production_authoring_guard(&input.task_id, &path)?;
         if permit.is_none() {
-            return self.instances.launch(input);
+            let data = self.tasks.production_authoring_data_root(&input.task_id)?;
+            return self.instances.launch_with_data_root(input, data);
         }
         if input.profile.mode != LaunchMode::Editor {
             return Err(AppError::new(

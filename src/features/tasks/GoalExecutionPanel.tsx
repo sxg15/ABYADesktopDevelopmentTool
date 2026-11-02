@@ -8,6 +8,7 @@ export function goalExecutionStatus(record:ProductionRecord,goal:WorkbenchGoal,c
   if(!["work","request","feedback"].includes(goal.sourceType)||["completed","resolved","accepted","superseded"].includes(goal.status))return goal.status;
   if(checking)return "reconciling";
   const status=[...(record.workbench?.attempts??[])].reverse().find(a=>a.goalId===goal.id)?.status??"untracked";
+  if(record.policy?.implementationExecution?.inPlaceRecoveryVersion===1&&goal.id===record.workbench?.activeGoalId&&["repairRequired","externalBlocked","technicalReview"].includes(record.workbench?.execution?.state??"")&&["finished","failed"].includes(status))return "technicalReview";
   if(["finished","interrupted","paused","failed"].includes(status)&&record.workbench?.execution?.preflight?.state==="exhausted"&&record.workbench.execution.preflight.goalId===goal.id&&goal.stage===record.currentStage)return "recoveryExhausted";
   if(["finished","interrupted","paused","failed"].includes(status)&&goal.id===record.workbench?.activeGoalId&&["repairRequired","externalBlocked"].includes(record.workbench?.execution?.state??""))return record.workbench!.execution!.state;
   if(["finished","interrupted","paused","failed"].includes(status)&&goal.id===record.workbench?.activeGoalId&&["waitingDependencies","settledWithGaps","settled"].includes(record.workbench?.execution?.state??""))return "workSettled";
@@ -31,7 +32,8 @@ export function GoalExecutionPanel({record,goal,active,checking,onResume,en=fals
     catch(e){setError(errorMessage(e));}finally{locked.current=false;setBusy(false);}}
   const allowed=goal.stage===record.currentStage&&goal.cycle===record.cycle&&!!executionLabels[status];
   return <section className="goal-execution" aria-label={en?"Subprocess execution":"子流程执行状态"}>
-    <strong>{en?status:executionLabels[status]??status}</strong>
+    <strong>{status==="technicalReview"?(en?"Results retained · technical follow-up":"成果已保留 · 技术待补项"):en?status:executionLabels[status]??status}</strong>
+    {status==="technicalReview"&&<p>{en?"No repeated Continue action is required. Review retained results and recovery conditions.":"无需反复点击继续。请查看已有成果及明确的恢复条件；未完成项没有被记为通过。"}</p>}
     {attempt?.reason&&<p>{attempt.reason}</p>}
     {status==="untracked"&&<p>{en?"This older goal has no execution binding. Review its history before choosing the original conversation.":"旧记录没有可靠的执行绑定。请核对历史并选定原会话；同名目标不会被自动合并或标记完成。"}</p>}
     {allowed&&status!=="recoveryExhausted"&&status!=="workSettled"&&status!=="running"&&status!=="sending"&&<button className="primary-button" disabled={!active||busy||checking||!onResume} onClick={()=>{

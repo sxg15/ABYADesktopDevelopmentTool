@@ -172,12 +172,14 @@ impl RuntimeBridgeService {
         spec: &AcceptanceSpec,
         seat: u8,
         host_id: Option<String>,
+        preview: bool,
     ) -> AppResult<GameInstance> {
         self.instances.launch_with_data_root(
             LaunchInstanceInput {
                 task_id: task.into(),
                 name: format!(
-                    "验收 {} · {}",
+                    "{} {} · {}",
+                    if preview { "预览" } else { "验收" },
                     spec.version,
                     if seat == 0 {
                         "Host / 单人".into()
@@ -297,7 +299,8 @@ impl RuntimeBridgeService {
                             "正在加入同一房间并检查玩法。"
                         },
                     );
-                    let instance = self.launch_seat(task, &spec, seat, created.first().cloned())?;
+                    let instance =
+                        self.launch_seat(task, &spec, seat, created.first().cloned(), false)?;
                     created.push(instance.id.clone());
                     session["instanceIds"] = json!(created);
                     self.check_instance(&instance.id, &spec, seat == 0)?;
@@ -343,6 +346,50 @@ impl RuntimeBridgeService {
             .lock()
             .insert(task.into(), session.clone());
         Ok(session)
+    }
+
+    /// 预览使用已验证包的隔离副本；不提交人工反馈，也不跨越正式试玩门槛。
+    pub fn start_preview(&self, task: &str) -> AppResult<Value> {
+        if !self.acceptance_busy.lock().insert(task.into()) {
+            return Err(AppError::validation(
+                "该任务的运行窗口正在准备，请等待当前启动完成。",
+            ));
+        }
+        let _lease = LaunchLease {
+            task: task.into(),
+            busy: self.acceptance_busy.clone(),
+        };
+        let mut spec = self.tasks.preview_spec(task)?;
+        spec.archive_path = self.tasks.preview_archive(task, &spec.version)?;
+        let mut created = Vec::new();
+        let result = (|| -> AppResult<Value> {
+            for seat in 0..spec.seats {
+                let instance =
+                    self.launch_seat(task, &spec, seat, created.first().cloned(), true)?;
+                created.push(instance.id.clone());
+                self.check_instance(&instance.id, &spec, seat == 0)?;
+            }
+            let value = json!({"id":uuid::Uuid::new_v4().to_string(),"purpose":"preview",
+                "version":spec.version,"status":"ready","instanceIds":created,"humanAccepted":false,
+                "message":"可玩检查点已打开；不代表完整实现或交付验收通过。","startedAt":chrono::Utc::now().to_rfc3339()});
+            self.tasks
+                .record_preview(task, &spec.version, value.clone())?;
+            Ok(value)
+        })();
+        if let Err(error) = result {
+            let mut cleanup = Vec::new();
+            for id in &created {
+                if let Err(stop) = self.instances.stop(id) {
+                    cleanup.push(json!({"instanceId":id,"error":stop.message}));
+                }
+            }
+            return Err(AppError::new(
+                error.code,
+                error.message,
+                json!({"cause":error.detail,"cleanupFailures":cleanup}).to_string(),
+            ));
+        }
+        result
     }
 }
 

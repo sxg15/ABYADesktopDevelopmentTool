@@ -89,6 +89,8 @@ DTO implementation, title validation, sanitization, and workflow persistence.
 
 ## Public Contracts
 
+Workflow 2.11 distinguishes technicalReview from user pause, permission waits and uncertain operations. The terminal explains retained technical work without repeatedly requesting Continue; it must not label technical settlement as game acceptance or ongoing execution.
+
 TerminalConnectionRequest connects an exact existing conversation requested by intake UI.
 It selects/mounts that terminal, waits for successful open/reattach, then resolves once. Missing
 or archived conversations fail; never create a replacement. A request waits for real layout,
