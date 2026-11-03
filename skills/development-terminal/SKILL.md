@@ -1,5 +1,7 @@
 # Development Terminal Skill
 
+Malformed or truncated workflow JSON yields a read-only empty projection with a recovery warning. On the next write, preserve the damaged bytes and old journal, sync the replacement, then rename it over the snapshot. Identity, schema and I/O failures still propagate.
+
 ## Terminal freeze recovery (2026-10-22)
 Input queue is capped at 1 MiB and has a four-second acknowledgement watchdog. Any uncertain/error write halts the queue; timeout is not cancellation or permission to send the next chunk. Disposal drops unsent chunks before a rebuilt terminal opens. Explicit 重建终端连接 calls the APP-only idle-checked endpoint and recreates xterm/queue only on success, with no automatic input or inference. Existing Pause/Force stop remain available for active or unconfirmed execution.
 

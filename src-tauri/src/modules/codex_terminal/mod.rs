@@ -784,7 +784,13 @@ impl CodexTerminalService {
         let _workflow_guard = self.workflow_write_lock.lock();
         let mut workflow = load_workflow(&conversation_directory, task_id, conversation_id)?;
         workflow.observability = observability.0;
-        workflow.warning = observability.1;
+        if workflow.preserve_corrupt_file {
+            workflow.warning = format!("{} {}", workflow.warning, observability.1)
+                .trim_end()
+                .into();
+        } else {
+            workflow.warning = observability.1;
+        }
         save_workflow(&conversation_directory, &workflow, "observability")?;
         let transcript = OpenOptions::new()
             .create(true)

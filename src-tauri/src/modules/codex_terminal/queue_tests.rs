@@ -814,6 +814,47 @@ fn stopping_rejects_new_input_and_duplicate_stop_without_clearing_the_owner() {
 }
 
 #[test]
+fn crash_damaged_projection_preserves_native_binding_and_scoped_control() {
+    let f = Fixture::new();
+    let task = f.service.tasks.get_readonly(&f.task).unwrap();
+    let dir = conversation_directory(Path::new(&task.workspace_path), &f.conversation);
+    let damaged = vec![0; 159214];
+    std::fs::write(dir.join("workflow.json"), &damaged).unwrap();
+    std::fs::write(dir.join("workflow-events.jsonl"), b"{}\n\0").unwrap();
+    std::fs::write(dir.join(format!("usage-{}.json", f.native)), [0; 233]).unwrap();
+    let generation = f.service.gate(&f.conversation).invalidate();
+    let control = f.service.task_control(&f.task, &f.conversation).unwrap();
+    assert_eq!(control.generation, generation);
+    assert_eq!(control.native_session_id.as_ref(), Some(&f.native));
+    assert!(
+        f.service
+            .force_stop_generation(&f.task, &f.conversation, generation - 1)
+            .is_err()
+    );
+    f.service
+        .force_stop_generation(&f.task, &f.conversation, generation)
+        .unwrap();
+    let workflow = f.service.workflow(&f.task, &f.conversation).unwrap();
+    assert!(workflow.preserve_corrupt_file && workflow.turns.is_empty());
+    save_workflow(&dir, &workflow, "observability").unwrap();
+    let restored = f.service.workflow(&f.task, &f.conversation).unwrap();
+    assert!(!restored.preserve_corrupt_file);
+    let files: Vec<_> = dir
+        .read_dir()
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect();
+    let preserved = files
+        .iter()
+        .find(|p| p.extension().is_some_and(|ext| ext == "corrupt"))
+        .unwrap();
+    assert_eq!(std::fs::read(preserved).unwrap(), damaged);
+    let journal = std::fs::read(dir.join("workflow-events.jsonl")).unwrap();
+    assert!(serde_json::from_slice::<Value>(&journal).is_ok());
+    assert!(f.calls.lock().is_empty());
+}
+
+#[test]
 fn explicit_force_stop_is_scoped_preserves_history_and_does_not_replay() {
     let f = Fixture::new();
     let other = Fixture::new();

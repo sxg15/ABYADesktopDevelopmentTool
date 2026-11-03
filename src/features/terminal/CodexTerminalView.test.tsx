@@ -35,6 +35,7 @@ const terminalApiMock = vi.hoisted(() => ({
   })),
   open: vi.fn(async ():Promise<CodexTerminalState> => ({
     inputSessionId:"input-session-test",
+    generation: 7,
     taskId: "task-1",
     conversationId: "conversation-1",
     status: "running",
@@ -332,7 +333,7 @@ describe("Codex conversation list", () => {
     expect(terminalApiMock.forceStop).not.toHaveBeenCalled();
     expect(screen.getByText(/已完成的文件或外部操作不会撤销/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button",{name:"确认强制停止"}));
-    await waitFor(()=>expect(terminalApiMock.forceStop).toHaveBeenCalledExactlyOnceWith("codex","task-1","conversation-1",0));
+    await waitFor(()=>expect(terminalApiMock.forceStop).toHaveBeenCalledExactlyOnceWith("codex","task-1","conversation-1",7));
     expect(terminalApiMock.stop).not.toHaveBeenCalled();
     expect(productionApiMock.continueTask).not.toHaveBeenCalled();
     expect(terminalApiMock.open).toHaveBeenCalledTimes(1);

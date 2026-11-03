@@ -369,6 +369,11 @@ mod tests {
             .unwrap();
         assert_eq!(restored.native_session_id.as_deref(), Some(native.as_str()));
         assert!(!restored.archived);
+        let directory = conversation_directory(Path::new(&task.workspace_path), &conversation.id);
+        std::fs::write(directory.join("workflow.json"), vec![0; 159214]).unwrap();
+        service
+            .rebuild_idle_terminal(&task.id, &conversation.id)
+            .unwrap();
         service
             .open(
                 &task.id,
@@ -378,6 +383,13 @@ mod tests {
                 Channel::new(|_| Ok(())),
             )
             .unwrap();
+        assert_eq!(
+            service
+                .native_session_id(&task.id, &conversation.id)
+                .unwrap()
+                .as_ref(),
+            Some(&native)
+        );
         service.stop(&conversation.id).unwrap();
         let candidates = service.recovery_candidates(&task.id).unwrap();
         assert!(candidates.iter().any(|c| c.id == native));

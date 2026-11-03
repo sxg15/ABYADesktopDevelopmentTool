@@ -1,5 +1,7 @@
 # Codex Terminal Skill
 
+After a crash, attach and control can read a syntax-damaged activity projection through the shared recovery path. Preserve the original native binding and show the repair warning on attachment. Force-stop confirmation captures an observed generation.
+
 ## Current scope
 
 Workflow 2.11 dispatches short outcome-oriented prompts and resumes ordinary failures in the original work unit. Time checkpoints do not invent functional failures. Other stages get bounded material-progress continuations; narration and plan wording are not progress. Explicit user pause, uncertain-send reconciliation, original native identity and APP human decisions remain authoritative. Technical-review outcomes are distinct from requests for the planner to click Continue. See [execution contract implementation](../../docs/EXECUTION_REFACTOR_20261030.md).

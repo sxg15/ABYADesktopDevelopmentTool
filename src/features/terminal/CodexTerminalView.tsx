@@ -1045,7 +1045,16 @@ function ConversationTerminal({
           {provider==="codex" && <button className="primary-button" onClick={()=>void continueTask()}
             disabled={actionBusy||state?.status==="starting"||!control?.nativeSessionId||["running","waitingForResponse","queued","pausing","stopFailed","closed"].includes(control?.state??"")}>{actionBusy?"正在处理…":control?.state==="blocked"?"重新检查问题":"继续任务"}</button>}
           {(pausePending||stopFailed||control?.state==="stopFailed"||control?.state==="pausing") && <button className="secondary-button terminal-stop"
-            disabled={forceBusy.current} onClick={()=>{forceGeneration.current=control?.generation??state?.generation??0;setConfirmForceStop(true);}}>强制停止此会话</button>}
+            disabled={forceBusy.current} onClick={()=>{
+              const generation=control?.generation??state?.generation;
+              if(generation===undefined){
+                setError("尚未取得此会话的执行器状态，正在重新核对。请稍后重试。");
+                window.dispatchEvent(new Event("abya:control-changed"));
+                return;
+              }
+              forceGeneration.current=generation;
+              setConfirmForceStop(true);
+            }}>强制停止此会话</button>}
           {terminalEnded && (
             <button
               className="secondary-button"

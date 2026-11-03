@@ -312,6 +312,8 @@ impl CodexTerminalService {
             }
         } else if turn.is_some_and(|t| t.status == CodexWorkflowTurnStatus::Failed) {
             "failed"
+        } else if turn.is_none() && workflow.activity_history_incomplete {
+            "needsReview"
         } else if turn.is_none() {
             "notStarted"
         } else {

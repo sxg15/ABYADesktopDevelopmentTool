@@ -138,6 +138,10 @@ pub struct CodexWorkflowTurn {
 #[serde(rename_all = "camelCase")]
 pub struct CodexWorkflowSnapshot {
     #[serde(default)]
+    pub(crate) activity_history_incomplete: bool,
+    #[serde(skip)]
+    pub(crate) preserve_corrupt_file: bool,
+    #[serde(default)]
     pub terminal_interaction: bool,
     #[serde(default)]
     pub interaction_id: Option<String>,
@@ -158,6 +162,8 @@ impl CodexWorkflowSnapshot {
         warning: impl Into<String>,
     ) -> Self {
         Self {
+            activity_history_incomplete: false,
+            preserve_corrupt_file: false,
             terminal_interaction: false,
             interaction_id: None,
             task_id: task_id.to_string(),
@@ -366,15 +372,33 @@ pub(crate) fn load_workflow(
     conversation_id: &str,
 ) -> AppResult<CodexWorkflowSnapshot> {
     let path = directory.join(WORKFLOW_SNAPSHOT_FILE);
-    if !path.is_file() {
-        return Ok(CodexWorkflowSnapshot::empty(
+    let empty = |warning| {
+        CodexWorkflowSnapshot::empty(
             task_id,
             conversation_id,
             CodexObservabilityStatus::Compatibility,
-            "This conversation has no native Codex activity stream.",
-        ));
-    }
-    let workflow: CodexWorkflowSnapshot = serde_json::from_str(&std::fs::read_to_string(path)?)?;
+            warning,
+        )
+    };
+    let bytes = match std::fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(empty(
+                "This conversation has no native Codex activity stream.",
+            ));
+        }
+        Err(error) => return Err(error.into()),
+    };
+    let workflow: CodexWorkflowSnapshot = match serde_json::from_slice(&bytes) {
+        Ok(workflow) => workflow,
+        Err(error) if error.is_syntax() || error.is_eof() => {
+            let mut workflow = empty("本地活动记录损坏。请在原对话历史中核对重启前的操作。");
+            workflow.preserve_corrupt_file = true;
+            workflow.activity_history_incomplete = true;
+            return Ok(workflow);
+        }
+        Err(error) => return Err(error.into()),
+    };
     if workflow.task_id != task_id || workflow.conversation_id != conversation_id {
         return Err(AppError::validation(
             "Codex workflow metadata does not match the conversation.",
@@ -391,15 +415,34 @@ pub(crate) fn save_workflow(
     std::fs::create_dir_all(directory)?;
     let target = directory.join(WORKFLOW_SNAPSHOT_FILE);
     let temporary = directory.join(format!(".{WORKFLOW_SNAPSHOT_FILE}.{}.tmp", Uuid::new_v4()));
-    std::fs::write(&temporary, serde_json::to_vec_pretty(workflow)?)?;
-    if let Err(error) = std::fs::rename(&temporary, &target) {
-        if target.is_file() {
-            std::fs::remove_file(&target)?;
-            std::fs::rename(&temporary, &target)?;
-        } else {
-            let _ = std::fs::remove_file(&temporary);
-            return Err(error.into());
+    let replace = || -> AppResult<()> {
+        let mut file = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&temporary)?;
+        file.write_all(&serde_json::to_vec_pretty(workflow)?)?;
+        file.sync_all()?;
+        drop(file);
+        if workflow.preserve_corrupt_file {
+            let backup = directory.join(format!("workflow.{}.corrupt", Uuid::new_v4()));
+            std::fs::copy(&target, &backup)?;
+            OpenOptions::new().write(true).open(backup)?.sync_all()?;
+            // A crash can leave an unterminated event. Start a clean journal
+            // while keeping the original prefix and damaged tail together.
+            let journal = directory.join(WORKFLOW_EVENTS_FILE);
+            if journal.try_exists()? {
+                std::fs::rename(
+                    &journal,
+                    directory.join(format!("workflow-events.{}.bak", Uuid::new_v4())),
+                )?;
+            }
         }
+        std::fs::rename(&temporary, &target)?;
+        Ok(())
+    };
+    if let Err(error) = replace() {
+        let _ = std::fs::remove_file(&temporary);
+        return Err(error);
     }
 
     let events_path = directory.join(WORKFLOW_EVENTS_FILE);
