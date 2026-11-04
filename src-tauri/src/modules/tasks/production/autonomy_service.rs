@@ -165,6 +165,20 @@ fn finish_available_work(r: &mut ProductionRecord, root: &Path) -> AppResult<()>
     r.workbench.execution.summary =
         json!({"at":now(),"version":r.current_version,"units":units,"issues":issues});
     super::execution_loop::settle_queue(r);
+    // 收尾自身登记版本会改变签名；无可执行项时由调度器核对当前版本后收束。
+    if super::execution_loop::enabled(r) {
+        let signature = completion::signature(r);
+        for unit in &mut r.workbench.execution.units {
+            if unit.kind == "finalization"
+                && unit.cycle == r.cycle
+                && unit.scope_hash == scope
+                && Some(&unit.goal_id) == r.workbench.active_goal_id.as_ref()
+                && unit.status == "deferred"
+            {
+                unit.input_signature = signature.clone();
+            }
+        }
+    }
     // The scheduler, rather than the model remembering a final tool call, guarantees closure.
     autonomy::conclude(r, root, &json!({"summary":summary}))
 }

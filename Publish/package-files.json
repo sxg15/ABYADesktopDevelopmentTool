@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "releaseLabel": "delivery-first-20261030",
-  "totalBytes": 349227843,
+  "totalBytes": 349196875,
   "files": [
     {
       "path": ".codex/README.md",
@@ -860,8 +860,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/autonomous-implementation.md",
-      "bytes": 6542,
-      "sha256": "aa1ac5660b096175990684994ed7c4016bae22108dede963e949a05da2abbf51"
+      "bytes": 6806,
+      "sha256": "be48a77f4e8ebe047db214a9da98c63025bf0a03c528ff2e7c5d5f6c359a0a30"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/bot-artifacts.md",
@@ -1525,18 +1525,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 38377984,
-      "sha256": "52e19dc5dca7fbc7279efa1905e1da9bf468d403583e2c316cb9944e1f08c0d3"
+      "bytes": 38345728,
+      "sha256": "e598718013a781968bc5bdb4ccb50027281e41d88a58e38b80bf9771057ff0f1"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 5995520,
-      "sha256": "feafbcfd611537a86023ef8089ec4c150973899bbeb6ade1da540e6fd99977f5"
+      "bytes": 5996544,
+      "sha256": "f23cdc63cbe0802c970673aff1c0a45ab51e5bbb352173dc95af7c09fefa282a"
     },
     {
       "path": "build-manifest.json",
       "bytes": 744,
-      "sha256": "d62b976e5b99370b27aea0aa3977a9b9f3e6be28ee9025fc706993791e2a75b5"
+      "sha256": "5923fb9990af12ef8be43be897a54bd895aedfbf451bd31582cbeab2dedc7c65"
     },
     {
       "path": "runtime/LICENSE.txt",

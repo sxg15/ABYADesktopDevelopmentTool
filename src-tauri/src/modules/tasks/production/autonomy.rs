@@ -624,7 +624,12 @@ pub(super) fn conclude(r: &mut ProductionRecord, root: &Path, data: &Value) -> A
         && !r.workbench.execution.units.iter().any(|u| {
             u.kind == "finalization"
                 && Some(&u.goal_id) == r.workbench.active_goal_id.as_ref()
-                && u.input_signature == sig
+                && u.cycle == r.cycle
+                && u.scope_hash == scope_hash
+                && (u.input_signature == sig
+                    || (super::execution_loop::enabled(r)
+                        && active.as_ref() == Some(&u.id)
+                        && u.status == "running"))
         })
     {
         return Err(AppError::validation(

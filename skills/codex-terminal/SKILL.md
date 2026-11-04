@@ -4,6 +4,8 @@ After a crash, attach and control can read a syntax-damaged activity projection 
 
 ## Current scope
 
+2026-11-04：显式恢复在原生会话空闲、原发送结果明确及身份一致后，调用任务服务按同一 intentId 恢复原工作项。预算耗尽时追加额度与恢复记录绑定此用户意图，自动续接和单纯重连不能追加；停止、审批、未知结果对账仍由现有会话契约约束。
+
 Workflow 2.11 dispatches short outcome-oriented prompts and resumes ordinary failures in the original work unit. Time checkpoints do not invent functional failures. Other stages get bounded material-progress continuations; narration and plan wording are not progress. Explicit user pause, uncertain-send reconciliation, original native identity and APP human decisions remain authoritative. Technical-review outcomes are distinct from requests for the planner to click Continue. See [execution contract implementation](../../docs/EXECUTION_REFACTOR_20261030.md).
 
 ## Purpose

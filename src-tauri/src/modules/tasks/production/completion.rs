@@ -244,7 +244,7 @@ impl TaskService {
             return Err(conflict());
         }
         if super::execution_loop::enabled(&r) {
-            return self.production_resume_in_place(task);
+            return self.production_resume_in_place(task, intent);
         }
         let mut probe = r.clone();
         if super::progress_budget::reassess(&mut probe) {

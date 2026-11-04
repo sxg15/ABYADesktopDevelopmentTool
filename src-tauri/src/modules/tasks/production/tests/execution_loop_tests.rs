@@ -12,8 +12,176 @@ fn setup() -> Fixture {
     f.evidence("proof", "json", "state");
     f
 }
+
+#[test]
+fn active_finalizer_can_capture_new_version_and_conclude_with_real_gaps() {
+    let f = setup();
+    unit(&f, "work");
+    next(&f, "start", false);
+    report(&f, "work", "succeeded", "");
+    let finalizer = next(&f, "finalize", true).unwrap();
+    assert_eq!(finalizer.kind, "finalization");
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.current_version = Some("new-unverified-version".into());
+            Ok(())
+        })
+        .unwrap();
+    f.apply(
+        "conclude-implementation",
+        json!({"summary":"Real incomplete results preserved"}),
+    )
+    .unwrap();
+    assert_eq!(f.record().workbench.execution.state, "repairRequired");
+    assert_eq!(f.record().current_stage, "implementation");
+}
+
+#[test]
+fn exhausted_finalizer_after_version_change_settles_without_another_native_turn() {
+    let f = setup();
+    unit(&f, "work");
+    next(&f, "start", false);
+    report(&f, "work", "succeeded", "");
+    let id = next(&f, "finalize", true).unwrap().id;
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.current_version = Some("new-unverified-version".into());
+            let u = r
+                .workbench
+                .execution
+                .units
+                .iter_mut()
+                .find(|u| u.id == id)
+                .unwrap();
+            u.elapsed_ms = 16 * 60_000;
+            u.attempt_started_at.clear();
+            Ok(())
+        })
+        .unwrap();
+    assert!(next(&f, "budget-ended", true).is_none());
+    assert_eq!(f.record().workbench.execution.state, "repairRequired");
+    assert!(!f.service.production_execution_budget_due(&f.id).unwrap());
+}
+
+#[test]
+fn explicit_resume_grants_once_preserves_history_and_ignores_offline_wall_time() {
+    let f = setup();
+    unit(&f, "work");
+    next(&f, "start", false);
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            let u = &mut r.workbench.execution.units[0];
+            u.elapsed_ms = 180 * 60_000;
+            u.attempt_started_at = "2020-01-01T00:00:00Z".into();
+            Ok(())
+        })
+        .unwrap();
+    let before = f.record();
+    f.service
+        .production_resume_in_place(&f.id, "intent-one")
+        .unwrap();
+    let after = f.record();
+    assert_eq!(after.workbench.execution.units[0].elapsed_ms, 180 * 60_000);
+    assert_eq!(
+        execution_loop::goal_used(&after, after.workbench.active_goal_id.as_deref().unwrap()),
+        0
+    );
+    assert_eq!(
+        serde_json::to_value(before.approvals).unwrap(),
+        serde_json::to_value(after.approvals).unwrap()
+    );
+    f.service
+        .production_resume_in_place(&f.id, "intent-one")
+        .unwrap();
+    assert_eq!(f.record().revision, after.revision);
+    assert_eq!(next(&f, "resume", false).unwrap().id, "work");
+    assert!(!f.service.production_execution_budget_due(&f.id).unwrap());
+}
 fn unit(f: &Fixture, id: &str) {
     f.apply("save-work-unit",json!({"id":id,"goalId":f.record().workbench.active_goal_id,"title":id,"routes":["first implementation","different verification method"],"dependsOn":[],"issueIds":[]})).unwrap();
+}
+
+#[test]
+fn resume_does_not_replay_unknown_writes_or_reopen_completed_units() {
+    let f = setup();
+    unit(&f, "unknown");
+    next(&f, "start", false);
+    report(&f, "unknown", "deferred", "unknown-result");
+    assert!(
+        f.service
+            .production_resume_in_place(&f.id, "resume-unknown")
+            .is_err()
+    );
+    assert_eq!(
+        f.record().workbench.execution.units[0].status,
+        "awaiting-condition"
+    );
+}
+
+#[test]
+fn stale_finalizer_cannot_conclude_new_scope() {
+    let f = setup();
+    unit(&f, "work");
+    next(&f, "start", false);
+    report(&f, "work", "succeeded", "");
+    let id = next(&f, "finalize", true).unwrap().id;
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            let u = r
+                .workbench
+                .execution
+                .units
+                .iter_mut()
+                .find(|u| u.id == id)
+                .unwrap();
+            u.scope_hash = "foreign-scope".into();
+            Ok(())
+        })
+        .unwrap();
+    assert!(
+        f.apply("conclude-implementation", json!({"summary":"Stale result"}))
+            .is_err()
+    );
+}
+
+#[test]
+fn explicit_finalization_resume_preserves_elapsed_and_gets_bounded_window() {
+    let f = setup();
+    unit(&f, "work");
+    next(&f, "start", false);
+    report(&f, "work", "succeeded", "");
+    let id = next(&f, "finalize", true).unwrap().id;
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            let u = r
+                .workbench
+                .execution
+                .units
+                .iter_mut()
+                .find(|u| u.id == id)
+                .unwrap();
+            u.elapsed_ms = 36 * 60_000;
+            u.attempt_started_at.clear();
+            Ok(())
+        })
+        .unwrap();
+    f.service
+        .production_resume_in_place(&f.id, "final-resume")
+        .unwrap();
+    let current = next(&f, "new-final-window", false).unwrap();
+    assert_eq!(current.id, id);
+    assert_eq!(current.elapsed_ms, 36 * 60_000);
+    assert!(!execution_loop::budget_exhausted(
+        &f.record(),
+        &current,
+        14 * 60_000
+    ));
+    assert!(execution_loop::budget_exhausted(
+        &f.record(),
+        &current,
+        15 * 60_000
+    ));
+    assert_eq!(f.record().workbench.execution.units[0].status, "succeeded");
 }
 fn next(f: &Fixture, event: &str, advance: bool) -> Option<autonomy::WorkUnit> {
     f.service

@@ -14,6 +14,76 @@ pub(super) fn goal_elapsed(r: &ProductionRecord, goal: &str) -> i64 {
         .map(|u| u.elapsed_ms)
         .sum()
 }
+/// 只在 APP 已确认原生执行空闲、用户发起新恢复意图后调用。
+fn resume_units(r: &mut ProductionRecord, intent: &str) -> AppResult<()> {
+    let relevant = completion::relevant(r);
+    let scope = autonomy::scope(r);
+    let cycle = r.cycle;
+    let resumable = |u: &autonomy::WorkUnit| {
+        relevant.contains(&u.id)
+            && u.cycle == cycle
+            && u.scope_hash == scope
+            && matches!(
+                u.status.as_str(),
+                "pending" | "running" | "deferred" | "failed"
+            )
+            && !matches!(
+                u.defer_reason_code.as_str(),
+                "unknown-result" | "external-condition"
+            )
+    };
+    if !r.workbench.execution.units.iter().any(resumable) {
+        return Err(AppError::validation(
+            "当前工作仍需对账或外部条件，请先核对原回执。",
+        ));
+    }
+    let goal = r.workbench.active_goal_id.clone().ok_or_else(conflict)?;
+    let used = goal_used(r, &goal);
+    let renewed = used >= goal_limit(r);
+    if renewed {
+        let elapsed = goal_elapsed(r, &goal);
+        r.workbench
+            .execution
+            .goal_budget_epochs
+            .insert(format!("{}:{goal}", autonomy::scope(r)), elapsed);
+    }
+    let settlement = autonomy_budget::limit(r, "settlementMinutes", 15) * 60_000;
+    for u in r
+        .workbench
+        .execution
+        .units
+        .iter_mut()
+        .filter(|u| resumable(u))
+    {
+        u.recovery_history
+            .push(json!({"at":now(),"kind":"explicit-user-resume",
+            "intentId":intent,"previousStatus":u.status,"elapsedMs":u.elapsed_ms,
+            "previousRounds":u.recovery_rounds,"reason":u.reason}));
+        if u.kind == "finalization" && u.elapsed_ms.saturating_sub(u.budget_epoch_ms) >= settlement
+        {
+            u.budget_grants.push(json!({"intentId":intent,"at":now(),
+                "kind":"explicit-user-resume","extraMs":settlement,"previousEpochMs":u.budget_epoch_ms}));
+            u.budget_epoch_ms = u.elapsed_ms;
+        }
+        u.attempt_started_at.clear();
+        u.recovery_rounds = 0;
+        u.unreported_turns = 0;
+        u.status = "pending".into();
+        u.stop_reason = "user-resume".into();
+        u.defer_reason_code.clear();
+        u.recovery_strategy = "用户明确恢复；先核对已有结果与原回执，继续原项未完成动作。".into();
+    }
+    r.workbench.execution.active_unit_id = None;
+    r.workbench.execution.state = "ready".into();
+    r.workbench
+        .execution
+        .events
+        .push(json!({"kind":"explicit-resume","at":now(),
+        "intentId":intent,"goalId":goal,"previousUsedMs":used,
+        "additionalGoalMs":if renewed { goal_limit(r) } else { 0 }}));
+    Ok(())
+}
+
 pub(super) fn goal_limit(r: &ProductionRecord) -> i64 {
     r.policy["implementationExecution"]["goalMinutes"]
         .as_i64()
@@ -37,7 +107,8 @@ pub(super) fn goal_used(r: &ProductionRecord, goal: &str) -> i64 {
 pub(super) fn budget_exhausted(r: &ProductionRecord, u: &autonomy::WorkUnit, extra: i64) -> bool {
     enabled(r)
         && if u.kind == "finalization" {
-            u.elapsed_ms + extra >= autonomy_budget::limit(r, "settlementMinutes", 15) * 60_000
+            u.elapsed_ms.saturating_sub(u.budget_epoch_ms) + extra
+                >= autonomy_budget::limit(r, "settlementMinutes", 15) * 60_000
         } else {
             goal_used(r, &u.goal_id) + extra >= goal_limit(r)
         }
@@ -409,46 +480,21 @@ impl TaskService {
         Ok(data)
     }
 
-    /// 明确恢复只重排原项；历史轮次入账，总目标额度不重置。
-    pub fn production_resume_in_place(&self, task: &str) -> AppResult<()> {
+    /// 明确恢复沿用原项；追加额度独立记账，重开后的等待时间不计为执行。
+    pub fn production_resume_in_place(&self, task: &str, intent: &str) -> AppResult<()> {
         let r = self.production_get(task)?.record.ok_or_else(conflict)?;
         if !enabled(&r) || !autonomy::autonomous_implementation(&r) {
             return Ok(());
         }
-        let relevant = completion::relevant(&r);
         if r.workbench
             .execution
-            .units
+            .events
             .iter()
-            .any(|u| relevant.contains(&u.id) && matches!(u.status.as_str(), "pending" | "running"))
+            .any(|e| e["kind"] == "explicit-resume" && e["intentId"] == intent)
         {
             return Ok(());
         }
-        let id = r
-            .workbench
-            .execution
-            .units
-            .iter()
-            .find(|u| {
-                relevant.contains(&u.id)
-                    && u.status == "deferred"
-                    && u.defer_reason_code != "unknown-result"
-                    && !autonomy_budget::exhausted(&r, u)
-            })
-            .map(|u| u.id.clone())
-            .ok_or_else(|| {
-                AppError::validation(
-                    "当前仅剩需对账或超出总执行额度的工作；成果保留，未生成新的诊断任务。",
-                )
-            })?;
-        self.production_commit(task,r.revision,|r|{
-            let u=r.workbench.execution.units.iter_mut().find(|u|u.id==id).unwrap();
-            u.recovery_history.push(json!({"at":now(),"kind":"explicit-user-resume","previousRounds":u.recovery_rounds,"elapsedMs":u.elapsed_ms,"reason":u.reason}));
-            u.recovery_rounds=0;u.unreported_turns=0;u.status="pending".into();u.stop_reason="user-resume".into();u.defer_reason_code.clear();
-            u.recovery_strategy="用户明确恢复；先核对已有结果和新的条件，仅继续原项剩余动作。".into();
-            r.workbench.execution.state="ready".into();
-            Ok(())
-        })
+        self.production_commit(task, r.revision, |r| resume_units(r, intent))
     }
 
     /// 其他阶段结束一轮却没有交付物时，原目标有限续接，不向策划反复索要继续。

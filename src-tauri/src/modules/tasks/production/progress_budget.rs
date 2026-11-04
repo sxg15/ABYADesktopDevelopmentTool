@@ -141,7 +141,9 @@ pub(super) fn initialize(r: &mut ProductionRecord, id: &str) {
     if super::execution_loop::enabled(r) {
         if let Some(u) = r.workbench.execution.units.iter().find(|u| u.id == id) {
             let remaining = if u.kind == "finalization" {
-                (autonomy_budget::limit(r, "settlementMinutes", 15) * 60_000 - u.elapsed_ms).max(0)
+                (autonomy_budget::limit(r, "settlementMinutes", 15) * 60_000
+                    - u.elapsed_ms.saturating_sub(u.budget_epoch_ms))
+                .max(0)
             } else {
                 (super::execution_loop::goal_limit(r)
                     - super::execution_loop::goal_used(r, &u.goal_id))
