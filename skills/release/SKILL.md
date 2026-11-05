@@ -182,3 +182,5 @@ Workflow continuity 2.6 (2026-10-26), Autonomous recovery 2.5 (2026-10-24), Term
 2026-11-05 方案预检专项：scripts/capability-preflight-smoke.mjs 在 marker 绑定的隔离 pilot 数据库测试真实当前 APP 包。普通连接失败必须即时卡片且自动清理；模拟中断回执单独标注为夹具，用于验证后台清理，不冒充成功的原生创建。原始诊断回执保留，正式任务与存档不受影响。
 
 方案预检交付候选：Candidates/Preflight-20261105。源码/候选指纹一致，完整清单通过，原生当前包连接失败被正确记录为普通问题并完成临时目录清理；中断恢复清理另用明确标记的夹具验证。参见 docs/CAPABILITY_PREFLIGHT_20261105.md。
+
+2026-11-05 试玩问题具体描述候选：Candidates/ConcreteIssues-20261105。缺少 playerSummary 时展示原始 description/复现及影响，失败检查展示 observations。相关组件 12 项测试通过，完整检查通过；不替换运行中的正式 APP。

@@ -1,0 +1,148 @@
+{
+  "notes": "Original references preserved byte-for-byte. Generic UI assets independently drawn; no license assertion for user reference images.",
+  "files": [
+    {
+      "path": "references/images/01-game-ready.png",
+      "sourceFilename": "whiteboard_exported_image.png",
+      "category": "user-reference-original",
+      "sha256": "1c2832054a5e6f036d80988b4a2fee0131947230d1129898a50c655cde3f3328"
+    },
+    {
+      "path": "references/images/02-settings.png",
+      "sourceFilename": "whiteboard_exported_image (1).png",
+      "category": "user-reference-original",
+      "sha256": "8f2141383526c3346f7496e410d9ba2b902d0e352c680c4a193922aaebf3363d"
+    },
+    {
+      "path": "references/images/03-player-cards.png",
+      "sourceFilename": "whiteboard_exported_image (2).png",
+      "category": "user-reference-original",
+      "sha256": "961086438815017ff14996c27360ccf87d06220ff206f0e623f111541237397d"
+    },
+    {
+      "path": "assets/ui-kit/avatar-1.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "3558dbcd79bb079b45305bed9b68c0813f01cd7b151e6f61d7056803ce993605"
+    },
+    {
+      "path": "assets/ui-kit/avatar-2.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "fcc2b755d6fdfe6c01b3727724923808eaae16b60afa59e86421f7b1c8f7f470"
+    },
+    {
+      "path": "assets/ui-kit/avatar-3.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "a6d24f26d83211734d90005a81a9eb791659489b5c34276a8f14fc6630d7ac90"
+    },
+    {
+      "path": "assets/ui-kit/avatar-4.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "bb742cdcbb2898b4ea254dbe495ae58a3559daccd711c213ed364cf6ef89be86"
+    },
+    {
+      "path": "assets/ui-kit/button-mint-disabled.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "16217e41bb6e1a5bdd9e98f2a427bf397929ee92a2e5575e9d1111186a91ca1e"
+    },
+    {
+      "path": "assets/ui-kit/button-mint-hover.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "2e79ddc73ffaf9cd3ca8344e1f07e2bd3fa20c0ee6a4236cbfbba7e5572226e2"
+    },
+    {
+      "path": "assets/ui-kit/button-mint-normal.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "2e79ddc73ffaf9cd3ca8344e1f07e2bd3fa20c0ee6a4236cbfbba7e5572226e2"
+    },
+    {
+      "path": "assets/ui-kit/button-mint-press.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "f758ec60c1ce16c5b24d8f2cb8159acc9c0042abd914bb3cde3b513ebd202571"
+    },
+    {
+      "path": "assets/ui-kit/button-white-disabled.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "16217e41bb6e1a5bdd9e98f2a427bf397929ee92a2e5575e9d1111186a91ca1e"
+    },
+    {
+      "path": "assets/ui-kit/button-white-hover.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "2e79ddc73ffaf9cd3ca8344e1f07e2bd3fa20c0ee6a4236cbfbba7e5572226e2"
+    },
+    {
+      "path": "assets/ui-kit/button-white-normal.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "4a452bb28214dd4711e5bb2e5802499fd0271d284dbc92facce69957e62ea1c9"
+    },
+    {
+      "path": "assets/ui-kit/button-white-press.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "063e5fbbb69e7d0089fe9d98f691c9132ec185d292f2a7a2f4f7cb0d66f1d07f"
+    },
+    {
+      "path": "assets/ui-kit/button-yellow-disabled.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "16217e41bb6e1a5bdd9e98f2a427bf397929ee92a2e5575e9d1111186a91ca1e"
+    },
+    {
+      "path": "assets/ui-kit/button-yellow-hover.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "2e79ddc73ffaf9cd3ca8344e1f07e2bd3fa20c0ee6a4236cbfbba7e5572226e2"
+    },
+    {
+      "path": "assets/ui-kit/button-yellow-normal.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "46649e7f5735b42793c044270094028bb9f90a6945cc2aac36de9f49d38e589b"
+    },
+    {
+      "path": "assets/ui-kit/button-yellow-press.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "4c0baa5e0b9371600e63e335afa54337c8484196ff592db96b7897f04de0d4c2"
+    },
+    {
+      "path": "assets/ui-kit/card-panel.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "0babcff160d0450c83932a1994991f433780eaa6802812dd283d0c62f1b306bf"
+    },
+    {
+      "path": "assets/ui-kit/corner-mint.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "fcb4fcad7c630480df738099e19405bc2d0706d814a82ec3481e651c16e81271"
+    },
+    {
+      "path": "assets/ui-kit/focus-ring.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "e4ed5af602fd32845aec31e5f97e8c84784ee9e0fb242f05029a6aaef9fac045"
+    },
+    {
+      "path": "assets/ui-kit/frame-white.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "ea5b0b8593453d6d845d127b4e955a5948522142493a96d7cbbc401f578dc51e"
+    },
+    {
+      "path": "assets/ui-kit/halftone.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "1ab02ae97fa38461fcdbd7da7324a5733d03ad4cee6387c05c47caf53670e679"
+    },
+    {
+      "path": "assets/ui-kit/icon-clock.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "91ef7d3f7c22b4c48dfe3267c5ad77fa564a7bb5d07fe7bbbeccd0ec6f312419"
+    },
+    {
+      "path": "assets/ui-kit/icon-cup.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "d3a135d4318be4888333ffb7cda6685b02f6ef89945fe6f03d4602c8cbc62a40"
+    },
+    {
+      "path": "assets/ui-kit/ribbon-mint.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "fcde947e865924e0f8ccab30d5b77a3650ef9c80916ed638df6af08a3f653c5e"
+    },
+    {
+      "path": "assets/ui-kit/solid.png",
+      "category": "original-generic-ui-asset",
+      "sha256": "b1053f89bb82a79f8d33fe961fb79364943688d6fa733b1de98be88f04359cbb"
+    }
+  ]
+}

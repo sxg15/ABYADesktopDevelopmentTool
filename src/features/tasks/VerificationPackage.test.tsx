@@ -65,5 +65,23 @@ it("requires explicit user handoff and preserves failed checks in the submitted 
 });
 it("does not present uncertain Esc observations as confirmed defects",()=>{
  const r=record();r.issues=[{id:"any-game",kind:"defect",status:"open",stage:"implementation",description:"physical Escape not tested",diagnosisStatus:"suspected"}];
- expect(playableIssues(r)[0]).toMatchObject({confirmed:false,title:"Esc 暂停与恢复"});
+ expect(playableIssues(r)[0]).toMatchObject({confirmed:false,title:"physical Escape not tested",description:"physical Escape not tested"});
+});
+
+it("shows distinct concrete issues on the current review candidate without player summaries",()=>{
+ const r=record();r.currentStage="review";
+ r.issues=[{id:"restart",kind:"defect",status:"open",stage:"review",description:"点击重新开始后，上一局得分没有清零。"},{id:"answer",kind:"defect",status:"open",stage:"review",description:"第二个玩家提交答案后，房主端没有更新结果。"}];
+ render(<VerificationPackage record={r} active en={false}/>);
+ expect(screen.getAllByText("点击重新开始后，上一局得分没有清零。").length).toBeGreaterThan(0);
+ expect(screen.getAllByText("第二个玩家提交答案后，房主端没有更新结果。").length).toBeGreaterThan(0);
+ expect(screen.queryByText("有一项游戏表现需要核对")).toBeNull();
+ expect(screen.getAllByText("原因待确认")).toHaveLength(2);
+});
+
+it("retains check observations, reproduction details and impact without inventing an Esc defect",()=>{
+ const r=record();r.issues=[{id:"esc",kind:"defect",status:"open",stage:"review",playerSummary:"  ",description:"Esc 恢复后鼠标点击无响应。",executionHandling:{mode:"diagnosing",reason:"",impact:"无法开始下一局",affectedUnitIds:[]}}];
+ r.selfTests!.push({id:"lifecycle",status:"failed",version:"v1",cycle:1,observations:"重开三次后计时器仍使用上一局数值。",recordedAt:"now"});
+ const issues=playableIssues(r);expect(issues[0].description).toContain("Esc 恢复后鼠标点击无响应。");expect(issues[0].description).toContain("影响：无法开始下一局");
+ expect(issues[1].description).toBe("重开三次后计时器仍使用上一局数值。");
+ expect(issues[0].description).not.toContain("平台菜单");
 });
