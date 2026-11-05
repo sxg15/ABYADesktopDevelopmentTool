@@ -421,6 +421,7 @@ impl DesktopToolDispatcher {
                     arguments["taskId"]
                         .as_str()
                         .ok_or_else(|| AppError::validation("taskId is required."))?,
+                    None,
                 )
             }
             "development_production_acceptance_status" => {

@@ -6,7 +6,7 @@ import { VisualGallery } from "./VisualGallery";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { productionApi, type ProductionRecord } from "../../shared/production";
 vi.mock("../../shared/production", () => ({ productionApi: {
-  acceptanceStatus: vi.fn(), startAcceptance: vi.fn(), media: vi.fn(), feedback: vi.fn(),
+  get: vi.fn(), acceptanceStatus: vi.fn(), startAcceptance: vi.fn(), media: vi.fn(), feedback: vi.fn(),
 } }));
 afterEach(() => { cleanup(); vi.resetAllMocks(); vi.useRealTimers(); });
 const record = (): ProductionRecord => ({
@@ -26,6 +26,30 @@ it("opens only on an explicit click and prevents duplicate launch while pending"
   finish({status:"ready",message:"Ready for human play"});
   await screen.findByText("Ready for human play");
   expect(productionApi.startAcceptance).toHaveBeenCalledTimes(1);
+});
+
+it("selects a multiplayer window count and locks it during launch", async () => {
+  vi.mocked(productionApi.get).mockResolvedValue({record:{...record(),playerMode:"multiplayer"}} as never);
+  vi.mocked(productionApi.acceptanceStatus).mockResolvedValue({status:"not-started"});
+  vi.mocked(productionApi.startAcceptance).mockImplementation(() => new Promise(() => {}));
+  render(<AcceptanceLauncher taskId="task" active />);
+  const select = await screen.findByRole("combobox", {name:"试玩人数（窗口数）"});
+  expect((select as HTMLSelectElement).value).toBe("2");
+  fireEvent.change(select, {target:{value:"4"}});
+  fireEvent.click(screen.getByRole("button", {name:"一键开始验收"}));
+  expect(productionApi.startAcceptance).toHaveBeenCalledExactlyOnceWith("task",4);
+  expect((select as HTMLSelectElement).disabled).toBe(true);
+});
+
+it("keeps single-player acceptance at its default one window", async () => {
+  vi.mocked(productionApi.get).mockResolvedValue({record:{...record(),playerMode:"single"}} as never);
+  vi.mocked(productionApi.acceptanceStatus).mockResolvedValue({status:"not-started"});
+  vi.mocked(productionApi.startAcceptance).mockResolvedValue({status:"ready"});
+  render(<AcceptanceLauncher taskId="task" active />);
+  await waitFor(()=>expect(productionApi.get).toHaveBeenCalledWith("task"));
+  expect(screen.queryByRole("combobox")).toBeNull();
+  fireEvent.click(screen.getByRole("button",{name:"一键开始验收"}));
+  await waitFor(()=>expect(productionApi.startAcceptance).toHaveBeenCalledExactlyOnceWith("task",undefined));
 });
 
 it("does not overlap slow status reads and stops polling hidden or unmounted panels",async()=>{

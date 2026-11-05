@@ -9,6 +9,16 @@ struct LaunchLease {
     task: String,
     busy: Arc<Mutex<std::collections::HashSet<String>>>,
 }
+
+fn seat_mode(spec: &AcceptanceSpec, seat: u8) -> LaunchMode {
+    if !spec.multiplayer {
+        LaunchMode::Offline
+    } else if seat == 0 {
+        LaunchMode::LanHost
+    } else {
+        LaunchMode::LanClient
+    }
+}
 impl Drop for LaunchLease {
     fn drop(&mut self) {
         self.busy.lock().remove(&self.task);
@@ -135,7 +145,7 @@ impl RuntimeBridgeService {
             let report = self.instances.read_launch_report(id)?;
             let game = self.acceptance_read(id, "runtime_get_game_state", json!({}))?;
             let c = &game["context"];
-            let networking = spec.seats == 1
+            let networking = !spec.multiplayer
                 || (c["clientConnected"] == true
                     && c["serverActive"] == host
                     && c["networkGameplayReady"] == true);
@@ -189,13 +199,7 @@ impl RuntimeBridgeService {
                 ),
                 executable_path: spec.executable_path.clone(),
                 profile: LaunchProfile {
-                    mode: if spec.seats == 1 {
-                        LaunchMode::Offline
-                    } else if seat == 0 {
-                        LaunchMode::LanHost
-                    } else {
-                        LaunchMode::LanClient
-                    },
+                    mode: seat_mode(spec, seat),
                     window_mode: WindowMode::Windowed,
                     visibility_mode: WindowVisibilityMode::Visible,
                     width: 1280,
@@ -217,7 +221,7 @@ impl RuntimeBridgeService {
         )
     }
 
-    pub fn start_acceptance(&self, task: &str) -> AppResult<Value> {
+    pub fn start_acceptance(&self, task: &str, seats: Option<u8>) -> AppResult<Value> {
         if !self.acceptance_busy.lock().insert(task.into()) {
             return Err(AppError::validation(
                 "验收窗口正在启动，请等待当前启动完成。",
@@ -238,7 +242,9 @@ impl RuntimeBridgeService {
         let mut created = Vec::<String>::new();
         let result = (|| -> AppResult<()> {
             let mut spec = self.tasks.acceptance_spec(task)?;
+            spec.select_seats(seats)?;
             session["version"] = json!(spec.version);
+            session["seats"] = json!(spec.seats);
             let last = self.tasks.acceptance_last(task)?;
             let reusable = last.as_ref().filter(|last| {
                 last["version"] == spec.version
@@ -277,7 +283,7 @@ impl RuntimeBridgeService {
                     })
                 {
                     return Err(AppError::validation(
-                        "上一组验收仍有运行中的窗口，请先关闭该组再打开新版本。",
+                        "上一组验收仍有运行中的窗口，请先关闭该组再更换版本或人数。",
                     ));
                 }
                 spec.archive_path = self
@@ -319,8 +325,10 @@ impl RuntimeBridgeService {
             }
             session["instanceIds"] = json!(ids);
             session["status"] = json!("ready");
-            session["message"] =
-                json!("玩法入口与 Lua 初始化检查通过，可以人工试玩；尚不代表验收通过。");
+            session["message"] = json!(format!(
+                "已准备 {} 个试玩窗口，玩法入口与 Lua 初始化检查通过。",
+                spec.seats
+            ));
             session["updatedAt"] = json!(chrono::Utc::now().to_rfc3339());
             self.tasks
                 .acceptance_record(task, &spec.version, session.clone())?;
@@ -349,7 +357,12 @@ impl RuntimeBridgeService {
     }
 
     /// 预览使用已验证包的隔离副本；不提交人工反馈，也不跨越正式试玩门槛。
-    pub fn start_preview(&self, task: &str, expected_version: Option<&str>) -> AppResult<Value> {
+    pub fn start_preview(
+        &self,
+        task: &str,
+        expected_version: Option<&str>,
+        seats: Option<u8>,
+    ) -> AppResult<Value> {
         if !self.acceptance_busy.lock().insert(task.into()) {
             return Err(AppError::validation(
                 "该任务的运行窗口正在准备，请等待当前启动完成。",
@@ -360,6 +373,7 @@ impl RuntimeBridgeService {
             busy: self.acceptance_busy.clone(),
         };
         let mut spec = self.tasks.preview_spec(task)?;
+        spec.select_seats(seats)?;
         if expected_version.is_some_and(|version| version != spec.version) {
             return Err(AppError::validation(
                 "试玩版本已更新，请刷新后启动当前显示的版本。",
@@ -375,8 +389,8 @@ impl RuntimeBridgeService {
                 self.check_instance(&instance.id, &spec, seat == 0)?;
             }
             let value = json!({"id":uuid::Uuid::new_v4().to_string(),"purpose":"preview",
-                "version":spec.version,"status":"ready","instanceIds":created,"humanAccepted":false,
-                "message":format!("已打开版本 {} 的独立试玩副本，请核对本轮修改。",spec.version),"startedAt":chrono::Utc::now().to_rfc3339()});
+                "version":spec.version,"seats":spec.seats,"status":"ready","instanceIds":created,"humanAccepted":false,
+                "message":format!("已打开版本 {} 的 {} 个试玩窗口，请核对本轮修改。",spec.version,spec.seats),"startedAt":chrono::Utc::now().to_rfc3339()});
             self.tasks
                 .record_preview(task, &spec.version, value.clone())?;
             Ok(value)
@@ -402,6 +416,35 @@ impl RuntimeBridgeService {
 mod tests {
     use super::*;
     #[test]
+    fn selected_windows_are_bounded_and_one_multiplayer_window_remains_host() {
+        let mut spec = AcceptanceSpec {
+            multiplayer: true,
+            seats: 4,
+            version: "v1".into(),
+            executable_path: String::new(),
+            archive_path: String::new(),
+            archive_guid: "a".into(),
+            level_guid: "l".into(),
+            required_tools: vec![],
+            require_ui: true,
+        };
+        spec.select_seats(None).unwrap();
+        assert_eq!(spec.seats, 4);
+        for count in [1, 2, 4, 8] {
+            spec.select_seats(Some(count)).unwrap();
+            assert_eq!(spec.seats, count);
+            assert_eq!(seat_mode(&spec, 0), LaunchMode::LanHost);
+        }
+        assert_eq!(seat_mode(&spec, 1), LaunchMode::LanClient);
+        for count in [0, 9, 255] {
+            assert!(spec.select_seats(Some(count)).is_err());
+        }
+        spec.multiplayer = false;
+        assert!(spec.select_seats(Some(2)).is_err());
+        spec.select_seats(Some(1)).unwrap();
+        assert_eq!(seat_mode(&spec, 0), LaunchMode::Offline);
+    }
+    #[test]
     fn lua_failure_is_not_ready_even_if_the_player_connected() {
         assert!(
             validate_lua(&json!({"items":[{"scriptName":"cat-match-clock","state":"Failed"}]}))
@@ -413,6 +456,7 @@ mod tests {
     #[test]
     fn launch_report_must_match_the_saved_archive_and_level() {
         let spec = AcceptanceSpec {
+            multiplayer: true,
             version: "v1".into(),
             executable_path: String::new(),
             archive_path: String::new(),

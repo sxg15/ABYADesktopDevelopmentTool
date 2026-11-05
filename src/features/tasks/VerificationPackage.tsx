@@ -1,13 +1,20 @@
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {productionApi,type ProductionRecord,type ProductionView} from "../../shared/production";
 import {errorMessage} from "../../shared/api";
 import {Modal} from "../../app/Modal";
 import {playableIssues,playableState} from "./playableState";
 import "./playablePackage.css";
+import {PlaytestSeats} from "./PlaytestSeats";
 
 export function VerificationPackage({record:r,active,en,onRepair,onUpdated}:{record:ProductionRecord;active:boolean;en:boolean;onRepair?:()=>Promise<unknown>;onUpdated?:(view:ProductionView)=>void}) {
   const [error,setError]=useState(""),[busy,setBusy]=useState(false),[confirm,setConfirm]=useState(false),[notice,setNotice]=useState("");
   const locked=useRef(false), pack=r.workbench?.execution?.verificationPackage, state=playableState(r), issues=playableIssues(r,en);
+  const [seats, setSeats] = useState(2);
+  useEffect(() => setSeats(2), [r.taskId, r.playerMode]);
+  const selectedSeats = r.playerMode === "multiplayer" ? seats : undefined;
+  const seatSelector = r.playerMode === "multiplayer"
+    ? <PlaytestSeats value={seats} onChange={setSeats} disabled={!active || busy} en={en}/>
+    : null;
   const text=(zh:string,english:string)=>en?english:zh;
   async function run(action:()=>Promise<unknown>){if(locked.current)return;locked.current=true;setBusy(true);setError("");setNotice("");try{await action();}catch(e){setError(errorMessage(e));}finally{locked.current=false;setBusy(false);}}
   async function enter(){const next=await productionApi.workbench(r.taskId,r.revision,"enter-playtest",{version:pack!.version});onUpdated?.(next);setConfirm(false);}
@@ -21,9 +28,9 @@ export function VerificationPackage({record:r,active,en,onRepair,onUpdated}:{rec
       {issues.length > 0 && <div className="playable-gaps"><h3>{text("目前仍需核对的问题", "Remaining checks")}</h3>
         {issues.map(issue => <article key={issue.id}><strong>{issue.title}</strong><p>{issue.description}</p></article>)}
       </div>}
-      <div className="playable-actions"><button className="primary-button" disabled={!active || busy || !version}
+      <div className="playable-actions">{seatSelector}<button className="primary-button" disabled={!active || busy || !version}
         onClick={() => void run(async () => {
-          const result = await productionApi.startPreview(r.taskId, version);
+          const result = await productionApi.startPreview(r.taskId, version, selectedSeats);
           setNotice(result.message || text("修改版试玩窗口已打开。", "Current candidate opened."));
         })}>{text("启动当前修改版试玩", "Play current changes")}</button></div>
       {pack?.path && pack.version !== version && <p className="playable-muted">
@@ -43,8 +50,8 @@ export function VerificationPackage({record:r,active,en,onRepair,onUpdated}:{rec
       {issues.map(i=><article key={i.id}><strong><span>{i.confirmed?text("已确认","Confirmed"):text("尚未确认","Unconfirmed")}</span>{i.title}</strong><p>{i.description}</p></article>)}
       {issues.some(i=>!i.confirmed)&&<p className="playable-muted">{text("待确认不代表已经发生故障，AI 仍需补充验证。","Unconfirmed does not mean broken; AI still needs to verify the behavior.")}</p>}</div>
       :<p className="playable-empty">{text("暂未登记未解决问题；试玩不等于已通过全部检查。","No unresolved issues recorded. Playability does not imply all checks passed.")}</p>}
-    <div className="playable-actions"><button className="secondary-button" disabled={busy} onClick={()=>void run(()=>productionApi.revealDocument(r.taskId,pack.path))}>{text("定位试玩包","Show package")}</button>
-      <button className="primary-button" disabled={!active||busy||!state.available} onClick={()=>void run(async()=>{const result=await productionApi.startPreview(r.taskId,pack.version);setNotice(result.message||text("试玩窗口已打开。","Playtest window opened."));})}>{text("启动此版本试玩","Play this version")}</button>
+    <div className="playable-actions">{seatSelector}<button className="secondary-button" disabled={busy} onClick={()=>void run(()=>productionApi.revealDocument(r.taskId,pack.path))}>{text("定位试玩包","Show package")}</button>
+      <button className="primary-button" disabled={!active||busy||!state.available} onClick={()=>void run(async()=>{const result=await productionApi.startPreview(r.taskId,pack.version,selectedSeats);setNotice(result.message||text("试玩窗口已打开。","Playtest window opened."));})}>{text("启动此版本试玩","Play this version")}</button>
       {onRepair&&<button className="secondary-button playable-repair" disabled={!active||busy} onClick={()=>void run(async()=>{await onRepair();setNotice(text("诊断请求已提交，请查看执行状态；若仍缺少条件，AI 会说明原因。","Diagnosis requested. Check execution status for progress or missing conditions."));})}>{text("诊断并修复上述缺陷","Diagnose and repair these issues")}</button>}</div>
     <p className="playable-note">{text("试玩使用独立副本，不自动切换阶段。试玩期间请停止 AI 自动操作；发现问题后可提交反馈。","Playtest uses an isolated copy and does not switch stages. Stop AI input during manual play and submit feedback afterward.")}</p>
     {r.currentStage==="implementation"&&<div className="playable-handoff"><div><strong>{text("想先边玩边改？","Ready to play and iterate?")}</strong><p>{text("可以带着待处理项进入下一阶段，后续继续跟进，不视为问题已解决。","Carry open items into the next stage without marking them resolved.")}</p></div><button className="secondary-button" disabled={!active||busy||!state.available||!state.current} onClick={()=>setConfirm(true)}>{text("进入试玩与修改阶段 →","Enter playtest & changes →")}</button></div>}

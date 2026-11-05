@@ -6,7 +6,7 @@ export interface CapabilityPreflight {
   checks:{id:string;status?:string}[];
 }
 export interface AcceptanceSession {
-  id?: string; version?: string; status: string; message?: string; instanceIds?: string[];
+  id?: string; version?: string; status: string; message?: string; instanceIds?: string[]; seats?: number;
   startedAt?: string; updatedAt?: string; cleanupFailures?: string[];
 }
 
@@ -111,8 +111,8 @@ export const productionApi = {
   feedback: (taskId: string, expectedRevision: number, operation: string, data: unknown) =>
     invoke<ProductionView>("submit_production_feedback", { input: { taskId, expectedRevision, operation, data } }),
   startPrototype: (taskId:string,expectedRevision:number,sourceInstanceId:string,note:string)=>invoke<ProductionView>("start_production_prototype",{taskId,expectedRevision,sourceInstanceId,note}),
-  startAcceptance: (taskId: string) => invoke<AcceptanceSession>("start_task_acceptance", { taskId }),
-  startPreview: (taskId: string, expectedVersion?: string) => invoke<AcceptanceSession>("start_task_preview", { taskId, expectedVersion }),
+  startAcceptance: (taskId: string, seats?: number) => invoke<AcceptanceSession>("start_task_acceptance", { taskId, seats }),
+  startPreview: (taskId: string, expectedVersion?: string, seats?: number) => invoke<AcceptanceSession>("start_task_preview", { taskId, expectedVersion, seats }),
   acceptanceStatus: (taskId: string) => invoke<AcceptanceSession>("get_task_acceptance", { taskId }),
   timing: (taskId:string)=>invoke<{elapsedMs:number|null;firstPlayableMs:number|null;humanWaitMs:number|null;blockedMs:number|null;feedbackReworkMs:number|null;activeWorkMs:number|null;executionMs:number|null;toolMs:number|null;answerWaitMs:number|null;approvalWaitMs:number|null;pauseMs:number|null;connectionMs:number|null;unfinishedTurns:number;note:string}>("get_production_timing",{taskId}),
   submitAnswers: (taskId:string,expectedRevision:number,id:string,answers:Record<string,string>) =>

@@ -4,6 +4,8 @@
 
 # Game Runtime CLI Bridge
 
+2026-11-05：start_acceptance/start_preview 增加可选 seats，调用任务规格统一验证1至8及单人固定1。按任务模式决定 Offline/LanHost/LanClient，单窗口多人仍验证网络就绪。回执保存 seats 并显示窗口数；验收会话复用须版本及窗口数一致，旧窗口仍运行时明确要求关闭后更换人数。
+
 2026-11-05：start_preview 接收可选 expected_version，界面选择过期时在创建实例前拒绝。review 使用当前候选独立副本，implementation 使用原检查点规则，回执显示实际版本。失败不回退历史包；并发版本变化由复制/记录阶段校验拒绝，清理本次实例。人工试玩实例继续禁止 AI 输入。
 
 ## 通用任务空白初始化（2026-11-02）

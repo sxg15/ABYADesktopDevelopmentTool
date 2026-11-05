@@ -81,6 +81,7 @@ impl TaskService {
         }
         let text = |key| mutation::text(&r.version_details, key).map(str::to_owned);
         Ok(AcceptanceSpec {
+            multiplayer: r.player_mode == "multiplayer",
             version: validation::version(&r)?.into(),
             executable_path: acceptance::launch_path(text("playerSource")?),
             archive_path: acceptance::launch_path(text("archiveSource")?),

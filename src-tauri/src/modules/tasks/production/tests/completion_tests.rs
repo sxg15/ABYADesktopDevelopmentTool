@@ -188,7 +188,7 @@ fn real_legacy_player_acceptance_loads_frozen_copy_in_owned_data_root() {
     settings.lan_broadcast_enabled = false;
     connections.start(&settings).unwrap();
     let bridge = RuntimeBridgeService::new(instances.clone(), f.service.clone());
-    let result = bridge.start_acceptance(&f.id);
+    let result = bridge.start_acceptance(&f.id, None);
     std::fs::write(
         out.join("acceptance.json"),
         serde_json::to_vec_pretty(&result.as_ref().map_err(|e| e.to_string())).unwrap(),

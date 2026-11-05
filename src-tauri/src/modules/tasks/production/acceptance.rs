@@ -10,8 +10,24 @@ pub struct AcceptanceSpec {
     pub archive_guid: String,
     pub level_guid: String,
     pub seats: u8,
+    pub multiplayer: bool,
     pub required_tools: Vec<String>,
     pub require_ui: bool,
+}
+
+impl AcceptanceSpec {
+    /// 本次人工试玩人数不改写任务模式或已保存验收配置。
+    pub fn select_seats(&mut self, seats: Option<u8>) -> AppResult<()> {
+        if let Some(seats) = seats {
+            if !(1..=8).contains(&seats) || (!self.multiplayer && seats != 1) {
+                return Err(AppError::validation(
+                    "试玩窗口数须为1至8；单人游戏只支持1个窗口。",
+                ));
+            }
+            self.seats = seats;
+        }
+        Ok(())
+    }
 }
 
 pub(super) fn launch_path(value: String) -> String {
@@ -75,6 +91,7 @@ impl TaskService {
         }
         let string = |key| mutation::text(&r.version_details, key).map(str::to_owned);
         Ok(AcceptanceSpec {
+            multiplayer: r.player_mode == "multiplayer",
             version,
             executable_path: launch_path(string("playerSource")?),
             archive_path: launch_path(string("archiveSource")?),

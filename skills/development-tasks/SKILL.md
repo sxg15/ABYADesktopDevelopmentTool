@@ -6,6 +6,8 @@ task_archive_sources 只提供本任务归属的编辑根及冻结候选；无�
 
 ## Current scope
 
+多人人工试玩支持本次1至8个窗口（默认2，正式验收默认沿用已配置人数），每窗口对应真人席位。AcceptanceSpec 保留 multiplayer 标记，选择1窗口仍为联网房主；单人任务固定1。人数选择只影响本次启动，不改任务模式、已保存验收配置或通过记录。界面说明应遵循游戏容量，Bot在游戏内添加。
+
 2026-11-05：review 阶段 preview_record 选择当前登记的冻结候选，校验真实存档/Player 后复制到独立试玩根。缺版本或校验失败时拒绝启动，不回退旧 verificationPackage。implementation 仍按原核心检查点规则预览；旧 review 记录自动适用当前候选选择。
 review 请求标记 completed 前须校验当前冻结版本，并记录 playtestResult 的 version、archiveHash、playerBuildHash。此绑定是复验交接，不提升为核心自测或人工验收通过。复验卡片显示当前候选和待复验状态，旧 ZIP 只作历史说明。
 

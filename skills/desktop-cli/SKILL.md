@@ -4,6 +4,8 @@ executablePath 仅允许断言 APP 当前所选包，不再作为覆盖设置的
 
 # Desktop CLI
 
+2026-11-05：现有 start_acceptance 调用显式传入空的人数覆盖，沿用任务验收配置；本次人数选择属于 APP 人工入口，不修改 CLI 参数契约。
+
 ## 通用空白存档（2026-11-02）
 archive create / game_archive_create：creationId(UUID)、name、author，executablePath 可省略沿用 APP 设置；taskId 从已认证会话绑定。
 用于任意开发任务，通过 Player 原生功能新建并加载空白存档；不要求调用者提供存档路径或虚构 GUID。

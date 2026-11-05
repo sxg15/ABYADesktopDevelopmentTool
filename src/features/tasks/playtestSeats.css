@@ -1,0 +1,5 @@
+.playtest-seats{display:flex;flex-direction:column;gap:6px;min-width:220px;max-width:100%;align-self:center}
+.playtest-seats label{display:flex;align-items:center;gap:10px;font-size:13px;flex-wrap:wrap}
+.playtest-seats select{min-width:155px;padding:7px 10px;border:1px solid #cec5b3;border-radius:6px;background:#fffcf5;color:#252429;font:inherit}
+.playtest-seats small{font-size:12px;line-height:1.5;color:#625e54;max-width:480px}
+.acceptance-launcher>.playtest-seats{margin:12px 0}
