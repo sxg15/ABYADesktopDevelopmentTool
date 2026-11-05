@@ -179,6 +179,7 @@
     {
       "id": "release",
       "paths": [
+        "Candidates/",
         "scripts/",
         "src-tauri/tauri.conf.json",
         "src-tauri/vendor/",

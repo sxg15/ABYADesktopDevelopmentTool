@@ -150,6 +150,10 @@ impl InstanceService {
         let _launch_guard = self.launch_gate.lock();
         let memory_warning = self.memory.launch_warning();
         let _files = crate::foundation::EXECUTABLE_FILES.read();
+        let _selection = crate::foundation::PLAYER_SELECTION.read();
+        let selected =
+            crate::foundation::selected_game_executable(&self.database, &input.executable_path)?;
+        input.executable_path = selected.to_string_lossy().into_owned();
         let task_id = input.task_id.trim();
         if task_id.is_empty() {
             return Err(AppError::validation("Select a development task."));
@@ -188,6 +192,7 @@ impl InstanceService {
                 .clone()
                 .ok_or_else(|| AppError::validation("Host has no Player executable."))?;
             validate_executable(&input.executable_path)?;
+            crate::foundation::selected_game_executable(&self.database, &input.executable_path)?;
             host.host_port
         } else {
             None

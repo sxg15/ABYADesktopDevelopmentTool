@@ -30,6 +30,7 @@ mod art_recovery;
 mod art_references;
 mod preview;
 mod runtime_baseline;
+mod task_assets;
 pub use acceptance::AcceptanceSpec;
 mod catalog;
 mod files;

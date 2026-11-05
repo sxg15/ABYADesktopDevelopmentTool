@@ -1,3 +1,7 @@
+## 2026-11-05 当前包与任务存档契约
+
+桌面 launch_instance 与 CLI 同走 launch_scoped，保留阶段校验与任务数据根。初始化及首次开发启动记录 APP 包路径/完整指纹；差异必须通过 APP 显式确认，不允许 agent 换包。
+
 # Game Runtime CLI Bridge
 
 ## 通用任务空白初始化（2026-11-02）

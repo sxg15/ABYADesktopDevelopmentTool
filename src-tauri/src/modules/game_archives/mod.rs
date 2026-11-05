@@ -1,4 +1,5 @@
 use crate::foundation::{AppError, AppPaths, AppResult};
+mod install;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::Value;
@@ -58,6 +59,53 @@ pub struct ArchiveCatalogService {
 }
 
 impl ArchiveCatalogService {
+    /// 来源由任务服务验证；条目标识包含来源和路径，避免同 GUID 副本混淆。
+    pub fn task_options(&self, sources: &Value) -> AppResult<Value> {
+        let mut entries = Vec::new();
+        let mut warnings = Vec::new();
+        let mut roots: Vec<(String, String)> = sources["editableRoots"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|p| p.as_str().map(|s| ("task".into(), s.into())))
+            .collect();
+        roots.push((
+            "global".into(),
+            self.paths
+                .default_archive_root
+                .to_string_lossy()
+                .into_owned(),
+        ));
+        for (origin, root) in roots {
+            if !Path::new(&root).exists() {
+                if origin == "task" {
+                    warnings.push(format!("任务存档目录不存在：{root}"));
+                }
+                continue;
+            }
+            let mut files = Vec::new();
+            collect_main_archives(Path::new(&root), &mut files)?;
+            for file in files {
+                match parse_archive(&file) {
+                    Ok(archive) => {
+                        let id = format!(
+                            "{origin}:{}",
+                            Path::new(&archive.archive_path).canonicalize()?.display()
+                        );
+                        if !entries.iter().any(|v: &Value| v["id"] == id) {
+                            entries.push(
+                                serde_json::json!({"id":id,"origin":origin,"archive":archive}),
+                            );
+                        }
+                    }
+                    Err(error) => warnings.push(format!("{}: {}", file.display(), error.message)),
+                }
+            }
+        }
+        Ok(
+            serde_json::json!({"entries":entries,"warnings":warnings,"candidate":sources["candidate"],"previewVersion":sources["previewVersion"],"globalRoot":self.paths.default_archive_root}),
+        )
+    }
     pub fn new(paths: AppPaths) -> Self {
         Self { paths }
     }
@@ -392,6 +440,51 @@ mod tests {
         assert_eq!(result.archive_guid, "archive-1");
         assert_eq!(result.file_count, 2);
         assert!(result.uncompressed_bytes > 3);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn task_sources_and_export_preserve_identity_and_reject_conflicts() {
+        let root = std::env::temp_dir().join(format!("abya-export-{}", Uuid::new_v4()));
+        let source = root.join("private").join("Demo");
+        std::fs::create_dir_all(source.join("Resources")).unwrap();
+        std::fs::write(
+            source.join("Main.PBArc"),
+            r#"{"Name":"Demo","Author":"QA","Guid":"archive-1","Levels":[]}"#,
+        )
+        .unwrap();
+        std::fs::write(source.join("Resources/asset.bin"), [1, 2, 3]).unwrap();
+        let service = ArchiveCatalogService::new(paths(&root));
+        let task = Uuid::new_v4().to_string();
+        let sources = serde_json::json!({"editableRoots":[source],"candidate":null});
+        let private = service.task_options(&sources).unwrap();
+        assert_eq!(private["entries"].as_array().unwrap().len(), 1);
+        assert_eq!(private["entries"][0]["origin"], "task");
+        let installed = service.export_snapshot(&source, &task, "v1").unwrap();
+        assert_eq!(installed["outcome"], "installed");
+        assert_eq!(
+            std::fs::read(root.join("archives/Demo/Resources/asset.bin")).unwrap(),
+            [1, 2, 3]
+        );
+        assert_eq!(
+            service.export_snapshot(&source, &task, "v1").unwrap()["outcome"],
+            "already-present"
+        );
+        let options = service.task_options(&sources).unwrap();
+        let entries = options["entries"].as_array().unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_ne!(entries[0]["id"], entries[1]["id"]);
+        assert_eq!(
+            entries[0]["archive"]["archiveGuid"],
+            entries[1]["archive"]["archiveGuid"]
+        );
+        std::fs::write(root.join("archives/Demo/Resources/asset.bin"), [9]).unwrap();
+        assert!(service.export_snapshot(&source, &task, "v2").is_err());
+        assert_eq!(
+            std::fs::read(root.join("archives/Demo/Resources/asset.bin")).unwrap(),
+            [9]
+        );
+        assert!(source.join("Main.PBArc").exists());
         let _ = std::fs::remove_dir_all(root);
     }
 

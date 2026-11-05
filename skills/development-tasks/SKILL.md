@@ -1,3 +1,7 @@
+## 2026-11-05 当前包与任务存档契约
+
+task_archive_sources 只提供本任务归属的编辑根及冻结候选；无版本的普通任务也发现 owner 校验的 .abya-authoring。task_player_status/check_task_player 记录当前 APP 包，adopt_task_player 仅 APP 可调用，保留切换历史且不修改旧版本证据。task_export_source 只返回校验通过的指定当前冻结版本。
+
 # Development Tasks Skill
 
 ## Current scope

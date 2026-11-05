@@ -1008,6 +1008,50 @@ fn discover_archives(
 }
 
 #[tauri::command]
+async fn task_launch_sources(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    let tasks = state.tasks.clone();
+    let archives = state.archives.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut value = archives.task_options(&tasks.task_archive_sources(&task_id)?)?;
+        value["player"] = tasks.task_player_status(&task_id)?;
+        Ok(value)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
+}
+
+#[tauri::command]
+async fn adopt_task_player(
+    task_id: String,
+    expected_hash: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    let tasks = state.tasks.clone();
+    tauri::async_runtime::spawn_blocking(move || tasks.adopt_task_player(&task_id, &expected_hash))
+        .await
+        .map_err(foundation::AppError::internal)?
+}
+
+#[tauri::command]
+async fn export_task_archive(
+    task_id: String,
+    version: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    let tasks = state.tasks.clone();
+    let archives = state.archives.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let source = tasks.task_export_source(&task_id, &version)?;
+        archives.export_snapshot(&source, &task_id, &version)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
+}
+
+#[tauri::command]
 fn list_archive_transfer_targets(
     state: State<'_, AppState>,
 ) -> AppResult<Vec<ArchiveTransferTarget>> {
@@ -1063,7 +1107,7 @@ fn launch_instance(
     input: LaunchInstanceInput,
     state: State<'_, AppState>,
 ) -> AppResult<GameInstance> {
-    state.instances.launch(input)
+    state.runtime_bridge.launch_scoped(input)
 }
 
 #[tauri::command]
@@ -1364,6 +1408,9 @@ pub fn run() {
             arm_instance_memory_stop,
             open_memory_reports,
             discover_archives,
+            task_launch_sources,
+            adopt_task_player,
+            export_task_archive,
             list_archive_transfer_targets,
             list_archive_transfer_sources,
             inspect_archive_transfer_source,

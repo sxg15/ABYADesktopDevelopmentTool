@@ -205,11 +205,33 @@ fn append_archive_args(args: &mut Vec<String>, archive: &ArchiveSelection) {
     ));
     args.push(format!(
         "--abya-launch-archive-path={}",
-        archive.archive_path
+        player_archive_path(&archive.archive_path)
     ));
     if !archive.level_guid.trim().is_empty() {
         args.push(format!("--abya-launch-level-guid={}", archive.level_guid));
     }
+}
+
+/// Rust 规范路径的 Windows 扩展前缀不被部分 Unity Player 识别。
+fn player_archive_path(path: &str) -> String {
+    if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{rest}")
+    } else {
+        path.strip_prefix(r"\\?\").unwrap_or(path).to_owned()
+    }
+}
+
+#[test]
+fn player_paths_preserve_unc_and_remove_extended_prefix() {
+    assert_eq!(
+        player_archive_path(r"\\?\D:\任务\Archives\Game"),
+        r"D:\任务\Archives\Game"
+    );
+    assert_eq!(
+        player_archive_path(r"\\?\UNC\server\share\Game"),
+        r"\\server\share\Game"
+    );
+    assert_eq!(player_archive_path(r"D:\Game"), r"D:\Game");
 }
 
 fn allocate_port() -> AppResult<u16> {

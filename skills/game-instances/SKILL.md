@@ -1,3 +1,7 @@
+## 2026-11-05 当前包与任务存档契约
+
+所有新托管启动（含初始化、预览、验收、LAN）只允许 APP 当前选定包；请求、任务旧包及 Host 继承均不得覆盖设置。LAN Host 与当前包不同则拒绝。旧进程不自动停止。此前任务包优先规则由本条替代。
+
 # Game Instances Skill
 
 ## 任务初始化会话（2026-11-02）
@@ -154,3 +158,5 @@ The stage workspace release retains the existing Windows Graphics Capture record
 LAN clients inherit the selected live same-task Host's executable as well as archive/level/port. Validate the inherited executable before spawning so generic UI and CLI cannot mix Player builds within one pair.
 RuntimeBridge owns acceptance orchestration and calls this module's existing lifecycle APIs. Failed acceptance launches stop only instances created by that attempt; unrelated and reused instances are preserved.
 The generic launch dialog prefers the selected task's captured Player over global settings. The dedicated acceptance button additionally validates fingerprints and readiness. Test inherited executable/archive and task ownership.
+
+启动参数中的存档路径去除 Windows 扩展路径前缀，并保留 UNC 语义；Rust 内部仍使用规范路径校验。此兼容性需用 APP 当前指定的真实 Player 验证。

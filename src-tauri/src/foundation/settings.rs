@@ -9,6 +9,31 @@ use windows_dpapi::{Scope, decrypt_data, encrypt_data};
 const SETTINGS_KEY: &str = "application";
 const TOKEN_ENTROPY: &[u8] = b"ABYA Desktop Development Tool CLI";
 
+/// 只读当前 APP 选择；调用参数只能断言同一路径，不能覆盖设置。
+pub fn selected_game_executable(database: &Database, requested: &str) -> AppResult<PathBuf> {
+    use rusqlite::OptionalExtension;
+    let selected: String = database.with_connection(|db| {
+        Ok(db.query_row("SELECT COALESCE(json_extract(value_json,'$.gameExecutablePath'),'') FROM settings WHERE key=?1",
+            [SETTINGS_KEY], |row| row.get(0)).optional()?.unwrap_or_default())
+    })?;
+    if selected.trim().is_empty() {
+        return Err(AppError::new(
+            "player_not_selected",
+            "请先在 APP 设置中选择 ABYA-PB 构建包。",
+            "not_executed",
+        ));
+    }
+    let selected = std::fs::canonicalize(selected.trim())?;
+    if !requested.trim().is_empty() && std::fs::canonicalize(requested.trim())? != selected {
+        return Err(AppError::new(
+            "app_player_mismatch",
+            "只能使用 APP 当前设置的构建包；请求路径、任务旧包和主机记录不能覆盖设置。",
+            "not_executed",
+        ));
+    }
+    Ok(selected)
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum GameClientSource {
@@ -182,6 +207,7 @@ impl SettingsService {
     }
 
     pub fn save(&self, settings: &AppSettings) -> AppResult<()> {
+        let _selection = super::PLAYER_SELECTION.write();
         let _guard = self.gate.lock();
         if settings.desktop_cli_port < 1024 {
             return Err(AppError::validation(

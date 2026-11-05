@@ -547,6 +547,11 @@ fn player_pin_and_authoring_data_are_task_owned() {
     );
     let r = f.record();
     let player = Path::new(r.version_details["playerSource"].as_str().unwrap());
+    f.service.database.with_connection(|db| {
+        db.execute("INSERT OR REPLACE INTO settings(key,value_json,updated_at) VALUES('application',?1,'test')",
+            [json!({"gameExecutablePath":player}).to_string()])?;
+        Ok(())
+    }).unwrap();
     f.service
         .production_check_player_pin(&f.id, player)
         .unwrap();

@@ -1,3 +1,7 @@
+## 2026-11-05 当前包与任务存档契约
+
+APP 设置是所有托管启动的唯一 Player 来源。任务服务保存来源/指纹与显式切换历史，旧版本只作为验证证据。任务来源发现由 tasks 提供可信根、game-archives 解析；launch_instance 经 runtime-bridge 保留私有数据根。game-archives 负责独立本地快照导出，原传输协议不变。
+
 # Architecture
 
 The application uses capability modules with a one-way dependency flow:

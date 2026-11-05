@@ -3,6 +3,11 @@ name: game-archives
 description: Discover, validate, and describe local ABYA archive folders for launch selection or transfer.
 ---
 
+## 2026-11-05 当前包与任务存档契约
+
+新增本地 export_snapshot：完整冻结目录经暂存、内容指纹验证、同卷重命名和读回安装到全局目录；相同内容幂等，同名/同 GUID 不同内容拒绝覆盖。回执保存 Reports/ArchiveExports，失败暂存不在扫描根。task_options 按来源+规范路径标识，返回解析警告。此本地安装扩展原仅解析契约，不修改 WebSocket 传输协议。
+
+
 # Game Archives Skill
 
 ## Purpose

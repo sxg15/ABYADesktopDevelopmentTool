@@ -2,25 +2,7 @@ use super::*;
 
 impl TaskService {
     pub fn production_check_player_pin(&self, task: &str, player: &Path) -> AppResult<()> {
-        let Some(r) = self.production_get(task)?.record else {
-            return Ok(());
-        };
-        if !execution_loop::enabled(&r) {
-            return Ok(());
-        }
-        let Some(pinned) = r.version_details["playerSource"].as_str() else {
-            return Ok(());
-        };
-        if Path::new(pinned).canonicalize()? != player.canonicalize()?
-            || versions::player_fingerprint(player)? != r.version_details["playerBuildHash"]
-        {
-            return Err(AppError::new(
-                "player_pin_mismatch",
-                "任务已有固定运行包；不能因一次报错自行换包。需要平台维护时由 APP 明确选择和登记新构建。",
-                "not_executed",
-            ));
-        }
-        Ok(())
+        self.check_task_player(task, player)
     }
 
     /// 校验实际运行包指纹；调用方只能提供由托管实例服务解析的路径。

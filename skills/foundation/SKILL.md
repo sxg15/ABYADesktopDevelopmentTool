@@ -1,3 +1,7 @@
+## 2026-11-05 当前包与任务存档契约
+
+APP 当前 gameExecutablePath 是唯一启动来源；selected_game_executable 只读设置并拒绝不同请求路径。PLAYER_SELECTION 将设置保存与实际进程启动互斥。
+
 # Foundation Skill
 
 2026-11-02：共享 ProductionIssue 增加可选 playerSummary，表达面向玩家的具体影响；原始 description、诊断和证据继续保留。

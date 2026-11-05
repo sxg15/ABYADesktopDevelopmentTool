@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, RefreshCw } from "lucide-react";
 import { Modal } from "../../app/Modal";
 import { api, errorMessage } from "../../shared/api";
 import { productionApi } from "../../shared/production";
+import { taskLaunchApi, type TaskLaunchSources } from "../../shared/taskLaunch";
 import type {
-  ArchiveOption,
   GameInstance,
   LaunchMode,
   LaunchProfile,
@@ -22,7 +22,6 @@ const resolutions = [
 
 export function LaunchInstanceModal({
   taskId,
-  executablePath,
   taskInstances,
   t,
   onClose,
@@ -41,36 +40,29 @@ export function LaunchInstanceModal({
   const [visibilityMode, setVisibilityMode] =
     useState<WindowVisibilityMode>("background");
   const [resolution, setResolution] = useState("1280x720");
-  const [archives, setArchives] = useState<ArchiveOption[]>([]);
+  const [sources, setSources] = useState<TaskLaunchSources | null>(null);
+  const archives = sources?.entries ?? [];
+  const generation = useRef(0);
+  const [exportMessage, setExportMessage] = useState("");
   const [archiveGuid, setArchiveGuid] = useState("");
   const [levelGuid, setLevelGuid] = useState("");
   const [hostInstanceId, setHostInstanceId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [taskExecutable, setTaskExecutable] = useState("");
-  const [sourceLoaded, setSourceLoaded] = useState(false);
-  const launchExecutable = taskExecutable || executablePath;
+  const sourceLoaded = sources !== null;
+  const launchExecutable = sources?.player.selectedPath ?? "";
   useEffect(() => {
-    let cancelled = false;
-    setTaskExecutable("");
-    setSourceLoaded(false);
-    void productionApi.get(taskId).then(value => {
-      if (!cancelled) { setTaskExecutable(value.record?.versionDetails?.playerSource ?? ""); setSourceLoaded(true); }
-    }).catch(reason => { if (!cancelled) setError(errorMessage(reason)); });
-    return () => { cancelled = true; };
+    setSources(null); setArchiveGuid(""); setExportMessage(""); setError("");
+    void refreshArchives();
+    return () => { generation.current++; };
   }, [taskId]);
 
   const hosts = taskInstances.filter(
     (instance) =>
       instance.mode === "lan-host" && instance.processState === "running",
   );
-  const selectedArchive = archives.find(
-    (archive) => archive.archiveGuid === archiveGuid,
-  );
-
-  useEffect(() => {
-    void refreshArchives();
-  }, []);
+  const selectedEntry = archives.find(entry => entry.id === archiveGuid);
+  const selectedArchive = selectedEntry?.archive;
 
   useEffect(() => {
     if (!selectedArchive) {
@@ -81,19 +73,21 @@ export function LaunchInstanceModal({
       selectedArchive.levels.find((level) => level.isStart) ??
       selectedArchive.levels[0];
     setLevelGuid(start?.levelGuid ?? "");
-  }, [archiveGuid]);
+  }, [selectedArchive]);
 
   const canLaunch = useMemo(() => {
-    if (!sourceLoaded || !name.trim() || !launchExecutable) return false;
+    if (!sourceLoaded || !sources?.player.matches || !name.trim() || !launchExecutable) return false;
     if (mode === "lan-client") return Boolean(hostInstanceId);
-    return Boolean(archiveGuid);
-  }, [archiveGuid, launchExecutable, sourceLoaded, hostInstanceId, levelGuid, mode, name]);
+    return Boolean(selectedArchive);
+  }, [selectedArchive, sources, launchExecutable, sourceLoaded, hostInstanceId, mode, name]);
 
   async function refreshArchives() {
+    const current = ++generation.current;
     try {
-      setArchives(await api.discoverArchives());
+      const value = await taskLaunchApi.sources(taskId);
+      if (generation.current === current) { setSources(value); setError(""); }
     } catch (value) {
-      setError(errorMessage(value));
+      if (generation.current === current) { setSources(null); setError(errorMessage(value)); }
     }
   }
 
@@ -134,8 +128,42 @@ export function LaunchInstanceModal({
     }
   }
 
+  async function assetAction(action: "adopt" | "export" | "preview") {
+    if (!sources) return;
+    const current = generation.current;
+    setBusy(true); setError("");
+    try {
+      if (action === "adopt") await taskLaunchApi.adopt(taskId, sources.player.selectedHash);
+      if (action === "preview") await productionApi.startPreview(taskId);
+      if (action === "export" && sources.candidate) {
+        const result = await taskLaunchApi.export(taskId, sources.candidate.version);
+        if (generation.current === current) setExportMessage(`${result.outcome === "already-present" ? "已存在相同版本" : "已导出"}：${result.version} → ${result.destination}`);
+      }
+      if (generation.current === current) await refreshArchives();
+    } catch (reason) { if (generation.current === current) setError(errorMessage(reason)); }
+    finally { setBusy(false); }
+  }
+
   return (
     <Modal title={t("launch")} onClose={onClose}>
+      {sources && <div className="inline-warning">
+        <div>当前 APP 构建包：{sources.player.selectedPath}</div>
+        <div>构建指纹：{sources.player.selectedHash}</div>
+        {sources.player.previous?.path && <div>任务记录：{sources.player.previous.path} · {sources.player.previous.hash}</div>}
+        {!sources.player.matches && <>
+          <p>任务记录与当前设置不同。确认后使用当前包；旧版本验证结果保留，需重新验证。</p>
+          <button type="button" disabled={busy} onClick={() => void assetAction("adopt")}>确认使用 APP 当前构建包</button>
+        </>}
+      </div>}
+      {sources?.warnings.map(warning => <p key={warning} role="alert">{warning}</p>)}
+      {sources?.candidate && <div>
+        <p>候选版本：{sources.candidate.version} · {sources.candidate.path}</p>
+        {sources.previewVersion && <button type="button" disabled={busy || !sources.player.matches} onClick={() => void assetAction("preview")}>试玩已验证版本 {sources.previewVersion}</button>}
+        <button type="button" disabled={busy} onClick={() => void assetAction("export")}>导出候选到全局存档目录</button>
+        <p>导出位置：{sources.globalRoot}；导出不代表验收通过。</p>
+      </div>}
+      {exportMessage && <p role="status">{exportMessage}</p>}
+      {selectedArchive && <p>保存/启动位置：{selectedArchive.archivePath}</p>}
       {!launchExecutable && <div className="inline-warning">{t("executableMissing")}</div>}
       <div className="form-grid">
         <label className="field field-span">
@@ -229,13 +257,14 @@ export function LaunchInstanceModal({
                 </button>
               </span>
               <select
+                aria-label="存档来源"
                 value={archiveGuid}
                 onChange={(event) => setArchiveGuid(event.target.value)}
               >
                 <option value="">-</option>
-                {archives.map((archive) => (
-                  <option key={archive.archiveGuid} value={archive.archiveGuid}>
-                    {archive.archiveName}
+                {archives.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.origin === "task" ? "本任务编辑存档" : "全局存档"} · {entry.archive.archiveName}
                   </option>
                 ))}
               </select>
