@@ -6,6 +6,9 @@ task_archive_sources 只提供本任务归属的编辑根及冻结候选；无�
 
 ## Current scope
 
+2026-11-05：review 阶段 preview_record 选择当前登记的冻结候选，校验真实存档/Player 后复制到独立试玩根。缺版本或校验失败时拒绝启动，不回退旧 verificationPackage。implementation 仍按原核心检查点规则预览；旧 review 记录自动适用当前候选选择。
+review 请求标记 completed 前须校验当前冻结版本，并记录 playtestResult 的 version、archiveHash、playerBuildHash。此绑定是复验交接，不提升为核心自测或人工验收通过。复验卡片显示当前候选和待复验状态，旧 ZIP 只作历史说明。
+
 2026-11-04：同周期、同需求范围和同目标的当前收尾项可核对其自身新登记的版本后收束；所有正式验收门槛照常验证。收尾超额或中断后，调度器能以当前签名记录缺口，避免反复派发已超额的最终核对。
 APP 明确恢复意图可给已耗尽的原目标追加一轮有上限的额度，记录 intentId、旧累计耗时、额度起点及恢复历史。同一意图幂等；自动检查点和重连不追加额度。恢复清除旧轮次起点，离线等待不入账；重新排入原未完成项，已完成项与未知写入/真实外部条件保持原状态。收尾额度单独使用 budgetEpochMs，累计 elapsedMs 始终保留。
 

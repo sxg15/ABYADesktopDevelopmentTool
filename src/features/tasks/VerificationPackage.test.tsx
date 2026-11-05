@@ -7,10 +7,28 @@ import {productionApi,type ProductionRecord} from "../../shared/production";
 vi.mock("../../shared/production",()=>({productionApi:{revealDocument:vi.fn(),startPreview:vi.fn(),workbench:vi.fn()}}));
 afterEach(()=>{cleanup();vi.resetAllMocks();});
 function record(){return {taskId:"task",revision:3,currentStage:"implementation",currentVersion:"v1",cycle:1,issues:[],selfTests:["lua","input","core-loop","save-reload"].map(id=>({id,status:"passed",version:"v1",cycle:1})),workbench:{execution:{verificationPackage:{status:"core-verified",version:"v1",path:"artifacts/playable-packages/package.zip"}}}} as unknown as ProductionRecord;}
+it("reviews the latest candidate even when only the old package exists",async()=>{
+ const r=record();r.currentStage="review";r.currentVersion="feedback-v4";
+ vi.mocked(productionApi.startPreview).mockResolvedValue({status:"ready",version:"feedback-v4"});
+ render(<VerificationPackage record={r} active en={false}/>);
+ expect(screen.getByText("feedback-v4")).toBeTruthy();
+ expect(screen.queryByRole("button",{name:"启动此版本试玩"})).toBeNull();
+ fireEvent.click(screen.getByRole("button",{name:"启动当前修改版试玩"}));
+ await waitFor(()=>expect(productionApi.startPreview).toHaveBeenCalledExactlyOnceWith("task","feedback-v4"));
+});
+it("offers current review without a package and surfaces rejection without fallback",async()=>{
+ const r=record();r.currentStage="review";r.currentVersion="feedback-v4";
+ r.workbench!.execution!.verificationPackage=undefined;
+ vi.mocked(productionApi.startPreview).mockRejectedValue(new Error("当前版本已改变"));
+ render(<VerificationPackage record={r} active en={false}/>);
+ fireEvent.click(screen.getByRole("button",{name:"启动当前修改版试玩"}));
+ await waitFor(()=>expect(screen.getByRole("alert").textContent).toContain("当前版本已改变"));
+ expect(productionApi.startPreview).toHaveBeenCalledTimes(1);
+});
 it("groups package, isolated playtest and repair actions for older tasks",async()=>{
  const repair=vi.fn().mockResolvedValue({});vi.mocked(productionApi.startPreview).mockResolvedValue({status:"ready"});
  render(<VerificationPackage record={record()} active en={false} onRepair={repair}/>);
- fireEvent.click(screen.getByRole("button",{name:"启动此版本试玩"}));await waitFor(()=>expect(productionApi.startPreview).toHaveBeenCalledExactlyOnceWith("task"));
+ fireEvent.click(screen.getByRole("button",{name:"启动此版本试玩"}));await waitFor(()=>expect(productionApi.startPreview).toHaveBeenCalledExactlyOnceWith("task","v1"));
  await waitFor(()=>expect((screen.getByRole("button",{name:"定位试玩包"}) as HTMLButtonElement).disabled).toBe(false));
  fireEvent.click(screen.getByRole("button",{name:"定位试玩包"}));await waitFor(()=>expect(productionApi.revealDocument).toHaveBeenCalledExactlyOnceWith("task","artifacts/playable-packages/package.zip"));
  await waitFor(()=>expect((screen.getByRole("button",{name:"诊断并修复上述缺陷"}) as HTMLButtonElement).disabled).toBe(false));
@@ -41,3 +59,4 @@ it("does not present uncertain Esc observations as confirmed defects",()=>{
  const r=record();r.issues=[{id:"any-game",kind:"defect",status:"open",stage:"implementation",description:"physical Escape not tested",diagnosisStatus:"suspected"}];
  expect(playableIssues(r)[0]).toMatchObject({confirmed:false,title:"Esc 暂停与恢复"});
 });
+

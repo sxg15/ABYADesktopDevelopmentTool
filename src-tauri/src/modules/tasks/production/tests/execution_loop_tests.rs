@@ -102,6 +102,75 @@ fn unit(f: &Fixture, id: &str) {
 }
 
 #[test]
+fn review_preview_uses_current_snapshot_and_never_falls_back_to_old_package() {
+    let f = setup();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.current_stage = "review".into();
+            r.player_mode = "single".into();
+            r.current_version = Some("feedback-v4".into());
+            r.workbench.execution.verification_package =
+                json!({"version":"old-v1","sourceRevision":1});
+            Ok(())
+        })
+        .unwrap();
+    let before = f.record();
+    let spec = f.service.preview_spec(&f.id).unwrap();
+    assert_eq!(spec.version, "feedback-v4");
+    assert!(f.service.preview_archive(&f.id, "old-v1").is_err());
+    let copy = f.service.preview_archive(&f.id, "feedback-v4").unwrap();
+    assert_ne!(copy, spec.archive_path);
+    assert_eq!(
+        std::fs::read(Path::new(&copy).join("Main.PBArc")).unwrap(),
+        std::fs::read(Path::new(&spec.archive_path).join("Main.PBArc")).unwrap()
+    );
+    assert_eq!(before.revision, f.record().revision);
+    std::fs::write(
+        Path::new(&spec.archive_path).join("Main.PBArc"),
+        "unregistered edit",
+    )
+    .unwrap();
+    assert!(f.service.preview_spec(&f.id).is_err());
+}
+
+#[test]
+fn completing_review_request_binds_saved_version_and_rejects_unregistered_changes() {
+    let f = setup();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.current_stage = "review".into();
+            r.workbench
+                .requests
+                .push(json!({"id":"feedback","stage":"review","status":"in-progress"}));
+            Ok(())
+        })
+        .unwrap();
+    f.apply(
+        "update-workbench-request",
+        json!({"id":"feedback","status":"completed","summary":"Saved changes ready for replay"}),
+    )
+    .unwrap();
+    let record = f.record();
+    assert_eq!(
+        record.workbench.requests[0]["playtestResult"]["version"],
+        "v1"
+    );
+    assert_eq!(
+        record.workbench.requests[0]["playtestResult"]["archiveHash"],
+        record.version_details["archiveHash"]
+    );
+    let path = record.version_details["archiveSource"].as_str().unwrap();
+    std::fs::write(Path::new(path).join("Main.PBArc"), "unsaved registration").unwrap();
+    assert!(
+        f.apply(
+            "update-workbench-request",
+            json!({"id":"feedback","status":"completed","summary":"Changed"})
+        )
+        .is_err()
+    );
+}
+
+#[test]
 fn resume_does_not_replay_unknown_writes_or_reopen_completed_units() {
     let f = setup();
     unit(&f, "unknown");

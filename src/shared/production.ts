@@ -112,7 +112,7 @@ export const productionApi = {
     invoke<ProductionView>("submit_production_feedback", { input: { taskId, expectedRevision, operation, data } }),
   startPrototype: (taskId:string,expectedRevision:number,sourceInstanceId:string,note:string)=>invoke<ProductionView>("start_production_prototype",{taskId,expectedRevision,sourceInstanceId,note}),
   startAcceptance: (taskId: string) => invoke<AcceptanceSession>("start_task_acceptance", { taskId }),
-  startPreview: (taskId: string) => invoke<AcceptanceSession>("start_task_preview", { taskId }),
+  startPreview: (taskId: string, expectedVersion?: string) => invoke<AcceptanceSession>("start_task_preview", { taskId, expectedVersion }),
   acceptanceStatus: (taskId: string) => invoke<AcceptanceSession>("get_task_acceptance", { taskId }),
   timing: (taskId:string)=>invoke<{elapsedMs:number|null;firstPlayableMs:number|null;humanWaitMs:number|null;blockedMs:number|null;feedbackReworkMs:number|null;activeWorkMs:number|null;executionMs:number|null;toolMs:number|null;answerWaitMs:number|null;approvalWaitMs:number|null;pauseMs:number|null;connectionMs:number|null;unfinishedTurns:number;note:string}>("get_production_timing",{taskId}),
   submitAnswers: (taskId:string,expectedRevision:number,id:string,answers:Record<string,string>) =>

@@ -4,6 +4,8 @@
 
 # Game Runtime CLI Bridge
 
+2026-11-05：start_preview 接收可选 expected_version，界面选择过期时在创建实例前拒绝。review 使用当前候选独立副本，implementation 使用原检查点规则，回执显示实际版本。失败不回退历史包；并发版本变化由复制/记录阶段校验拒绝，清理本次实例。人工试玩实例继续禁止 AI 输入。
+
 ## 通用任务空白初始化（2026-11-02）
 archive create 编排独立数据根的托管启动、当前 Player 原生 editor_create_archive / editor_load_archive 及真实读回。
 不复制已有游戏、不生成猜测 PBArc、不改 Player；返回真实 instanceId、archiveGuid、levelGuid、archivePath。

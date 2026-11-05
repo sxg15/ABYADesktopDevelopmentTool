@@ -349,7 +349,7 @@ impl RuntimeBridgeService {
     }
 
     /// 预览使用已验证包的隔离副本；不提交人工反馈，也不跨越正式试玩门槛。
-    pub fn start_preview(&self, task: &str) -> AppResult<Value> {
+    pub fn start_preview(&self, task: &str, expected_version: Option<&str>) -> AppResult<Value> {
         if !self.acceptance_busy.lock().insert(task.into()) {
             return Err(AppError::validation(
                 "该任务的运行窗口正在准备，请等待当前启动完成。",
@@ -360,6 +360,11 @@ impl RuntimeBridgeService {
             busy: self.acceptance_busy.clone(),
         };
         let mut spec = self.tasks.preview_spec(task)?;
+        if expected_version.is_some_and(|version| version != spec.version) {
+            return Err(AppError::validation(
+                "试玩版本已更新，请刷新后启动当前显示的版本。",
+            ));
+        }
         spec.archive_path = self.tasks.preview_archive(task, &spec.version)?;
         let mut created = Vec::new();
         let result = (|| -> AppResult<Value> {
@@ -371,7 +376,7 @@ impl RuntimeBridgeService {
             }
             let value = json!({"id":uuid::Uuid::new_v4().to_string(),"purpose":"preview",
                 "version":spec.version,"status":"ready","instanceIds":created,"humanAccepted":false,
-                "message":"可玩检查点已打开；不代表完整实现或交付验收通过。","startedAt":chrono::Utc::now().to_rfc3339()});
+                "message":format!("已打开版本 {} 的独立试玩副本，请核对本轮修改。",spec.version),"startedAt":chrono::Utc::now().to_rfc3339()});
             self.tasks
                 .record_preview(task, &spec.version, value.clone())?;
             Ok(value)

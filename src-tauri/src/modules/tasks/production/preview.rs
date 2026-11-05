@@ -37,6 +37,12 @@ impl TaskService {
         let root = self.production_workspace(task)?;
         validation::approved(&current, &root, "requirements")?;
         validation::approved(&current, &root, "plan")?;
+        // 反馈复验始终对应当前冻结候选；旧检查点不能代替本轮修改。
+        if current.current_stage == "review" {
+            validation::version(&current)?;
+            versions::verify(&current.version_details)?;
+            return Ok(current);
+        }
         let pack = &current.workbench.execution.verification_package;
         if pack["version"].as_str() == current.current_version.as_deref() {
             verification_package::core_ready(&current, &root)?;

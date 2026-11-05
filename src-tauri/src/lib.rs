@@ -324,12 +324,15 @@ async fn get_task_acceptance(
 #[tauri::command]
 async fn start_task_preview(
     task_id: String,
+    expected_version: Option<String>,
     state: State<'_, AppState>,
 ) -> AppResult<serde_json::Value> {
     let bridge = state.runtime_bridge.clone();
-    tauri::async_runtime::spawn_blocking(move || bridge.start_preview(&task_id))
-        .await
-        .map_err(foundation::AppError::internal)?
+    tauri::async_runtime::spawn_blocking(move || {
+        bridge.start_preview(&task_id, expected_version.as_deref())
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
 }
 
 #[tauri::command(async)]

@@ -7,6 +7,8 @@ rounds/ 和 reports/ 是导出，不能手改来批准文档、关闭反馈或�
 
 ## 当前状态与变更
 
+试玩与修改阶段提交修改完成前，必须保存并登记本次候选版本。update-workbench-request completed 会校验并绑定当前版本摘要，APP 的“启动当前修改版试玩”使用该阶段的最新冻结候选。旧检查点 ZIP 可作为历史成果保留，不能用其版本号声称已经包含本轮修改。主观听感等人工复验项须明确列出。
+
 使用环境注入的 ABYA_DESKTOP_CLI；task/conversation/provider 上下文由桌面绑定。
 首次 doctor、capabilities、conversation bind，再 production get --json。
 读取 record.revision、固定 policy、阶段、问题、反馈和确认版本；不要按随包最新版本猜旧任务规则。

@@ -61,6 +61,21 @@ pub(super) fn apply(
             if !["in-progress", "completed"].contains(&status) || summary.len() > 4000 {
                 return Err(AppError::validation("无效的目标进展。"));
             }
+            let review_result = if status == "completed"
+                && r.workbench
+                    .requests
+                    .iter()
+                    .any(|request| request["id"] == id && request["stage"] == "review")
+            {
+                let version = validation::version(r)?.to_owned();
+                super::versions::verify(&r.version_details)?;
+                Some(
+                    json!({"version":version,"archiveHash":r.version_details["archiveHash"],
+                    "playerBuildHash":r.version_details["playerBuildHash"]}),
+                )
+            } else {
+                None
+            };
             let request = r
                 .workbench
                 .requests
@@ -70,6 +85,9 @@ pub(super) fn apply(
             request["status"] = json!(status);
             request["summary"] = json!(summary);
             request["updatedAt"] = json!(now());
+            if let Some(result) = review_result {
+                request["playtestResult"] = result;
+            }
             Ok(())
         }
         "configure-acceptance" => super::acceptance::configure(r, data),

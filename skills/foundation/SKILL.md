@@ -4,6 +4,8 @@ APP 当前 gameExecutablePath 是唯一启动来源；selected_game_executable �
 
 # Foundation Skill
 
+2026-11-05：共享 productionApi.startPreview 和 Tauri start_task_preview 接收可选 expectedVersion，传递给 RuntimeBridge 拒绝过期界面选择。省略参数的既有调用继续按任务当前阶段选择预览版本；候选选择与验证由任务模块拥有。
+
 2026-11-02：共享 ProductionIssue 增加可选 playerSummary，表达面向玩家的具体影响；原始 description、诊断和证据继续保留。
 
 ## Current scope

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "releaseLabel": "delivery-first-20261030",
-  "totalBytes": 349196875,
+  "totalBytes": 351690541,
   "files": [
     {
       "path": ".codex/README.md",
@@ -780,8 +780,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/SKILL.md",
-      "bytes": 4405,
-      "sha256": "d66433773a2017a9ced00742dbf777230f0c55cab335c5d8636e2ab296dfa320"
+      "bytes": 4663,
+      "sha256": "6b247b30806ccd521f3c864c0bafdf6e7f5b78ab79a67458e36a0ae95951559f"
     },
     {
       "path": ".codex/skills/abya-game-development-task/agents/openai.yaml",
@@ -845,8 +845,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/workflow-policy.json",
-      "bytes": 6188,
-      "sha256": "09f013e519f5aaa20ce45fa65ed696d756d3205e03a6bc0c92e16bba195e4e3b"
+      "bytes": 6224,
+      "sha256": "2cd3bd54961c39478c75befd37d26aa56e9d382e2d523b0e9124ed318db4b7a3"
     },
     {
       "path": ".codex/skills/abya-game-development-task/assets/production/workflow.template.json",
@@ -875,8 +875,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/cli-commands.md",
-      "bytes": 3080,
-      "sha256": "f59caa90cc392ae6f6a5ae93e1791ee0863d40c7aa7a015f219d5d1214538fee"
+      "bytes": 4590,
+      "sha256": "6f824f8c2489dc3ba1959109cf3c41e804f066e96ace05e79b5a09a9465d38a9"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/game-art-design/SKILL.md",
@@ -1415,13 +1415,13 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/production-records.md",
-      "bytes": 12133,
-      "sha256": "d7435f51a7eb9c72f22eb5607102f9e98fe394d1dfa3a25e7d344f4c5f2bf53e"
+      "bytes": 12526,
+      "sha256": "0df019d081829d93919a365a3fffbe0ac5d5bf429aebc4c30c0f8ab1b7780148"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/production-stages.md",
-      "bytes": 9966,
-      "sha256": "529818f9ea45ebb049351f6b9eadd6223a3f46ca8bee9a66303599767a3a49a5"
+      "bytes": 11579,
+      "sha256": "23e0997471c5a50016b2bffa1bcc2d169aa125a41f9ce45b3ab980fc44c60c85"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/recording.md",
@@ -1525,18 +1525,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 38345728,
-      "sha256": "e598718013a781968bc5bdb4ccb50027281e41d88a58e38b80bf9771057ff0f1"
+      "bytes": 40838656,
+      "sha256": "3e3c9ef4329c2defe235d413bc41dd39e65c6f59a15c3072e0aba3412fa391bb"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 5996544,
-      "sha256": "f23cdc63cbe0802c970673aff1c0a45ab51e5bbb352173dc95af7c09fefa282a"
+      "bytes": 5993472,
+      "sha256": "e3731caef7e6e1e2b616191431f90018b585816cba4fad0e5c531e89e4376237"
     },
     {
       "path": "build-manifest.json",
       "bytes": 744,
-      "sha256": "5923fb9990af12ef8be43be897a54bd895aedfbf451bd31582cbeab2dedc7c65"
+      "sha256": "327bb7572eb966e84817cc451509a108d05c0177c520bfa0123af81cfd9a898c"
     },
     {
       "path": "runtime/LICENSE.txt",
