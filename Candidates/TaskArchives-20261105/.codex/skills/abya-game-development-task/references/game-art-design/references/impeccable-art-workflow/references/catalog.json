@@ -1,0 +1,481 @@
+{
+  "capturedAt": "2026-10-21",
+  "sources": [
+    "https://impeccable.cn/docs/",
+    "https://impeccable.cn/slop/"
+  ],
+  "upstream": "https://github.com/pbakaus/impeccable",
+  "commit": "dad8dbb3aac21ad1fa236c110315ef4abece23e8",
+  "version": "4.7.0",
+  "ruleCount": 46,
+  "commands": [
+    {
+      "id": "init",
+      "purpose": "产品上下文",
+      "status": "已使用",
+      "application": "把两轮确认与证据边界写入 PRODUCT.md；不重复访谈。"
+    },
+    {
+      "id": "shape",
+      "purpose": "交互方案",
+      "status": "已应用方法",
+      "application": "六项设计问答、三种结构比较及状态设计；用户已授权继续。"
+    },
+    {
+      "id": "craft",
+      "purpose": "完整制作入口",
+      "status": "兼容项",
+      "application": "固定上游版本中已弃用为普通新设计请求的别名。"
+    },
+    {
+      "id": "document",
+      "purpose": "设计系统记录",
+      "status": "已使用",
+      "application": "记录真实 token、密度和组件状态，保留源版本。"
+    },
+    {
+      "id": "extract",
+      "purpose": "复用组件",
+      "status": "已应用原则",
+      "application": "工作区和输入区共用状态与样式；生产组件提取列入实施。"
+    },
+    {
+      "id": "critique",
+      "purpose": "设计复核",
+      "status": "已应用方法",
+      "application": "独立审查层级、认知负担和状态；不把自评分当人工验收。"
+    },
+    {
+      "id": "audit",
+      "purpose": "实现质量",
+      "status": "已应用方法",
+      "application": "检查溢出、输入、焦点、状态、对比；确定性检测另存结果。"
+    },
+    {
+      "id": "polish",
+      "purpose": "最终细化",
+      "status": "已应用方法",
+      "application": "统一中文字体、边界和控件反馈，基于渲染修正。"
+    },
+    {
+      "id": "bolder",
+      "purpose": "增强表达",
+      "status": "按范围使用",
+      "application": "将表现力留给成果展示与清晰标题，不把所有控件放大。"
+    },
+    {
+      "id": "quieter",
+      "purpose": "降低视觉刺激",
+      "status": "已应用方法",
+      "application": "撤去满屏状态卡、强调条和重复工具栏。"
+    },
+    {
+      "id": "distill",
+      "purpose": "信息精简",
+      "status": "已应用方法",
+      "application": "当前成果与唯一输入替代多面板，能力改为按需访问。"
+    },
+    {
+      "id": "harden",
+      "purpose": "异常与边界",
+      "status": "已应用方法",
+      "application": "草稿保存、无选择禁用、版本过期、重连、重复提交保护。"
+    },
+    {
+      "id": "onboard",
+      "purpose": "首次体验",
+      "status": "已应用方法",
+      "application": "输入想法或附件即可开始，按需补问。"
+    },
+    {
+      "id": "animate",
+      "purpose": "有目的的反馈",
+      "status": "有限使用",
+      "application": "仅执行状态活动提示；减少动态模式保留文字状态。"
+    },
+    {
+      "id": "colorize",
+      "purpose": "色彩职责",
+      "status": "已应用方法",
+      "application": "靛蓝表达当前选择与主要动作，警告与错误独立语义。"
+    },
+    {
+      "id": "typeset",
+      "purpose": "排版",
+      "status": "已应用方法",
+      "application": "中文开源字体、正文层级、正常字距与长标题换行。"
+    },
+    {
+      "id": "layout",
+      "purpose": "版面与密度",
+      "status": "已应用方法",
+      "application": "稳定底部输入区、单一作品主区、窄窗口结构重排。"
+    },
+    {
+      "id": "delight",
+      "purpose": "恰当的完成感",
+      "status": "有限使用",
+      "application": "保留草稿与原位置反馈，完成任务时给明确成果入口。"
+    },
+    {
+      "id": "overdrive",
+      "purpose": "高复杂度体验",
+      "status": "评估后不启用",
+      "application": "本任务核心是减负，额外 shader、复杂动效或声效没有必要。"
+    },
+    {
+      "id": "clarify",
+      "purpose": "交互文案",
+      "status": "已应用方法",
+      "application": "确认方案、恢复处理等动作写清对象和后果。"
+    },
+    {
+      "id": "adapt",
+      "purpose": "场景适配",
+      "status": "已应用方法",
+      "application": "宽窄窗口与 200% 缩放检查；未宣称移动原生验收。"
+    },
+    {
+      "id": "optimize",
+      "purpose": "性能诊断",
+      "status": "限定使用",
+      "application": "本地字体子集和静态轻量原型；正式 APP 性能需另测，不承诺加速比例。"
+    },
+    {
+      "id": "live",
+      "purpose": "实时变体迭代",
+      "status": "评估后不启动",
+      "application": "使用独立可点击 HTML 与浏览器检验；不为预览修改生产 HMR 配置。"
+    },
+    {
+      "id": "generate",
+      "purpose": "指定元素变体",
+      "status": "评估后不启动",
+      "application": "上游新增；当前用户已授权选定完整设计，不制造额外变体选择负担。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "border-accent-on-rounded",
+      "name": "圆角元素上的粗强调边",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：工作台不用粗强调边；选中用面色、文字和轮次标记。"
+    },
+    {
+      "id": "glassmorphism",
+      "name": "玻璃拟态到处都是",
+      "layer": "llm",
+      "optional": false,
+      "application": "采用：不加入装饰性玻璃，独立图片查看只使用遮罩。"
+    },
+    {
+      "id": "side-tab",
+      "name": "侧边标签式强调边",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：取消旧行动卡的粗侧边条。"
+    },
+    {
+      "id": "gpt-thin-border-wide-shadow",
+      "name": "细边框配大面积阴影",
+      "layer": "cli",
+      "optional": true,
+      "application": "采用：普通工作区保留细分隔线；浮层阴影仅表达遮挡。"
+    },
+    {
+      "id": "repeating-stripes-gradient",
+      "name": "重复渐变条纹",
+      "layer": "cli",
+      "optional": true,
+      "application": "采用：背景保持平静，不铺装饰条纹。"
+    },
+    {
+      "id": "over-round",
+      "name": "卡片上夸张的圆角半径",
+      "layer": "llm",
+      "optional": false,
+      "application": "适配：桌面控件 6–7px 圆角，游戏资产按自身风格。"
+    },
+    {
+      "id": "sketchy-svg",
+      "name": "业余感很重的手绘 SVG",
+      "layer": "llm",
+      "optional": false,
+      "application": "采用：工作台不绘装饰人物；棋盘为可精确定义的几何 UI。"
+    },
+    {
+      "id": "flat-type-hierarchy",
+      "name": "扁平的文字层级",
+      "layer": "cli",
+      "optional": false,
+      "application": "适配：中文工作台按 26/17/14/12px 分工，不硬套展示字体倍率。"
+    },
+    {
+      "id": "icon-tile-stack",
+      "name": "图标砖堆在标题上方",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：不为每个阶段和标题再添加图标容器。"
+    },
+    {
+      "id": "italic-serif-display",
+      "name": "斜体衬线 display 大标题",
+      "layer": "cli",
+      "optional": false,
+      "application": "不适用：工作台没有品牌 Hero，不引入斜体展示标题。"
+    },
+    {
+      "id": "hero-eyebrow-chip",
+      "name": "Hero 眉标 / 胶囊小标签",
+      "layer": "cli",
+      "optional": false,
+      "application": "适配：仅保留有定位意义的阶段与轮次，不添加营销眉标。"
+    },
+    {
+      "id": "repeated-section-kickers",
+      "name": "重复出现的分节眉标",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：正文以标题层级区分，没有重复装饰眉标。"
+    },
+    {
+      "id": "oversized-h1",
+      "name": "过大的 hero 标题",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：任务标题控制在可读尺度，成果占主空间。"
+    },
+    {
+      "id": "extreme-negative-tracking",
+      "name": "被压扁的字距",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：中文正文保持正常字距。"
+    },
+    {
+      "id": "overused-font",
+      "name": "被用滥的字体",
+      "layer": "cli",
+      "optional": false,
+      "application": "适配：按 CJK 可读性选 Noto Sans SC，不因流行程度禁用合适字体。"
+    },
+    {
+      "id": "single-font",
+      "name": "所有东西只用一个字体",
+      "layer": "cli",
+      "optional": false,
+      "application": "明确例外：Operate 工作台可以使用单一字族，以字号字重区分职责。"
+    },
+    {
+      "id": "all-caps-body",
+      "name": "全大写正文",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：中文界面，英文标识也不使用长段全大写。"
+    },
+    {
+      "id": "ai-color-palette",
+      "name": "AI 默认配色",
+      "layer": "cli",
+      "optional": false,
+      "application": "适配：色彩由动作与选中职责决定，不使用渐变套色。"
+    },
+    {
+      "id": "dark-glow",
+      "name": "深色模式配发光强调",
+      "layer": "cli",
+      "optional": false,
+      "application": "不适用：本版浅色；未来深色另行设计，不靠发光。"
+    },
+    {
+      "id": "gradient-text",
+      "name": "渐变文字",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：全部文字纯色。"
+    },
+    {
+      "id": "gray-on-color",
+      "name": "彩色背景上的灰色文字",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：逐组测量正文与表面的实际对比。"
+    },
+    {
+      "id": "cream-palette",
+      "name": "奶油 / 米色配色",
+      "layer": "cli",
+      "optional": false,
+      "application": "适配：本版冷白与淡靛蓝；游戏中已确认的暖色不受此条禁用。"
+    },
+    {
+      "id": "hero-metric-layout",
+      "name": "Hero 指标布局",
+      "layer": "llm",
+      "optional": false,
+      "application": "不适用：任务工作台无营销指标区。"
+    },
+    {
+      "id": "identical-card-grids",
+      "name": "一模一样的卡片网格",
+      "layer": "llm",
+      "optional": false,
+      "application": "采用：没有同尺寸功能卡墙，结果按内容类型展示。"
+    },
+    {
+      "id": "monotonous-spacing",
+      "name": "单调重复的间距",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：相关项紧凑，成果、决定和导航分区更明确。"
+    },
+    {
+      "id": "nested-cards",
+      "name": "卡片套卡片",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：取消面板层层包裹；棋盘内部格子属于作品内容。"
+    },
+    {
+      "id": "numbered-section-markers",
+      "name": "编号式分节标记（01 / 02 / 03）",
+      "layer": "cli",
+      "optional": false,
+      "application": "明确例外：七阶段及轮次有真实顺序，保留编号。"
+    },
+    {
+      "id": "line-length",
+      "name": "单行长度过长",
+      "layer": "browser",
+      "optional": false,
+      "application": "适配：长正文限制阅读宽度，中文仍看实测行长。"
+    },
+    {
+      "id": "text-overflow",
+      "name": "内容溢出容器",
+      "layer": "browser",
+      "optional": false,
+      "application": "采用：在 1440、1280、960 和窄窗口检查横向溢出。"
+    },
+    {
+      "id": "clipped-overflow-container",
+      "name": "定位子元素被 overflow 容器裁掉",
+      "layer": "browser",
+      "optional": false,
+      "application": "采用：查看层使用原生 dialog 顶层，避免父容器裁切。"
+    },
+    {
+      "id": "bounce-easing",
+      "name": "弹跳 / 橡皮筋 easing",
+      "layer": "cli",
+      "optional": false,
+      "application": "适配：工作台不使用弹跳；游戏反馈是否弹性取决于玩法。"
+    },
+    {
+      "id": "layout-transition",
+      "name": "布局属性动画",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：仅状态指示器旋转，无宽高动画。"
+    },
+    {
+      "id": "image-hover-transform",
+      "name": "图片悬停变形",
+      "layer": "cli",
+      "optional": true,
+      "application": "采用：图片悬停不变形，放大需要明确点击。"
+    },
+    {
+      "id": "em-dash-overuse",
+      "name": "破折号滥用",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：使用直接的句子，避免重复破折号节奏。"
+    },
+    {
+      "id": "marketing-buzzword",
+      "name": "营销黑话",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：按钮描述实际动作与对象。"
+    },
+    {
+      "id": "aphoristic-cadence",
+      "name": "格言体节奏文案",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：不用反转口号解释功能。"
+    },
+    {
+      "id": "theater-slop-phrase",
+      "name": "“theater” 式框架文案",
+      "layer": "cli",
+      "optional": true,
+      "application": "采用：错误和限制用具体事实表述。"
+    },
+    {
+      "id": "broken-image",
+      "name": "损坏图像或占位图像",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：原型作品由代码绘制并标注示例；正式版本用已绑定资源。"
+    },
+    {
+      "id": "cramped-padding",
+      "name": "过紧的内边距",
+      "layer": "browser",
+      "optional": false,
+      "application": "采用：输入与按钮留足内边距；触控模式扩大热区。"
+    },
+    {
+      "id": "body-text-viewport-edge",
+      "name": "正文贴着视口边缘",
+      "layer": "browser",
+      "optional": false,
+      "application": "采用：正文和工作内容有容器边距。"
+    },
+    {
+      "id": "justified-text",
+      "name": "两端对齐正文",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：正文左对齐，中文按自然换行。"
+    },
+    {
+      "id": "low-contrast",
+      "name": "低对比文字",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：正文和占位文字核对 4.5:1，状态同时有文字。"
+    },
+    {
+      "id": "skipped-heading",
+      "name": "跳级标题",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：正文语义标题逐级排列，视觉字号独立控制。"
+    },
+    {
+      "id": "tight-leading",
+      "name": "过紧的行高",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：中文正文行高 1.6，长文 1.9。"
+    },
+    {
+      "id": "tiny-text",
+      "name": "过小的正文",
+      "layer": "cli",
+      "optional": false,
+      "application": "适配：操作正文 14px，长文 15px，12px 只用于次要元信息。"
+    },
+    {
+      "id": "wide-tracking",
+      "name": "正文上过大的字距",
+      "layer": "cli",
+      "optional": false,
+      "application": "采用：正文不使用拉大字距。"
+    }
+  ]
+}
