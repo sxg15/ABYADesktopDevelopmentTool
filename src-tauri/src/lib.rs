@@ -1024,6 +1024,21 @@ async fn task_launch_sources(
 }
 
 #[tauri::command]
+async fn run_task_preflight(
+    task_id: String,
+    reuse_existing: bool,
+    retry: bool,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    let bridge = state.runtime_bridge.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        bridge.run_capability_preflight(&task_id, reuse_existing, retry)
+    })
+    .await
+    .map_err(foundation::AppError::internal)?
+}
+
+#[tauri::command]
 async fn adopt_task_player(
     task_id: String,
     expected_hash: String,
@@ -1232,6 +1247,17 @@ pub fn run() {
             let instances =
                 InstanceService::new(database.clone(), paths.clone(), connections.clone());
             let runtime_bridge = RuntimeBridgeService::new(instances.clone(), tasks.clone());
+            let preflight_cleanup = runtime_bridge.clone();
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    let bridge = preflight_cleanup.clone();
+                    let _ = tauri::async_runtime::spawn_blocking(move || {
+                        bridge.reconcile_capability_preflights()
+                    })
+                    .await;
+                    tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+                }
+            });
             let memory_codex = codex_terminal.clone();
             instances.set_memory_context_reader(std::sync::Arc::new(move |task| {
                 memory_codex.memory_incident_context(task)
@@ -1409,6 +1435,7 @@ pub fn run() {
             open_memory_reports,
             discover_archives,
             task_launch_sources,
+            run_task_preflight,
             adopt_task_player,
             export_task_archive,
             list_archive_transfer_targets,

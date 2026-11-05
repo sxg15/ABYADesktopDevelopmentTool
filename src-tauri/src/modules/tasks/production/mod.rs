@@ -2,6 +2,7 @@ mod acceptance_contract;
 mod authoring;
 mod autonomy;
 mod bootstrap;
+mod capability_preflight;
 mod completion;
 mod completion_repair;
 mod execution_loop;
@@ -182,6 +183,9 @@ impl TaskService {
     }
 
     pub fn production_decide(&self, input: ProductionDecision) -> AppResult<ProductionView> {
+        if input.accepted && input.kind == "plan" {
+            self.validate_current_preflight(&input.task_id)?;
+        }
         let root = self.production_workspace(&input.task_id)?;
         self.production_commit(&input.task_id, input.expected_revision, |r| {
             interaction::review(r, &root, &input.kind)?;
@@ -202,6 +206,9 @@ impl TaskService {
                 return Err(conflict());
             }
             if input.accepted {
+                if input.kind == "plan" {
+                    capability_preflight::plan_notes(r, &doc.content)?;
+                }
                 interaction::approve(r, &root, &input.kind)?;
                 visuals::verify_bindings(&doc, &root)?;
                 validation::document_gate(r, &root, &input.kind)?;
@@ -359,6 +366,9 @@ impl TaskService {
     }
 
     pub fn production_update(&self, input: ProductionMutation) -> AppResult<ProductionView> {
+        if input.operation == "submit-document" && input.data["kind"] == "plan" {
+            self.validate_current_preflight(&input.task_id)?;
+        }
         if input.operation == "build-verification-package" {
             return self.production_build_package(&input.task_id, input.expected_revision);
         }

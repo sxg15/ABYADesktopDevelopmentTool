@@ -9,6 +9,7 @@ export function programmerIssue(issue: ProductionIssue, en = false) {
   if(issue.diagnosisStatus==="excluded")return undefined;
   if (issue.repairTarget === "abya-source" || issue.repairTarget === "abya-build") {
     const confirmed=issue.diagnosisStatus==="confirmed";
+    if(issue.preflightRunId&&confirmed&&issue.repairTarget==="abya-build")return {suspected:false,label:en?"ABYA-PB package compatibility issue":"ABYA-PB 包兼容问题"};
     return {suspected:!confirmed,label:confirmed?(en?"Confirmed platform issue":"已确认平台问题"):(en?"Runtime issue · cause unconfirmed":"运行异常 · 原因待确认")};
   }
   if (issue.repairTarget) return undefined;

@@ -19,6 +19,7 @@ import { ArtWorkflowPanel } from "./ArtWorkflowPanel";
 import { DocumentReview } from "./DocumentReview";
 import { programmerIssue, activeProgrammerIssues } from "./programmerIssue";
 import { ProgrammerIssueExport } from "./ProgrammerIssueExport";
+import { CapabilityPreflightPanel } from "./CapabilityPreflightPanel";
 
 const names: Record<string, string> = {
   requirements: "需求整理",
@@ -195,7 +196,7 @@ export function ProductionPanel({
     catch(e){if(alive.current)setError(errorMessage(e));}
     finally {mutating.current=false;if(alive.current){setBusy(false);setRepairingIssue(undefined);void refresh();}}
   }
-  const programmerIssues = stage === "implementation" ? activeProgrammerIssues(openIssues) : [];
+  const programmerIssues = stage === "plan" ? openIssues.filter(i=>programmerIssue(i)&&i.preflightDisposition!=="verified-workaround") : stage === "implementation" ? activeProgrammerIssues(openIssues).filter(i=>i.preflightDisposition!=="verified-workaround") : [];
   const groups =
     r?.questionGroups?.filter((g) => (g.stage ?? "requirements") === stage) ??
     [];
@@ -273,6 +274,7 @@ export function ProductionPanel({
         </small>
       )}
       <dl>
+        {i.preflightDisposition==="verified-workaround"&&<><dt>处理状态</dt><dd>已验证绕行 · 原问题保留，替代路径已注明于预检报告，须写入方案。</dd></>}
         <dt>{en ? "What happened" : "问题描述"}</dt>
         <dd>{i.description}</dd>
         <dt>{en ? "Next step" : "处理方案"}</dt>
@@ -289,7 +291,8 @@ export function ProductionPanel({
         )}
       </dl>
       {programmerIssue(i) && r && <ProgrammerIssueExport taskId={taskId} revision={r.revision} issueIds={[i.id]} en={en} single/>}
-      {i.status !== "resolved" && !programmerIssue(i) && <div className="issue-repair-action">
+      {i.preflightReport&&<button className="text-button" onClick={()=>void reveal(i.preflightReport!)}>查看预检证据</button>}
+      {i.status !== "resolved" && !programmerIssue(i) && !i.preflightRunId && <div className="issue-repair-action">
         <button className="primary-button" disabled={busy || !active || !onRepairIssue} onClick={()=>void requestRepair(i)}
           title={!active ? (en ? "Reactivate the task first" : "请先恢复任务") : !onRepairIssue ? (en ? "Open this task's Codex conversation first" : "请先选择并打开本任务的 Codex 原会话") : (en ? "Ask AI to investigate, fix and verify this issue" : "让 AI 检查并修复此问题，完成后记录验证结果")}>
           <Wrench size={15} aria-hidden="true"/>{repairingIssue===i.id ? (en ? "Submitting…" : "正在提交…") : (en ? "Let AI fix this" : "让 AI 自动修复")}
@@ -435,6 +438,7 @@ export function ProductionPanel({
         </section>
       ) : (
         <>
+          {stage==="plan"&&<CapabilityPreflightPanel key={taskId} record={r} active={active&&r.currentStage==="plan"} onUpdated={()=>void refresh()}/>}
           {programmerIssues.length > 0 && <section className="programmer-blocker-banner" role="alert">
             <TriangleAlert size={26} aria-hidden="true"/>
             <div><h3>{en ? "Programmer attention required" : "程序处理提醒：ABYA 源码／构建包问题"}</h3>

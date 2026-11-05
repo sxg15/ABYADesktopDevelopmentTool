@@ -15,6 +15,7 @@ fn command(group: &str, action: &str) -> Option<&'static str> {
         ("production", "batch") => "development_production_batch",
         ("production", "receipt") => "development_production_receipt",
         ("production", "get") => "development_production_get",
+        ("production", "preflight") => "development_production_preflight",
         ("production", "start-acceptance") => "development_production_start_acceptance",
         ("production", "acceptance-status") => "development_production_acceptance_status",
         ("production", "update") => "development_production_update",

@@ -353,6 +353,8 @@ impl TaskService {
 
     pub fn ensure_deletable(&self, id: &str) -> AppResult<()> {
         self.database.with_connection(|connection| {
+            let pending:i64=connection.query_row("SELECT COUNT(*) FROM task_production WHERE task_id=?1 AND json_extract(body,'$.workbench.execution.capabilityPreflight.cleanup.state')='pending'",[id],|row|row.get(0))?;
+            if pending>0 {return Err(AppError::validation("基础预检尚在运行或等待清理，请在自动清理完成后删除任务。"));}
             let exists: i64 = connection.query_row(
                 "SELECT COUNT(*) FROM development_tasks WHERE id=?1",
                 [id],

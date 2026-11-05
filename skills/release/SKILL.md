@@ -174,3 +174,7 @@ Workflow continuity 2.6 (2026-10-26), Autonomous recovery 2.5 (2026-10-24), Term
 任务存档入口回归：scripts/task-archive-launch-smoke.mjs 接收隔离 pilot 根和已有真实存档路径，只复制到测试任务私有根，不更换 APP 指定 Player、不改原件。验证同 GUID 全局副本并存、非法 EXE 被拒绝、编辑/离线启动报告身份与日志私有路径。该专项不代替完整自主玩法验收。
 
 2026-11-05：存档入口专项候选保留于 Candidates/TaskArchives-20261105，包含完整已核验便携运行时。真实 Editor/Offline 私有存档回归通过；原正式 APP 仍运行，未替换 Publish，也未声明完整自主制作验收通过。验证报告：docs/TASK_ARCHIVES_20261105.md。
+
+2026-11-05 方案预检专项：scripts/capability-preflight-smoke.mjs 在 marker 绑定的隔离 pilot 数据库测试真实当前 APP 包。普通连接失败必须即时卡片且自动清理；模拟中断回执单独标注为夹具，用于验证后台清理，不冒充成功的原生创建。原始诊断回执保留，正式任务与存档不受影响。
+
+方案预检交付候选：Candidates/Preflight-20261105。源码/候选指纹一致，完整清单通过，原生当前包连接失败被正确记录为普通问题并完成临时目录清理；中断恢复清理另用明确标记的夹具验证。参见 docs/CAPABILITY_PREFLIGHT_20261105.md。

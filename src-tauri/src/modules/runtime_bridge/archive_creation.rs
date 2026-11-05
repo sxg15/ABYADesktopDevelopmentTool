@@ -340,7 +340,7 @@ impl RuntimeBridgeService {
     }
 }
 
-fn display_path(path: &Path) -> String {
+pub(super) fn display_path(path: &Path) -> String {
     let value = path.to_string_lossy();
     if let Some(p) = value.strip_prefix(r"\\?\UNC\") {
         format!(r"\\{p}")
@@ -349,7 +349,7 @@ fn display_path(path: &Path) -> String {
     }
 }
 
-fn checked_archive(root: &Path, value: &Value) -> AppResult<PathBuf> {
+pub(super) fn checked_archive(root: &Path, value: &Value) -> AppResult<PathBuf> {
     let guid = value["guid"]
         .as_str()
         .ok_or_else(|| AppError::validation("游戏未返回存档 GUID。"))?;

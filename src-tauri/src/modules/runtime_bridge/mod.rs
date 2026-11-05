@@ -5,6 +5,7 @@ pub use archive_creation::CreateArchiveInput;
 mod baseline;
 mod operation_receipts;
 mod operation_trace;
+mod preflight;
 mod process;
 fn memory_safe_tool(name: &str) -> bool {
     matches!(

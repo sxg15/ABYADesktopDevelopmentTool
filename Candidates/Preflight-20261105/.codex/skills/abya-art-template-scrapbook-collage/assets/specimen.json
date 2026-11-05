@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Isolated UI specimen, not a complete game or multiplayer proof",
+  "canvas": {"width": 1280,"height": 720},
+  "font": {"runtimeName": "SourceHanSans","resourceId": "SourceHanSansOLD SDF","source": "Runtime resource_search; verify actual rendering before reuse"},
+  "board": {"x": 322,"y": 62,"width": 480,"height": 596},
+  "cellBorderPixels": 2,
+  "accents": [
+    {"id":"left-note","asset":"torn-paper","rect":[62,256,212,268],"color":"cream"},
+    {"id":"left-tape","asset":"tape","rect":[86,242,140,44]},
+    {"id":"left-sticker","asset":"sticker","rect":[101,466,120,88]}
+  ],
+  "notes": [
+    {"id":"note-a","text":"把灵感","rect":[76,309,184,42],"fontSize":27},
+    {"id":"note-b","text":"留在纸上","rect":[76,350,184,42],"fontSize":27},
+    {"id":"note-c","text":"固定数据 · 验证小样","rect":[67,405,200,36],"fontSize":14,"color":"muted"}
+  ],
+  "header": {"x": 334,"y": 12,"width": 456,"height": 42,"text": "纸上练习 · 连线与数字","fontSize": 20},
+  "targetLabel": {"x": 372,"y": 92,"width": 380,"height": 30,"text": "目标","fontSize": 20},
+  "target": {"x": 372,"y": 122,"width": 380,"height": 102,"fontSize": 80},
+  "grids": {
+    "3": {"x": 372,"y": 250,"columns": 3,"rows": 3,"cell": 116,"gap": 16,"fontSize": 64,"target": "9","values": [3,3,1,1,3,2,2,1,3]},
+    "4": {"x": 372,"y": 250,"columns": 4,"rows": 4,"cell": 86,"gap": 12,"fontSize": 48,"target": "13","values": [4,4,3,2,5,3,3,2,1,2,2,2,2,3,2,3]}
+  },
+  "score": {"x": 838,"y": 162,"width": 288,"height": 408,"rowHeight": 52,"nameFontSize": 20,"valueFontSize": 26,"names": ["小禾","阿布","长名字玩家","我"],"values": [25,20,15,20]},
+  "timer": {"label": "剩余时间","value": "30","fontSize": 52},
+  "scoreLayout": {
+    "tape":[74,-18,140,44],"label":[28,44,232,28,18],
+    "timer":[28,72,232,64],"unit":[189,95,35,38,20],
+    "rowsTop":156,"line":[24,-4,240,1],"mark":[26,15,5,16],
+    "name":[42,0,160,52],"value":[204,0,54,52]
+  },
+  "states": ["default","selected","success","error","settlement"],
+  "selectedCells": [0,1,4],
+  "calibration": {"referenceWidth": 1280,"edgePx": 2,"gapPx": 2,"glyphHeightPercent": 5,"scope": "This specimen only; not a global visual acceptance policy"},
+  "controls": {"x": 322,"y": 674,"height": 32,"width": 110,"gap": 8,"fontSize": 16}
+}

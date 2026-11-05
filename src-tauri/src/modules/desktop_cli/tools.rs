@@ -603,11 +603,37 @@ impl DesktopToolDispatcher {
                     .ok_or_else(|| AppError::validation("taskId is required."))?;
                 serialize(self.dependencies.tasks.production_get(id)?)
             }
-            "development_production_update" => serialize(
-                self.dependencies
-                    .tasks
-                    .production_update(decode(arguments)?)?,
-            ),
+            "development_production_preflight" => {
+                self.dependencies.runtime_bridge.run_capability_preflight(
+                    arguments["taskId"]
+                        .as_str()
+                        .ok_or_else(|| AppError::validation("taskId is required"))?,
+                    arguments["reuseExisting"].as_bool().unwrap_or(false),
+                    arguments["retry"].as_bool().unwrap_or(false),
+                )
+            }
+            "development_production_update" => {
+                let input: crate::modules::tasks::ProductionMutation = decode(arguments)?;
+                if input.operation == "submit-document" && input.data["kind"] == "plan" {
+                    let view = self.dependencies.tasks.production_get(&input.task_id)?;
+                    if view.record.is_some_and(|r| {
+                        r.policy["capabilityPreflightVersion"] == 1
+                            && r.workbench.execution.capability_preflight.is_null()
+                    }) {
+                        self.dependencies.runtime_bridge.run_capability_preflight(
+                            &input.task_id,
+                            false,
+                            false,
+                        )?;
+                        return Err(AppError::new(
+                            "preflight_record_updated",
+                            "已执行基础能力预检并登记结果，请读取最新记录与问题卡片后更新方案。",
+                            "refresh_record",
+                        ));
+                    }
+                }
+                serialize(self.dependencies.tasks.production_update(input)?)
+            }
             "development_production_art_library_list" => serialize(
                 self.dependencies
                     .tasks

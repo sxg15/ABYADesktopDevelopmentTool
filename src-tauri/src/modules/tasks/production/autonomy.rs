@@ -4,6 +4,7 @@ use sha2::{Digest, Sha256};
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ExecutionLedger {
+    pub capability_preflight: Value,
     pub stage_recovery: BTreeMap<String, Value>,
     pub goal_budget_epochs: BTreeMap<String, i64>,
     pub evidence_bindings: BTreeMap<String, Value>,
@@ -785,6 +786,9 @@ pub(super) fn fulfill_requests(r: &mut ProductionRecord) {
 }
 // A verified task-level equivalent workaround does not claim the platform defect is fixed.
 pub(super) fn workaround_bound(r: &ProductionRecord, issue: &Value) -> bool {
+    if super::capability_preflight::workaround(r, issue) {
+        return true;
+    }
     let h = &issue["executionHandling"];
     r.policy["implementationExecution"]["mode"] == "autonomous"
         && matches!(
@@ -812,6 +816,10 @@ pub(super) fn verify_workarounds(r: &ProductionRecord, root: &Path, stage: &str)
         .iter()
         .filter(|i| i["status"] != "resolved" && workaround_bound(r, i))
     {
+        if super::capability_preflight::workaround(r, issue) {
+            super::capability_preflight::gate(r, root)?;
+            continue;
+        }
         validation::evidence_refs(
             r,
             root,

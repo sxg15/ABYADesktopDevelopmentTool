@@ -1,4 +1,5 @@
 mod autonomy_tests;
+mod capability_preflight_tests;
 mod completion_tests;
 mod execution_loop_tests;
 mod progress_budget_tests;
@@ -19,6 +20,9 @@ use crate::modules::tasks::TaskInput;
 // Existing fixtures intentionally exercise pinned pre-2.2 contracts.
 fn prior_policy() -> Value {
     let mut p = policy();
+    p.as_object_mut()
+        .unwrap()
+        .remove("capabilityPreflightVersion");
     p.as_object_mut().unwrap().remove("artDesignVersion");
     p.as_object_mut().unwrap().remove("implementationExecution");
     p.as_object_mut().unwrap().remove("stageContractsVersion");

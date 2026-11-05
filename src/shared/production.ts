@@ -1,5 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ArtDesign } from "./artDesign";
+export interface CapabilityPreflight {
+  runId:string; state:string; phase:string; reportPath?:string; playerBuildHash?:string;
+  cleanup:{state:string;message?:string}; error?:{code:string;message:string};
+  checks:{id:string;status?:string}[];
+}
 export interface AcceptanceSession {
   id?: string; version?: string; status: string; message?: string; instanceIds?: string[];
   startedAt?: string; updatedAt?: string; cleanupFailures?: string[];
@@ -21,6 +26,7 @@ export interface TaskSkill {
   path: string; sha256: string;
 }
 export interface ProductionPolicy {
+  capabilityPreflightVersion?: number;
   stageContractsVersion?:number;
   implementationExecution?: {mode:string;inPlaceRecoveryVersion?:number};
   iterationMode?: string;
@@ -31,6 +37,7 @@ export interface ProductionPolicy {
   questions: { id: string; text: string; family: string }[];
 }
 export interface ProductionIssue {
+  preflightRunId?: string; preflightReport?: string; preflightDisposition?: string;
   playerSummary?: string;
   diagnosis?: {reproduction?:string;comparison?:string;rootCause?:string;playerBuildHash?:string;exclusionReason?:string};
   category?:string; owningStage?:string; detectedStage?:string; blockingDisposition?:string;
@@ -56,7 +63,7 @@ export interface WorkbenchGoal {
 export interface WorkbenchAttempt { id:string;goalId:string;requestId?:string;conversationId:string;nativeId:string;turnId?:string;status:string;reason:string;startedAt:string;updatedAt:string;predecessorId?:string;processEpoch:string;generation:number }
 export interface WorkbenchState {
   prototypeGrants?:{id:string;instanceId:string;note:string;status:string;expiresAt:string;archivePath:string;effective?:boolean}[];
-  execution?: {technicalQueue?:Record<string,{unitId:string;reason:string;status:string;nextCondition?:string}>;verificationPackage?:{sourceRevision?:number;path:string;version:string;sha256:string;status:string;createdAt:string};preflight?:{state:string;stage:string;goalId:string;attempts:number;elapsedMs:number};scopeHash?:string;state:string;activeUnitId?:string;updatedAt:string;units:{scopeHash?:string;id:string;goalId:string;cycle:number;title:string;status:string;reason:string;dependsOn:string[];routes:string[];route:number;attempts:number;resultPaths:string[]}[];events:{kind:string;unitId?:string;reason:string;at:string}[]};
+  execution?: {capabilityPreflight?: CapabilityPreflight;technicalQueue?:Record<string,{unitId:string;reason:string;status:string;nextCondition?:string}>;verificationPackage?:{sourceRevision?:number;path:string;version:string;sha256:string;status:string;createdAt:string};preflight?:{state:string;stage:string;goalId:string;attempts:number;elapsedMs:number};scopeHash?:string;state:string;activeUnitId?:string;updatedAt:string;units:{scopeHash?:string;id:string;goalId:string;cycle:number;title:string;status:string;reason:string;dependsOn:string[];routes:string[];route:number;attempts:number;resultPaths:string[]}[];events:{kind:string;unitId?:string;reason:string;at:string}[]};
   attempts?:WorkbenchAttempt[];
   goals:WorkbenchGoal[]; activeGoalId?:string; drafts:Record<string,string>;
   requests:{id:string;text:string;stage:string;status:string;revision:number}[];
@@ -94,6 +101,7 @@ export interface ProductionView {
   reportPaths: string[]; availableUpdate: boolean;
 }
 export const productionApi = {
+  preflight:(taskId:string,reuseExisting=false,retry=false)=>invoke<CapabilityPreflight>("run_task_preflight",{taskId,reuseExisting,retry}),
   reconcile:(taskId:string)=>invoke<ProductionView>("reconcile_task_execution",{taskId}),
   resumeGoal:(taskId:string,goalId:string,conversationId:string,expectedRevision:number,resumeIntentId:string,reconciliationNote?:string)=>invoke<IntakeContinuation>("resume_workbench_goal",{taskId,goalId,conversationId,expectedRevision,resumeIntentId,reconciliationNote}),
   exportDeveloperPackage:(taskId:string,expectedRevision:number,issueIds:string[])=>invoke<string>("export_developer_package",{taskId,expectedRevision,issueIds}),

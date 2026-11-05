@@ -39,3 +39,9 @@ runtime run 的输入为 {"instanceId":"桌面实例 ID","toolName":"能力 ID",
 - production acceptance-status → development_production_acceptance_status，读取进度、版本与实例。
 两者绑定当前任务；启动前验证保存版本，不会使用全局旧运行包替代任务运行包。
 策划关闭反馈和接受作品没有Agent CLI入口。
+## 2026-11-05 方案基础能力预检与自动清理
+
+capabilityPreflightVersion=1 的任务在方案阶段运行固定创建/加载/保存/冷加载检查，仅使用 APP 当前包。production preflight / development_production_preflight（reuseExisting、retry 默认 false）从认证上下文取得 taskId，无任意 Player 或测试目录参数。APP 进入方案自动执行，CLI 提交方案遗漏预检时先执行并要求刷新记录。
+独立 .abya-preflight/<taskId>/<runId> 具有 owner 标记；不放宽普通 authoring 权限。首次失败立即登记 preflight:basic；超时/上下文不可用为普通待定位问题，真实能力目录缺项/必需契约缺失才标 PB 包兼容问题。此问题只能由实际预检回执更新。
+reuseExisting 仅复制本任务唯一编辑存档，实测保存冷加载后记为已验证替代，保留原问题。方案引用当前报告并说明替代路径及限制；未测、失败、证据变化、包变化或清理未完均不能进入实现。旧任务未显式启动或升级时不追溯撤销既有批准。
+回执保存在 artifacts/capability-preflight，临时数据自动清理：停止本次实例、核对 OS PID 已退出、验证 UUID/路径边界/owner/无链接后删除。失败/未知也先停止并核对；重启及每 30 秒继续清理 pending，不重放创建、不停止外来 PID、不删正式存档。只保留诊断回执和日志。无 owner 的空目录可回收，非空且归属不明则保留并报告。

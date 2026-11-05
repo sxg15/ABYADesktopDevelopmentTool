@@ -71,7 +71,9 @@ impl TaskService {
         );
         for (index, issue) in selected.iter().enumerate() {
             out.push_str(&format!("## 问题 {}\n\n", index + 1));
-            out.push_str(if issue["diagnosisStatus"] == "confirmed" {
+            out.push_str(if !issue["preflightRunId"].is_null() {
+                "诊断范围：仅限基础预检记录的运行能力或契约；原始回执见预检报告，不等于全部引擎能力失效。\n\n"
+            } else if issue["diagnosisStatus"] == "confirmed" {
                 "诊断：已登记复现、对照、根因与构建证据。\n\n"
             } else {
                 "诊断：运行异常，原因待确认；处理归属不代表根因已确认。\n\n"
@@ -92,6 +94,8 @@ impl TaskService {
                 ("description", "问题描述／复现线索"),
                 ("diagnosis", "复现、对照、源码根因与构建指纹"),
                 ("executionHandling", "已尝试替代方案与影响范围"),
+                ("preflightReport", "基础预检原始回执"),
+                ("preflightDisposition", "预检替代路径验证状态"),
                 ("fix", "已尝试处理／修复方案"),
                 ("resumeWhen", "恢复条件"),
                 ("recheck", "复验结果"),

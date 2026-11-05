@@ -210,6 +210,9 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
         return Err(AppError::validation("请提交 Markdown 文档。"));
     }
     let (content, sha256) = files::text_file(root, path)?;
+    if kind == "plan" {
+        super::capability_preflight::plan_notes(r, &content)?;
+    }
     let art_scope = if kind == "resources" {
         let scope = text(data, "artScope")?;
         if !["new-art", "reuse-only", "no-art"].contains(&scope) {
@@ -476,6 +479,14 @@ fn evidence(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
 }
 
 fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
+    if data["id"]
+        .as_str()
+        .is_some_and(|id| id.starts_with("preflight:"))
+    {
+        return Err(AppError::validation(
+            "预检问题只能由真实测试回执更新，请复测或验证替代路径。",
+        ));
+    }
     super::acceptance_contract::validate_platform(r, data)?;
     if let Some(status) = data.get("diagnosisStatus") {
         let excluded = super::execution_loop::enabled(r) && status == "excluded";

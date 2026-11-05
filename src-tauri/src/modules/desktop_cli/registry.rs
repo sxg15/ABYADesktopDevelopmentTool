@@ -23,6 +23,16 @@ struct ToolAnnotations {
 pub(crate) fn tools() -> Vec<CliCommand> {
     vec![
         tool(
+            "development_production_preflight",
+            "Run the bounded plan-stage basic capability smoke test using only APP-selected Player. Temporary data is cleaned automatically; original receipts remain. reuseExisting validates a copy of this task's unique existing editable archive as an alternative to native creation.",
+            "Run plan capability preflight",
+            object_schema(
+                json!({"taskId":{"type":"string"},"reuseExisting":{"type":"boolean","default":false},"retry":{"type":"boolean","default":false}}),
+                &[],
+            ),
+            process_create(),
+        ),
+        tool(
             "development_production_start_acceptance",
             "Open the task's fingerprinted Player/archive as a verified playable group. Does not approve delivery.",
             "Start acceptance",

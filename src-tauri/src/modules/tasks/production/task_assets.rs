@@ -43,6 +43,12 @@ impl TaskService {
         let _gate = ASSET_GATE.lock();
         crate::foundation::selected_game_executable(&self.database, &player.to_string_lossy())?;
         let status = self.task_player_status(task)?;
+        if self.production_get(task)?.record.is_some_and(|r| {
+            r.policy["capabilityPreflightVersion"] == 1
+                && matches!(r.current_stage.as_str(), "implementation" | "review")
+        }) {
+            self.validate_current_preflight(task)?;
+        }
         if status["matches"] != true {
             return Err(AppError::new(
                 "player_pin_mismatch",
