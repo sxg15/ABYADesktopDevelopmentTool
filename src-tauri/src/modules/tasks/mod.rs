@@ -124,6 +124,7 @@ pub struct TaskService {
 impl TaskService {
     /// Relocate only the former managed default. Keep the source as a recovery copy.
     pub fn prepare_terminal_workspace(&self, task_id: &str) -> AppResult<DevelopmentTask> {
+        self.production_remove_execution_deadlines(task_id)?;
         let Some(legacy) = crate::foundation::AppPaths::legacy_workspace_root() else {
             return self.get(task_id);
         };
@@ -560,7 +561,7 @@ fn sync_skill_directory(
         }
         std::fs::remove_dir_all(&target)?;
     }
-    if let Err(error) = std::fs::rename(&temporary, &target) {
+    if let Err(error) = install_skill_directory(&temporary, &target) {
         let _ = std::fs::remove_dir_all(&temporary);
         return Err(AppError::new(
             "skillDeployment",
@@ -569,6 +570,48 @@ fn sync_skill_directory(
         ));
     }
     Ok(())
+}
+
+/// 长路径目录树在 Windows 上可能拒绝整体改名，改用校验副本并最后发布入口。
+fn install_skill_directory(source: &Path, target: &Path) -> std::io::Result<()> {
+    match std::fs::rename(source, target) {
+        Ok(()) => Ok(()),
+        Err(error) if cfg!(windows) && matches!(error.raw_os_error(), Some(5 | 32 | 33)) => {
+            install_skill_copy(source, target)
+        }
+        Err(error) => Err(error),
+    }
+}
+
+/// 只创建不存在的目标，最后写入口并校验内容；失败只清理本次新建目录。
+fn install_skill_copy(source: &Path, target: &Path) -> std::io::Result<()> {
+    std::fs::create_dir(target)?;
+    let result = (|| {
+        for entry in std::fs::read_dir(source)? {
+            let entry = entry?;
+            if entry.file_name() == "SKILL.md" {
+                continue;
+            }
+            let destination = target.join(entry.file_name());
+            if entry.file_type()?.is_dir() {
+                copy_directory(&entry.path(), &destination).map_err(std::io::Error::other)?;
+            } else {
+                std::fs::copy(entry.path(), destination)?;
+            }
+        }
+        let entry = std::fs::read(source.join("SKILL.md"))?;
+        std::fs::write(target.join("SKILL.md"), entry)?;
+        if !directories_equal(source, target).map_err(std::io::Error::other)? {
+            return Err(std::io::Error::other("Skill copy verification failed"));
+        }
+        Ok(())
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_dir_all(target);
+    } else {
+        let _ = std::fs::remove_dir_all(source);
+    }
+    result
 }
 
 fn discover_managed_skill_source(llm_directory: &str) -> Option<PathBuf> {
@@ -678,6 +721,41 @@ fn display_path(path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn verified_skill_copy_preserves_existing_targets_and_cleans_partial_installation() {
+        use super::*;
+        let root = std::env::temp_dir().join(format!("abya-skill-copy-{}", Uuid::new_v4()));
+        let source = root.join("stage");
+        let target = root.join("installed");
+        std::fs::create_dir_all(source.join("references/nested")).unwrap();
+        std::fs::write(source.join("references/nested/data.json"), b"original").unwrap();
+        assert!(install_skill_copy(&source, &target).is_err());
+        assert!(!target.exists());
+        assert!(source.is_dir());
+        std::fs::write(source.join("SKILL.md"), b"complete entry").unwrap();
+        std::fs::create_dir(&target).unwrap();
+        std::fs::write(target.join("user.txt"), b"keep me").unwrap();
+        assert!(install_skill_copy(&source, &target).is_err());
+        assert_eq!(std::fs::read(target.join("user.txt")).unwrap(), b"keep me");
+        let destination = root.join("complete");
+        install_skill_copy(&source, &destination).unwrap();
+        assert_eq!(
+            std::fs::read(destination.join("SKILL.md")).unwrap(),
+            b"complete entry"
+        );
+        assert_eq!(
+            std::fs::read(destination.join("references/nested/data.json")).unwrap(),
+            b"original"
+        );
+        assert!(!source.exists());
+        assert!(
+            root.canonicalize()
+                .unwrap()
+                .starts_with(std::env::temp_dir().canonicalize().unwrap())
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
     #[test]
     fn workspace_repair_preserves_source_and_is_idempotent() {
         use super::*;

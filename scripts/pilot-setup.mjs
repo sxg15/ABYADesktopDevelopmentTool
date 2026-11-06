@@ -30,16 +30,16 @@ if(action==='init'){
   state.appSha256=appHash;state.packageInventorySha256=inventoryHash;
   if(state.specSha256&&state.specSha256!==hashFile(arg))throw Error('Pilot specification changed; keep the existing run and start an independent repetition');
   state.specSha256=hashFile(arg);saveJson(stateFile,state);
-  const title=`2.11 隔离实测 · ${spec.title} · ${repeat}`;
+  const title=`2.12 隔离实测 · ${spec.title} · ${repeat}`;
   if(!state.task){
    const matches=(await api.invoke('list_tasks')).filter(t=>t.title===title);assert.ok(matches.length<=1);
-   state.task=matches[0]??await api.invoke('create_task',{input:{title,description:`这是已授权的工作流原生隔离测试，非用户正式项目。固定规格通过输入附件提供，分别是玩法要求、美术参考和旧方案参考；旧文件中的历史流程/旧版本状态不覆盖当前2.11策略。不要删减玩法范围，不复制已有游戏实现，不访问其他任务存档。可复用 inputs/assets 的合法素材，必须在本任务通过托管CLI实际制作、运行验证与产包。按当前七阶段流程提交成果；需求、美术和计划将在隔离APP按固定规格审查，不自行批准。${spec.description??''}`}});
+   state.task=matches[0]??await api.invoke('create_task',{input:{title,description:`这是已授权的工作流原生隔离测试，非用户正式项目。固定规格通过输入附件提供，分别是玩法要求、美术参考和旧方案参考；旧文件中的历史流程/旧版本状态不覆盖当前2.12策略。不要删减玩法范围，不复制已有游戏实现，不访问其他任务存档。可复用 inputs/assets 的合法素材，必须在本任务通过托管CLI实际制作、运行验证与产包。按当前七阶段流程提交成果；需求、美术和计划将在隔离APP按固定规格审查，不自行批准。${spec.description??''}`}});
    saveJson(stateFile,state);
   }
   assert.ok(path.resolve(state.task.workspacePath).toLowerCase().startsWith(path.join(root,'Workspaces').toLowerCase()+path.sep));
   const taskId=state.task.id;let view=await api.invoke('get_task_production',{taskId});
   if(!view.record)view=await api.invoke('update_task_production',{input:{taskId,expectedRevision:0,operation:'initialize',data:{questionMode:'no-followup',playerMode:spec.playerMode}}});
-  assert.equal(view.record.workflowVersion,'2.11.0');
+  assert.equal(view.record.workflowVersion,'2.12.0');
   state.inputs??=[];
   for(const [kind,file] of Object.entries(spec.documents)){
    const saved=state.inputs.find(i=>i.kind===kind);

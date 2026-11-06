@@ -1,0 +1,67 @@
+{
+  "schema": "abya.workflow-player-probe/v1",
+  "appSha256": "3fc4fb5f4c6e546b1e2151d4d9738b5ccddc833638c6496382fee9628e196d52",
+  "creationStatus": "failed-before-create",
+  "error": {
+    "code": "bootstrap_capability_unavailable",
+    "message": "当前 Player 尚未开放主菜单存档入口 editor_create_archive，请更新支持通用初始化的运行包。"
+  },
+  "capabilities": [
+    {
+      "id": "runtime_get_game_state",
+      "available": null,
+      "error": null,
+      "observation": "not-observed-after-bootstrap-failure"
+    },
+    {
+      "id": "runtime_input_key_press",
+      "available": null,
+      "error": null,
+      "observation": "not-observed-after-bootstrap-failure"
+    },
+    {
+      "id": "runtime_input_mouse_click",
+      "available": null,
+      "error": null,
+      "observation": "not-observed-after-bootstrap-failure"
+    },
+    {
+      "id": "runtime_input_reset",
+      "available": null,
+      "error": null,
+      "observation": "not-observed-after-bootstrap-failure"
+    },
+    {
+      "id": "runtime_test_begin",
+      "available": null,
+      "error": null,
+      "observation": "not-observed-after-bootstrap-failure"
+    },
+    {
+      "id": "runtime_test_assert",
+      "available": null,
+      "error": null,
+      "observation": "not-observed-after-bootstrap-failure"
+    },
+    {
+      "id": "runtime_test_capture",
+      "available": null,
+      "error": null,
+      "observation": "not-observed-after-bootstrap-failure"
+    },
+    {
+      "id": "runtime_test_end",
+      "available": null,
+      "error": null,
+      "observation": "not-observed-after-bootstrap-failure"
+    },
+    {
+      "id": "custom_ui_runtime_get_tree",
+      "available": null,
+      "error": null,
+      "observation": "not-observed-after-bootstrap-failure"
+    }
+  ],
+  "nativeGameplayTested": false,
+  "note": "Capability queries after failed bootstrap do not establish absence; the owned instance had been stopped."
+}

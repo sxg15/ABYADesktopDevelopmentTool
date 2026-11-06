@@ -10,13 +10,7 @@ fn error(code: &str, message: &str) -> AppError {
 
 impl RuntimeBridgeService {
     /// 固定测试脚本仅能调用这些能力；不开放设计阶段的任意运行写入。
-    fn preflight_call(
-        &self,
-        id: &str,
-        tool: &str,
-        input: Value,
-        deadline: Instant,
-    ) -> AppResult<Value> {
+    fn preflight_call(&self, id: &str, tool: &str, input: Value) -> AppResult<Value> {
         if ![
             "runtime_get_game_state",
             "capability_describe",
@@ -30,16 +24,13 @@ impl RuntimeBridgeService {
         {
             return Err(error("preflight_scope_denied", "不允许的预检操作。"));
         }
-        let remaining = deadline
-            .checked_duration_since(Instant::now())
-            .ok_or_else(|| error("preflight_timeout", "预检超过总时间预算，未自动重试。"))?;
         let response = self.run(
             id,
             &["capability", "run", tool],
             Some(input),
             "capability-preflight",
             &uuid::Uuid::new_v4().to_string(),
-            remaining.min(Duration::from_secs(35)),
+            Duration::from_secs(35),
             Default::default(),
         )?;
         if response["success"] != true {
@@ -93,20 +84,14 @@ impl RuntimeBridgeService {
         Ok(instance.id)
     }
 
-    fn preflight_ready(&self, id: &str, deadline: Instant) -> AppResult<()> {
-        let remaining = deadline
-            .checked_duration_since(Instant::now())
-            .ok_or_else(|| error("preflight_timeout", "预检等待超时。"))?;
-        self.wait_for_cli(id, remaining.min(Duration::from_secs(40)))?;
+    fn preflight_ready(&self, id: &str) -> AppResult<()> {
+        self.wait_for_cli(id, Duration::from_secs(40))?;
         loop {
-            let game = self.preflight_call(id, "runtime_get_game_state", json!({}), deadline)?;
+            let game = self.preflight_call(id, "runtime_get_game_state", json!({}))?;
             if game["context"]["rootInitialized"] == true
                 && game["context"]["isTransitioning"] == false
             {
                 return Ok(());
-            }
-            if Instant::now() >= deadline {
-                return Err(error("preflight_timeout", "游戏初始化等待超时。"));
             }
             std::thread::sleep(Duration::from_millis(300));
         }
@@ -264,7 +249,6 @@ impl RuntimeBridgeService {
         let task = p["taskId"].as_str().unwrap().to_owned();
         let run = p["runId"].as_str().unwrap().to_owned();
         let root = PathBuf::from(p["dataRoot"].as_str().unwrap());
-        let deadline = Instant::now() + Duration::from_secs(180);
         let reused = p["reuseExisting"] == true;
         let selection = if reused {
             let copy = self.tasks.copy_preflight_existing_archive(&task, &run)?;
@@ -290,7 +274,7 @@ impl RuntimeBridgeService {
         };
         let id = self.preflight_launch(p, selection)?;
         self.preflight_progress(p, "runtime-connect")?;
-        self.preflight_ready(&id, deadline)?;
+        self.preflight_ready(&id)?;
         p["checks"]
             .as_array_mut()
             .unwrap()
@@ -321,12 +305,8 @@ impl RuntimeBridgeService {
                         &format!("当前包能力目录未提供 {name}，无法使用该自动初始化契约。"),
                     ));
                 }
-                let d = self.preflight_call(
-                    &id,
-                    "capability_describe",
-                    json!({"capabilityId":name}),
-                    deadline,
-                )?;
+                let d =
+                    self.preflight_call(&id, "capability_describe", json!({"capabilityId":name}))?;
                 p["checks"]
                     .as_array_mut()
                     .unwrap()
@@ -351,7 +331,7 @@ impl RuntimeBridgeService {
                 }
             }
             self.preflight_progress(p, "create-archive")?;
-            let catalog = self.preflight_call(&id, "editor_list_archives", json!({}), deadline)?;
+            let catalog = self.preflight_call(&id, "editor_list_archives", json!({}))?;
             let archives = catalog["archives"].as_array().ok_or_else(|| {
                 error(
                     "preflight_isolation_unknown",
@@ -373,19 +353,18 @@ impl RuntimeBridgeService {
                 &id,
                 "editor_create_archive",
                 json!({"name":format!("预检-{run}"),"author":"ABYA 基础能力预检","introduce":run}),
-                deadline,
             )?;
             let path = archive_creation::checked_archive(&root, &created["archive"])?;
             p["checks"].as_array_mut().unwrap().push(json!({"id":"create-archive","status":"passed","archive":created["archive"],"path":path}));
-            self.preflight_call(&id,"editor_load_archive",json!({"archiveGuid":created["archive"]["guid"],"openStartLevel":true,"discardUnsavedChanges":false}),deadline)?;
+            self.preflight_call(&id,"editor_load_archive",json!({"archiveGuid":created["archive"]["guid"],"openStartLevel":true,"discardUnsavedChanges":false}))?;
         }
         self.preflight_progress(p, "save-archive")?;
-        let loaded = self.preflight_call(&id, "editor_get_archive", json!({}), deadline)?;
+        let loaded = self.preflight_call(&id, "editor_get_archive", json!({}))?;
         let archive = archive_creation::checked_archive(&root, &loaded)?;
         if loaded["archiveAndLevelLoaded"] != true {
             return Err(error("preflight_load_failed", "存档或初始关卡未真正加载。"));
         }
-        let saved = self.preflight_call(&id, "editor_save_archive", json!({}), deadline)?;
+        let saved = self.preflight_call(&id, "editor_save_archive", json!({}))?;
         if saved["completed"] != true {
             return Err(error(
                 "preflight_save_failed",
@@ -419,17 +398,11 @@ impl RuntimeBridgeService {
         }
         self.preflight_progress(p, "cold-load")?;
         let cold = self.preflight_launch(p, Some(selection.clone()))?;
-        self.preflight_ready(&cold, deadline)?;
+        self.preflight_ready(&cold)?;
         let actual = loop {
-            let actual = self.preflight_call(&cold, "editor_get_archive", json!({}), deadline)?;
+            let actual = self.preflight_call(&cold, "editor_get_archive", json!({}))?;
             if actual["archiveAndLevelLoaded"] == true {
                 break actual;
-            }
-            if Instant::now() >= deadline {
-                return Err(error(
-                    "preflight_cold_load_failed",
-                    "冷加载在预算内未就绪。",
-                ));
             }
             std::thread::sleep(Duration::from_millis(300));
         };

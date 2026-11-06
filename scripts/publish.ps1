@@ -5,11 +5,11 @@ $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 if (@($Staging, $WorkflowStaging, $RecoveryStaging, $ContinuationStaging, $UiStaging, $Validation, $RecorderStaging).Where({ $_ }).Count -gt 1) { throw 'Choose only one staging destination.' }
 $publishName = if ($RecorderStaging) { "Publish-Staging-Recorder" } elseif ($Validation) { "Publish-Staging-Validation" } elseif ($UiStaging) { "Publish-Staging-UI" } elseif ($ContinuationStaging) { "Publish-Staging-Continuation" } elseif ($RecoveryStaging) { "Publish-Staging-Recovery" } elseif ($WorkflowStaging) { "Publish-Staging-Workflow" } elseif ($Staging) { "Publish-Staging-Bot" } else { "Publish" }
-if ($publishName -eq 'Publish') { throw 'Workflow 2.11 requires an isolated candidate and native game pilots. Build with -WorkflowStaging, then promote the same validated candidate with scripts/promote-workflow.ps1.' }
+if ($publishName -eq 'Publish') { throw 'Workflow 2.12 requires an isolated candidate and native game pilots. Build with -WorkflowStaging, then promote the same validated candidate with scripts/promote-workflow.ps1.' }
 $publish = Join-Path $root $publishName
 $running = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith("$publish\", [StringComparison]::OrdinalIgnoreCase) }
 if ($running) { throw "Close the running package before replacing it: $publish" }
-$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } elseif ($UiStaging) { 'guidance-action-panel-20261012' } else { 'delivery-first-20261030' }
+$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } elseif ($UiStaging) { 'guidance-action-panel-20261012' } else { 'workflow-unlimited-20261106' }
 $env:ABYA_BUILD_UTC = [DateTime]::UtcNow.ToString('O')
 $packageVersion = (Get-Content -Raw -LiteralPath (Join-Path $root 'package.json') | ConvertFrom-Json).version
 $llmDirectories = @(".codex")
@@ -19,6 +19,15 @@ $managedSkillRequiredFiles = @(
     "skills\abya-game-development-task\references\autonomous-implementation.md",
     "skills\abya-game-development-task\references\runtime-scenarios.md",
     "skills\abya-game-development-task\scripts\runtime-scenario.mjs",
+    "skills\abya-game-development-task\scripts\scenario-actions.mjs",
+    "skills\abya-game-development-task\scripts\scenario-values.mjs",
+    "skills\abya-game-development-task\scripts\scenario-preflight.mjs",
+    "skills\abya-game-development-task\scripts\scenario-cleanup.mjs",
+    "skills\abya-game-development-task\assets\runtime-tests\plan.template.json",
+    "skills\abya-game-development-task\assets\art-library\catalog.json",
+    "skills\abya-game-development-task\assets\art-library\effects.mjs",
+    "skills\abya-game-development-task\assets\art-library\preview.html",
+    "skills\abya-game-development-task\assets\art-library\INTEGRATION.md",
     "skills\abya-game-development-task\references\art-design-records.md",
     "skills\abya-game-development-task\references\game-art-design\SKILL.md",
     "skills\abya-game-development-task\references\game-art-design\references\game-ui-design\SKILL.md",

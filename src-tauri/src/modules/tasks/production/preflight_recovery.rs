@@ -50,7 +50,8 @@ pub fn preflight_recovery_resumable(r: &ProductionRecord) -> bool {
     enabled(r)
         && r.workbench.execution.preflight.key == key(r)
         && r.workbench.execution.preflight.state == "paused"
-        && r.workbench.execution.preflight.elapsed_ms < 20 * 60_000
+        && (super::execution_time::unlimited(r)
+            || r.workbench.execution.preflight.elapsed_ms < 20 * 60_000)
 }
 fn elapsed(p: &PreflightRecovery) -> i64 {
     chrono::DateTime::parse_from_rfc3339(&p.started_at)
@@ -70,7 +71,9 @@ pub(super) fn pause(r: &mut ProductionRecord) {
     p.state = "paused".into();
 }
 pub(super) fn due(r: &ProductionRecord) -> bool {
-    preflight_recovery_active(r) && elapsed(&r.workbench.execution.preflight) >= 10 * 60_000
+    !super::execution_time::unlimited(r)
+        && preflight_recovery_active(r)
+        && elapsed(&r.workbench.execution.preflight) >= 10 * 60_000
 }
 impl TaskService {
     /// Authorization comes from a native-observed desktopCli runtime failure or
@@ -129,6 +132,7 @@ impl TaskService {
             let k = key(r);
             let stage = r.current_stage.clone();
             let goal = r.workbench.active_goal_id.clone().unwrap_or_default();
+            let unlimited = super::execution_time::unlimited(r);
             let p = &mut r.workbench.execution.preflight;
             if p.key != k {
                 *p = PreflightRecovery {
@@ -143,7 +147,7 @@ impl TaskService {
             }
             p.started_at.clear();
             p.last_event = event_id.into();
-            if p.attempts >= 2 || p.elapsed_ms >= 20 * 60_000 {
+            if !unlimited && (p.attempts >= 2 || p.elapsed_ms >= 20 * 60_000) {
                 p.state = "exhausted".into();
                 return Ok(());
             }

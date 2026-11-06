@@ -1,3 +1,7 @@
+## 2026-11-06 Workflow 2.12
+
+Existing art list/get and inspect-art-case/use-art-case now include complete source/asset packages. Inspection materializes resources.json and files under artifacts/art-library/<id>/<version>; it does not adopt or execute them. Runtime scenario v3 uses existing production get and runtime describe/run, preserves role-specific responses, and reports missing Player capabilities. No new Abya engine capability is introduced.
+
 ## 2026-11-05 当前包与任务存档契约
 
 executablePath 仅允许断言 APP 当前所选包，不再作为覆盖设置的选项。任务切换包确认和本地导出仅通过 APP，不新增 AI 自行换包能力。

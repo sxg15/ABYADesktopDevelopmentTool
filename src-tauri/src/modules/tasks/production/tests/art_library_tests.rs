@@ -31,6 +31,55 @@ fn collect(f: &Fixture, id: &str) -> Value {
 }
 
 #[test]
+fn builtin_recipes_export_import_and_materialize_complete_sources_without_approval() {
+    let f = enabled_fixture();
+    let entry = f.service.art_library_get("builtin.press", 1).unwrap();
+    assert_eq!(entry["runtimeVerified"], false);
+    assert_eq!(entry["designApproved"], false);
+    assert_eq!(entry["resources"]["files"].as_array().unwrap().len(), 4);
+    let package = action(&f, "export", json!({"id":"builtin.press","version":1})).unwrap();
+    let imported = action(
+        &f,
+        "import",
+        json!({"path":f.workspace.join(package["path"].as_str().unwrap())}),
+    )
+    .unwrap();
+    assert_eq!(imported["runtimeVerified"], false);
+    let id = imported["id"].as_str().unwrap();
+    f.apply("inspect-art-case", json!({"caseId":id,"version":1}))
+        .unwrap();
+    let copied = f
+        .workspace
+        .join(format!("artifacts/art-library/{id}/1/files/effects.mjs"));
+    assert!(
+        std::fs::read_to_string(&copied)
+            .unwrap()
+            .contains("export function sample")
+    );
+    assert!(f.record().art_design.case_uses.is_empty());
+    std::fs::write(copied, "user modified source").unwrap();
+    assert!(
+        f.apply("inspect-art-case", json!({"caseId":id,"version":1}))
+            .is_err()
+    );
+}
+
+#[test]
+fn reusable_resources_reject_missing_dependencies_and_path_escape() {
+    let f = enabled_fixture();
+    let entry = f.service.art_library_get("builtin.hit", 1).unwrap();
+    let mut resources = entry["resources"].clone();
+    resources["files"][0]["dependencies"] = json!(["missing.shader"]);
+    assert!(art_resources::validate(&resources).is_err());
+    resources = entry["resources"].clone();
+    resources["files"][0]["name"] = json!("../escape.lua");
+    assert!(art_resources::validate(&resources).is_err());
+    resources = entry["resources"].clone();
+    resources["files"][0]["name"] = json!("run.exe");
+    assert!(art_resources::validate(&resources).is_err());
+}
+
+#[test]
 fn human_case_requests_survive_continuation_without_adoption_or_approval() {
     let f = enabled_fixture();
     let image = prepare(&f);
@@ -165,7 +214,8 @@ fn revisions_withdrawal_and_frozen_task_references_do_not_mutate_old_cases() {
             .unwrap()
             .as_array()
             .unwrap()
-            .is_empty()
+            .iter()
+            .all(|entry| entry["provenance"] == "builtin")
     );
     let mut withdrawn = use_data;
     withdrawn["version"] = json!(2);
@@ -237,7 +287,8 @@ fn stale_drafts_and_unlisted_zip_payloads_never_enter_library() {
             .unwrap()
             .as_array()
             .unwrap()
-            .is_empty()
+            .iter()
+            .all(|entry| entry["provenance"] == "builtin")
     );
     // A syntactically valid manifest cannot authorize arbitrary extraction.
     let path = f.workspace.join("malformed.zip");
@@ -255,7 +306,8 @@ fn stale_drafts_and_unlisted_zip_payloads_never_enter_library() {
             .unwrap()
             .as_array()
             .unwrap()
-            .is_empty()
+            .iter()
+            .all(|entry| entry["provenance"] == "builtin")
     );
     assert!(!f.root.join("outside.png").exists());
 }

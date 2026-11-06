@@ -1,3 +1,7 @@
+## 2026-11-06 Workflow 2.12
+
+Workflow 2.12 packages scenario-actions/values/preflight modules and assets/art-library with the complete managed Skill. Runtime scenario v3 and recipe behavioral tests are required. Native pilot outcomes have no four-hour completion gate; temporal ordering, version binding and actual evidence remain required. Engine CLI gaps are a separately owned dependency; no synthetic result qualifies native acceptance.
+
 # Release Skill
 
 ## Current scope

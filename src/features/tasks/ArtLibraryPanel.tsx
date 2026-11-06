@@ -6,6 +6,7 @@ import { artCaseFields, artLibraryApi, type ArtCase } from "../../shared/artDesi
 import { productionApi, type ProductionView } from "../../shared/production";
 import { ArtifactMedia } from "./ArtifactPreview";
 import { ArtCaseThumbnail } from "./ArtCaseThumbnail";
+import { ArtRecipePreview } from "./ArtRecipePreview";
 import "./artDesign.css";
 import "./skillLibrary.css";
 import "./visualRefinement.css";
@@ -57,7 +58,7 @@ export function ArtLibraryPanel({taskId,view,active,en=false,onClose,onContinue,
   const shown=drafts?r?.artDesign?.caseDrafts??[]:entries;
   const isDraft=selected&&!selected.version;
   const content = <>
-    <p>{t("保存策划满意的具体设计及其上下文。检索时先看玩法、平台与适用条件，再看风格。","Curated designs with their context. Compare gameplay, platform and applicability before style.")}</p>
+    <p>{t("按玩法与用途查找设计案例、素材和表现配方。随包配方可预览、导出源码并改造；接入游戏后需实机验证。","Find design cases, assets and effect recipes by gameplay and purpose. Preview and adapt bundled sources, then verify them in the game.")}</p>
     <div className="art-library-toolbar">
       <button className={drafts?"secondary-button":"primary-button"} onClick={()=>{setDrafts(false);setSelected(undefined);}}>{t("已收录案例","Saved cases")}</button>
       <button className={drafts?"primary-button":"secondary-button"} onClick={()=>{setDrafts(true);setSelected(undefined);}}>{t("待审阅草稿","Drafts to review")} · {r?.artDesign?.caseDrafts.length??0}</button>
@@ -80,6 +81,18 @@ export function ArtLibraryPanel({taskId,view,active,en=false,onClose,onContinue,
     </div><div className="art-case-detail">
       {selected?<>
         <h3>{selected.title}</h3>
+        {selected.provenance==="builtin"&&selected.presetId&&<ArtRecipePreview presetId={selected.presetId}/>}
+        {selected.resources&&<section aria-label={t("可复用资源与接入","Reusable resources")}>
+          <h4>{t("可复用资源与接入","Reusable resources")}</h4>
+          <p>{selected.resources.compatibility}</p><p>{selected.resources.verification}</p>
+          <p>{selected.resources.integration}</p>
+          <details><summary>{t("参数、生命周期与依赖","Parameters, lifecycle and dependencies")}</summary>
+            <p>{selected.resources.lifecycle}</p><p>{selected.resources.license}</p>
+            <pre>{JSON.stringify(selected.resources.parameters,null,2)}</pre>
+            <ul>{selected.resources.files.map(file=><li key={file.name}>{file.name} · {file.role}</li>)}</ul>
+            <p>{t("接入后验证：","Verify after integration: ")}{selected.resources.tests.join("、")}</p>
+          </details>
+        </section>}
         <div className="art-case-context">
           {selected.satisfaction&&<section><h4>{selected.provenance==="imported"?t("来源方声明的认可范围（未在本机复验）","Source-reported satisfaction (not locally revalidated)"):t("策划满意的具体范围","Planner satisfaction scope")}</h4><p className="art-source-text">{selected.satisfaction}</p></section>}
           <section><h4>{t("适用条件","Applicability")}</h4><p className="art-source-text">{selected.applicability || t("尚未记录，请结合当前需求判断。","Not recorded; assess against current requirements.")}</p></section>
@@ -94,9 +107,9 @@ export function ArtLibraryPanel({taskId,view,active,en=false,onClose,onContinue,
           <button className="primary-button" disabled={busy||!satisfaction.trim()||selected.designHash!==view.artDesignStatus?.designHash}>{t("满意并收录此案例","Satisfied — collect this case")}</button>
           {selected.designHash!==view.artDesignStatus?.designHash&&<p role="status">{t("草稿对应的要求或设计已变化，请让 AI 更新。","Requirements or design changed; ask AI to update the draft.")}</p>}
         </form>:<div className="art-inline-actions">
-          {active&&onContinue&&view.artDesignStatus?.enabled&&selected.status==="accepted"&&<button className="primary-button" disabled={busy} onClick={()=>void request("reference",selected)}>{t("让 AI 评估并参考","Ask AI to evaluate and reference")}</button>}
+          {active&&onContinue&&view.artDesignStatus?.enabled&&(selected.status==="accepted"||selected.provenance==="builtin")&&<button className="primary-button" disabled={busy} onClick={()=>void request("reference",selected)}>{t("让 AI 评估并参考","Ask AI to evaluate and reference")}</button>}
           <button className="secondary-button" disabled={busy||!r} onClick={()=>void act("export",{id:selected.id,version:selected.version})}>{t("导出完整案例包","Export complete case")}</button>
-          {active&&onContinue&&view.artDesignStatus?.enabled&&<button className="text-button" disabled={busy} onClick={()=>void request("revision",selected)}>{t("整理该案例的新版本","Prepare a revised case")}</button>}
+          {active&&onContinue&&view.artDesignStatus?.enabled&&selected.provenance!=="builtin"&&<button className="text-button" disabled={busy} onClick={()=>void request("revision",selected)}>{t("整理该案例的新版本","Prepare a revised case")}</button>}
           {selected.status==="accepted"&&<button className="text-button" disabled={busy||!r} onClick={()=>setWithdrawing(v=>!v)}>{t("停止推荐此版本","Stop recommending this version")}</button>}
         </div>}
         {withdrawing&&<form className="art-withdraw" onSubmit={e=>{e.preventDefault();void act("withdraw",{id:selected.id,version:selected.version,reason:withdrawReason});}}>

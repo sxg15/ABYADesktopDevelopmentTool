@@ -182,7 +182,7 @@ fn realization(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult
     )
 }
 
-fn case_draft(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
+fn case_draft(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
     let id = text(data, "id", 100)?;
     let ids = list(data, "artifactIds", 16)?;
     let references = if data.get("referenceIds").is_some() {
@@ -235,6 +235,8 @@ fn case_draft(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
     }
     let tags = list(data, "tags", 20)?;
     item["tags"] = json!(tags);
+    super::art_resources::read_files(root, &data["resources"])?;
+    item["resources"] = data["resources"].clone();
     put(&mut r.art_design.case_drafts, item)
 }
 fn source(r: &ProductionRecord, data: &Value) -> AppResult<Value> {
@@ -321,7 +323,7 @@ pub(super) fn apply(
         }
         "save-art-coverage" => coverage(r, root, data)?,
         "save-art-realization" => realization(r, root, data)?,
-        "save-art-case-draft" => case_draft(r, data)?,
+        "save-art-case-draft" => case_draft(r, root, data)?,
         _ => return Err(AppError::validation("无效美术设计操作。")),
     }
     if before != design_hash(r) {

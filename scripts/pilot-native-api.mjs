@@ -30,8 +30,8 @@ export async function connectPilot(directory){
  const paths=await invoke('get_app_paths'),build=await invoke('get_build_info');
  assert.equal(path.resolve(paths.dataDir).toLowerCase(),path.join(root,'Local','ABYA Desktop Development Tool','Data').toLowerCase());
  assert.equal(build.testEnvironment,true);assert.equal(build.verification,'verified');
- assert.equal(build.release,'delivery-first-20261030');
+ assert.equal(build.release,'workflow-unlimited-20261106');
  const manifest=readJson(path.join(path.dirname(build.executable),'build-manifest.json'));
- assert.equal(manifest.workflowVersion,'2.11.0');
+ assert.equal(manifest.workflowVersion,'2.12.0');
  return {root,marker,browser,page,invoke,build,paths};
 }

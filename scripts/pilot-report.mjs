@@ -10,7 +10,7 @@ try{
   const file=path.join(faultsPath,name),fault=readJson(file);
   return {kind:fault.kind,passed:fault.passed===true&&fault.appSha256===hashFile(api.build.executable),evidence:{path:`faults/${name}`,sha256:hashFile(file)}};
  }):[];
- const report={schema:'abya.workflow-pilot/v1',workflowVersion:'2.11.0',createdAt:new Date().toISOString(),appSha256:hashFile(api.build.executable),
+ const report={schema:'abya.workflow-pilot/v1',workflowVersion:'2.12.0',createdAt:new Date().toISOString(),appSha256:hashFile(api.build.executable),
   packageInventorySha256:hashFile(path.join(path.dirname(api.build.executable),'package-files.json')),runs,faultInjections};
  const file=path.join(api.root,'pilot.json');saveJson(file,report);
  let qualification;try{qualification=verifyPilot(file,api.build.executable);}catch(error){qualification={passed:false,reason:error.message};}

@@ -1,3 +1,7 @@
+## 2026-11-06 Workflow 2.12
+
+ArtCase optionally includes presetId and resources (kind, license, compatibility, parameters, lifecycle, integration, verification, requiredCapabilities, tests and hashed files). Builtin recipes are available references with designApproved/runtimeVerified=false. Only trusted bundled preview source runs in an opaque-origin sandbox iframe; imported scripts are never executed by the UI.
+
 ## 2026-11-05 当前包与任务存档契约
 
 APP 当前 gameExecutablePath 是唯一启动来源；selected_game_executable 只读设置并拒绝不同请求路径。PLAYER_SELECTION 将设置保存与实际进程启动互斥。

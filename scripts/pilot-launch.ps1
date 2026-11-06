@@ -9,7 +9,7 @@ $executable=Join-Path $package 'ABYA Desktop Development Tool.exe'
 & (Join-Path $package 'runtime/node.exe') (Join-Path $repository 'scripts/portable-package.mjs') --package $package
 if($LASTEXITCODE -ne 0){throw 'Candidate inventory failed'}
 $manifest=Get-Content -LiteralPath (Join-Path $package 'build-manifest.json') -Raw | ConvertFrom-Json
-if($manifest.workflowVersion -ne '2.11.0' -or $manifest.releaseLabel -ne 'delivery-first-20261030'){throw 'Wrong candidate'}
+if($manifest.workflowVersion -ne '2.12.0' -or $manifest.releaseLabel -ne 'workflow-unlimited-20261106'){throw 'Wrong candidate'}
 if(Get-NetTCPConnection -State Listen -LocalPort $marker.debugPort -ErrorAction SilentlyContinue){throw 'Pilot debug port is already in use'}
 $env:ABYA_TEST_MODE='1'
 $env:LOCALAPPDATA=Join-Path $pilotRoot 'Local'

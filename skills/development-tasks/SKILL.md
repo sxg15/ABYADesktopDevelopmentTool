@@ -1,3 +1,11 @@
+## 2026-11-06 Workflow 2.12
+
+Windows 长路径目录树改名返回访问/共享错误时，安装使用不存在的目标复制已完成暂存内容，最后写 SKILL.md 并逐文件校验。失败只清理本次创建的目标，既有目标不会被兜底复制覆盖；不改 ACL。发布前须用真实便携包验证此路径。
+
+旧任务首次打开/恢复托管终端时，在无活动 CLI 会话且任务 active 的前提下，仅迁移 executionTimePolicy 并保存历史；不升级其他阶段门槛、不覆盖固定 Skill。运行中任务不被迁移打断。旧时间指令由托管 developer instructions 明确废止。全流程升级仍通过原 APP 升级入口同步 Skill 和新测试计划契约。
+
+Workflow 2.12: executionTimePolicy=unlimited removes all development deadlines after upgrade, including preflight, turns, recovery and finalization. Timing remains telemetry. Migration reopens only budget-expired work, preserves approvals/results/unknown writes and stays paused. Plan submission requires a requirement-hash-bound artifacts/runtime-tests/plan.json without verdicts. Art cases may include abya.art-resources/v1 source/asset files with hashes and closed dependencies; collect/import/export/inspect preserve complete versioned packages. Six bundled interactive recipes are available without claiming planner approval or native verification.
+
 ## 2026-11-05 当前包与任务存档契约
 
 task_archive_sources 只提供本任务归属的编辑根及冻结候选；无版本的普通任务也发现 owner 校验的 .abya-authoring。task_player_status/check_task_player 记录当前 APP 包，adopt_task_player 仅 APP 可调用，保留切换历史且不修改旧版本证据。task_export_source 只返回校验通过的指定当前冻结版本。

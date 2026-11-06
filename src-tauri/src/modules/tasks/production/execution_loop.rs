@@ -39,7 +39,7 @@ fn resume_units(r: &mut ProductionRecord, intent: &str) -> AppResult<()> {
     }
     let goal = r.workbench.active_goal_id.clone().ok_or_else(conflict)?;
     let used = goal_used(r, &goal);
-    let renewed = used >= goal_limit(r);
+    let renewed = !super::execution_time::unlimited(r) && used >= goal_limit(r);
     if renewed {
         let elapsed = goal_elapsed(r, &goal);
         r.workbench
@@ -47,6 +47,7 @@ fn resume_units(r: &mut ProductionRecord, intent: &str) -> AppResult<()> {
             .goal_budget_epochs
             .insert(format!("{}:{goal}", autonomy::scope(r)), elapsed);
     }
+    let unlimited = super::execution_time::unlimited(r);
     let settlement = autonomy_budget::limit(r, "settlementMinutes", 15) * 60_000;
     for u in r
         .workbench
@@ -59,7 +60,9 @@ fn resume_units(r: &mut ProductionRecord, intent: &str) -> AppResult<()> {
             .push(json!({"at":now(),"kind":"explicit-user-resume",
             "intentId":intent,"previousStatus":u.status,"elapsedMs":u.elapsed_ms,
             "previousRounds":u.recovery_rounds,"reason":u.reason}));
-        if u.kind == "finalization" && u.elapsed_ms.saturating_sub(u.budget_epoch_ms) >= settlement
+        if !unlimited
+            && u.kind == "finalization"
+            && u.elapsed_ms.saturating_sub(u.budget_epoch_ms) >= settlement
         {
             u.budget_grants.push(json!({"intentId":intent,"at":now(),
                 "kind":"explicit-user-resume","extraMs":settlement,"previousEpochMs":u.budget_epoch_ms}));
@@ -105,7 +108,8 @@ pub(super) fn goal_used(r: &ProductionRecord, goal: &str) -> i64 {
 
 /// 全目标上限与独立收尾预留防止多个工作项各自续期导致总耗时无限增长。
 pub(super) fn budget_exhausted(r: &ProductionRecord, u: &autonomy::WorkUnit, extra: i64) -> bool {
-    enabled(r)
+    !super::execution_time::unlimited(r)
+        && enabled(r)
         && if u.kind == "finalization" {
             u.elapsed_ms.saturating_sub(u.budget_epoch_ms) + extra
                 >= autonomy_budget::limit(r, "settlementMinutes", 15) * 60_000

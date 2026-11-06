@@ -89,7 +89,7 @@ fn resource_runtime_failure_dispatches_scoped_recovery_without_approving_art() {
         f.calls.lock()[0]["input"][0]["text"]
             .as_str()
             .unwrap()
-            .contains("技术预检有限恢复")
+            .contains("技术预检恢复")
     );
     let result = f
         .service
@@ -135,7 +135,7 @@ fn explicit_resume_of_legacy_blocked_preflight_stays_on_original_goal() {
         f.calls.lock()[0]["input"][0]["text"]
             .as_str()
             .unwrap()
-            .contains("技术预检有限恢复")
+            .contains("技术预检恢复")
     );
     let after = f
         .service
@@ -152,7 +152,7 @@ fn explicit_resume_of_legacy_blocked_preflight_stays_on_original_goal() {
     assert_eq!(after.workbench.execution.preflight.attempts, 1);
 }
 #[test]
-fn budget_interrupt_continues_only_its_owned_turn_after_native_completion() {
+fn legacy_budget_interrupt_continues_only_its_owned_turn_after_native_completion() {
     let f = Fixture::new();
     seed(&f);
     f.service
@@ -168,6 +168,10 @@ fn budget_interrupt_continues_only_its_owned_turn_after_native_completion() {
         )
         .unwrap();
     let mut record: Value = serde_json::from_str(&body).unwrap();
+    record["policy"]
+        .as_object_mut()
+        .unwrap()
+        .remove("executionTimePolicy");
     record["workbench"]["execution"]["units"][0]["attemptStartedAt"] =
         json!((Utc::now() - chrono::Duration::minutes(16)).to_rfc3339());
     db.execute(

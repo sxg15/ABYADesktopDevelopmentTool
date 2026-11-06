@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "tolerances": {
+    "status": "proposed", "source": "",
+    "edgePx": null, "gapPx": null, "sizePx": null, "glyphHeightPercent": null
+  },
+  "reference": {
+    "image": { "path": "", "sha256": "", "width": null, "height": null },
+    "frame": { "x": 0, "y": 0, "width": null, "height": null },
+    "context": { "designVersion": "", "scenario": "", "content": "", "layout": "" },
+    "fonts": [
+      { "id": "primary-text", "resourceId": "", "weight": null, "style": "", "sample": "", "source": "" }
+    ],
+    "measurements": [
+      { "id": "main-left", "kind": "edge", "axis": "x", "value": null, "source": "" },
+      { "id": "content-gap", "kind": "gap", "axis": "x", "value": null, "source": "" },
+      { "id": "content-width", "kind": "size", "axis": "x", "value": null, "source": "" },
+      { "id": "primary-glyph", "kind": "glyph-height", "axis": "y", "value": null, "fontId": "primary-text", "source": "" }
+    ]
+  },
+  "actual": {
+    "image": { "path": "", "sha256": "", "width": null, "height": null },
+    "frame": { "x": 0, "y": 0, "width": null, "height": null },
+    "context": { "designVersion": "", "scenario": "", "content": "", "layout": "" },
+    "implementationVersion": "",
+    "fonts": [
+      { "id": "primary-text", "resourceId": "", "weight": null, "style": "", "sample": "", "source": "" }
+    ],
+    "measurements": [
+      { "id": "main-left", "kind": "edge", "axis": "x", "value": null, "source": "" },
+      { "id": "content-gap", "kind": "gap", "axis": "x", "value": null, "source": "" },
+      { "id": "content-width", "kind": "size", "axis": "x", "value": null, "source": "" },
+      { "id": "primary-glyph", "kind": "glyph-height", "axis": "y", "value": null, "fontId": "primary-text", "source": "" }
+    ]
+  }
+}

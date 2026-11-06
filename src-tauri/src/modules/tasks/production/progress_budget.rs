@@ -25,6 +25,9 @@ fn family(u: &autonomy::WorkUnit) -> String {
     }
 }
 pub(super) fn exhausted(r: &ProductionRecord, u: &autonomy::WorkUnit, extra: i64) -> bool {
+    if super::execution_time::unlimited(r) {
+        return false;
+    }
     let base = autonomy_budget::limit(r, "workMinutes", 60) * 60_000;
     let members: Vec<_> = r
         .workbench
@@ -138,6 +141,9 @@ fn markers(r: &ProductionRecord, u: &autonomy::WorkUnit) -> BTreeSet<String> {
     result
 }
 pub(super) fn initialize(r: &mut ProductionRecord, id: &str) {
+    if super::execution_time::unlimited(r) {
+        return;
+    }
     if super::execution_loop::enabled(r) {
         if let Some(u) = r.workbench.execution.units.iter().find(|u| u.id == id) {
             let remaining = if u.kind == "finalization" {
@@ -182,6 +188,9 @@ pub(super) fn initialize(r: &mut ProductionRecord, id: &str) {
     u.execution_limit_ms = limit;
 }
 pub(super) fn refresh(r: &mut ProductionRecord) {
+    if super::execution_time::unlimited(r) {
+        return;
+    }
     if super::execution_loop::enabled(r) {
         return;
     }

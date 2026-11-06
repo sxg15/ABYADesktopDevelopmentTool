@@ -16,6 +16,12 @@ pub(super) fn directory(c: &rusqlite::Connection) -> AppResult<PathBuf> {
     Ok(path)
 }
 pub(super) fn read(c: &rusqlite::Connection, id: &str, version: u32) -> AppResult<Value> {
+    if id.starts_with("builtin.") && version == 1 {
+        return super::art_builtin::entries(c)?
+            .into_iter()
+            .find(|e| e["id"] == id)
+            .ok_or_else(|| AppError::validation("随包配方不存在。"));
+    }
     let row: Option<(String, String)> = c
         .query_row(
             "SELECT body,status FROM art_library_cases WHERE id=?1 AND version=?2",
@@ -109,6 +115,8 @@ impl TaskService {
                     && e.cycle == r.cycle && Some(&e.version) == r.current_version.as_ref() && e.sha256 == a["sha256"]) { runtime_count+=1; }
             }
             let mut entry=draft.clone();
+            let resource_files=super::art_resources::read_files(workspace,&draft["resources"])?;
+            entry["resources"]=super::art_resources::copy(&library,&format!("{id}/{version}/files"),&draft["resources"],&resource_files)?;
             let runtime_total=media.iter().filter(|m|m["sourceType"] == "gameplay").count();
             let visual_test=r.self_tests.iter().rev().find(|t|t["id"] == "visual"
                 && t["version"] == json!(r.current_version) && t["cycle"] == r.cycle);
@@ -147,6 +155,11 @@ impl TaskService {
                 entry["status"] = json!(status);
                 found.push((score,entry));
             }
+            for entry in super::art_builtin::entries(c)? {
+                let haystack=format!("{} {} {}",entry["title"],entry["context"],entry["tags"]).to_lowercase();
+                let score=tokens.iter().filter(|t|haystack.contains(t.as_str())).count();
+                if tokens.is_empty() || score>0 { found.push((score,entry)); }
+            }
             found.sort_by_key(|a| std::cmp::Reverse(a.0));
             Ok(json!(found.into_iter().take(50).map(|(_,v)|v).collect::<Vec<_>>()))
         })
@@ -173,9 +186,9 @@ impl TaskService {
         let avoid = decision("avoid")?;
         let root = self.production_workspace(&input.task_id)?;
         // Resolve and verify a fixed snapshot before the task transaction. No library locks are nested.
-        let (entry, media) = self.database.with_connection(|c| {
+        let (entry, media, resource_files) = self.database.with_connection(|c| {
             let entry = read(c, &id, version)?;
-            if entry["status"] != "accepted" {
+            if entry["status"] != "accepted" && entry["provenance"] != "builtin" {
                 return Err(AppError::validation("已撤回案例不能新增引用。"));
             }
             let library = directory(c)?;
@@ -185,12 +198,19 @@ impl TaskService {
                 .iter()
                 .map(|m| Ok((m.clone(), media_bytes(&library, m)?)))
                 .collect::<AppResult<Vec<_>>>()?;
-            Ok((entry, media))
+            let resource_files = super::art_resources::read_files(&library, &entry["resources"])?;
+            Ok((entry, media, resource_files))
         })?;
         self.production_commit(&input.task_id,input.expected_revision,|r| {
             if !super::art_design_sources::enabled(r) { return Err(AppError::validation("请先升级美术流程。")); }
             let before=design_hash(r);
             let mut references=vec![];
+            let resources=super::art_resources::copy(&root,&format!("artifacts/art-library/{id}/{version}/files"),&entry["resources"],&resource_files)?;
+            if !resources.is_null() {
+                let manifest_path=format!("artifacts/art-library/{id}/{version}/resources.json");
+                files::write_file(&root,&manifest_path,&serde_json::to_vec_pretty(&resources)?)?;
+                references.push(json!(manifest_path));
+            }
             for (i,(m,bytes)) in media.iter().enumerate() {
                 let ext=Path::new(mutation::text(m,"path")?).extension().and_then(|x|x.to_str()).unwrap_or("png");
                 let path=format!("artifacts/art-library/{id}/{version}/{i}.{ext}");

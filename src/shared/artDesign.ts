@@ -13,6 +13,10 @@ export interface ArtRealization {
   id:string;evidenceIds:string[];target:string;comparison:string;differences:string;status:string;designHash:string;version:string;cycle:number;
 }
 export interface ArtCase {
+  presetId?:string;
+  resources?:{schema:string;kind:string;license:string;compatibility:string;lifecycle:string;integration:string;verification:string;
+    parameters:Record<string,unknown>;requiredCapabilities:string[];tests:string[];
+    files:{name:string;path:string;sha256:string;role:string;dependencies?:string[]}[]}|null;
   id:string;version?:number;status?:string;title:string;context:string;plannerRequirements:string;visualRules:string;
   decisions:string;production:string;applicability:string;limitations:string;sources:string;tags:string[];
   satisfaction?:string;designApproved?:boolean;runtimeVerified?:boolean;provenance?:string;designHash?:string;

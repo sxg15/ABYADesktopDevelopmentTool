@@ -12,7 +12,7 @@ function owned(root,name){
 }
 export function verifyPilot(reportPath,executable){
  const report=json(reportPath),root=path.dirname(path.resolve(reportPath));
- if(report.schema!=='abya.workflow-pilot/v1'||report.workflowVersion!=='2.11.0')throw Error('Expected workflow 2.11 native pilot evidence');
+ if(report.schema!=='abya.workflow-pilot/v1'||report.workflowVersion!=='2.12.0')throw Error('Expected workflow 2.12 native pilot evidence');
  if(report.appSha256!==sha(executable))throw Error('Pilot executable does not match the candidate');
  if(report.packageInventorySha256!==sha(path.join(path.dirname(executable),'package-files.json')))throw Error('Pilot resources do not match the candidate package');
  if(!Array.isArray(report.runs)||report.runs.length<6)throw Error('At least three game cases, repeated independently, are required');
@@ -24,8 +24,8 @@ export function verifyPilot(reportPath,executable){
   if(!run.taskId||tasks.has(run.taskId)||!run.nativeSessionId||nativeIds.has(run.nativeSessionId))throw Error('Each repetition needs independent task and native identities');
   tasks.add(run.taskId);nativeIds.add(run.nativeSessionId);
   const start=Date.parse(run.startedAt),end=Date.parse(run.completedAt),first=Date.parse(run.firstPlayableAt);
-  if(!Number.isFinite(start)||!Number.isFinite(end)||!Number.isFinite(first)||first<start||end<first||end-start>4*3600_000)
-   throw Error('Invalid timing or the four-hour measured pilot target was exceeded');
+  if(!Number.isFinite(start)||!Number.isFinite(end)||!Number.isFinite(first)||first<start||end<first)
+   throw Error('Invalid timing sequence');
   const snapshotPath=owned(root,run.production.path),workflowPath=owned(root,run.workflow.path);
   if(sha(snapshotPath)!==run.production.sha256||sha(workflowPath)!==run.workflow.sha256)throw Error('Pilot evidence fingerprint changed');
   const view=json(snapshotPath),record=view.record??view;

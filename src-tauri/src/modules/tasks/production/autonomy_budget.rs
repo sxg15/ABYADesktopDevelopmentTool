@@ -45,6 +45,9 @@ fn keys(r: &ProductionRecord, u: &autonomy::WorkUnit) -> Vec<String> {
         .collect()
 }
 pub(super) fn exhausted(r: &ProductionRecord, u: &autonomy::WorkUnit) -> bool {
+    if super::execution_time::unlimited(r) {
+        return false;
+    }
     let extra = running_ms(u);
     if super::execution_loop::enabled(r) {
         return super::execution_loop::budget_exhausted(r, u, extra);
@@ -250,6 +253,9 @@ impl TaskService {
         let Some(r) = self.database.with_connection(|c| load(c, task))? else {
             return Ok(false);
         };
+        if super::execution_time::unlimited(&r) {
+            return Ok(false);
+        }
         if super::preflight_recovery::due(&r) {
             return Ok(true);
         }

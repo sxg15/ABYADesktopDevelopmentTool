@@ -1,0 +1,15 @@
+{
+  "schema": "abya.test-plan/v1",
+  "requirementsHash": "替换为当前 requirements.sha256",
+  "cases": [
+    {
+      "id": "core-loop",
+      "requirementQuote": "替换为当前已批准需求中的实际原文",
+      "roles": ["Host"],
+      "precondition": "当前包冷启动，加载本任务存档，目标关卡和输入映射就绪",
+      "actions": "按当前游戏映射准备、开始、合法输入、结算和返回；使用公共动作组合",
+      "expected": "填写可核对的阶段顺序、权威状态变化和再次开始结果",
+      "evidence": "逐端运行身份、动作回执、状态断言、关键画面和退出日志"
+    }
+  ]
+}

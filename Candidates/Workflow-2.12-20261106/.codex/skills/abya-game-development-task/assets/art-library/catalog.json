@@ -1,0 +1,12 @@
+{
+  "schema": "abya.builtin-art-library/v1",
+  "version": 1,
+  "entries": [
+    {"id":"press","title":"按钮按压与恢复","kind":"interaction","purpose":"确认按下与松开的输入反馈","duration":0.3,"color":"#e6b86a","tags":["按钮","按压","恢复","UI"]},
+    {"id":"selection","title":"选择高亮","kind":"interaction","purpose":"标识当前选择并保持内容可读","duration":1.2,"color":"#6ec6b5","tags":["选择","高亮","UI"]},
+    {"id":"panel","title":"面板进入与退出","kind":"interaction","purpose":"建立面板出现方向及层级","duration":0.4,"color":"#82afe0","tags":["面板","转场","UI"]},
+    {"id":"reward","title":"资源到账轨迹","kind":"effect","purpose":"表达资源从来源到目标的因果关系","duration":0.9,"color":"#ebbd61","tags":["资源","奖励","运动"]},
+    {"id":"hit","title":"命中冲击","kind":"effect","purpose":"表现命中位置及短促冲击","duration":0.35,"color":"#ed816c","tags":["命中","战斗","一次性"]},
+    {"id":"aura","title":"持续状态光环","kind":"effect","purpose":"标识持续生效状态并支持中断清理","duration":1.6,"color":"#9cabe8","tags":["状态","光环","持续"]}
+  ]
+}

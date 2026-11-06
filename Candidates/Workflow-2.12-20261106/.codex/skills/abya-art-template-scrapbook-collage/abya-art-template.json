@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "kind": "abya-art-template",
+  "id": "abya-art-template-scrapbook-collage",
+  "displayName": "手作纸艺／拼贴",
+  "description": "可选的纸艺拼贴视觉方法与分层资源；先按玩法适配，再核对字体、热区和实机标定，非默认风格或已认可案例。",
+  "sourceSkillName": "scrapbook-collage"
+}

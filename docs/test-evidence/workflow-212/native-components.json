@@ -1,0 +1,18 @@
+{
+  "schema": "abya.workflow-components-smoke/v1",
+  "passed": true,
+  "appSha256": "3fc4fb5f4c6e546b1e2151d4d9738b5ccddc833638c6496382fee9628e196d52",
+  "inventorySha256": "8ae02cc003dbde98264df8dd47bc9030a490eb4147f1ae6839691f98d371f1f0",
+  "checks": [
+    "unlimited-policy",
+    "planned-tests-contract",
+    "complete-task-script-deployment",
+    "six-builtin-recipes",
+    "source-package-roundtrip",
+    "materialized-source-hashes",
+    "no-fabricated-approval",
+    "reference-request"
+  ],
+  "nativeGameplayTested": false,
+  "scope": "Isolated real packaged APP service calls; no model or game acceptance"
+}

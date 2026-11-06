@@ -2,6 +2,7 @@ mod autonomy_tests;
 mod capability_preflight_tests;
 mod completion_tests;
 mod execution_loop_tests;
+mod execution_time_tests;
 mod progress_budget_tests;
 mod review_handoff_tests;
 mod task_assets_tests;
@@ -20,6 +21,8 @@ use crate::modules::tasks::TaskInput;
 // Existing fixtures intentionally exercise pinned pre-2.2 contracts.
 fn prior_policy() -> Value {
     let mut p = policy();
+    p.as_object_mut().unwrap().remove("executionTimePolicy");
+    p.as_object_mut().unwrap().remove("runtimeTestPlanVersion");
     p.as_object_mut()
         .unwrap()
         .remove("capabilityPreflightVersion");

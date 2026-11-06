@@ -29,6 +29,13 @@ impl TaskService {
             let mut zip = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
             let options = zip::write::SimpleFileOptions::default()
                 .compression_method(zip::CompressionMethod::Deflated);
+            let resources = super::art_resources::read_files(&library, &entry["resources"])?;
+            for (index, (item, bytes)) in resources.iter().enumerate() {
+                let path = format!("files/{}", mutation::text(item, "name")?);
+                zip.start_file(&path, options).map_err(AppError::internal)?;
+                zip.write_all(bytes)?;
+                entry["resources"]["files"][index]["path"] = json!(path);
+            }
             for (i, m) in entry["media"]
                 .as_array_mut()
                 .ok_or_else(|| AppError::validation("案例没有素材。"))?
@@ -68,7 +75,7 @@ impl TaskService {
         let key = format!("import:{}", files::hash_file(source)?.0);
         let mut archive =
             zip::ZipArchive::new(std::fs::File::open(source)?).map_err(AppError::internal)?;
-        if archive.len() > 17 {
+        if archive.len() > 273 {
             return Err(AppError::validation("案例包包含过多文件。"));
         }
         let mut manifest = String::new();
@@ -86,7 +93,7 @@ impl TaskService {
         }
         let items = original["media"]
             .as_array()
-            .filter(|a| !a.is_empty() && a.len() <= 16)
+            .filter(|a| (!a.is_empty() || original["resources"].is_object()) && a.len() <= 16)
             .ok_or_else(|| AppError::validation("案例包须包含1–16个素材。"))?;
         let mut payloads = vec![];
         let mut total = 0;
@@ -122,16 +129,44 @@ impl TaskService {
             }
             payloads.push((m.clone(), bytes));
         }
-        if archive.len() != payloads.len() + 1 {
+        super::art_resources::validate(&original["resources"])?;
+        let mut resources = vec![];
+        for item in original["resources"]["files"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            let name = format!("files/{}", mutation::text(item, "name")?);
+            if item["path"] != name || !names.insert(mutation::text(item, "path")?) {
+                return Err(AppError::validation("资源包路径无效。"));
+            }
+            let mut bytes = vec![];
+            archive
+                .by_name(&name)
+                .map_err(AppError::internal)?
+                .take(64 * 1024 * 1024 + 1)
+                .read_to_end(&mut bytes)?;
+            total += bytes.len();
+            use sha2::{Digest, Sha256};
+            if bytes.len() > 64 * 1024 * 1024
+                || total > 128 * 1024 * 1024
+                || item["sha256"] != format!("{:x}", Sha256::digest(&bytes))
+            {
+                return Err(AppError::validation("资源文件校验失败或超出容量。"));
+            }
+            resources.push((item.clone(), bytes));
+        }
+        if archive.len() != payloads.len() + resources.len() + 1 {
             return Err(AppError::validation("案例包只能包含清单及声明的素材。"));
         }
-        self.import_art_payload(original, payloads, &key)
+        self.import_art_payload(original, payloads, resources, &key)
     }
 
     fn import_art_payload(
         &self,
         original: Value,
         payloads: Vec<(Value, Vec<u8>)>,
+        resources: Vec<(Value, Vec<u8>)>,
         key: &str,
     ) -> AppResult<Value> {
         self.database.with_connection(|c| {
@@ -149,6 +184,7 @@ impl TaskService {
             }
             entry["tags"]=json!(super::art_design::list(&original,"tags",20)?);
             let library=directory(c)?;
+            entry["resources"]=super::art_resources::copy(&library,&format!("{id}/1/files"),&original["resources"],&resources)?;
             let mut media=vec![];
             for (i,(m,bytes)) in payloads.iter().enumerate() {
                 let mime=mutation::text(m,"mediaType")?;

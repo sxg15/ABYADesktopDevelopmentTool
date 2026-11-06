@@ -1,3 +1,9 @@
+## 2026-11-06 Workflow 2.12
+
+托管 developer instructions 明确废止旧 Skill 的时间额度。prepare_terminal_workspace 在原生执行启动前调用任务服务的幂等时间策略迁移，保留原会话与用户恢复意图；不会因重连已活动任务而中断它。
+
+Workflow 2.12 dispatch never requests completion within a time allowance. Unlimited policies cannot trigger budget turn interruption; natural completion still uses existing identity/receipt continuation. Pauses, approvals and unknown writes remain authoritative. Legacy pinned policies migrate through the task upgrade with retained history.
+
 # Codex Terminal Skill
 
 After a crash, attach and control can read a syntax-damaged activity projection through the shared recovery path. Preserve the original native binding and show the repair warning on attachment. Force-stop confirmation captures an observed generation.

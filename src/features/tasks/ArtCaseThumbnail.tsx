@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImageOff, Image } from "lucide-react";
 import { artLibraryApi, type ArtCase } from "../../shared/artDesign";
+import { ArtRecipeThumbnail } from "./ArtRecipeThumbnail";
 
 export function ArtCaseThumbnail({ entry, en }: { entry: ArtCase; en: boolean }) {
   const host = useRef<HTMLSpanElement>(null);
@@ -21,7 +22,8 @@ export function ArtCaseThumbnail({ entry, en }: { entry: ArtCase; en: boolean })
     return () => { alive = false; };
   }, [entry.id, entry.version, index, visible, Boolean(media)]);
   return <span ref={host} className="art-case-thumbnail">
-    {src && media ? media.mediaType.startsWith("video/")
+    {entry.provenance==="builtin"&&<span className="art-case-source-label">{en?"Interactive recipe":"可交互配方"}</span>}
+    {entry.provenance==="builtin"&&entry.presetId?<ArtRecipeThumbnail presetId={entry.presetId}/>:src && media ? media.mediaType.startsWith("video/")
       ? <video src={src} preload="metadata" muted aria-label={media.title} />
       : <img src={src} alt={media.title} loading="lazy" />
       : <span className="art-case-thumbnail-placeholder">{failed ? <ImageOff size={24}/> : <Image size={24}/>}

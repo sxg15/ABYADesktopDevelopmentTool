@@ -170,6 +170,10 @@ pub(super) fn enabled_fixture() -> Fixture {
             r.policy
                 .as_object_mut()
                 .unwrap()
+                .remove("runtimeTestPlanVersion");
+            r.policy
+                .as_object_mut()
+                .unwrap()
                 .remove("capabilityPreflightVersion");
             r.workflow_version = "2.2.1".into();
             Ok(())

@@ -1,0 +1,28 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>ABYA 表现配方预览</title>
+<style>
+body{margin:0;background:#161c23;color:#e6edf4;font:15px system-ui}main{padding:20px}
+.stage{height:190px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#202a35;border-radius:8px}
+#target{padding:18px 30px;border:2px solid var(--color,#e6b86a);border-radius:10px;background:#283747;will-change:transform,opacity;user-select:none}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}button,select{font:inherit;color:inherit;background:#2a3948;border:1px solid #6b8198;border-radius:4px;padding:6px 12px}input{accent-color:#e6b86a}
+label{display:flex;align-items:center;gap:6px}p{color:#adbccc;font-size:13px}
+</style><main><div class="stage"><div id="target">表现对象</div></div>
+<div class="controls"><button id="play">播放</button><button id="pause">暂停</button><button id="reset">还原</button>
+<label>强度<input id="strength" type="range" min="0" max="2" step="0.1" value="1"></label>
+<label>进度<input id="seek" type="range" min="0" max="1" step="0.01" value="0"></label></div>
+<p>Web 配方预览。原生游戏接入后须验证实际输入、生命周期与联机表现。</p></main>
+<script type="module">
+import {sample,style} from './effects.mjs';
+const catalog=await fetch('./catalog.json').then(response=>response.json());
+const preset='@@PRESET@@'==='@@'+'PRESET@@'?(location.hash.slice(1)||'press'):'@@PRESET@@';
+const settings=catalog.entries.find(entry=>entry.id===preset);if(!settings)throw Error('Unknown preset');
+const target=document.querySelector('#target'),seek=document.querySelector('#seek'),strength=document.querySelector('#strength');
+target.style.setProperty('--color',settings.color);
+let elapsed=0,playing=false,last=0;
+function render(){Object.assign(target.style,style(sample(preset,elapsed,{strength:Number(strength.value)}),settings.color));seek.value=String(elapsed);}
+document.querySelector('#play').onclick=()=>{if(elapsed>=1)elapsed=0;playing=true;last=performance.now();};
+document.querySelector('#pause').onclick=()=>{playing=false;};
+document.querySelector('#reset').onclick=()=>{playing=false;elapsed=0;target.removeAttribute('style');target.style.setProperty('--color',settings.color);seek.value='0';};
+seek.oninput=()=>{playing=false;elapsed=Number(seek.value);render();};strength.oninput=render;
+function tick(now){if(playing){elapsed=Math.min(1,elapsed+(now-last)/(settings.duration*1000));render();if(elapsed===1)playing=false;}last=now;requestAnimationFrame(tick);}
+requestAnimationFrame(tick);
+</script></html>

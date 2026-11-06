@@ -14,7 +14,10 @@ impl TaskService {
                 .and_then(|n| u32::try_from(n).ok())
                 .ok_or_else(|| AppError::validation("请选择具体案例版本。"))?;
             let entry = self.art_library_get(&id, version)?;
-            if kind == "reference" && entry["status"] != "accepted" {
+            if kind == "reference"
+                && entry["status"] != "accepted"
+                && entry["provenance"] != "builtin"
+            {
                 return Err(AppError::validation("该案例版本已停止推荐，请重新选择。"));
             }
             entry

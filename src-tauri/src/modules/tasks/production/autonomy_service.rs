@@ -35,7 +35,7 @@ impl TaskService {
             "workUnitCount":ledger.units.iter().filter(|u|u.cycle==r.cycle&&u.scope_hash==scope_hash).count(),
             "workUnits":current_units, "workUnitsTruncated":false, "verificationPackage":ledger.verification_package,
             "reviewHandoffDeficits":super::review_handoff::deficits(&r),
-            "executionBudget":if super::execution_loop::enabled(&r){json!({"mode":"shared-goal","usedMs":super::execution_loop::goal_used(&r,r.workbench.active_goal_id.as_deref().unwrap_or("")),"limitMs":super::execution_loop::goal_limit(&r),"settlementMinutes":super::autonomy_budget::limit(&r,"settlementMinutes",15)})}else{Value::Null},
+            "executionBudget":if super::execution_time::unlimited(&r){json!({"mode":"unlimited","usedMs":super::execution_loop::goal_elapsed(&r,r.workbench.active_goal_id.as_deref().unwrap_or("")),"limitMs":null})}else if super::execution_loop::enabled(&r){json!({"mode":"shared-goal","usedMs":super::execution_loop::goal_used(&r,r.workbench.active_goal_id.as_deref().unwrap_or("")),"limitMs":super::execution_loop::goal_limit(&r),"settlementMinutes":super::autonomy_budget::limit(&r,"settlementMinutes",15)})}else{Value::Null},
             "technicalQueue":ledger.technical_queue,"acceptanceContract":ledger.acceptance_contract,"runtimeBaselines":ledger.runtime_baselines,
             "issueCount":r.issues.iter().filter(|i|i["status"]!="resolved").count(),
             "issues":r.issues.iter().filter(|i|i["status"]!="resolved").take(16).map(|i|json!({"id":i["id"],"status":i["status"],"repairTarget":i["repairTarget"],"description":i["description"].as_str().unwrap_or("").chars().take(300).collect::<String>(),"handling":{"mode":i["executionHandling"]["mode"],"reason":i["executionHandling"]["reason"].as_str().unwrap_or("").chars().take(200).collect::<String>(),"impact":i["executionHandling"]["impact"].as_str().unwrap_or("").chars().take(200).collect::<String>()}})).collect::<Vec<_>>(),
@@ -194,6 +194,7 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
     if advance && in_place {
         super::execution_loop::checkpoint(r);
     }
+    let unlimited = super::execution_time::unlimited(r);
     let route_ms = super::autonomy_budget::limit(r, "routeMinutes", 15) * 60_000;
     let attempt_limit = super::autonomy_budget::limit(r, "routeAttemptLimit", 2) as u32;
     let exhausted: Vec<_> = r
@@ -290,7 +291,7 @@ fn schedule(r: &mut ProductionRecord, event_id: &str, advance: bool) -> AppResul
             unit.reason = "本项或关联故障的累计恢复预算已用完，保留成果并继续独立工作。".into();
         }
         if unit.status == "failed"
-            && (unit.attempts >= attempt_limit || unit.route_elapsed_ms >= route_ms)
+            && (unit.attempts >= attempt_limit || !unlimited && unit.route_elapsed_ms >= route_ms)
         {
             unit.route += 1;
             unit.attempts = 0;
