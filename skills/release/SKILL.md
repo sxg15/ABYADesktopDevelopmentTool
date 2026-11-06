@@ -1,5 +1,7 @@
 ## 2026-11-06 Workflow 2.12
 
+用户随后明确要求“先把正式版替换吧，同时把见缝插针的项目迁移到新版本，然后清理旧版本的文件”。本次先行发布限定 APP SHA-256 `3fc4fb5f4c6e546b1e2151d4d9738b5ccddc833638c6496382fee9628e196d52`、inventory SHA-256 `8ae02cc003dbde98264df8dd47bc9030a490eb4147f1ae6839691f98d371f1f0`。正式 Publish 已替换，见缝插针已通过原生升级接口迁移，游戏内容与原会话身份保留。本次授权不改变标准试跑门槛，也不代表完整游戏通过。迁移及清理记录见 [发布报告](../../docs/JFCZ_WORKFLOW_212_20261106.md)。
+
 Workflow 2.12 packages scenario-actions/values/preflight modules and assets/art-library with the complete managed Skill. Runtime scenario v3 and recipe behavioral tests are required. Native pilot outcomes have no four-hour completion gate; temporal ordering, version binding and actual evidence remain required. Engine CLI gaps are a separately owned dependency; no synthetic result qualifies native acceptance.
 
 # Release Skill

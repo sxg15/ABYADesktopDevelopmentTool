@@ -1,4 +1,0 @@
-interface:
-  display_name: "产品界面设计约束"
-  short_description: "从真实用户任务与平台约束推导交互、视觉和实现，并用运行证据验收"
-  default_prompt: "使用 $product-interface-design，先分析当前产品的用户任务、内容和平台，再设计并验证适合它的界面。"

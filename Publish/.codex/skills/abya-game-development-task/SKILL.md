@@ -19,6 +19,8 @@ description: 在 ABYA 桌面任务内制作玩法或执行指定制作阶段；�
 | 美术设计、参考与实机还原 | [游戏美术](references/game-art-design/SKILL.md)、[美术记录](references/art-design-records.md) |
 | 游戏 UI | [游戏 UI](references/game-art-design/references/game-ui-design/SKILL.md)，整体重设计另用 [产品界面](references/game-art-design/references/product-interface-design/SKILL.md) |
 | Bot 新增或修改 | [人机指南](references/bot-development.md) |
+| 测试计划、通用动作与逐端取证 | [运行测试 v3](references/runtime-scenario-v3.md) |
+| 可复用源码、素材与特效 | [资源配方](references/art-resources.md) |
 
 只读相关参考和已选模板，不每轮重读全部文档，不为局部修改启动完整选型流程。Impeccable 等设计能力按当前对象和阶段使用。
 
