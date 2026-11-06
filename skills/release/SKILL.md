@@ -1,5 +1,9 @@
 ## 2026-11-06 Workflow 2.12
 
+用户本轮要求修复试玩修改的预检死锁。专项维护包 APP `2bcd227afcaf9aa3b62a15f9e052c66ebb1d36752e3e62b1ae497a92dfb6fe40`、inventory `bd60c54876b98315584dcab9b6fb2733483eb60eb7389c137fc109f06f5b0f66` 已完成完整检查及新 PB 原生旧/新包对照回归，并进入正式 Publish。实际见缝插针的批准、证据、阶段、会话与101个游戏文件均保留；本次不是完整自主游戏验收，未改变标准试跑门槛。详见 [专项报告](../../docs/REVIEW_PREFLIGHT_20261106.md)。
+
+试玩修改预检循环阻塞维护：核验 review 原阶段运行真实副本预检、报告清理完成后普通编辑入口恢复，并保留原阶段、批准和目标。必须覆盖失败/缺失/包路径或指纹变化、未批准方案及禁止阶段；组件夹具与原生链路证据不作为整款游戏通过。
+
 用户随后明确要求“先把正式版替换吧，同时把见缝插针的项目迁移到新版本，然后清理旧版本的文件”。本次先行发布限定 APP SHA-256 `3fc4fb5f4c6e546b1e2151d4d9738b5ccddc833638c6496382fee9628e196d52`、inventory SHA-256 `8ae02cc003dbde98264df8dd47bc9030a490eb4147f1ae6839691f98d371f1f0`。正式 Publish 已替换，见缝插针已通过原生升级接口迁移，游戏内容与原会话身份保留。本次授权不改变标准试跑门槛，也不代表完整游戏通过。迁移及清理记录见 [发布报告](../../docs/JFCZ_WORKFLOW_212_20261106.md)。
 
 Workflow 2.12 packages scenario-actions/values/preflight modules and assets/art-library with the complete managed Skill. Runtime scenario v3 and recipe behavioral tests are required. Native pilot outcomes have no four-hour completion gate; temporal ordering, version binding and actual evidence remain required. Engine CLI gaps are a separately owned dependency; no synthetic result qualifies native acceptance.

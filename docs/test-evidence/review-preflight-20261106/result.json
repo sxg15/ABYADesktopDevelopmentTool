@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "scope": "Real Player existing-archive preflight and authorized edit entry; synthetic approvals, not game acceptance",
+  "stage": "review",
+  "state": "existing-verified",
+  "checks": [
+    {
+      "id": "runtime-connect",
+      "status": "passed"
+    },
+    {
+      "id": "save-archive",
+      "receipt": {
+        "completed": true,
+        "isAutoSaving": false,
+        "success": true
+      },
+      "savedGuid": "899e6f37-679b-4d28-8fe2-dd65c18068f4",
+      "savedName": "见缝插针-任务独立存档",
+      "status": "passed"
+    },
+    {
+      "archiveGuid": "899e6f37-679b-4d28-8fe2-dd65c18068f4",
+      "id": "cold-load",
+      "levelGuid": "145d965e3bb141ff954fb5340a73fcc0",
+      "status": "passed"
+    }
+  ],
+  "cleanup": {
+    "at": "2026-11-06T12:25:04.626273400+00:00",
+    "state": "completed"
+  },
+  "approvalsPreserved": true,
+  "documentsPreserved": true,
+  "authoringLaunchAllowed": true,
+  "appSha256": "2bcd227afcaf9aa3b62a15f9e052c66ebb1d36752e3e62b1ae497a92dfb6fe40"
+}

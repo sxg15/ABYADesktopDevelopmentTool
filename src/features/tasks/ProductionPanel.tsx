@@ -19,7 +19,7 @@ import { ArtWorkflowPanel } from "./ArtWorkflowPanel";
 import { DocumentReview } from "./DocumentReview";
 import { programmerIssue, activeProgrammerIssues } from "./programmerIssue";
 import { ProgrammerIssueExport } from "./ProgrammerIssueExport";
-import { CapabilityPreflightPanel } from "./CapabilityPreflightPanel";
+import { CapabilityPreflightPanel, showCapabilityPreflight } from "./CapabilityPreflightPanel";
 
 const names: Record<string, string> = {
   requirements: "需求整理",
@@ -438,7 +438,7 @@ export function ProductionPanel({
         </section>
       ) : (
         <>
-          {stage==="plan"&&<CapabilityPreflightPanel key={taskId} record={r} active={active&&r.currentStage==="plan"} onUpdated={()=>void refresh()}/>}
+          {showCapabilityPreflight(r,stage)&&<CapabilityPreflightPanel key={taskId} record={r} active={active&&r.currentStage===stage} onUpdated={()=>void refresh()}/>}
           {programmerIssues.length > 0 && <section className="programmer-blocker-banner" role="alert">
             <TriangleAlert size={26} aria-hidden="true"/>
             <div><h3>{en ? "Programmer attention required" : "程序处理提醒：ABYA 源码／构建包问题"}</h3>

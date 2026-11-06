@@ -43,18 +43,18 @@ impl TaskService {
         let _gate = ASSET_GATE.lock();
         crate::foundation::selected_game_executable(&self.database, &player.to_string_lossy())?;
         let status = self.task_player_status(task)?;
-        if self.production_get(task)?.record.is_some_and(|r| {
-            r.policy["capabilityPreflightVersion"] == 1
-                && matches!(r.current_stage.as_str(), "implementation" | "review")
-        }) {
-            self.validate_current_preflight(task)?;
-        }
         if status["matches"] != true {
             return Err(AppError::new(
                 "player_pin_mismatch",
                 "APP 构建包与任务记录不同，请在启动窗口确认使用当前包并重新验证。",
                 "not_executed",
             ));
+        }
+        if self.production_get(task)?.record.is_some_and(|r| {
+            r.policy["capabilityPreflightVersion"] == 1
+                && matches!(r.current_stage.as_str(), "implementation" | "review")
+        }) {
+            self.validate_current_preflight(task)?;
         }
         self.write_task_player(task, &status)
     }

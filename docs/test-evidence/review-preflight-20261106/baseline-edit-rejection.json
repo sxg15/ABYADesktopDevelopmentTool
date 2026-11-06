@@ -1,0 +1,3 @@
+{
+  "rejected": "launch_instance: {\"code\":\"validation\",\"message\":\"基础预检缺少真实完成的必要检查。\"}"
+}

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ArtDesign } from "./artDesign";
 export interface CapabilityPreflight {
+  stage?:string; purpose?:"initialization"|"maintenance"; reuseExisting?:boolean;
   runId:string; state:string; phase:string; reportPath?:string; playerBuildHash?:string;
   cleanup:{state:string;message?:string}; error?:{code:string;message:string};
   checks:{id:string;status?:string}[];

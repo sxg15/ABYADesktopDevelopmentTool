@@ -27,3 +27,21 @@ it("marks confirmed package problems but not a connection timeout",()=>{
  expect(programmerIssue(i)).toBeUndefined();
  expect(programmerIssue({...i,repairTarget:"abya-build",diagnosisStatus:"confirmed"})?.label).toBe("ABYA-PB 包兼容问题");
 });
+
+it("allows review revalidation using the existing archive without auto-running on view",async()=>{
+ const r=record();r.currentStage="review";r.workbench!.execution!.capabilityPreflight=undefined;
+ render(<CapabilityPreflightPanel record={r} active onUpdated={()=>{}}/>);
+ expect(productionApi.preflight).not.toHaveBeenCalled();
+ expect(screen.getByText(/可在当前阶段验证修改环境/)).toBeTruthy();
+ fireEvent.click(screen.getByRole("button",{name:"重新预检"}));
+ await waitFor(()=>expect(productionApi.preflight).toHaveBeenCalledWith("task",true,true));
+});
+
+it("shows existing archive verification without requesting a new plan approval",()=>{
+ const r=record();r.currentStage="review";const p=r.workbench!.execution!.capabilityPreflight!;
+ p.state="existing-verified";p.reportPath="artifacts/preflight.json";p.error=undefined;
+ render(<CapabilityPreflightPanel record={r} active onUpdated={()=>{}}/>);
+ expect(screen.getByText("已有存档的加载、保存及冷加载已验证")).toBeTruthy();
+ expect(screen.queryByText(/方案需引用/)).toBeNull();
+ expect(productionApi.preflight).not.toHaveBeenCalled();
+});

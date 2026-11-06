@@ -12,11 +12,12 @@ vi.mock("./AutonomousExecution",()=>({AutonomousExecution:()=>null}));
 vi.mock("./VisualGallery",()=>({VisualGallery:()=>null}));
 vi.mock("./WorkbenchSplit",()=>({WorkbenchSplit:({children}:{children:ReactNode})=><>{children}</>}));
 afterEach(()=>{cleanup();vi.resetAllMocks();});
-function fixture(platform:boolean){
+function fixture(platform:boolean,stage="plan"){
  const policy={capabilityPreflightVersion:1,stages:[{id:"plan",name:"方案预检"}],workflowVersion:"2.11.0"};
  const view={policy,warnings:[],availableUpdate:false,record:{taskId:"task",revision:2,cycle:1,workflowVersion:"2.11.0",policy,currentStage:"plan",stages:{plan:"in-progress"},documents:{},artifacts:[],
   issues:[{id:"preflight:basic",title:"基础能力预检未通过",description:"真实失败原因",stage:"plan",status:"open",kind:"blocker",preflightRunId:"run",repairTarget:platform?"abya-build":"other",diagnosisStatus:platform?"confirmed":"suspected"}],
   workbench:{goals:[],drafts:{},attempts:[],deferrals:[],execution:{capabilityPreflight:{runId:"run",state:"failed",phase:"create",checks:[],cleanup:{state:"completed"}}}}}} as unknown as ProductionView;
+ view.record!.currentStage=stage;view.record!.policy!.stages.push({id:"review",name:"试玩与修改",approval:null});
  vi.mocked(productionApi.get).mockResolvedValue(view);vi.mocked(productionApi.reconcile).mockResolvedValue(view);
  render(<ProductionWorkbench taskId="task" active visible onTerminal={()=>{}} onEnsureConnection={vi.fn()}/>);
 }
@@ -32,4 +33,10 @@ it("keeps ordinary preflight failures visible without platform styling",async()=
  fixture(false);const reason=await screen.findByText("真实失败原因");
  expect((reason.closest("details") as HTMLDetailsElement).open).toBe(true);
  expect(reason.closest(".programmer-issue")).toBeNull();
+});
+
+it("exposes the preflight recovery entry on the actual review workbench",async()=>{
+ fixture(false,"review");
+ expect(await screen.findByRole("region",{name:"基础能力预检"})).toBeTruthy();
+ expect(productionApi.preflight).not.toHaveBeenCalled();
 });

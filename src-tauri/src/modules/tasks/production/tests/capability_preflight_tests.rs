@@ -40,6 +40,191 @@ fn successful_contract(f: &Fixture, p: &mut Value) {
     f.service.publish_capability_preflight(&f.id, p).unwrap();
 }
 
+fn approved_maintenance(stage: &str) -> (Fixture, Value) {
+    let (f, mut p) = fixture();
+    successful_contract(&f, &mut p);
+    let report = f.record().workbench.execution.capability_preflight["reportPath"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    f.doc(
+        "plan",
+        &format!("Approved fixture implementation. {report}"),
+    );
+    f.accept("plan");
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.current_stage = stage.into();
+            Ok(())
+        })
+        .unwrap();
+    (f, p)
+}
+
+#[test]
+fn review_preflight_reopens_editing_in_place_without_new_archive_or_approvals() {
+    let (f, _) = approved_maintenance("review");
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.workbench.execution.capability_preflight = Value::Null;
+            Ok(())
+        })
+        .unwrap();
+    let before = f.record();
+    assert!(f.service.validate_current_preflight(&f.id).is_err());
+    let mut p = f
+        .service
+        .begin_capability_preflight(&f.id, false, false)
+        .unwrap();
+    assert_eq!(p["stage"], "review");
+    assert_eq!(p["purpose"], "maintenance");
+    assert_eq!(p["reuseExisting"], true);
+    p["state"] = json!("existing-verified");
+    p["checks"] = json!(
+        ["runtime-connect", "save-archive", "cold-load"]
+            .map(|id| json!({"id":id,"status":"passed"}))
+    );
+    f.service
+        .cleanup_capability_preflight_files(&f.id, p["runId"].as_str().unwrap())
+        .unwrap();
+    p["cleanup"] = json!({"state":"completed"});
+    f.service.publish_capability_preflight(&f.id, &p).unwrap();
+    f.service.validate_current_preflight(&f.id).unwrap();
+    let player = PathBuf::from(p["playerPath"].as_str().unwrap());
+    f.service.check_task_player(&f.id, &player).unwrap();
+    let after = f.record();
+    assert_eq!(after.current_stage, "review");
+    assert_eq!(
+        serde_json::to_value(after.approvals).unwrap(),
+        serde_json::to_value(before.approvals).unwrap()
+    );
+    assert_eq!(
+        serde_json::to_value(after.documents).unwrap(),
+        serde_json::to_value(before.documents).unwrap()
+    );
+    assert!(
+        after
+            .issues
+            .iter()
+            .all(|i| i["id"] != capability_preflight::ISSUE)
+    );
+    assert_eq!(
+        f.service
+            .begin_capability_preflight(&f.id, false, false)
+            .unwrap()["runId"],
+        p["runId"]
+    );
+}
+
+#[test]
+fn maintenance_checks_keep_authorization_and_do_not_reuse_failed_creation_route() {
+    for stage in ["implementation", "review"] {
+        let (f, mut old) = approved_maintenance(stage);
+        old["state"] = json!("failed");
+        old["error"] =
+            json!({"code":"preflight_capability_unavailable","message":"create unavailable"});
+        f.service.publish_capability_preflight(&f.id, &old).unwrap();
+        let p = f
+            .service
+            .begin_capability_preflight(&f.id, true, false)
+            .unwrap();
+        assert_ne!(p["runId"], old["runId"]);
+        assert_eq!(f.record().current_stage, stage);
+        let mut failed = p.clone();
+        failed["error"] = json!({"code":"timeout","message":"synthetic failure"});
+        failed["state"] = json!("failed");
+        f.service
+            .publish_capability_preflight(&f.id, &failed)
+            .unwrap();
+        assert_eq!(
+            f.record()
+                .issues
+                .iter()
+                .find(|i| i["id"] == capability_preflight::ISSUE)
+                .unwrap()["stage"],
+            stage
+        );
+        assert!(f.service.validate_current_preflight(&f.id).is_err());
+    }
+    let (f, _) = approved_maintenance("review");
+    let r = f.record();
+    files::write_file(
+        &f.workspace,
+        &r.documents["plan"].path,
+        b"unapproved change",
+    )
+    .unwrap();
+    assert!(
+        f.service
+            .begin_capability_preflight(&f.id, true, true)
+            .is_err()
+    );
+}
+
+#[test]
+fn preflight_remains_restricted_to_active_authorized_stages() {
+    for stage in ["requirements", "resources", "delivery", "closeout"] {
+        let (f, _) = approved_maintenance(stage);
+        assert!(
+            f.service
+                .begin_capability_preflight(&f.id, true, true)
+                .is_err()
+        );
+    }
+    let (f, _) = approved_maintenance("review");
+    f.service
+        .database
+        .with_connection(|db| {
+            db.execute(
+                "UPDATE development_tasks SET status='archived' WHERE id=?1",
+                [&f.id],
+            )?;
+            Ok(())
+        })
+        .unwrap();
+    assert!(
+        f.service
+            .begin_capability_preflight(&f.id, true, true)
+            .is_err()
+    );
+}
+
+#[test]
+fn changed_player_is_reported_before_preflight_and_moved_build_is_rechecked() {
+    let (f, p) = approved_maintenance("review");
+    let initial = f.service.task_player_status(&f.id).unwrap();
+    f.service
+        .adopt_task_player(&f.id, initial["selectedHash"].as_str().unwrap())
+        .unwrap();
+    let moved = f.root.join("relocated/fixture-player.exe");
+    std::fs::create_dir_all(moved.parent().unwrap()).unwrap();
+    std::fs::copy(p["playerPath"].as_str().unwrap(), &moved).unwrap();
+    f.service
+        .database
+        .with_connection(|db| {
+            db.execute(
+                "UPDATE settings SET value_json=?1 WHERE key='application'",
+                [json!({"gameExecutablePath":moved}).to_string()],
+            )?;
+            Ok(())
+        })
+        .unwrap();
+    assert_eq!(
+        f.service.check_task_player(&f.id, &moved).unwrap_err().code,
+        "player_pin_mismatch"
+    );
+    let next = f.service.task_player_status(&f.id).unwrap();
+    f.service
+        .adopt_task_player(&f.id, next["selectedHash"].as_str().unwrap())
+        .unwrap();
+    let fresh = f
+        .service
+        .begin_capability_preflight(&f.id, false, false)
+        .unwrap();
+    assert_ne!(fresh["runId"], p["runId"]);
+    assert_eq!(fresh["reuseExisting"], true);
+}
+
 #[test]
 fn failures_are_visible_immediately_and_are_not_all_platform_defects() {
     let (f, mut p) = fixture();

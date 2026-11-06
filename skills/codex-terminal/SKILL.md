@@ -1,5 +1,7 @@
 ## 2026-11-06 Workflow 2.12
 
+托管 developer instructions 指明 implementation/review 的编辑预检在当前阶段执行，review 验证本任务已有存档副本；不得因此回退方案或重复索取已批准修改的安装确认。实际权限和运行包切换仍按原生入口核验。
+
 托管 developer instructions 明确废止旧 Skill 的时间额度。prepare_terminal_workspace 在原生执行启动前调用任务服务的幂等时间策略迁移，保留原会话与用户恢复意图；不会因重连已活动任务而中断它。
 
 Workflow 2.12 dispatch never requests completion within a time allowance. Unlimited policies cannot trigger budget turn interruption; natural completion still uses existing identity/receipt continuation. Pauses, approvals and unknown writes remain authoritative. Legacy pinned policies migrate through the task upgrade with retained history.

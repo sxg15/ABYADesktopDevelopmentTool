@@ -1,0 +1,4 @@
+{
+  "message": "run_task_preflight: {\"code\":\"validation\",\"message\":\"基础能力预检仅在活动任务的方案阶段运行。\"}",
+  "appSha256": "3fc4fb5f4c6e546b1e2151d4d9738b5ccddc833638c6496382fee9628e196d52"
+}

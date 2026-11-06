@@ -115,6 +115,8 @@ impl RuntimeBridgeService {
             if p["state"] != "running" {
                 return Ok(p);
             }
+            let reuse = p["reuseExisting"] == true;
+            let maintenance = reuse && p["purpose"] == "maintenance";
             let outcome = if p["error"].is_null() {
                 self.preflight_native(&mut p)
             } else {
@@ -125,12 +127,14 @@ impl RuntimeBridgeService {
             };
             match outcome {
                 Ok(()) => {
-                    p["state"] = json!(if reuse {
+                    p["state"] = json!(if maintenance {
+                        "existing-verified"
+                    } else if reuse {
                         "workaround-verified"
                     } else {
                         "passed"
                     });
-                    if reuse {
+                    if reuse && !maintenance {
                         p["error"] = if p["routeIssue"].is_null() {
                             json!({"code":"preflight_existing_route","message":"本次验证使用已有任务存档替代新建；未证明原生新建能力恢复。"})
                         } else {
@@ -245,6 +249,19 @@ impl RuntimeBridgeService {
 }
 
 impl RuntimeBridgeService {
+    /// 场景就绪不代表关卡加载已完成，保存和冷加载均核对实际存档加载标志。
+    fn preflight_loaded_archive(&self, id: &str) -> AppResult<Value> {
+        loop {
+            let actual = self.preflight_call(id, "editor_get_archive", json!({}))?;
+            if actual["archiveAndLevelLoaded"] == true
+                && actual["isLoadingArchive"] != true
+                && actual["isLoadingLevel"] != true
+            {
+                return Ok(actual);
+            }
+            std::thread::sleep(Duration::from_millis(300));
+        }
+    }
     fn preflight_native(&self, p: &mut Value) -> AppResult<()> {
         let task = p["taskId"].as_str().unwrap().to_owned();
         let run = p["runId"].as_str().unwrap().to_owned();
@@ -359,7 +376,7 @@ impl RuntimeBridgeService {
             self.preflight_call(&id,"editor_load_archive",json!({"archiveGuid":created["archive"]["guid"],"openStartLevel":true,"discardUnsavedChanges":false}))?;
         }
         self.preflight_progress(p, "save-archive")?;
-        let loaded = self.preflight_call(&id, "editor_get_archive", json!({}))?;
+        let loaded = self.preflight_loaded_archive(&id)?;
         let archive = archive_creation::checked_archive(&root, &loaded)?;
         if loaded["archiveAndLevelLoaded"] != true {
             return Err(error("preflight_load_failed", "存档或初始关卡未真正加载。"));
@@ -399,13 +416,7 @@ impl RuntimeBridgeService {
         self.preflight_progress(p, "cold-load")?;
         let cold = self.preflight_launch(p, Some(selection.clone()))?;
         self.preflight_ready(&cold)?;
-        let actual = loop {
-            let actual = self.preflight_call(&cold, "editor_get_archive", json!({}))?;
-            if actual["archiveAndLevelLoaded"] == true {
-                break actual;
-            }
-            std::thread::sleep(Duration::from_millis(300));
-        };
+        let actual = self.preflight_loaded_archive(&cold)?;
         if actual["guid"] != selection.archive_guid
             || actual["currentLevelGuid"] != selection.level_guid
             || actual["archiveAndLevelLoaded"] != true

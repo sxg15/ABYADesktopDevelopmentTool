@@ -28,15 +28,20 @@ impl TaskService {
                 let failure = !value["error"].is_null() || !value["cleanupError"].is_null();
                 if failure {
                     let platform = matches!(value["error"]["code"].as_str(),Some("preflight_capability_missing" | "preflight_contract_missing"));
-                    let issue=json!({"id":ISSUE,"preflightRunId":value["runId"],"stage":"plan","affectedStages":["plan","implementation"],"kind":"blocker","status":"open",
-                        "title":if value["cleanupError"].is_null(){"基础能力预检未通过"}else{"预检临时文件待清理"},"description":if value["error"].is_null(){value["cleanupError"].clone()}else{value["error"]["message"].clone()},"detectedStage":"plan","owningStage":"plan",
+                    let stage=value["stage"].as_str().unwrap_or("plan");
+                    let issue=json!({"id":ISSUE,"preflightRunId":value["runId"],"stage":stage,"affectedStages":[stage,"implementation","review"],"kind":"blocker","status":"open",
+                        "title":if value["cleanupError"].is_null(){"基础能力预检未通过"}else{"预检临时文件待清理"},"description":if value["error"].is_null(){value["cleanupError"].clone()}else{value["error"]["message"].clone()},"detectedStage":stage,"owningStage":stage,
                         "repairTarget":if platform{"abya-build"}else{"other"},"diagnosisStatus":if platform{"confirmed"}else{"suspected"},
                         "category":if platform{"platform-confirmed"}else{"runtime-unknown"},"preflightDisposition":if value["state"]=="workaround-verified"{"verified-workaround"}else{"pending"},
                         "fix":if value["state"]=="workaround-verified"{"复用本任务已有存档，保存及冷加载已验证；原创建入口问题仍保留。"}else{"核对当前包、运行状态和调用条件；有本任务已有存档时可验证复用路径，禁止自行换包。"},
-                        "resumeWhen":"当前包下通过基础链路或经验证的等效路径，并在方案中引用本次预检报告。",
+                        "resumeWhen":if stage=="plan"{"当前包下通过基础链路或经验证的等效路径，并在方案中引用本次预检报告。"}else{"在当前阶段完成当前包的隔离预检，再继续原修改任务；无需回退方案或重复确认安装意图。"},
                         "playerBuildHash":value["playerBuildHash"],"preflightReport":relative,"updatedAt":now()});
                     if let Some(old)=r.issues.iter_mut().find(|i|i["id"]==ISSUE){*old=issue;}else{r.issues.push(issue);}
                 } else if value["state"]=="passed" && let Some(old)=r.issues.iter_mut().find(|i|i["id"]==ISSUE){old["status"]=json!("resolved");old["fix"]=json!("基础能力重新实测通过。");old["recheck"]=json!(relative);old["preflightDisposition"]=json!("resolved");old["preflightReport"]=json!(relative);old["preflightRunId"]=value["runId"].clone();}
+                else if value["state"]=="existing-verified" && let Some(old)=r.issues.iter_mut().find(|i|i["id"]==ISSUE){
+                    old["preflightDisposition"]=json!("verified-existing");old["preflightReport"]=json!(relative);old["preflightRunId"]=value["runId"].clone();
+                    old["fix"]=json!("本任务已有存档的加载、保存和冷加载已验证；原新建路径问题仍保留，不阻止适用的已有存档修改。");
+                }
                 Ok(())
             });
             match result {
@@ -153,7 +158,19 @@ pub(super) fn gate(r: &ProductionRecord, root: &Path) -> AppResult<()> {
         return Ok(());
     }
     let p = &r.workbench.execution.capability_preflight;
-    let required = if p["state"] == "workaround-verified" {
+    if p["state"] == "existing-verified"
+        && (p["reuseExisting"] != true
+            || p["purpose"] != "maintenance"
+            || !matches!(p["stage"].as_str(), Some("implementation" | "review")))
+    {
+        return Err(AppError::validation(
+            "已有存档预检缺少有效的修改阶段与复用范围。",
+        ));
+    }
+    let required = if matches!(
+        p["state"].as_str(),
+        Some("workaround-verified" | "existing-verified")
+    ) {
         vec!["runtime-connect", "save-archive", "cold-load"]
     } else {
         vec![
@@ -172,12 +189,14 @@ pub(super) fn gate(r: &ProductionRecord, root: &Path) -> AppResult<()> {
     }) {
         return Err(AppError::validation("基础预检缺少真实完成的必要检查。"));
     }
-    if !matches!(p["state"].as_str(), Some("passed" | "workaround-verified"))
-        || p["scope"] != scope(r)
+    if !matches!(
+        p["state"].as_str(),
+        Some("passed" | "workaround-verified" | "existing-verified")
+    ) || p["scope"] != scope(r)
         || p["cleanup"]["state"] != "completed"
     {
         return Err(AppError::validation(
-            "请先完成基础能力预检及临时存档清理；未测、失败或结果未知不能进入实现。",
+            "请在当前阶段完成基础能力预检及临时存档清理，再继续编辑；未测、失败或结果未知不能视为通过。",
         ));
     }
     let report = files::safe_path(root, mutation::text(p, "reportPath")?)?;
@@ -213,7 +232,10 @@ pub(super) fn plan_notes(r: &ProductionRecord, content: &str) -> AppResult<()> {
 pub(super) fn workaround(r: &ProductionRecord, i: &Value) -> bool {
     let p = &r.workbench.execution.capability_preflight;
     i["id"] == ISSUE
-        && p["state"] == "workaround-verified"
+        && matches!(
+            p["state"].as_str(),
+            Some("workaround-verified" | "existing-verified")
+        )
         && p["scope"] == scope(r)
         && i["preflightRunId"] == p["runId"]
         && p["cleanup"]["state"] == "completed"
@@ -222,7 +244,7 @@ pub(super) fn workaround(r: &ProductionRecord, i: &Value) -> bool {
 }
 
 impl TaskService {
-    /// 方案预检是固定测试授权，不授予普通游戏开发或任意目录写入权限。
+    /// 固定隔离预检支持方案、实现和试玩修改；不改阶段或授予普通开发权限。
     pub fn begin_capability_preflight(
         &self,
         task: &str,
@@ -230,13 +252,24 @@ impl TaskService {
         retry: bool,
     ) -> AppResult<Value> {
         let r = self.production_get(task)?.record.ok_or_else(conflict)?;
-        if self.get_readonly(task)?.status != TaskStatus::Active || r.current_stage != "plan" {
+        if self.get_readonly(task)?.status != TaskStatus::Active
+            || !matches!(
+                r.current_stage.as_str(),
+                "plan" | "implementation" | "review"
+            )
+        {
             return Err(AppError::validation(
-                "基础能力预检仅在活动任务的方案阶段运行。",
+                "基础能力预检可在活动任务的方案、实现或试玩修改阶段运行。",
             ));
         }
         let root = self.production_workspace(task)?;
         validation::approved(&r, &root, "requirements")?;
+        let maintenance = matches!(r.current_stage.as_str(), "implementation" | "review");
+        if maintenance {
+            validation::approved(&r, &root, "plan")?;
+        }
+        // 试玩修改已有作品，只验证当前编辑链路，避免重新依赖无关的新建入口。
+        let reuse = reuse || r.current_stage == "review";
         let player = self.task_player_status(task);
         let old = &r.workbench.execution.capability_preflight;
         if old["state"] == "running" || old["cleanup"]["state"] == "pending" {
@@ -245,6 +278,11 @@ impl TaskService {
             ));
         }
         if !retry
+            && player.as_ref().is_ok_and(|p| p["matches"] == true)
+            && player
+                .as_ref()
+                .is_ok_and(|p| p["selectedPath"] == old["playerPath"])
+            && (old["state"] == "passed" || old["reuseExisting"] == reuse)
             && old["scope"] == scope(&r)
             && old["playerBuildHash"]
                 == player
@@ -255,7 +293,7 @@ impl TaskService {
             && !old.is_null()
             && (!matches!(
                 old["state"].as_str(),
-                Some("passed" | "workaround-verified")
+                Some("passed" | "workaround-verified" | "existing-verified")
             ) || gate(&r, &root).is_ok())
         {
             return Ok(old.clone());
@@ -265,7 +303,7 @@ impl TaskService {
             root.parent().ok_or_else(conflict)?,
             &format!(".abya-preflight/{task}/{run}"),
         )?;
-        let mut value = json!({"runId":run,"taskId":task,"scope":scope(&r),"suiteVersion":1,"state":"running","phase":"starting","reuseExisting":reuse,
+        let mut value = json!({"runId":run,"taskId":task,"stage":r.current_stage,"purpose":if maintenance{"maintenance"}else{"initialization"},"scope":scope(&r),"suiteVersion":1,"state":"running","phase":"starting","reuseExisting":reuse,
             "dataRoot":data,"instances":[],"checks":[],"cleanup":{"state":"pending"},"startedAt":now(),"reportPath":format!("artifacts/capability-preflight/{run}.json")});
         if reuse {
             value["routeIssue"] = old["error"].clone();
@@ -315,7 +353,7 @@ impl TaskService {
             || current["selectedPath"] != p["playerPath"]
         {
             return Err(AppError::validation(
-                "APP 选定包或指纹已变化，请重新执行方案预检。",
+                "APP 选定包或指纹已变化，请在当前阶段重新执行基础能力预检。",
             ));
         }
         Ok(())

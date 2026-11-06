@@ -1,5 +1,7 @@
 # ABYA CLI 工作流
 
+基础能力预检 `production preflight` 支持 plan、implementation、review。后两者要求已有有效的需求和计划批准；review 默认使用本任务已有编辑存档的隔离副本验证加载、保存和冷加载。结果 existing-verified 只证明这条编辑链路，不证明新建能力或游戏验收通过。预检完成继续原阶段，不重新提交未变化的方案；包切换和未知写入仍分别确认/对账。
+
 使用环境变量 ABYA_DESKTOP_CLI 指定的可执行文件。参数均为 JSON 对象，
 通过 --input-file 文件路径或 -（stdin）传递；--json 返回单个 JSON 文档。
 先运行 doctor 和 capabilities。capabilities 返回准确的命令 ID、参数 schema 与风险说明。

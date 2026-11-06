@@ -1,5 +1,7 @@
 ## 2026-11-06 Workflow 2.12
 
+试玩修改预检修复：begin_capability_preflight 支持活动任务的 plan/implementation/review；后两者必须已有有效需求和方案批准。review 默认 reuseExisting，返回 purpose=maintenance、实际 stage；验证通过为 existing-verified，仅要求 runtime-connect/save-archive/cold-load 及清理。预检不回退阶段或重开批准，原新建故障可保留为有证据的非阻断问题。缓存核对任务范围、包路径/指纹和路线，失败新建结果不锁住复用路线；运行包不匹配先报告确认需求。
+
 Windows 长路径目录树改名返回访问/共享错误时，安装使用不存在的目标复制已完成暂存内容，最后写 SKILL.md 并逐文件校验。失败只清理本次创建的目标，既有目标不会被兜底复制覆盖；不改 ACL。发布前须用真实便携包验证此路径。
 
 旧任务首次打开/恢复托管终端时，在无活动 CLI 会话且任务 active 的前提下，仅迁移 executionTimePolicy 并保存历史；不升级其他阶段门槛、不覆盖固定 Skill。运行中任务不被迁移打断。旧时间指令由托管 developer instructions 明确废止。全流程升级仍通过原 APP 升级入口同步 Skill 和新测试计划契约。

@@ -24,8 +24,8 @@ pub(crate) fn tools() -> Vec<CliCommand> {
     vec![
         tool(
             "development_production_preflight",
-            "Run the bounded plan-stage basic capability smoke test using only APP-selected Player. Temporary data is cleaned automatically; original receipts remain. reuseExisting validates a copy of this task's unique existing editable archive as an alternative to native creation.",
-            "Run plan capability preflight",
+            "Run isolated capability preflight in plan, implementation or review using the APP-selected Player. Implementation/review require an approved plan. Review defaults to a copy of the task's existing editable archive; it validates load/save/cold-load without moving stages or reopening approval. Temporary data is cleaned and receipts retained.",
+            "Run current-stage capability preflight",
             object_schema(
                 json!({"taskId":{"type":"string"},"reuseExisting":{"type":"boolean","default":false},"retry":{"type":"boolean","default":false}}),
                 &[],
