@@ -1,5 +1,7 @@
 ## 2026-11-06 Workflow 2.12
 
+当前子流程统一投影：先看当前阶段/周期的最近执行记录，再判断是否仍在执行或需要恢复；不得跳过已结束的新执行，复活更早中断的目标。新请求优先于已暂停/中断的旧请求；running/sending/queued/reconciling/needsReview 仍保留真实执行归属。读取旧任务时仅修正返回的 activeGoalId，不改持久化历史、请求完成状态或启动执行；下一次合法提交自然保存正确指向。前端提交新意见后清除旧目标选择，review 阶段保留原子流程继续入口，不因已有旧试玩版而隐藏。
+
 Lua 实现和试玩修改的启动版本、人数、问题与反馈表单合并到同一“试玩与反馈”区域；VerificationPackage 的 embedded 模式去掉嵌套卡片边框，长问题保留数量并可展开。当前阶段连续滚动，历史仍只读；启动版本、修复、手动阶段交接、草稿/附件和提交继续沿用原接口及禁用条件。
 
 试玩修改预检修复：begin_capability_preflight 支持活动任务的 plan/implementation/review；后两者必须已有有效需求和方案批准。review 默认 reuseExisting，返回 purpose=maintenance、实际 stage；验证通过为 existing-verified，仅要求 runtime-connect/save-archive/cold-load 及清理。预检不回退阶段或重开批准，原新建故障可保留为有证据的非阻断问题。缓存核对任务范围、包路径/指纹和路线，失败新建结果不锁住复用路线；运行包不匹配先报告确认需求。

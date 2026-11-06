@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "fixed": false,
+  "appSha256": "a573125b26938e32a744da4dd94f648d0c99ce9c4154f138de1afca8c6117457",
+  "projectedGoal": "request:a28384b2-e5e8-41f7-bd93-bdb4eae53efb",
+  "storedGoal": "request:a28384b2-e5e8-41f7-bd93-bdb4eae53efb",
+  "readOnlyProjection": true,
+  "controlsRestored": false,
+  "historyReturnCorrect": false,
+  "scope": "Isolated native App using copied record structure; no game launch or model execution"
+}

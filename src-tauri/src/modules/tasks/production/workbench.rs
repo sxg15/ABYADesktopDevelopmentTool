@@ -54,9 +54,8 @@ fn upsert(
 pub(super) fn observe(r: &mut ProductionRecord, before: Option<&ProductionRecord>) {
     let original_count = r.workbench.goals.len();
     let revision = r.revision + u64::from(before.is_some());
-    let mut current = None;
     for group in r.question_groups.clone() {
-        let id = upsert(
+        upsert(
             r,
             &group.stage,
             "question",
@@ -75,9 +74,6 @@ pub(super) fn observe(r: &mut ProductionRecord, before: Option<&ProductionRecord
                 .map(|a| serde_json::to_string(&a.answers).unwrap_or_default()),
             revision,
         );
-        if group.stage == r.current_stage && group.status == "pending" {
-            current = Some(id);
-        }
     }
     for (stage, doc) in r.documents.clone() {
         let source = format!("{stage}:{}:{}", doc.revision, doc.sha256);
@@ -104,7 +100,7 @@ pub(super) fn observe(r: &mut ProductionRecord, before: Option<&ProductionRecord
             .map(|a| a.decision.as_str())
             .unwrap_or("awaiting-confirmation");
         let title = format!("{} · 第 {} 版", stage_label(&stage), doc.revision);
-        let id = upsert(
+        upsert(
             r,
             &stage,
             "document",
@@ -115,18 +111,10 @@ pub(super) fn observe(r: &mut ProductionRecord, before: Option<&ProductionRecord
             decision.as_ref().map(|a| a.feedback.clone()),
             revision,
         );
-        if current.is_none()
-            && stage == r.current_stage
-            && r.stages
-                .get(&stage)
-                .is_some_and(|s| s == "awaiting-confirmation")
-        {
-            current = Some(id);
-        }
     }
     for feedback in r.feedback.clone() {
         let stage = feedback["stage"].as_str().unwrap_or("review");
-        let id = upsert(
+        upsert(
             r,
             stage,
             "feedback",
@@ -140,13 +128,10 @@ pub(super) fn observe(r: &mut ProductionRecord, before: Option<&ProductionRecord
                 .map(Value::to_string),
             revision,
         );
-        if current.is_none() && stage == r.current_stage && feedback["status"] != "resolved" {
-            current = Some(id);
-        }
     }
     for request in r.workbench.requests.clone().into_iter().rev() {
         let stage = request["stage"].as_str().unwrap_or("requirements");
-        let id = upsert(
+        upsert(
             r,
             stage,
             "request",
@@ -160,13 +145,8 @@ pub(super) fn observe(r: &mut ProductionRecord, before: Option<&ProductionRecord
             None,
             revision,
         );
-        if current.is_none() && stage == r.current_stage && request["status"] != "completed" {
-            current = Some(id);
-        }
     }
-    if let Some(goal) = execution_goal(r) {
-        current = Some(goal);
-    }
+    let mut current = current_goal(r);
     if current.is_none() {
         let existing = r
             .workbench
@@ -243,7 +223,51 @@ pub(super) fn stage_label(stage: &str) -> &str {
     }
 }
 
-fn execution_goal(r: &ProductionRecord) -> Option<String> {
+/// Shared read/write projection: returning to current work must not revive an old interruption.
+pub(super) fn current_goal(r: &ProductionRecord) -> Option<String> {
+    let eligible = |g: &&WorkbenchGoal| g.stage == r.current_stage && g.cycle == r.cycle;
+    let goals: Vec<_> = r.workbench.goals.iter().filter(eligible).collect();
+    let candidate = goals
+        .iter()
+        .rev()
+        .find(|g| g.source_type == "question" && g.status == "pending")
+        .or_else(|| {
+            goals.iter().rev().find(|g| {
+                g.source_type == "document"
+                    && g.status == "awaiting-confirmation"
+                    && r.stages
+                        .get(&r.current_stage)
+                        .is_some_and(|s| s == "awaiting-confirmation")
+            })
+        })
+        .or_else(|| {
+            goals.iter().find(|g| {
+                g.source_type == "feedback"
+                    && !matches!(g.status.as_str(), "resolved" | "superseded")
+            })
+        })
+        .or_else(|| {
+            r.workbench.requests.iter().rev().find_map(|request| {
+                goals.iter().find(|g| {
+                    g.source_type == "request"
+                        && request["id"] == g.source_id
+                        && !matches!(g.status.as_str(), "completed" | "superseded")
+                })
+            })
+        })
+        .map(|g| g.id.clone());
+    execution_goal(r, candidate.as_deref())
+        .or(candidate)
+        .or_else(|| {
+            goals
+                .iter()
+                .rev()
+                .find(|g| g.source_type == "work" && g.status == "in-progress")
+                .map(|g| g.id.clone())
+        })
+}
+
+fn execution_goal(r: &ProductionRecord, candidate: Option<&str>) -> Option<String> {
     if r.stages
         .get(&r.current_stage)
         .is_some_and(|s| s == "awaiting-confirmation")
@@ -253,20 +277,32 @@ fn execution_goal(r: &ProductionRecord) -> Option<String> {
     {
         return None;
     }
-    r.workbench
-        .attempts
-        .iter()
-        .rev()
-        .find(|a| {
-            matches!(
-                a.status.as_str(),
-                "running" | "sending" | "queued" | "interrupted" | "paused"
-            ) && r.workbench.goals.iter().any(|g| {
-                g.id == a.goal_id
-                    && g.stage == r.current_stage
-                    && g.cycle == r.cycle
-                    && !matches!(g.status.as_str(), "completed" | "accepted" | "resolved")
-            })
-        })
-        .map(|a| a.goal_id.clone())
+    // Find the latest attempt first, including terminal states. Filtering by recovery
+    // status first skips finished newer work and incorrectly resurrects old goals.
+    let attempt = r.workbench.attempts.iter().rev().find(|a| {
+        r.workbench
+            .goals
+            .iter()
+            .any(|g| g.id == a.goal_id && g.stage == r.current_stage && g.cycle == r.cycle)
+    })?;
+    let goal = r.workbench.goals.iter().find(|g| g.id == attempt.goal_id)?;
+    if matches!(
+        goal.status.as_str(),
+        "completed" | "accepted" | "resolved" | "superseded"
+    ) {
+        return None;
+    }
+    match attempt.status.as_str() {
+        "running" | "sending" | "queued" | "reconciling" | "needsReview" => Some(goal.id.clone()),
+        "interrupted" | "paused"
+            if !r
+                .workbench
+                .goals
+                .iter()
+                .any(|g| Some(g.id.as_str()) == candidate && g.number > goal.number) =>
+        {
+            Some(goal.id.clone())
+        }
+        _ => None,
+    }
 }

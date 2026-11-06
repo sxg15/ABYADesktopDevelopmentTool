@@ -1,4 +1,142 @@
 use super::*;
+
+#[test]
+fn current_request_survives_finished_attempt_and_readonly_legacy_projection() {
+    for stage in ["implementation", "review"] {
+        let f = Fixture::new();
+        f.service
+            .production_commit(&f.id, f.record().revision, |r| {
+                r.current_stage = stage.into();
+                r.stages.insert(stage.into(), "in-progress".into());
+                Ok(())
+            })
+            .unwrap();
+        action(&f, "request", json!({"id":"old","text":"旧修改"})).unwrap();
+        let old = f
+            .service
+            .production_begin_attempt(
+                &f.id,
+                None,
+                WorkbenchAttempt {
+                    id: "old-attempt".into(),
+                    goal_id: "request:old".into(),
+                    status: "running".into(),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        f.service
+            .production_attempt_status(&f.id, &old.id, "interrupted", None, "旧中断")
+            .unwrap();
+        action(&f, "request", json!({"id":"new","text":"新的插针修改"})).unwrap();
+        assert_eq!(
+            f.record().workbench.active_goal_id.as_deref(),
+            Some("request:new")
+        );
+        let new = f
+            .service
+            .production_begin_attempt(
+                &f.id,
+                None,
+                WorkbenchAttempt {
+                    id: "new-attempt".into(),
+                    goal_id: "request:new".into(),
+                    status: "running".into(),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        f.service
+            .production_attempt_status(&f.id, &new.id, "finished", None, "等待包确认")
+            .unwrap();
+        let before = f.record();
+        assert_eq!(
+            before.workbench.active_goal_id.as_deref(),
+            Some("request:new")
+        );
+        assert_eq!(
+            before.workbench.requests.last().unwrap()["status"],
+            "pending"
+        );
+        // Old installations persisted the wrong pointer. Reading must repair only
+        // the projected focus, not complete requests or rewrite any stored record.
+        f.service
+            .database
+            .with_connection(|db| {
+                let mut legacy = load(db, &f.id)?.unwrap();
+                legacy.workbench.active_goal_id = Some("request:old".into());
+                db.execute(
+                    "UPDATE task_production SET body=?2 WHERE task_id=?1",
+                    rusqlite::params![f.id, serde_json::to_string(&legacy)?],
+                )?;
+                Ok(())
+            })
+            .unwrap();
+        let read = f.record();
+        assert_eq!(
+            read.workbench.active_goal_id.as_deref(),
+            Some("request:new")
+        );
+        assert_eq!(read.revision, before.revision);
+        assert_eq!(
+            serde_json::to_value(&read.workbench.attempts).unwrap(),
+            serde_json::to_value(&before.workbench.attempts).unwrap()
+        );
+        assert_eq!(read.workbench.requests, before.workbench.requests);
+        assert_eq!(
+            f.service
+                .database
+                .with_connection(|db| Ok(load(db, &f.id)?.unwrap().workbench.active_goal_id))
+                .unwrap()
+                .as_deref(),
+            Some("request:old")
+        );
+        action(&f, "save-draft", json!({"key":"current","text":"保留草稿"})).unwrap();
+        assert_eq!(
+            f.record().workbench.active_goal_id.as_deref(),
+            Some("request:new")
+        );
+    }
+}
+
+#[test]
+fn current_goal_preserves_live_and_uncertain_execution_without_reviving_older_attempts() {
+    let f = Fixture::new();
+    action(&f, "request", json!({"id":"old","text":"旧修改"})).unwrap();
+    action(&f, "request", json!({"id":"new","text":"新修改"})).unwrap();
+    let mut r = f.record();
+    for state in ["running", "sending", "queued", "reconciling", "needsReview"] {
+        r.workbench.attempts = vec![WorkbenchAttempt {
+            goal_id: "request:old".into(),
+            status: state.into(),
+            ..Default::default()
+        }];
+        assert_eq!(
+            workbench::current_goal(&r).as_deref(),
+            Some("request:old"),
+            "{state}"
+        );
+    }
+    for state in ["finished", "failed", "paused", "interrupted"] {
+        r.workbench.attempts = vec![
+            WorkbenchAttempt {
+                goal_id: "request:old".into(),
+                status: "interrupted".into(),
+                ..Default::default()
+            },
+            WorkbenchAttempt {
+                goal_id: "request:new".into(),
+                status: state.into(),
+                ..Default::default()
+            },
+        ];
+        assert_eq!(
+            workbench::current_goal(&r).as_deref(),
+            Some("request:new"),
+            "{state}"
+        );
+    }
+}
 #[test]
 fn workbench_package_reports_missing_and_changed_evidence_without_claiming_inclusion() {
     use std::io::Read;

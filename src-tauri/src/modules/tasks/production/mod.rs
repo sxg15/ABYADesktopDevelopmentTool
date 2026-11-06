@@ -311,6 +311,9 @@ impl TaskService {
             authoring::project_grants(r);
             if r.workbench.goals.is_empty() {
                 workbench::observe(r, None);
+            } else {
+                // Repair stale focus in old records without rewriting history or starting work.
+                r.workbench.active_goal_id = workbench::current_goal(r);
             }
         }
         let warnings = record

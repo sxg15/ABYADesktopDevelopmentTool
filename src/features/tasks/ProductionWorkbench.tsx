@@ -73,7 +73,7 @@ export function ProductionWorkbench(props:Props) {
   async function send(){if(!r||!draft.trim()||running)return;
     if(/^(继续|继续执行|继续此子流程|continue|resume)[。.!！\s]*$/i.test(draft.trim())){setNotice(en?"Use Resume this subprocess to keep the original goal.":"请点击‘继续此子流程’恢复当前目标；无需新建名为‘继续’的目标。");return;}
     const next=await run(()=>productionApi.workbench(taskId,r.revision,"request",{id:requestId,text:draft}));
-    if(!next?.record)return;setDraft("");dirty.current=false;localStorage.removeItem(`abya:workbench:${taskId}`);setRequestId(crypto.randomUUID());setNotice(en?"Request saved.":"请求已保存，无需重复提交。");
+    if(!next?.record)return;setStage(next.record.currentStage);setGoalId("");setDraft("");dirty.current=false;localStorage.removeItem(`abya:workbench:${taskId}`);setRequestId(crypto.randomUUID());setNotice(en?"Request saved.":"请求已保存，无需重复提交。");
     try{await onContinue?.("",undefined,next.record.revision);}catch(e){setError((en?"Saved; connection needs attention. ":"请求已保存，续接未完成：")+errorMessage(e));}}
   async function attach(file:File){
     if(file.size>32*1024*1024){setError(en?"File exceeds 32 MiB.":"附件超过32 MiB。");return;}
@@ -86,7 +86,7 @@ export function ProductionWorkbench(props:Props) {
   const packagePanel=playtest&&<VerificationPackage key={taskId} embedded record={r} active={active&&!running&&!reconciling} en={en} onUpdated={next=>{accept(next);setStage(next.record?.currentStage??"review");setGoalId("");}} onRepair={props.onResumeGoal&&r.workbench?.activeGoalId?async()=>{await props.onResumeGoal!(r.workbench!.activeGoalId!,r.revision,crypto.randomUUID());await refresh();}:undefined}/>;
   const technicalPanel=<details className="playable-technical" open={!playtest}><summary>{en?"Technical details and execution records":"技术详情与执行记录"}</summary><AutonomousExecution record={r} en={en} control={control}/>
     {!historical&&view.policy.stageContractsVersion===1&&["resources","plan"].includes(currentStage)&&<PrototypeAuthorization key={taskId} record={r} active={active&&!running} en={en} onUpdated={accept}/>}
-    {goal&&["work","request","feedback"].includes(goal.sourceType)&&<GoalExecutionPanel hideAction={playableState(r).available&&!historical} key={goal.id} record={r} goal={goal} active={active} checking={reconciling} en={en} onResume={props.onResumeGoal?async(...args)=>{const result=await props.onResumeGoal!(...args);await refresh();return result;}:undefined}/>}
+    {goal&&["work","request","feedback"].includes(goal.sourceType)&&<GoalExecutionPanel hideAction={currentStage==="implementation"&&playableState(r).available&&!historical} key={goal.id} record={r} goal={goal} active={active} checking={reconciling} en={en} onResume={props.onResumeGoal?async(...args)=>{const result=await props.onResumeGoal!(...args);await refresh();return result;}:undefined}/>}
   </details>;
   const outcome=<><header className="wb-outcome-heading"><div><h2>{goal?.title??name(currentStage)}</h2><p>{historical?(en?"Historical snapshot · read only":"历史快照 · 只读"):(r.stageUpdates?.[currentStage]?.summary||(en?"Results will appear here as work progresses.":"这一阶段的成果将在这里集中呈现。"))}</p></div><button className="icon-button" title={en?"Expand result":"放大成果"} onClick={()=>setExpanded(true)}><Maximize2 size={18}/></button></header>
     {historical&&goal&&!snapshot?<p role="status">{en?"Loading history…":"正在读取历史…"}</p>:<>
