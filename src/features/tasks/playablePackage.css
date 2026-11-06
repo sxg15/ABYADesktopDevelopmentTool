@@ -5,3 +5,15 @@
 @media(max-width:1000px){.playable-package-heading small{display:block;margin:6px 0 0}.playable-package-heading,.playable-handoff{flex-wrap:wrap}}@media(max-width:650px){.playable-actions button{width:100%}}
 .wb-main.wb-playable-flow{display:block;overflow:auto}.wb-playable-flow>.wb-outcome,.wb-playable-flow>.wb-interaction{overflow:visible;max-height:none;min-height:0;height:auto}.wb-playable-flow>.wb-outcome{padding-bottom:12px}.wb-playable-flow>.wb-divider[hidden]{display:none}.wb-playable-flow>.wb-outcome>details>summary{font-size:13px;color:#625e54;cursor:pointer}.tasks-workspace .task-guidance.guidance-playable{background:#edf1e6;border-color:#b7c9b4;border-left-color:#47724c}.guidance-playable .guidance-icon{background:#dbe6d3;color:#355b38}
 .wb-main.wb-split.wb-playable-flow{display:block;overflow:auto}.playable-section-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:14px}.playable-section-heading h3{font-size:15px;margin:0}.playable-section-heading small{color:#625e54;font-size:12px}
+
+/* Playtest and feedback share one interaction surface in implementation/review. */
+.playable-package-embedded{border:0;border-bottom:1px solid #d8d3c6;border-radius:0;background:transparent;margin:0 0 16px;padding:0 0 14px;overflow:visible}
+.playable-package-embedded .playable-package-heading{padding:4px 0 12px}
+.playable-package-embedded .playable-package-heading h4{font-size:17px;line-height:1.5;margin:0}
+.playable-package-embedded .playable-gaps{margin:0;padding:10px 12px}
+.playable-package-embedded .playable-gaps>summary{cursor:pointer;font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.playable-package-embedded .playable-gaps[open]>summary{margin-bottom:12px}
+.playable-package-embedded .playable-actions{padding:14px 0 6px;align-items:center}
+.playable-package-embedded .playable-note,.playable-package-embedded .playable-empty{padding:0}
+.playable-package-embedded .playable-handoff{padding:12px 0 0;margin-top:12px;background:transparent;flex-wrap:wrap}
+.wb-playable-flow>.wb-interaction>header{flex-wrap:wrap}

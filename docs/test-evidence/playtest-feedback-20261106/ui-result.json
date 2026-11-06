@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "scope": "Real React components with isolated API fixtures; no real launch or AI submission",
+  "results": [
+    {
+      "stage": "review",
+      "oneMergedArea": true,
+      "players": 4,
+      "launchVersion": "input-362f-v1",
+      "draftRetained": true,
+      "issuesExpandable": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "stage": "implementation",
+      "oneMergedArea": true,
+      "players": 4,
+      "launchVersion": "standard-bot-c1-v1",
+      "draftRetained": true,
+      "issuesExpandable": true,
+      "noHorizontalOverflow": true
+    }
+  ],
+  "runningGuardsPreserved": true
+}

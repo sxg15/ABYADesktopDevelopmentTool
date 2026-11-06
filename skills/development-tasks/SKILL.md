@@ -1,5 +1,7 @@
 ## 2026-11-06 Workflow 2.12
 
+Lua 实现和试玩修改的启动版本、人数、问题与反馈表单合并到同一“试玩与反馈”区域；VerificationPackage 的 embedded 模式去掉嵌套卡片边框，长问题保留数量并可展开。当前阶段连续滚动，历史仍只读；启动版本、修复、手动阶段交接、草稿/附件和提交继续沿用原接口及禁用条件。
+
 试玩修改预检修复：begin_capability_preflight 支持活动任务的 plan/implementation/review；后两者必须已有有效需求和方案批准。review 默认 reuseExisting，返回 purpose=maintenance、实际 stage；验证通过为 existing-verified，仅要求 runtime-connect/save-archive/cold-load 及清理。预检不回退阶段或重开批准，原新建故障可保留为有证据的非阻断问题。缓存核对任务范围、包路径/指纹和路线，失败新建结果不锁住复用路线；运行包不匹配先报告确认需求。
 
 Windows 长路径目录树改名返回访问/共享错误时，安装使用不存在的目标复制已完成暂存内容，最后写 SKILL.md 并逐文件校验。失败只清理本次创建的目标，既有目标不会被兜底复制覆盖；不改 ACL。发布前须用真实便携包验证此路径。

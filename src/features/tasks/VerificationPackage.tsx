@@ -6,7 +6,7 @@ import {playableIssues,playableState} from "./playableState";
 import "./playablePackage.css";
 import {PlaytestSeats} from "./PlaytestSeats";
 
-export function VerificationPackage({record:r,active,en,onRepair,onUpdated}:{record:ProductionRecord;active:boolean;en:boolean;onRepair?:()=>Promise<unknown>;onUpdated?:(view:ProductionView)=>void}) {
+export function VerificationPackage({record:r,active,en,embedded=false,onRepair,onUpdated}:{record:ProductionRecord;active:boolean;en:boolean;embedded?:boolean;onRepair?:()=>Promise<unknown>;onUpdated?:(view:ProductionView)=>void}) {
   const [error,setError]=useState(""),[busy,setBusy]=useState(false),[confirm,setConfirm]=useState(false),[notice,setNotice]=useState("");
   const locked=useRef(false), pack=r.workbench?.execution?.verificationPackage, state=playableState(r), issues=playableIssues(r,en);
   const [seats, setSeats] = useState(2);
@@ -16,18 +16,19 @@ export function VerificationPackage({record:r,active,en,onRepair,onUpdated}:{rec
     ? <PlaytestSeats value={seats} onChange={setSeats} disabled={!active || busy} en={en}/>
     : null;
   const text=(zh:string,english:string)=>en?english:zh;
+  const packageClass=`playable-package${embedded?" playable-package-embedded":""}`, Heading=embedded?"h4":"h2", Issues=embedded?"details":"div";
   async function run(action:()=>Promise<unknown>){if(locked.current)return;locked.current=true;setBusy(true);setError("");setNotice("");try{await action();}catch(e){setError(errorMessage(e));}finally{locked.current=false;setBusy(false);}}
   async function enter(){const next=await productionApi.workbench(r.taskId,r.revision,"enter-playtest",{version:pack!.version});onUpdated?.(next);setConfirm(false);}
   if (r.currentStage === "review") {
     const version = r.currentVersion;
-    return <section className="playable-package" aria-label={text("当前修改版复验", "Review current changes")}>
+    return <section className={packageClass} aria-label={text("当前修改版复验", "Review current changes")}>
       <div className="playable-package-heading"><div>
-        <h2>{text("当前修改版", "Current candidate")} <small>{version ?? text("尚未保存", "Not saved")}</small></h2>
+        <Heading>{text("当前修改版", "Current candidate")} <small>{version ?? text("尚未保存", "Not saved")}</small></Heading>
         <p>{text("启动当前已保存版本的独立副本，核对本轮修改。", "Open an isolated copy of the current saved version to review these changes.")}</p>
       </div><span className="playable-status">{text("待试玩复验", "Awaiting playtest")}</span></div>
-      {issues.length > 0 && <div className="playable-gaps"><h3>{text("目前仍需核对的问题", "Remaining checks")}</h3>
+      {issues.length > 0 && <Issues className="playable-gaps">{embedded?<summary>{text("目前仍需核对的问题", "Remaining checks")} · {issues.length}</summary>:<h3>{text("目前仍需核对的问题", "Remaining checks")}</h3>}
         {issues.map(issue => <article key={issue.id}><strong><span>{issue.confirmed?text("已确认","Confirmed"):text("原因待确认","Cause unconfirmed")}</span>{issue.title}</strong><p style={{whiteSpace:"pre-wrap"}}>{issue.description}</p></article>)}
-      </div>}
+      </Issues>}
       <div className="playable-actions">{seatSelector}<button className="primary-button" disabled={!active || busy || !version}
         onClick={() => void run(async () => {
           const result = await productionApi.startPreview(r.taskId, version, selectedSeats);
@@ -42,13 +43,13 @@ export function VerificationPackage({record:r,active,en,onRepair,onUpdated}:{rec
     </section>;
   }
   if(!pack?.path)return null;
-  return <section className="playable-package" aria-label={text("试玩版本与剩余问题","Playable version and remaining issues")}>
-    <div className="playable-package-heading"><div><h2>{text("试玩版本","Playable version")} <small>{pack.version}</small></h2>
+  return <section className={packageClass} aria-label={text("试玩版本与剩余问题","Playable version and remaining issues")}>
+    <div className="playable-package-heading"><div><Heading>{text("试玩版本","Playable version")} <small>{pack.version}</small></Heading>
       <p>{state.current?text("核心玩法已有验证记录。剩余问题会随版本保留。","Core gameplay has verification records. Remaining issues stay attached to this version."):text("这是之前的可试玩版本，尚不包含当前候选的最新修改。","This earlier playable version does not include the latest candidate changes.")}</p></div>
       <span className="playable-status">{state.available?text("可试玩 · 尚未验收","Playable · not accepted"):text("试玩包待核对","Package needs verification")}</span></div>
-    {issues.length>0?<div className="playable-gaps"><h3>{text("可能影响试玩的问题","Possible gameplay issues")} <small>{issues.length} {text("项待处理","open")}</small></h3>
+    {issues.length>0?<Issues className="playable-gaps">{embedded?<summary>{text("可能影响试玩的问题","Possible gameplay issues")} · {issues.length}</summary>:<h3>{text("可能影响试玩的问题","Possible gameplay issues")} <small>{issues.length} {text("项待处理","open")}</small></h3>}
       {issues.map(i=><article key={i.id}><strong><span>{i.confirmed?text("已确认","Confirmed"):text("原因待确认","Cause unconfirmed")}</span>{i.title}</strong><p style={{whiteSpace:"pre-wrap"}}>{i.description}</p></article>)}
-      {issues.some(i=>!i.confirmed)&&<p className="playable-muted">{text("待确认不代表已经发生故障，AI 仍需补充验证。","Unconfirmed does not mean broken; AI still needs to verify the behavior.")}</p>}</div>
+      {issues.some(i=>!i.confirmed)&&<p className="playable-muted">{text("待确认不代表已经发生故障，AI 仍需补充验证。","Unconfirmed does not mean broken; AI still needs to verify the behavior.")}</p>}</Issues>
       :<p className="playable-empty">{text("暂未登记未解决问题；试玩不等于已通过全部检查。","No unresolved issues recorded. Playability does not imply all checks passed.")}</p>}
     <div className="playable-actions">{seatSelector}<button className="secondary-button" disabled={busy} onClick={()=>void run(()=>productionApi.revealDocument(r.taskId,pack.path))}>{text("定位试玩包","Show package")}</button>
       <button className="primary-button" disabled={!active||busy||!state.available} onClick={()=>void run(async()=>{const result=await productionApi.startPreview(r.taskId,pack.version,selectedSeats);setNotice(result.message||text("试玩窗口已打开。","Playtest window opened."));})}>{text("启动此版本试玩","Play this version")}</button>
