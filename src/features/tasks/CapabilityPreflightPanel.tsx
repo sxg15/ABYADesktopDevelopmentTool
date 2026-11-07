@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from "react";
 import {productionApi,type ProductionRecord} from "../../shared/production";
 import {errorMessage} from "../../shared/api";
+import {PreviewPlayerRecovery} from "./PreviewPlayerRecovery";
 
 const phases:Record<string,string>={starting:"准备测试目录", "runtime-connect":"启动并连接运行时", "create-availability":"核对主菜单能力", "create-archive":"创建临时存档", "save-archive":"保存并核对内容", "cold-load":"重新启动并核对存档"};
 export function showCapabilityPreflight(record:ProductionRecord,stage:string){
@@ -35,6 +36,9 @@ export function CapabilityPreflightPanel({record,active,onUpdated}:{record:Produ
   {p&&<p role="status">临时文件：{pending?`待清理${p.cleanup.message?` · ${p.cleanup.message}`:""}`:"已清理"}</p>}
   {p?.reportPath&&<p>{record.currentStage==="plan"?"方案需引用预检报告：":"当前阶段预检报告："}<code style={{overflowWrap:"anywhere"}}>{p.reportPath}</code></p>}
   {error&&<p role="alert">{error}</p>}
+  {(p?.error?.code==="player_pin_mismatch"||(p?.error?.code==="preflight_setup_failed"&&p.error.message.includes("任务记录不同")))&&
+    <PreviewPlayerRecovery key={record.taskId} taskId={record.taskId} active={active&&!busy&&!pending}
+      reuse={record.currentStage==="review"||!!p.reuseExisting} onVerified={onUpdated}/>}
   <button type="button" disabled={!active||busy||p?.state==="running"||pending} onClick={()=>void run(false,true)}>重新预检</button>
   {p?.error&&<button type="button" disabled={!active||busy||pending} onClick={()=>void run(true,true)}>验证复用本任务已有存档</button>}
  </section>;

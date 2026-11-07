@@ -1,5 +1,7 @@
 ## 2026-11-06 Workflow 2.12
 
+task_player_binding 单独读取任务和 App 的 PB 路径与指纹。试玩及预检卡片据此提供确认与重新验证入口。
+
 CapabilityPreflight 增加可选 stage/purpose/reuseExisting，识别 existing-verified。实现和试玩修改工作台显示预检恢复入口；仅方案阶段自动启动，查看 review 不启动进程。review 按钮走已有存档副本，不要求重新提交未变化的方案。
 
 ArtCase optionally includes presetId and resources (kind, license, compatibility, parameters, lifecycle, integration, verification, requiredCapabilities, tests and hashed files). Builtin recipes are available references with designApproved/runtimeVerified=false. Only trusted bundled preview source runs in an opaque-origin sandbox iframe; imported scripts are never executed by the UI.

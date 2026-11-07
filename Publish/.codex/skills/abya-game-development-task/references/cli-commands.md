@@ -1,5 +1,7 @@
 # ABYA CLI 工作流
 
+开发实例启动沿用 App 当前 PB，省略 executablePath。出现 player_pin_mismatch 时，在试玩或基础能力预检卡片确认当前 PB 并预检，再从新实例登记新候选。兼容试玩会记录实际 PB 指纹；交付和验收使用对应候选的验证记录。
+
 基础能力预检 `production preflight` 支持 plan、implementation、review。后两者要求已有有效的需求和计划批准；review 默认使用本任务已有编辑存档的隔离副本验证加载、保存和冷加载。结果 existing-verified 只证明这条编辑链路，不证明新建能力或游戏验收通过。预检完成继续原阶段，不重新提交未变化的方案；包切换和未知写入仍分别确认/对账。
 
 使用环境变量 ABYA_DESKTOP_CLI 指定的可执行文件。参数均为 JSON 对象，

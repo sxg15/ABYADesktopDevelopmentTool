@@ -9,6 +9,7 @@ export interface TaskLaunchSources {
   player: { selectedPath: string; selectedHash: string; previous: { path?: string; hash?: string } | null; matches: boolean };
 }
 export const taskLaunchApi = {
+  binding: (taskId: string) => invoke<TaskLaunchSources["player"]>("task_player_binding", { taskId }),
   sources: (taskId: string) => invoke<TaskLaunchSources>("task_launch_sources", { taskId }),
   adopt: (taskId: string, expectedHash: string) => invoke("adopt_task_player", { taskId, expectedHash }),
   export: (taskId: string, version: string) => invoke<{ destination: string; version: string; outcome: string }>("export_task_archive", { taskId, version }),

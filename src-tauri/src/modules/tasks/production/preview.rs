@@ -40,7 +40,11 @@ impl TaskService {
         // 反馈复验始终对应当前冻结候选；旧检查点不能代替本轮修改。
         if current.current_stage == "review" {
             validation::version(&current)?;
-            versions::verify(&current.version_details)?;
+            if current.version_details["frozenSnapshot"] == true {
+                versions::verify_archive(&current.version_details)?;
+            } else {
+                versions::verify(&current.version_details)?;
+            }
             return Ok(current);
         }
         let pack = &current.workbench.execution.verification_package;
@@ -76,13 +80,17 @@ impl TaskService {
 
     pub fn preview_spec(&self, task: &str) -> AppResult<AcceptanceSpec> {
         let r = self.preview_record(task)?;
+        Self::preview_spec_from(&r)
+    }
+
+    fn preview_spec_from(r: &ProductionRecord) -> AppResult<AcceptanceSpec> {
         if !["single", "multiplayer"].contains(&r.player_mode.as_str()) {
             return Err(AppError::validation("预览须沿用已确认的单人或多人模式。"));
         }
         let text = |key| mutation::text(&r.version_details, key).map(str::to_owned);
         Ok(AcceptanceSpec {
             multiplayer: r.player_mode == "multiplayer",
-            version: validation::version(&r)?.into(),
+            version: validation::version(r)?.into(),
             executable_path: acceptance::launch_path(text("playerSource")?),
             archive_path: acceptance::launch_path(text("archiveSource")?),
             archive_guid: text("archiveGuid")?,
@@ -91,6 +99,50 @@ impl TaskService {
             required_tools: vec![],
             require_ui: true,
         })
+    }
+
+    /// Resolve the actual PB before creating a preview copy.
+    pub fn preview_launch_spec(&self, task: &str) -> AppResult<(AcceptanceSpec, Value)> {
+        let player = self.task_player_status(task)?;
+        if player["matches"] != true {
+            return Err(AppError::new(
+                "player_pin_mismatch",
+                "任务绑定的 PB 与 App 当前选择不同，请确认当前构建包并预检。",
+                "not_executed",
+            ));
+        }
+        let record = self.preview_record(task)?;
+        let mut spec = Self::preview_spec_from(&record)?;
+        let candidate = &record.version_details;
+        let different = player["selectedHash"] != candidate["playerBuildHash"]
+            || Path::new(mutation::text(candidate, "playerSource")?)
+                .canonicalize()
+                .ok()
+                != Some(PathBuf::from(mutation::text(&player, "selectedPath")?));
+        if different {
+            let current = self.production_get(task)?.record.ok_or_else(conflict)?;
+            if current.current_stage != "review" || candidate["frozenSnapshot"] != true {
+                return Err(AppError::validation(
+                    "请在已确认的当前 PB 中验证并登记新试玩版本。",
+                ));
+            }
+            if !capability_preflight::enabled(&current)
+                || self.validate_current_preflight(task).is_err()
+            {
+                return Err(AppError::new(
+                    "preview_preflight_required",
+                    "使用当前 PB 试玩已保存的存档前，请先完成基础能力预检。",
+                    "not_executed",
+                ));
+            }
+        }
+        spec.executable_path =
+            acceptance::launch_path(mutation::text(&player, "selectedPath")?.to_owned());
+        Ok((
+            spec,
+            json!({"path":player["selectedPath"],"hash":player["selectedHash"],
+            "candidateHash":candidate["playerBuildHash"],"compatibilityPreview":different}),
+        ))
     }
 
     pub fn preview_archive(&self, task: &str, version: &str) -> AppResult<String> {

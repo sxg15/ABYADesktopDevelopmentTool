@@ -121,7 +121,9 @@ impl RuntimeBridgeService {
                 self.preflight_native(&mut p)
             } else {
                 Err(error(
-                    "preflight_setup_failed",
+                    p["error"]["code"]
+                        .as_str()
+                        .unwrap_or("preflight_setup_failed"),
                     p["error"]["message"].as_str().unwrap_or("预检设置不可用。"),
                 ))
             };

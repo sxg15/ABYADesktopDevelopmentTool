@@ -105,16 +105,22 @@ pub(super) fn digest(roots: &[PathBuf]) -> AppResult<String> {
     }
     Ok(format!("{:x}", h.finalize()))
 }
-pub(super) fn verify(details: &Value) -> AppResult<()> {
+pub(super) fn verify_archive(details: &Value) -> AppResult<()> {
     let archive = details["archiveSource"]
         .as_str()
         .ok_or_else(|| AppError::validation("缺少实际存档版本源，请使用 production version。"))?;
+    if digest(&[archive_root(Path::new(archive))?])? != details["archiveHash"] {
+        return Err(AppError::validation("实际存档已改变，请登记新版本并复验。"));
+    }
+    Ok(())
+}
+
+pub(super) fn verify(details: &Value) -> AppResult<()> {
+    verify_archive(details)?;
     let player = details["playerSource"]
         .as_str()
         .ok_or_else(|| AppError::validation("缺少实际 Player 版本源。"))?;
-    if digest(&[archive_root(Path::new(archive))?])? != details["archiveHash"]
-        || digest(&player_roots(Path::new(player))?)? != details["playerBuildHash"]
-    {
+    if digest(&player_roots(Path::new(player))?)? != details["playerBuildHash"] {
         return Err(AppError::validation(
             "实际存档或 Player 文件已改变，请登记新版本并复验，不能沿用旧通过记录。",
         ));

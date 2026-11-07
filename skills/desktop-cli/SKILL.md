@@ -1,5 +1,7 @@
 ## 2026-11-06 Workflow 2.12
 
+production version 从任务实例获取 Player 路径并核对 App 所选 PB、任务绑定与适用预检，再冻结存档。
+
 development_production_preflight / production preflight 在 plan、implementation、review 可调用；后两者要求有效方案批准，review 自动使用已有任务存档。目录描述为当前阶段预检，不引导回退 plan。existing-verified 是编辑基础链路结果，不能替代新建能力或完整游戏通过。
 
 Existing art list/get and inspect-art-case/use-art-case now include complete source/asset packages. Inspection materializes resources.json and files under artifacts/art-library/<id>/<version>; it does not adopt or execute them. Runtime scenario v3 uses existing production get and runtime describe/run, preserves role-specific responses, and reports missing Player capabilities. No new Abya engine capability is introduced.

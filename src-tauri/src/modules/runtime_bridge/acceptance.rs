@@ -372,7 +372,7 @@ impl RuntimeBridgeService {
             task: task.into(),
             busy: self.acceptance_busy.clone(),
         };
-        let mut spec = self.tasks.preview_spec(task)?;
+        let (mut spec, player) = self.tasks.preview_launch_spec(task)?;
         spec.select_seats(seats)?;
         if expected_version.is_some_and(|version| version != spec.version) {
             return Err(AppError::validation(
@@ -388,7 +388,7 @@ impl RuntimeBridgeService {
                 created.push(instance.id.clone());
                 self.check_instance(&instance.id, &spec, seat == 0)?;
             }
-            let value = json!({"id":uuid::Uuid::new_v4().to_string(),"purpose":"preview",
+            let value = json!({"id":uuid::Uuid::new_v4().to_string(),"purpose":"preview","player":player,
                 "version":spec.version,"seats":spec.seats,"status":"ready","instanceIds":created,"humanAccepted":false,
                 "message":format!("已打开版本 {} 的 {} 个试玩窗口，请核对本轮修改。",spec.version,spec.seats),"startedAt":chrono::Utc::now().to_rfc3339()});
             self.tasks

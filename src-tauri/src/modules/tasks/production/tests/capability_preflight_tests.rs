@@ -117,6 +117,56 @@ fn review_preflight_reopens_editing_in_place_without_new_archive_or_approvals() 
 }
 
 #[test]
+fn review_pb_switch_checks_pin_and_preflight_then_uses_new_pb_for_saved_archive() {
+    let f = Fixture::new();
+    f.plan();
+    let old = f.record().version_details.clone();
+    let new = f.root.join("selected-pb.exe");
+    std::fs::write(&new, b"new PB").unwrap();
+    f.service.database.with_connection(|db| {
+        db.execute("INSERT OR REPLACE INTO settings(key,value_json,updated_at) VALUES('application',?1,'test')",[json!({"gameExecutablePath":new}).to_string()])?;
+        Ok(())
+    }).unwrap();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.current_stage = "review".into();
+            r.player_mode = "single".into();
+            r.version_details["frozenSnapshot"] = json!(true);
+            Ok(())
+        })
+        .unwrap();
+    let version = f.record().version_details;
+    assert_eq!(
+        f.service.preview_launch_spec(&f.id).err().unwrap().code,
+        "player_pin_mismatch"
+    );
+    let status = f.service.task_player_status(&f.id).unwrap();
+    f.service
+        .adopt_task_player(&f.id, status["selectedHash"].as_str().unwrap())
+        .unwrap();
+    std::fs::remove_file(old["playerSource"].as_str().unwrap()).unwrap();
+    assert_eq!(
+        f.service.preview_launch_spec(&f.id).err().unwrap().code,
+        "preview_preflight_required"
+    );
+    let mut report = f
+        .service
+        .begin_capability_preflight(&f.id, true, true)
+        .unwrap();
+    successful_contract(&f, &mut report);
+    let (spec, receipt) = f.service.preview_launch_spec(&f.id).unwrap();
+    assert_eq!(
+        Path::new(&spec.executable_path).canonicalize().unwrap(),
+        new.canonicalize().unwrap()
+    );
+    assert_eq!(receipt["hash"], status["selectedHash"]);
+    assert_eq!(receipt["compatibilityPreview"], true);
+    assert_eq!(f.record().version_details, version);
+    std::fs::write(Path::new(&spec.archive_path).join("Main.PBArc"), b"changed").unwrap();
+    assert!(f.service.preview_launch_spec(&f.id).is_err());
+}
+
+#[test]
 fn maintenance_checks_keep_authorization_and_do_not_reuse_failed_creation_route() {
     for stage in ["implementation", "review"] {
         let (f, mut old) = approved_maintenance(stage);

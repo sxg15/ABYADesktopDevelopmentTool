@@ -450,6 +450,9 @@ impl DesktopToolDispatcher {
                 let executable = instance
                     .executable_path
                     .ok_or_else(|| AppError::validation("Instance has no Player executable."))?;
+                self.dependencies
+                    .tasks
+                    .production_check_player_pin(task_id, std::path::Path::new(&executable))?;
                 let expected = arguments["expectedRevision"]
                     .as_u64()
                     .ok_or_else(|| AppError::validation("expectedRevision is required."))?;

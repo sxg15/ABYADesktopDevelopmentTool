@@ -4,8 +4,25 @@ import {afterEach,it,expect,vi} from "vitest";
 import {VerificationPackage} from "./VerificationPackage";
 import {playableState,playableIssues} from "./playableState";
 import {productionApi,type ProductionRecord} from "../../shared/production";
-vi.mock("../../shared/production",()=>({productionApi:{revealDocument:vi.fn(),startPreview:vi.fn(),workbench:vi.fn()}}));
+import {taskLaunchApi} from "../../shared/taskLaunch";
+vi.mock("../../shared/taskLaunch",()=>({taskLaunchApi:{binding:vi.fn(),adopt:vi.fn()}}));
+vi.mock("../../shared/production",()=>({productionApi:{revealDocument:vi.fn(),startPreview:vi.fn(),workbench:vi.fn(),preflight:vi.fn()}}));
 afterEach(()=>{cleanup();vi.resetAllMocks();});
+it("recovers a mismatched PB at the play button with explicit adoption and verified review preflight",async()=>{
+ const r=record();r.currentStage="review";
+ vi.mocked(productionApi.startPreview).mockRejectedValueOnce({code:"player_pin_mismatch",message:"PB 不匹配"});
+ vi.mocked(taskLaunchApi.binding).mockResolvedValue({selectedPath:"new.exe",selectedHash:"new-hash",previous:{path:"old.exe"},matches:false});
+ vi.mocked(productionApi.preflight).mockResolvedValue({runId:"run",phase:"done",state:"existing-verified",checks:[],cleanup:{state:"completed"}});
+ render(<VerificationPackage record={r} active en={false}/>);
+ fireEvent.click(screen.getByRole("button",{name:"启动当前修改版试玩"}));
+ const confirm=await screen.findByRole("button",{name:"确认使用当前 PB 并预检"});
+ expect(taskLaunchApi.adopt).not.toHaveBeenCalled();
+ fireEvent.click(confirm);
+ await screen.findByText("当前 PB 预检通过，可以重新启动试玩。");
+ expect(taskLaunchApi.adopt).toHaveBeenCalledExactlyOnceWith("task","new-hash");
+ expect(productionApi.preflight).toHaveBeenCalledExactlyOnceWith("task",true,true);
+ expect(productionApi.startPreview).toHaveBeenCalledTimes(1);
+});
 it.each([1,4,8])("passes %i multiplayer windows with the current review version",async seats=>{
  const r=record();r.currentStage="review";r.currentVersion="feedback-v4";r.playerMode="multiplayer";
  vi.mocked(productionApi.startPreview).mockResolvedValue({status:"ready"});

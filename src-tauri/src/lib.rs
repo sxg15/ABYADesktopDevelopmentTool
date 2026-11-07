@@ -1044,6 +1044,17 @@ async fn run_task_preflight(
 }
 
 #[tauri::command]
+async fn task_player_binding(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    let tasks = state.tasks.clone();
+    tauri::async_runtime::spawn_blocking(move || tasks.task_player_status(&task_id))
+        .await
+        .map_err(foundation::AppError::internal)?
+}
+
+#[tauri::command]
 async fn adopt_task_player(
     task_id: String,
     expected_hash: String,
@@ -1442,6 +1453,7 @@ pub fn run() {
             task_launch_sources,
             run_task_preflight,
             adopt_task_player,
+            task_player_binding,
             export_task_archive,
             list_archive_transfer_targets,
             list_archive_transfer_sources,
