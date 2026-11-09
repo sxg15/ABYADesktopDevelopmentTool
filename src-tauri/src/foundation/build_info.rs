@@ -7,6 +7,7 @@ use std::io::Read;
 #[serde(rename_all = "camelCase")]
 pub struct BuildInfo {
     pub version: String,
+    pub release_number: Option<u64>,
     pub release: String,
     pub built_at: String,
     pub verification: String,
@@ -19,6 +20,7 @@ pub fn read(paths: &AppPaths) -> AppResult<BuildInfo> {
     let exe = std::env::current_exe()?;
     let manifest = exe.parent().unwrap().join("build-manifest.json");
     let mut verification = "missing";
+    let mut release_number = None;
     if let Ok(bytes) = std::fs::read(&manifest) {
         let bytes = bytes.strip_prefix(&[239, 187, 191]).unwrap_or(&bytes);
         if let Ok(value) = serde_json::from_slice::<serde_json::Value>(bytes) {
@@ -41,10 +43,12 @@ pub fn read(paths: &AppPaths) -> AppResult<BuildInfo> {
                     .is_some_and(|h| h.eq_ignore_ascii_case(&actual))
             {
                 verification = "verified";
+                release_number = value["releaseNumber"].as_u64();
             }
         }
     }
     Ok(BuildInfo {
+        release_number,
         version: env!("CARGO_PKG_VERSION").into(),
         release: env!("ABYA_RELEASE_ID").into(),
         built_at: env!("ABYA_BUILD_UTC").into(),

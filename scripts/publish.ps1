@@ -11,6 +11,10 @@ $running = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and
 if ($running) { throw "Close the running package before replacing it: $publish" }
 $env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } elseif ($UiStaging) { 'guidance-action-panel-20261012' } else { 'workflow-unlimited-20261106' }
 $env:ABYA_BUILD_UTC = [DateTime]::UtcNow.ToString('O')
+$previous = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'Publish/build-manifest.json') | ConvertFrom-Json
+$releaseNumber = [int64]$previous.releaseNumber + 1
+$releaseNotes = (Get-Content -Encoding UTF8 -LiteralPath (Join-Path $root 'CHANGELOG.md') | Select-String '^# ' | Select-Object -First 1).Line -replace '^# ', ''
+if ([string]::IsNullOrWhiteSpace($releaseNotes)) { throw 'Add a release summary to CHANGELOG.md.' }
 $packageVersion = (Get-Content -Raw -LiteralPath (Join-Path $root 'package.json') | ConvertFrom-Json).version
 $llmDirectories = @(".codex")
 $managedSkillRelativePath = "skills\abya-game-development-task\SKILL.md"
@@ -171,6 +175,8 @@ try {
 $manifest = [ordered]@{
     sourceFingerprint = (& (Join-Path $runtime 'node.exe') (Join-Path $root 'scripts/source-fingerprint.mjs')).Trim()
     product = "ABYA Desktop Development Tool"
+    releaseNumber = $releaseNumber
+    releaseNotes = $releaseNotes
     version = $packageVersion
     workflowVersion = (Get-Content (Join-Path $root ".codex/skills/abya-game-development-task/assets/production/workflow-policy.json") -Raw -Encoding UTF8 | ConvertFrom-Json).workflowVersion
     releaseLabel = $env:ABYA_RELEASE_ID

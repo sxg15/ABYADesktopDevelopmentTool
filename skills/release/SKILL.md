@@ -53,6 +53,13 @@ review the patch on dependency upgrades, and run the no-frontend-cursor-reply re
 
 ## Public Contracts
 
+### 项目接续与旧包清理
+
+1. 打包前从实际运行的正式 App 确认数据目录、数据库、工作区及全部项目（含完成和归档）。记录项目 ID、状态、当前阶段/版本、会话、批准、证据、Player 路径与编辑存档/冻结版本指纹。备份一致的 SQLite 快照和需要迁移的项目文件，放在包目录之外。
+2. 正式包从当前 Publish 的 releaseNumber 递增（旧包从 0 起），releaseNotes 取 CHANGELOG 最新标题。发布前重新同步，遇到并行发布导致编号冲突，重新构建、验证。只将验证过的完整包和清单一起推至 dev。
+3. 从原正式启动入口打开新 Publish，核对运行 EXE、编号、实际数据库及工作区。外置数据直接接续；需要升级的项目用已有任务迁移入口执行并保留原会话、历史、存档和暂停状态。逐项对比，打开已有项目并核对当前版本可读。记录每个项目的迁移或原地接续结果。
+4. 全部核验通过后才清理已确认停用的旧候选包、staging 与冗余安装副本，检查进程、路径和项目引用。保留必要的回滚包与迁移快照。发现缺失、读错数据库或升级失败时停止清理，保留旧包并从备份恢复或修复。用户工作区、游戏存档、固定 Player 和会话不进入旧包清理范围。
+
 ### Repository distribution (2026-10-13)
 Track the complete official Publish package and the root ABYA 开发工具.cmd launcher.
 The launcher resolves paths relative to itself, uses bundled Node for a quick package

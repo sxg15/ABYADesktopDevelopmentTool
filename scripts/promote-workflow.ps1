@@ -12,6 +12,8 @@ try {
  & $node (Join-Path $root 'scripts/verify-workflow-pilot.mjs') $PilotReport $executable
  if($LASTEXITCODE -ne 0){throw 'Native gameplay pilots have not qualified this exact package.'}
  $manifest=Get-Content -LiteralPath (Join-Path $candidate 'build-manifest.json') -Raw | ConvertFrom-Json
+ $previous=Get-Content -LiteralPath (Join-Path $destination 'build-manifest.json') -Raw | ConvertFrom-Json
+ if ([int64]$manifest.releaseNumber -le [int64]$previous.releaseNumber) {throw 'Candidate release number is stale. Rebuild against the latest formal package.'}
  $source=(& $node (Join-Path $root 'scripts/source-fingerprint.mjs')).Trim()
  if($source -ne $manifest.sourceFingerprint){throw 'Runtime sources changed after candidate build; rebuild and retest the affected candidate.'}
  $running=Get-CimInstance Win32_Process | Where-Object {$_.ExecutablePath -and $_.ExecutablePath.StartsWith("$destination\",[StringComparison]::OrdinalIgnoreCase)}

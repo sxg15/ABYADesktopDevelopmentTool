@@ -29,8 +29,11 @@ import type {
   StorageRepairReport,
 } from "./types";
 
+export interface DesktopRelease { releaseNumber: number; version: string; notes: string; packageUrl: string }
 export const api = {
-  buildInfo: () => invoke<{version:string;release:string;builtAt:string;verification:string;dataDirectory:string;executable:string;testEnvironment:boolean}>("get_build_info"),
+  latestDesktopRelease: () => invoke<DesktopRelease | null>("latest_desktop_release"),
+  desktopHasActiveTurn: () => invoke<boolean>("desktop_has_active_turn"),
+  buildInfo: () => invoke<{version:string;releaseNumber:number|null;release:string;builtAt:string;verification:string;dataDirectory:string;executable:string;testEnvironment:boolean}>("get_build_info"),
   readRuntimeArtifact: (taskId: string, path: string) => invoke<string>("read_runtime_artifact", { taskId, path }),
   paths: () => invoke<AppPaths>("get_app_paths"),
   settings: () => invoke<AppSettings>("get_settings"),

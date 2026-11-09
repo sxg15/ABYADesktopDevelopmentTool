@@ -17,6 +17,7 @@ pub mod cli_environment;
 pub mod cli_sessions;
 pub mod cli_transport;
 pub mod clipboard;
+pub mod desktop_release;
 pub mod notifications;
 pub mod secrets;
 pub mod single_instance;

@@ -181,6 +181,29 @@ pub struct CodexTerminalService {
 }
 
 impl CodexTerminalService {
+    pub fn has_active_turn(&self) -> AppResult<bool> {
+        let bindings: Vec<_> = self.thread_conversations.lock().values().cloned().collect();
+        for (task, conversation) in bindings {
+            if self
+                .runtime_handle(&conversation)
+                .is_some_and(|handle| handle.is_alive())
+            {
+                let snapshot = self.workflow(&task, &conversation)?;
+                if snapshot.turns.iter().any(|turn| {
+                    Some(&turn.id) == snapshot.current_turn_id.as_ref()
+                        && matches!(
+                            turn.status,
+                            CodexWorkflowTurnStatus::InProgress
+                                | CodexWorkflowTurnStatus::WaitingForPlan
+                        )
+                }) {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
+    }
+
     #[cfg(test)]
     pub(crate) fn preflight_for_test(
         &self,

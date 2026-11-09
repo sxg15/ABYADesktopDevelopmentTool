@@ -120,6 +120,19 @@ fn get_build_info(state: State<'_, AppState>) -> AppResult<foundation::build_inf
 }
 
 #[tauri::command]
+async fn latest_desktop_release() -> AppResult<Option<foundation::desktop_release::DesktopRelease>>
+{
+    tauri::async_runtime::spawn_blocking(foundation::desktop_release::latest)
+        .await
+        .map_err(|_| foundation::AppError::internal("Desktop update worker failed"))?
+}
+
+#[tauri::command(async)]
+fn desktop_has_active_turn(state: State<'_, AppState>) -> AppResult<bool> {
+    state.codex_terminal.has_active_turn()
+}
+
+#[tauri::command]
 fn get_settings(state: State<'_, AppState>) -> AppResult<AppSettings> {
     state.settings.get()
 }
@@ -1408,6 +1421,8 @@ pub fn run() {
             export_programmer_issues,
             get_app_paths,
             get_build_info,
+            latest_desktop_release,
+            desktop_has_active_turn,
             get_settings,
             update_settings,
             regenerate_desktop_cli_token,

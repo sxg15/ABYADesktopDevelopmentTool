@@ -32,6 +32,8 @@ export function SettingsView({
   onManageClients,
   preferredInstallationId,
   focusGitHub,
+  checkDesktopUpdate,
+  checkingDesktopUpdate,
 }: {
   settings?: AppSettings;
   locale: Locale;
@@ -41,6 +43,8 @@ export function SettingsView({
   onManageClients: () => void;
   preferredInstallationId?: string;
   focusGitHub?: boolean;
+  checkDesktopUpdate?: () => void;
+  checkingDesktopUpdate?: boolean;
 }) {
   const clientWorkflow = useClientWorkflow();
   const [gameClient, setGameClient] = useState(emptyClientSelection);
@@ -158,6 +162,13 @@ export function SettingsView({
           {t("save")}
         </button>
       </header>
+
+      <section className="settings-section">
+        <h2>{locale === "en-US" ? "Desktop app updates" : "桌面工具更新"}</h2>
+        <button className="secondary-button" disabled={checkingDesktopUpdate} onClick={checkDesktopUpdate}>
+          <RefreshCw size={16} />{checkingDesktopUpdate ? (locale === "en-US" ? "Checking…" : "正在检查…") : t("gcCheckUpdate")}
+        </button>
+      </section>
 
       <GitHubAccountSettings t={t} focus={focusGitHub} onChanged={() => { setAccountRevision(value => value + 1); clientWorkflow.refreshUpdates(); }} />
       <GameClientSettings value={gameClient} onChange={setGameClient} t={t} onManage={onManageClients} accountRevision={accountRevision}

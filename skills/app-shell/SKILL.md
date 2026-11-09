@@ -1,5 +1,7 @@
 # App Shell Skill
 
+Desktop updates check the verified portable build at startup, on reconnect and every 15 minutes. Settings can check manually. Defer the automatic dialog during active AI turns; its sidebar reminder remains available. Snooze per release and local day.
+
 ## 可试玩工作区（2026-11-02）
 已确认的局部改版沿用米色/橙色：顶部可试玩指引、Lua 阶段“可试玩”、集中试玩版本/问题/三个按钮与手动进入试玩入口。
 可试玩阶段采用连续滚动以免分隔条将操作截在小面板内；其他阶段保留原上下分区和草稿。

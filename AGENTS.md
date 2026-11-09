@@ -1,5 +1,7 @@
 # LLM Maintenance Contract
 
+每次交付新版桌面工具，按 skills/release/SKILL.md 的「项目接续与旧包清理」执行。验收覆盖更新前 App 内的全部项目（包括见缝插针）。以新正式 Publish 的实际回读结果作为清理旧版本的前提。
+
 Release branch policy (user clarification, 2026-10-15): all development happens
 on CLI. Before editing, inspect the working tree, fetch origin/CLI and origin/dev,
 switch to CLI, and integrate both latest remote branches into CLI. Preserve local

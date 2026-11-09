@@ -8,6 +8,8 @@ Workflow 2.12 dispatch never requests completion within a time allowance. Unlimi
 
 # Codex Terminal Skill
 
+Desktop update prompts use a read-only active-turn query across live conversation executors. Unknown activity defers automatic interruption.
+
 After a crash, attach and control can read a syntax-damaged activity projection through the shared recovery path. Preserve the original native binding and show the repair warning on attachment. Force-stop confirmation captures an observed generation.
 
 ## Current scope

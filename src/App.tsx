@@ -18,6 +18,7 @@ import "./App.css";
 import "./app/workspaceRefinement.css";
 import "./app/workbenchTheme.css";
 import { IconButtonTooltips } from "./app/IconButtonTooltips";
+import { useDesktopUpdate } from "./app/useDesktopUpdate";
 import { useNotificationActivations } from "./app/useNotificationActivations";
 import type { NotificationActivation } from "./shared/notifications";
 
@@ -39,6 +40,7 @@ function App() {
     error: boolean;
   }>();
   const t = useMemo(() => translator(locale), [locale]);
+  const desktopUpdate = useDesktopUpdate(buildInfo, locale === "en-US", notify);
   useNotificationActivations(activation => {
     if (activation.status === "test") {
       setView("settings");
@@ -120,6 +122,7 @@ function App() {
           })}
         </nav>
         <div className="sidebar-footer">
+          {desktopUpdate.reminder}
           <span className="connection-light" />
           <strong>APP {buildInfo?.version??"版本核对中"}{buildInfo?.testEnvironment?" · 测试环境":""}</strong>
           <span>{buildInfo?.release??""}</span>
@@ -145,6 +148,8 @@ function App() {
           onOpenSettings={(id, login) => { setPreferredInstallationId(id); setFocusGitHub(!!login); setView("settings"); }} />}
         {view === "settings" && (
           <SettingsView
+            checkDesktopUpdate={() => void desktopUpdate.check(true)}
+            checkingDesktopUpdate={desktopUpdate.checking}
             settings={settings}
             locale={locale}
             t={t}
@@ -172,6 +177,7 @@ function App() {
           </button>
         </div>
       )}
+      {desktopUpdate.dialog}
     </div>
     </ClientWorkflowProvider>
   );
