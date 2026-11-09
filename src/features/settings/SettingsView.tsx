@@ -34,6 +34,7 @@ export function SettingsView({
   focusGitHub,
   checkDesktopUpdate,
   checkingDesktopUpdate,
+  releaseNumber,
   migrations = [],
 }: {
   settings?: AppSettings;
@@ -46,6 +47,7 @@ export function SettingsView({
   focusGitHub?: boolean;
   checkDesktopUpdate?: () => void;
   checkingDesktopUpdate?: boolean;
+  releaseNumber?: number | null;
   migrations?: Awaited<ReturnType<typeof api.projectMigrationReport>>;
 }) {
   const clientWorkflow = useClientWorkflow();
@@ -167,6 +169,7 @@ export function SettingsView({
 
       <section className="settings-section">
         <h2>{locale === "en-US" ? "Desktop app updates" : "桌面工具更新"}</h2>
+        {releaseNumber != null && <p>{locale === "en-US" ? "Installed release" : "当前发布编号"} #{releaseNumber}</p>}
         <button className="secondary-button" disabled={checkingDesktopUpdate} onClick={checkDesktopUpdate}>
           <RefreshCw size={16} />{checkingDesktopUpdate ? (locale === "en-US" ? "Checking…" : "正在检查…") : t("gcCheckUpdate")}
         </button>

@@ -1,5 +1,7 @@
 # App Shell Skill
 
+Pass the verified installed release number to Settings so testers can identify the running package.
+
 Settings shows each project’s startup migration result. A persistent navigation action surfaces items needing review.
 
 Desktop updates check the verified portable build at startup, on reconnect and every 15 minutes. Settings can check manually. Defer the automatic dialog during active AI turns; its sidebar reminder remains available. Snooze per release and local day.

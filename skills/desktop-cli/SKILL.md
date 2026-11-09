@@ -12,6 +12,8 @@ executablePath 仅允许断言 APP 当前所选包，不再作为覆盖设置的
 
 # Desktop CLI
 
+Desktop app updates displays the installed release number beside the manual check when available.
+
 Settings lists migration results from the active App database. Startup migration requires no CLI authentication.
 
 Settings exposes a desktop-package update check independent of Player selection. The check uses the app-shell release workflow and leaves settings drafts intact.

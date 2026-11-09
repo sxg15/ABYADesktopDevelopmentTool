@@ -152,6 +152,7 @@ function App() {
           onOpenSettings={(id, login) => { setPreferredInstallationId(id); setFocusGitHub(!!login); setView("settings"); }} />}
         {view === "settings" && (
           <SettingsView
+            releaseNumber={buildInfo?.releaseNumber}
             migrations={migrations}
             checkDesktopUpdate={() => void desktopUpdate.check(true)}
             checkingDesktopUpdate={desktopUpdate.checking}
