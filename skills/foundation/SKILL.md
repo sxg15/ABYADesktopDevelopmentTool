@@ -12,6 +12,8 @@ APP 当前 gameExecutablePath 是唯一启动来源；selected_game_executable �
 
 # Foundation Skill
 
+The shared projectMigrationReport API exposes read-only per-project results from native startup.
+
 Verified build info exposes the portable release number. Read the public dev ref via Git smart HTTP, then fetch the manifest and archive at that same commit. This avoids shared anonymous REST quotas.
 
 2026-11-05：人工验收/预览的 Tauri 命令与共享 productionApi 增加可选 seats；旧调用省略时保留默认规则。AcceptanceSession 增加可选 seats 读回实际窗口数。具体人数限制及联网模式由任务/Runtime 模块校验。

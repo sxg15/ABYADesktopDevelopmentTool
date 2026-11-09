@@ -31,6 +31,7 @@ import type {
 
 export interface DesktopRelease { releaseNumber: number; version: string; notes: string; packageUrl: string }
 export const api = {
+  projectMigrationReport: () => invoke<{title:string;status:"adapted"|"retained"|"review";reason:string}[]>("project_migration_report"),
   latestDesktopRelease: () => invoke<DesktopRelease | null>("latest_desktop_release"),
   desktopHasActiveTurn: () => invoke<boolean>("desktop_has_active_turn"),
   buildInfo: () => invoke<{version:string;releaseNumber:number|null;release:string;builtAt:string;verification:string;dataDirectory:string;executable:string;testEnvironment:boolean}>("get_build_info"),

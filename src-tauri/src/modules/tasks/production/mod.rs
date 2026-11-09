@@ -38,6 +38,8 @@ mod task_assets;
 mod test_plan;
 pub use acceptance::AcceptanceSpec;
 mod catalog;
+mod release_migration;
+pub use release_migration::ProjectMigration;
 mod files;
 mod interaction;
 mod issue_export;

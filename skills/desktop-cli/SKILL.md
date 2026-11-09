@@ -12,6 +12,8 @@ executablePath 仅允许断言 APP 当前所选包，不再作为覆盖设置的
 
 # Desktop CLI
 
+Settings lists migration results from the active App database. Startup migration requires no CLI authentication.
+
 Settings exposes a desktop-package update check independent of Player selection. The check uses the app-shell release workflow and leaves settings drafts intact.
 
 2026-11-05：现有 start_acceptance 调用显式传入空的人数覆盖，沿用任务验收配置；本次人数选择属于 APP 人工入口，不修改 CLI 参数契约。

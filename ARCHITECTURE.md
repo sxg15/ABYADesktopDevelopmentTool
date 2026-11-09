@@ -115,6 +115,10 @@ Stage gates check current document hashes, actual saved archive/Player fingerpri
 evidence files and issue closure. Pinned 1.x tasks retain round/question gates; workflow 2.0 uses current-version self-tests and user-closed feedback. They validate declared
 materials, not gameplay quality or user experience. Scoped tasks remain opt-in.
 Common workflow resources are maintained in the repository .codex bundle.
+Numbered desktop builds adapt compatible pinned projects before starting task executors.
+TaskService uses the open database, a per-project release receipt, a SQLite recovery snapshot,
+and staged managed Skill replacements. Changes requiring stage resets stay available through
+the manual upgrade flow. Settings exposes each project's migration outcome.
 Checks validate resource links, policy contracts and deployment. Once production
 is enabled, ordinary task reads stop
 refreshing managed Skills. Explicit upgrades require stopped terminals, check for

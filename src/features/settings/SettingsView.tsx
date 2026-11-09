@@ -34,6 +34,7 @@ export function SettingsView({
   focusGitHub,
   checkDesktopUpdate,
   checkingDesktopUpdate,
+  migrations = [],
 }: {
   settings?: AppSettings;
   locale: Locale;
@@ -45,6 +46,7 @@ export function SettingsView({
   focusGitHub?: boolean;
   checkDesktopUpdate?: () => void;
   checkingDesktopUpdate?: boolean;
+  migrations?: Awaited<ReturnType<typeof api.projectMigrationReport>>;
 }) {
   const clientWorkflow = useClientWorkflow();
   const [gameClient, setGameClient] = useState(emptyClientSelection);
@@ -168,6 +170,14 @@ export function SettingsView({
         <button className="secondary-button" disabled={checkingDesktopUpdate} onClick={checkDesktopUpdate}>
           <RefreshCw size={16} />{checkingDesktopUpdate ? (locale === "en-US" ? "Checking…" : "正在检查…") : t("gcCheckUpdate")}
         </button>
+        {migrations.length > 0 && <details open={migrations.some(item => item.status === "review")}>
+          <summary>{locale === "en-US" ? "Project migration" : "项目迁移"} · {migrations.length}</summary>
+          <ul>{migrations.map((item,index) => <li key={index}><strong>{item.title}</strong>{" "}
+            {(locale === "en-US" ? {adapted:"Adapted",retained:"Carried forward",review:"Needs review"} :
+              {adapted:"已适配",retained:"原地接续",review:"需要核对"})[item.status]}
+            {item.reason && <p>{item.reason}</p>}
+          </li>)}</ul>
+        </details>}
       </section>
 
       <GitHubAccountSettings t={t} focus={focusGitHub} onChanged={() => { setAccountRevision(value => value + 1); clientWorkflow.refreshUpdates(); }} />

@@ -40,6 +40,7 @@ use std::path::PathBuf;
 use tauri::{Emitter, Manager, State, ipc::Channel};
 
 struct AppState {
+    project_migrations: Vec<modules::tasks::ProjectMigration>,
     paths: AppPaths,
     database: Database,
     settings: SettingsService,
@@ -117,6 +118,11 @@ fn get_app_paths(state: State<'_, AppState>) -> AppPaths {
 #[tauri::command(async)]
 fn get_build_info(state: State<'_, AppState>) -> AppResult<foundation::build_info::BuildInfo> {
     foundation::build_info::read(&state.paths)
+}
+
+#[tauri::command]
+fn project_migration_report(state: State<'_, AppState>) -> Vec<modules::tasks::ProjectMigration> {
+    state.project_migrations.clone()
 }
 
 #[tauri::command]
@@ -1270,6 +1276,25 @@ pub fn run() {
                 database.clone(),
                 PathBuf::from(&current_settings.workspace_root_path),
             );
+            let migrations = (|| -> AppResult<Vec<modules::tasks::ProjectMigration>> {
+                let build = foundation::build_info::read(&paths)?;
+                let Some(number) = build.release_number else {
+                    return Ok(Vec::new());
+                };
+                let exe = PathBuf::from(build.executable);
+                tasks.migrate_desktop_projects(
+                    number,
+                    exe.parent().unwrap(),
+                    &paths.data_dir.join("RecoveryBackups"),
+                )
+            })();
+            let project_migrations = migrations.unwrap_or_else(|e| {
+                vec![modules::tasks::ProjectMigration {
+                    title: String::new(),
+                    status: "review".into(),
+                    reason: e.to_string(),
+                }]
+            });
             let codex_terminal = CodexTerminalService::new(tasks.clone())?;
             let connections = GameConnectionService::new();
             let archives = ArchiveCatalogService::new(paths.clone());
@@ -1342,6 +1367,7 @@ pub fn run() {
                 }),
             );
             app.manage(AppState {
+                project_migrations,
                 paths,
                 database: database.clone(),
                 settings,
@@ -1421,6 +1447,7 @@ pub fn run() {
             export_programmer_issues,
             get_app_paths,
             get_build_info,
+            project_migration_report,
             latest_desktop_release,
             desktop_has_active_turn,
             get_settings,

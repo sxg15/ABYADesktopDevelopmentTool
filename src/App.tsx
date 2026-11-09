@@ -32,6 +32,7 @@ function App() {
   const [focusGitHub, setFocusGitHub] = useState(false);
   const [preferredReleaseId, setPreferredReleaseId] = useState<number>();
   const [buildInfo,setBuildInfo]=useState<Awaited<ReturnType<typeof api.buildInfo>>>();
+  const [migrations,setMigrations]=useState<Awaited<ReturnType<typeof api.projectMigrationReport>>>([]);
   const [locale, setLocale] = useState<Locale>(
     normalizeLocale(navigator.language),
   );
@@ -56,6 +57,7 @@ function App() {
 
   useEffect(() => {
     void api.buildInfo().then(setBuildInfo).catch(()=>undefined);
+    void api.projectMigrationReport().then(setMigrations).catch(error => notify(errorMessage(error),true));
     void api
       .settings()
       .then((value) => {
@@ -123,6 +125,8 @@ function App() {
         </nav>
         <div className="sidebar-footer">
           {desktopUpdate.reminder}
+          {view !== "settings" && migrations.some(item => item.status === "review") &&
+            <button className="secondary-button" onClick={() => setView("settings")}>{locale === "en-US" ? "Review project migration" : "查看项目迁移问题"}</button>}
           <span className="connection-light" />
           <strong>APP {buildInfo?.version??"版本核对中"}{buildInfo?.testEnvironment?" · 测试环境":""}</strong>
           <span>{buildInfo?.release??""}</span>
@@ -148,6 +152,7 @@ function App() {
           onOpenSettings={(id, login) => { setPreferredInstallationId(id); setFocusGitHub(!!login); setView("settings"); }} />}
         {view === "settings" && (
           <SettingsView
+            migrations={migrations}
             checkDesktopUpdate={() => void desktopUpdate.check(true)}
             checkingDesktopUpdate={desktopUpdate.checking}
             settings={settings}

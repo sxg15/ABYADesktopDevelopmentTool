@@ -3,7 +3,7 @@ use crate::foundation::{AppError, AppResult};
 use sha2::{Digest, Sha256};
 use std::path::Path;
 
-fn tree_hash(workspace: &Path, relative: &str) -> AppResult<String> {
+pub(super) fn tree_hash(workspace: &Path, relative: &str) -> AppResult<String> {
     let canonical = workspace.canonicalize()?;
     let workspace = canonical.as_path();
     let directory = files::safe_path(workspace, relative)?;
@@ -193,84 +193,187 @@ impl TaskService {
         }
         let root = self.production_workspace(id)?.canonicalize()?;
         self.production_commit(id, expected_revision, |r| {
-            for pin in r.skill_pins.iter().filter(|p| p.kind != "user" && p.provider == "codex") {
+            for pin in r
+                .skill_pins
+                .iter()
+                .filter(|p| p.kind != "user" && p.provider == "codex")
+            {
                 if tree_hash(&root, &pin.path)? != pin.sha256 {
-                    return Err(AppError::validation("任务中的受管 Skill 有本地修改，请先处理差异；升级未执行。"));
+                    return Err(AppError::validation(
+                        "任务中的受管 Skill 有本地修改，请先处理差异；升级未执行。",
+                    ));
                 }
             }
             let backup = format!("{}/skill-backups/{}", super::ROOT, uuid::Uuid::new_v4());
-            for pin in r.skill_pins.iter().filter(|p| p.kind != "user" && p.provider == "codex") {
+            for pin in r
+                .skill_pins
+                .iter()
+                .filter(|p| p.kind != "user" && p.provider == "codex")
+            {
                 let from = files::safe_path(&root, &pin.path)?;
                 let mut pending = vec![from.clone()];
                 while let Some(folder) = pending.pop() {
                     for entry in std::fs::read_dir(folder)? {
                         let entry = entry?;
-                        let relative = entry.path().strip_prefix(&root).map_err(AppError::internal)?.to_string_lossy().replace('\\', "/");
+                        let relative = entry
+                            .path()
+                            .strip_prefix(&root)
+                            .map_err(AppError::internal)?
+                            .to_string_lossy()
+                            .replace('\\', "/");
                         let checked = files::safe_path(&root, &relative)?;
-                        if checked.is_dir() { pending.push(checked); }
-                        else { files::write_file(&root, &format!("{backup}/{relative}"), &std::fs::read(checked)?)?; }
+                        if checked.is_dir() {
+                            pending.push(checked);
+                        } else {
+                            files::write_file(
+                                &root,
+                                &format!("{backup}/{relative}"),
+                                &std::fs::read(checked)?,
+                            )?;
+                        }
                     }
                 }
             }
             self.sync_managed_skills(&root)?;
             r.skill_pins = scan(&root)?;
-            let next_policy=policy();
-            let completion_upgrade=!super::completion::enabled(r);
-            let progress_upgrade=!super::progress_budget::enabled(r);
-            let in_place_upgrade=!super::execution_loop::enabled(r);
-            let handoff_upgrade=!super::review_handoff::enabled(r);
-            let budget_upgrade=r.policy["implementationExecution"]["checkpointMode"]!=next_policy["implementationExecution"]["checkpointMode"];
-            let design_upgrade = !super::art_design_sources::enabled(r) && next_policy["artDesignVersion"] == 1;
-            let art_upgrade = !super::interaction::art_approval(r) && next_policy["stages"].as_array().is_some_and(|stages| stages.iter().any(|s| s["approval"] == "resources"));
-            let feedback_upgrade = !super::iteration::enabled(r) && next_policy["iterationMode"] == "human-feedback";
-            let compatible=["rounds","questions","dimensions","stages","checkStatuses","stageStatuses"].iter().all(|key|r.policy[*key]==next_policy[*key]);
-            r.policy = next_policy; r.workflow_version = r.policy["workflowVersion"].as_str().unwrap().into();
-            if art_upgrade || design_upgrade {
-                for stage in ["resources", "plan", "implementation", "review", "delivery", "closeout"] { r.stages.insert(stage.into(), "not-started".into()); }
-                r.current_stage = if r.stages.get("requirements").is_some_and(|s| s == "passed") { "resources" } else { "requirements" }.into();
-                r.stages.insert(r.current_stage.clone(), "in-progress".into());
-                r.issues.push(serde_json::json!({"id":format!("art-review-upgrade-{}",r.revision),"kind":"suggestion","status":"resolved","stage":"resources",
-                    "description":"已升级美术需求与设计追踪。既有文档、批准、轮次与证据保留为历史；需核对策划原话、参考、设计落实及受影响的后续阶段，不补造确认。","backup":backup,"updatedAt":now()}));
-                return Ok(());
-            }
-            if feedback_upgrade {
-                for s in r.policy["stages"].as_array().unwrap() {
-                    r.stages.entry(s["id"].as_str().unwrap().into()).or_insert("not-started".into());
-                }
-                if r.stages.get("plan").is_some_and(|s| s == "passed") {
-                    r.current_stage = "implementation".into();
-                    r.stages.insert("implementation".into(), "in-progress".into());
-                    for stage in ["review", "delivery", "closeout"] { r.stages.insert(stage.into(), "not-started".into()); }
-                }
-                r.issues.push(serde_json::json!({"id":format!("feedback-upgrade-{}",r.revision),"kind":"suggestion","status":"resolved","stage":"closeout",
-                    "description":"已切换人工反馈流程；需求和计划确认、旧轮次与证据保留。当前作品须登记必要自测后交给策划验收，不补造新流程通过。","backup":backup,"updatedAt":now()}));
-                return Ok(());
-            }
-            if compatible {
-                if super::stage_contracts::enabled(r) {super::stage_contracts::migrate(r);}
-                if budget_upgrade {super::autonomy_budget::migrate_budget(r);}
-                if completion_upgrade&&super::completion::enabled(r){super::completion::migrate(r);}
-                if handoff_upgrade&&super::review_handoff::enabled(r){super::review_handoff::migrate(r);}
-                if progress_upgrade {super::progress_budget::migrate(r);}
-                if in_place_upgrade {super::execution_loop::migrate(r);}
-                super::execution_time::migrate(r);
-                if r.policy["implementationExecution"]["mode"]=="autonomous" && r.current_stage=="implementation" && r.stages.get("implementation").is_some_and(|s|s=="blocked") {
-                    r.stages.insert("implementation".into(),"in-progress".into());
-                    super::autonomy::event(&mut r.workbench.execution,"policy-upgraded",None,"明确升级后启用问题隔离；原问题和批准历史保留，不自动启动执行。");
-                }
-                r.issues.push(serde_json::json!({"id":format!("workflow-update-{}",r.revision),"kind":"suggestion","status":"resolved","stage":"closeout","description":"制作流程界面与沟通规则已更新，已确认的需求、计划和历史继续有效。","backup":backup,"updatedAt":now()}));
-                return Ok(());
-            }
-            r.cycle += 1; r.current_round = 0; r.milestones.clear(); r.checks.clear();
-            for status in r.stages.values_mut() { *status = "not-started".into(); }
-            r.current_stage = "requirements".into();
-            r.documents.clear();
-            r.issues.push(serde_json::json!({"id":format!("upgrade-{}",r.cycle),"kind":"suggestion","status":"open",
-                "stage":"requirements","description":"流程已升级，历史记录已保留，请重新提交并确认适用文档。",
-                "backup":backup,"updatedAt":now()}));
-            Ok(())
+            upgrade_policy(r, &backup, false)
         })?;
         self.production_export(id)?;
         self.production_get(id)
     }
+}
+
+pub(super) fn upgrade_policy(
+    r: &mut super::ProductionRecord,
+    backup: &str,
+    changed_contracts_only: bool,
+) -> AppResult<()> {
+    let next_policy = policy();
+    let stage_contract_changed =
+        r.policy["stageContractsVersion"] != next_policy["stageContractsVersion"];
+    let time_policy_changed = r.policy["executionTimePolicy"] != next_policy["executionTimePolicy"];
+    let execution_mode_changed = r.policy["implementationExecution"]["mode"]
+        != next_policy["implementationExecution"]["mode"];
+    let completion_upgrade = !super::completion::enabled(r);
+    let progress_upgrade = !super::progress_budget::enabled(r);
+    let in_place_upgrade = !super::execution_loop::enabled(r);
+    let handoff_upgrade = !super::review_handoff::enabled(r);
+    let budget_upgrade = r.policy["implementationExecution"]["checkpointMode"]
+        != next_policy["implementationExecution"]["checkpointMode"];
+    let design_upgrade =
+        !super::art_design_sources::enabled(r) && next_policy["artDesignVersion"] == 1;
+    let art_upgrade = !super::interaction::art_approval(r)
+        && next_policy["stages"]
+            .as_array()
+            .is_some_and(|stages| stages.iter().any(|s| s["approval"] == "resources"));
+    let feedback_upgrade =
+        !super::iteration::enabled(r) && next_policy["iterationMode"] == "human-feedback";
+    let compatible = [
+        "rounds",
+        "questions",
+        "dimensions",
+        "stages",
+        "checkStatuses",
+        "stageStatuses",
+    ]
+    .iter()
+    .all(|key| r.policy[*key] == next_policy[*key]);
+    r.policy = next_policy;
+    r.workflow_version = r.policy["workflowVersion"].as_str().unwrap().into();
+    if art_upgrade || design_upgrade {
+        for stage in [
+            "resources",
+            "plan",
+            "implementation",
+            "review",
+            "delivery",
+            "closeout",
+        ] {
+            r.stages.insert(stage.into(), "not-started".into());
+        }
+        r.current_stage = if r.stages.get("requirements").is_some_and(|s| s == "passed") {
+            "resources"
+        } else {
+            "requirements"
+        }
+        .into();
+        r.stages
+            .insert(r.current_stage.clone(), "in-progress".into());
+        r.issues.push(serde_json::json!({"id":format!("art-review-upgrade-{}",r.revision),"kind":"suggestion","status":"resolved","stage":"resources",
+            "description":"已升级美术需求与设计追踪。既有文档、批准、轮次与证据保留为历史；需核对策划原话、参考、设计落实及受影响的后续阶段，不补造确认。","backup":backup,"updatedAt":now()}));
+        return Ok(());
+    }
+    if feedback_upgrade {
+        for s in r.policy["stages"].as_array().unwrap() {
+            r.stages
+                .entry(s["id"].as_str().unwrap().into())
+                .or_insert("not-started".into());
+        }
+        if r.stages.get("plan").is_some_and(|s| s == "passed") {
+            r.current_stage = "implementation".into();
+            r.stages
+                .insert("implementation".into(), "in-progress".into());
+            for stage in ["review", "delivery", "closeout"] {
+                r.stages.insert(stage.into(), "not-started".into());
+            }
+        }
+        r.issues.push(serde_json::json!({"id":format!("feedback-upgrade-{}",r.revision),"kind":"suggestion","status":"resolved","stage":"closeout",
+            "description":"已切换人工反馈流程；需求和计划确认、旧轮次与证据保留。当前作品须登记必要自测后交给策划验收，不补造新流程通过。","backup":backup,"updatedAt":now()}));
+        return Ok(());
+    }
+    if compatible {
+        if super::stage_contracts::enabled(r) && (!changed_contracts_only || stage_contract_changed)
+        {
+            super::stage_contracts::migrate(r);
+        }
+        if budget_upgrade {
+            super::autonomy_budget::migrate_budget(r);
+        }
+        if completion_upgrade && super::completion::enabled(r) {
+            super::completion::migrate(r);
+        }
+        if handoff_upgrade && super::review_handoff::enabled(r) {
+            super::review_handoff::migrate(r);
+        }
+        if progress_upgrade {
+            super::progress_budget::migrate(r);
+        }
+        if in_place_upgrade {
+            super::execution_loop::migrate(r);
+        }
+        if !changed_contracts_only || time_policy_changed {
+            super::execution_time::migrate(r);
+        }
+        if (!changed_contracts_only || execution_mode_changed)
+            && r.policy["implementationExecution"]["mode"] == "autonomous"
+            && r.current_stage == "implementation"
+            && r.stages
+                .get("implementation")
+                .is_some_and(|s| s == "blocked")
+        {
+            r.stages
+                .insert("implementation".into(), "in-progress".into());
+            super::autonomy::event(
+                &mut r.workbench.execution,
+                "policy-upgraded",
+                None,
+                "明确升级后启用问题隔离；原问题和批准历史保留，不自动启动执行。",
+            );
+        }
+        r.issues.push(serde_json::json!({"id":format!("workflow-update-{}",r.revision),"kind":"suggestion","status":"resolved","stage":"closeout","description":"制作流程界面与沟通规则已更新，已确认的需求、计划和历史继续有效。","backup":backup,"updatedAt":now()}));
+        return Ok(());
+    }
+    r.cycle += 1;
+    r.current_round = 0;
+    r.milestones.clear();
+    r.checks.clear();
+    for status in r.stages.values_mut() {
+        *status = "not-started".into();
+    }
+    r.current_stage = "requirements".into();
+    r.documents.clear();
+    r.issues.push(serde_json::json!({"id":format!("upgrade-{}",r.cycle),"kind":"suggestion","status":"open",
+        "stage":"requirements","description":"流程已升级，历史记录已保留，请重新提交并确认适用文档。",
+        "backup":backup,"updatedAt":now()}));
+    Ok(())
 }

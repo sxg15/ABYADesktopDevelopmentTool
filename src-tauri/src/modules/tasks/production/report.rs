@@ -81,18 +81,23 @@ pub(super) fn render(r: &ProductionRecord, phase: &str, warnings: &[String]) -> 
     for warning in warnings {
         body += &format!("<p class=missing>{}</p>", escape(warning));
     }
+    let stage_statuses = super::workspace::stage_statuses(r);
     body += &rows(
         &["阶段", "状态"],
         r.policy["stages"]
             .as_array()
-            .unwrap()
-            .iter()
-            .map(|s| {
-                vec![
-                    s["name"].as_str().unwrap().into(),
-                    status_text(&super::workspace::stage_statuses(r)[s["id"].as_str().unwrap()])
+            .into_iter()
+            .flatten()
+            .filter_map(|s| {
+                let id = s["id"].as_str()?;
+                Some(vec![
+                    s["name"].as_str().unwrap_or(id).into(),
+                    stage_statuses
+                        .get(id)
+                        .map(|status| status_text(status))
+                        .unwrap_or("未记录")
                         .into(),
-                ]
+                ])
             })
             .collect(),
     );

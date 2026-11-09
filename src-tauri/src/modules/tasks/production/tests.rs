@@ -4,6 +4,7 @@ mod completion_tests;
 mod execution_loop_tests;
 mod execution_time_tests;
 mod progress_budget_tests;
+mod release_migration_tests;
 mod review_handoff_tests;
 mod task_assets_tests;
 mod validation_impact_tests;
