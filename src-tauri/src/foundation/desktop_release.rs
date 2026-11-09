@@ -12,7 +12,7 @@ pub struct DesktopRelease {
     release_number: u64,
     version: String,
     notes: String,
-    package_url: String,
+    commit: String,
 }
 
 #[derive(Deserialize)]
@@ -48,7 +48,7 @@ fn release(bytes: &[u8], sha: &str) -> AppResult<Option<DesktopRelease>> {
         release_number: number,
         version: manifest.version,
         notes,
-        package_url: format!("https://github.com/{REPO}/archive/{sha}.zip"),
+        commit: sha.to_owned(),
     }))
 }
 

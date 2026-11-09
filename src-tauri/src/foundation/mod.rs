@@ -13,6 +13,7 @@ pub use settings::{
 
 pub mod build_info;
 pub mod change_signal;
+pub mod checkout_update;
 pub mod cli_environment;
 pub mod cli_sessions;
 pub mod cli_transport;

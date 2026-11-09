@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "releaseLabel": "workflow-unlimited-20261106",
-  "totalBytes": 355547142,
+  "totalBytes": 355917323,
   "files": [
     {
       "path": ".codex/README.md",
@@ -1580,18 +1580,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 44669440,
-      "sha256": "153371f8fada6dd416dd239a7e7d5e629b5449c09561cbd896ae6924c00168c4"
+      "bytes": 45039104,
+      "sha256": "8e26a4de112202984349540acbd471e4345c34a4fe66c4636839e87337e47e64"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 5993984,
-      "sha256": "9aebc10304ecef39b8d2284aa3fa2368c721801d32069c44d7a0175fdb1d6b01"
+      "bytes": 5994496,
+      "sha256": "a09cc2d45d54567567a61b7ef6358acec22334d2c40ba16cc0532e3222a45e16"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 857,
-      "sha256": "1283d2f7c855edb0f750be1ecef4f09f72285b628d43d3d81be20ec3281b5c1f"
+      "bytes": 862,
+      "sha256": "f9fb929d258e7204c5cd302eda7ed4114fa9d676129cfe3f9cbb484500f2d223"
     },
     {
       "path": "runtime/LICENSE.txt",

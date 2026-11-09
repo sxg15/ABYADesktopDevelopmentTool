@@ -1,5 +1,7 @@
 # App Shell Skill
 
+The update action invokes install_desktop_release with the offered release number and commit. Keep the dialog open during preparation, show native errors in the dialog, and allow retry after failure.
+
 Pass the verified installed release number to Settings so testers can identify the running package.
 
 Settings shows each project’s startup migration result. A persistent navigation action surfaces items needing review.

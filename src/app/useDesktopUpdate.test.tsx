@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { api } from "../shared/api";
 import { useDesktopUpdate } from "./useDesktopUpdate";
 
 const build = { version: "0.4.0", releaseNumber: 1, verification: "verified", builtAt: "", release: "", dataDirectory: "", executable: "", testEnvironment: false };
-const release = { version: "0.4.0", releaseNumber: 2, notes: "new", packageUrl: "https://github.com/example" };
+const release = { version: "0.4.0", releaseNumber: 2, notes: "new", commit: "a".repeat(40) };
 beforeEach(() => {
   localStorage.clear();
   vi.spyOn(api, "latestDesktopRelease").mockResolvedValue(release);
@@ -53,4 +53,18 @@ it("recovers from offline checks and ignores older packages", async () => {
   await act(() => hook.result.current.check(true));
   expect(hook.result.current.dialog).toBeTruthy();
   hook.unmount();
+});
+
+it("installs the offered commit and keeps the current app available for retry on a Git conflict", async () => {
+  const install = vi.spyOn(api, "installDesktopRelease")
+    .mockRejectedValueOnce({message: "本地分支有独立提交"})
+    .mockResolvedValue(undefined);
+  function Window() { return useDesktopUpdate(build, false, vi.fn()).dialog || null; }
+  render(<Window />);
+  fireEvent.click(await screen.findByRole("button", {name: "原地更新并重启"}));
+  await screen.findByRole("alert");
+  expect(screen.getByRole("alert").textContent).toContain("本地分支有独立提交");
+  fireEvent.click(screen.getByRole("button", {name: "原地更新并重启"}));
+  await waitFor(() => expect(install).toHaveBeenCalledTimes(2));
+  expect(install).toHaveBeenLastCalledWith(release);
 });

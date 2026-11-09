@@ -139,6 +139,57 @@ fn desktop_has_active_turn(state: State<'_, AppState>) -> AppResult<bool> {
 }
 
 #[tauri::command]
+async fn install_desktop_release(
+    app: tauri::AppHandle,
+    commit: String,
+    number: u64,
+) -> AppResult<()> {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static INSTALLING: AtomicBool = AtomicBool::new(false);
+    if INSTALLING.swap(true, Ordering::SeqCst) {
+        return Err(foundation::AppError::validation("更新已在进行中。"));
+    }
+    let worker_app = app.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        use modules::instances::{InstanceOrigin, ProcessState};
+        let state = worker_app.state::<AppState>();
+        foundation::checkout_update::prepare_and_handoff(&state.paths, &commit, number, || {
+            if state.codex_terminal.has_active_turn()?
+                || state.game_clients.operation().active
+                || state
+                    .archive_transfers
+                    .list()?
+                    .iter()
+                    .any(|t| t.status.active())
+                || state.instances.list(None)?.iter().any(|i| {
+                    i.origin == InstanceOrigin::Managed
+                        && matches!(
+                            i.process_state,
+                            ProcessState::Launching
+                                | ProcessState::Running
+                                | ProcessState::Stopping
+                        )
+                })
+            {
+                return Err(foundation::AppError::validation(
+                    "请先结束正在运行的 AI 任务、游戏实例或传输，再更新桌面工具。",
+                ));
+            }
+            Ok(())
+        })
+    })
+    .await
+    .map_err(foundation::AppError::internal)
+    .and_then(|r| r);
+    if result.is_ok() {
+        app.exit(0);
+    } else {
+        INSTALLING.store(false, Ordering::SeqCst);
+    }
+    result
+}
+
+#[tauri::command]
 fn get_settings(state: State<'_, AppState>) -> AppResult<AppSettings> {
     state.settings.get()
 }
@@ -1449,6 +1500,7 @@ pub fn run() {
             get_build_info,
             project_migration_report,
             latest_desktop_release,
+            install_desktop_release,
             desktop_has_active_turn,
             get_settings,
             update_settings,

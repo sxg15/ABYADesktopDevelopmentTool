@@ -29,8 +29,9 @@ import type {
   StorageRepairReport,
 } from "./types";
 
-export interface DesktopRelease { releaseNumber: number; version: string; notes: string; packageUrl: string }
+export interface DesktopRelease { releaseNumber: number; version: string; notes: string; commit: string }
 export const api = {
+  installDesktopRelease: (release: DesktopRelease) => invoke<void>("install_desktop_release", {commit: release.commit, number: release.releaseNumber}),
   projectMigrationReport: () => invoke<{title:string;status:"adapted"|"retained"|"review";reason:string}[]>("project_migration_report"),
   latestDesktopRelease: () => invoke<DesktopRelease | null>("latest_desktop_release"),
   desktopHasActiveTurn: () => invoke<boolean>("desktop_has_active_turn"),

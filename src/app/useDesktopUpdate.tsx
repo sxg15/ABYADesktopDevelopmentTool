@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
-import { api, type DesktopRelease } from "../shared/api";
+import { api, errorMessage, type DesktopRelease } from "../shared/api";
 import { Modal } from "./Modal";
 
 type Build = Awaited<ReturnType<typeof api.buildInfo>>;
@@ -11,6 +10,9 @@ export function useDesktopUpdate(build: Build | undefined, en: boolean, notify: 
   const [candidate, setCandidate] = useState<DesktopRelease>();
   const [open, setOpen] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [installError, setInstallError] = useState("");
+  const installation = useRef(false);
   const current = useRef({ en, notify });
   current.current = { en, notify };
   const inFlight = useRef(false);
@@ -19,6 +21,7 @@ export function useDesktopUpdate(build: Build | undefined, en: boolean, notify: 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const check = useCallback(async (manual = false) => {
+    if (installation.current) return;
     const message = (zh: string, english: string, error = false) =>
       current.current.notify(current.current.en ? english : zh, error);
     if (build?.verification !== "verified" || build.releaseNumber == null) {
@@ -70,19 +73,34 @@ export function useDesktopUpdate(build: Build | undefined, en: boolean, notify: 
   }, [candidate, open]);
 
   function later() {
+    if (installation.current) return;
+    setInstallError("");
     if (candidate) localStorage.setItem(snoozeKey, snoozeValue(candidate.releaseNumber));
     setCandidate(undefined);
     setOpen(false);
   }
   const title = en ? "Desktop update available" : "桌面工具有新版本";
+  async function install() {
+    if (!candidate || installation.current) return;
+    installation.current = true;
+    setInstalling(true);
+    setInstallError("");
+    try { await api.installDesktopRelease(candidate); }
+    catch (error) {
+      installation.current = false;
+      setInstalling(false);
+      setInstallError(errorMessage(error));
+    }
+  }
   const reminder = candidate && !open && <button className="secondary-button" onClick={() => setOpen(true)}>{title} · #{candidate.releaseNumber}</button>;
   const dialog = candidate && open && <Modal title={title} onClose={later}>
     <p>{en ? "Current" : "当前"} {build?.version} #{build?.releaseNumber} → {candidate.version} #{candidate.releaseNumber}</p>
     <p>{candidate.notes}</p>
-    <p>{en ? "Extract the complete ZIP to a new folder and use the included launcher after closing the old app." : "将完整 ZIP 解压到新目录，关闭旧版后，使用包内的「ABYA 开发工具.cmd」启动。"}</p>
-    <div className="modal-actions"><button className="secondary-button" onClick={later}>{en ? "Remind me later" : "稍后提醒"}</button>
-    <button className="primary-button" onClick={() => void openUrl(candidate.packageUrl).then(later).catch(() =>
-      notify(en ? "Could not open the download link." : "无法打开下载链接。", true))}>{en ? "Get update" : "获取新版"}</button></div>
+    <p>{en ? "Save your work. The app will update this Git checkout, restart here and adapt your projects." : "请先保存手头的工作。App 将通过 GitHub 更新当前目录，在原位置重启并自动适配已有项目。"}</p>
+    {installError && <p role="alert">{installError}</p>}
+    <div className="modal-actions"><button className="secondary-button" disabled={installing} onClick={later}>{en ? "Remind me later" : "稍后提醒"}</button>
+    <button className="primary-button" disabled={installing} onClick={() => void install()}>
+      {installing ? (en ? "Preparing update…" : "正在准备更新…") : (en ? "Update in place and restart" : "原地更新并重启")}</button></div>
   </Modal>;
   return { check, checking, reminder, dialog };
 }
