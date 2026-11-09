@@ -28,7 +28,7 @@ resources 提交必含 artScope（new-art/reuse-only/no-art）与 artScopeReason
 仅复用/无新增美术也提交确认单列明范围和依据，可不新增概念图。未正式提交的草稿不开放反馈。
 用户确认后正文变化须重新提交；范围改变修订相关需求/计划，缺陷修正不重审无关决定。
 问答 publish-questions 使用 id/title/questions/stage，当前阶段每组1–12题：
-questions 项为 id/text/options/optional。绑定由桌面注入，不填写原生会话身份。
+questions 项为 id/text/options/optional。资源阶段针对既有待澄清要求提问时，在题目填 clarifiesRequirementId；正式提交后的要求关联见 art-design-records.md。会话绑定由桌面注入，不填写原生会话身份。
 只使用 answers 最新提交版，draft 不是答案；问答提交不是文档批准。
 发布后结束本轮等待，不轮询、不要求暂停或重复输入“继续”。APP负责原会话排队续接。
 
