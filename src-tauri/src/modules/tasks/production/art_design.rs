@@ -67,7 +67,22 @@ fn requirement(r: &mut ProductionRecord, data: &Value, human: bool) -> AppResult
     for key in ["interpretation", "scope", "acceptance"] {
         item[key] = json!(text(data, key, 4000)?);
     }
-    put(&mut r.art_design.requirements, item)
+    if let Some(link) = r
+        .art_design
+        .requirements
+        .iter()
+        .find(|q| {
+            q["id"] == id
+                && q["kind"] == kind
+                && q["sourceHash"] == s["hash"]
+                && q["quote"] == quote
+        })
+        .and_then(|q| q.get("clarificationAnswer"))
+    {
+        item["clarificationAnswer"] = link.clone();
+    }
+    put(&mut r.art_design.requirements, item)?;
+    super::art_clarification::connect(r, &id, data, human)
 }
 
 fn review_source(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {

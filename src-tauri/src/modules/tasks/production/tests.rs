@@ -9,6 +9,7 @@ mod review_handoff_tests;
 mod task_assets_tests;
 mod validation_impact_tests;
 use super::*;
+mod art_clarification_tests;
 mod art_design_tests;
 mod art_library_tests;
 mod art_recovery_tests;

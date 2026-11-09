@@ -348,6 +348,7 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
             "awaiting-confirmation"
         },
     );
+    super::execution_loop::document_delivered(r, kind, revision);
     Ok(())
 }
 
@@ -496,6 +497,47 @@ fn evidence(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()
     Ok(())
 }
 
+fn design_record_evidence(r: &ProductionRecord, data: &Value) -> bool {
+    let stage = &data["stage"];
+    let design = |v: &Value| v.as_str().is_some_and(super::stage_contracts::design_stage);
+    let design_only = |issue: &Value| {
+        issue["stage"] == *stage
+            && design(stage)
+            && ["owningStage", "detectedStage"]
+                .iter()
+                .all(|k| issue[*k].is_null() || design(&issue[*k]))
+            && issue["affectedStages"]
+                .as_array()
+                .is_none_or(|stages| stages.iter().all(design))
+            && issue["diagnosisStatus"].is_null()
+            && !matches!(
+                issue["category"].as_str(),
+                Some("runtime-state" | "runtime-unknown" | "platform-confirmed")
+            )
+            && !matches!(
+                issue["repairTarget"].as_str(),
+                Some("abya-source" | "abya-build" | "lua")
+            )
+    };
+    data["kind"] == "blocker"
+        && design_only(data)
+        && r.issues
+            .iter()
+            .find(|i| i["id"] == data["id"])
+            .is_some_and(|old| old["kind"] == "blocker" && design_only(old))
+        && data["evidenceIds"].as_array().is_some_and(|ids| {
+            ids.iter().all(|id| {
+                r.evidence.iter().any(|e| {
+                    id.as_str() == Some(e.id.as_str())
+                        && stage == &e.stage
+                        && e.version == "preflight"
+                        && matches!(e.kind.as_str(), "text" | "json")
+                        && matches!(e.capture_type.as_str(), "state" | "inspection")
+                })
+            })
+        })
+}
+
 fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
     if data["id"]
         .as_str()
@@ -604,7 +646,12 @@ fn issue(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> {
         if ["defect", "checkpoint"].contains(&kind)
             || super::review_handoff::enabled(r) && kind == "blocker"
         {
-            validation::evidence_refs(r, root, &data["evidenceIds"], validation::version(r)?)?;
+            let version = if design_record_evidence(r, data) {
+                "preflight"
+            } else {
+                validation::version(r)?
+            };
+            validation::evidence_refs(r, root, &data["evidenceIds"], version)?;
         }
     }
     if kind == "blocker" {

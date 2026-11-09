@@ -12,6 +12,8 @@ APP 当前 gameExecutablePath 是唯一启动来源；selected_game_executable �
 
 # Foundation Skill
 
+Art requirements may expose clarificationAnswer and the server projects currently valid resolvedClarifications. Intake questions optionally carry clarifiesRequirementId.
+
 Verified build info also returns the installed manifest release notes.
 
 The shared projectMigrationReport API exposes read-only per-project results from native startup.

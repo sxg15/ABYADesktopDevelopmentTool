@@ -7,6 +7,9 @@
 
 1. 读取 artDesign.sources 中的原始任务、已提交答案、有效参考备注、人工反馈、退回意见和补充要求；这些来源由 APP 汇集。图片来源同时有 asset.id/path/sha256。
    终端对话中新提出而尚未入记录的美术要求，先用 record-art-input 追加完整原句和可定位的会话/消息来源。它标为“AI 摘录，待策划核对”，不能伪称 APP 已认证原话；对话未出现的建议不能登记成用户指令。
+遇到仍有效的 clarify 要求时，在 publish-questions 的对应题目内填写 clarifiesRequirementId（旧要求 ID）。策划在 APP 正式提交后，读取 questionGroups 最新答案 revision，以 answer:<组ID>:<题ID> 为来源，调用 save-art-requirement 创建明确要求，quote 取自正式答案正文，并提供 answerRevision。系统校验后把旧要求、题目、答案修订和新要求关联。刷新方向与所有覆盖后再送审；批准仍由策划决定。旧问题未预先绑定时，可由策划在「要求与参考」的旧要求修订中关联已有正式答案，无需重复提问。
+资源/方案阶段记录类 blocker 的复验可引用同阶段登记、同周期且已审阅的 preflight 状态或文档证据（json/text、state/inspection）。保留 fix、recheck 和实际文件哈希。
+
 2. 将每个具体要求写为 save-art-requirement；图片没有原话时 quote 留空，解读必须标注推断。AI 建议不要伪装成策划来源。
 3. 用 review-art-source 核对每个来源是否已完整拆解，列 requirementIds 与 reason；不涉及美术时可以空数组但必须说明，不把“已查看”当作无要求。
 4. 查看并分析每张有效策划参考图；检索并查看适用案例。先阅读后判断，不用文件名代替看图。

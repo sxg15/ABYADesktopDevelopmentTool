@@ -139,6 +139,22 @@ pub(super) fn publish(r: &mut ProductionRecord, data: &Value) -> AppResult<()> {
         return Err(AppError::validation("请先完成或取消当前问题组。"));
     }
     let questions: Vec<IntakeQuestion> = serde_json::from_value(data["questions"].clone())?;
+    let mut clarifications = std::collections::HashSet::new();
+    for question in &questions {
+        if let Some(id) = &question.clarifies_requirement_id
+            && (!clarifications.insert(id)
+                || stage != "resources"
+                || !r
+                    .art_design
+                    .requirements
+                    .iter()
+                    .any(|q| q["id"] == *id && q["kind"] == "clarify" && q["withdrawn"] != true))
+        {
+            return Err(AppError::validation(
+                "问题须绑定当前美术阶段有效的待澄清要求。",
+            ));
+        }
+    }
     let mut ids = std::collections::HashSet::new();
     if questions.is_empty()
         || questions.len() > 12
