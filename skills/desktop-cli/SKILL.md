@@ -12,6 +12,8 @@ executablePath 仅允许断言 APP 当前所选包，不再作为覆盖设置的
 
 # Desktop CLI
 
+Desktop update settings shows the verified local release notes next to the installed build number.
+
 Desktop app updates displays the installed release number beside the manual check when available.
 
 Settings lists migration results from the active App database. Startup migration requires no CLI authentication.

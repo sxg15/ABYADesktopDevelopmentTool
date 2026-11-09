@@ -8,6 +8,7 @@ use std::io::Read;
 pub struct BuildInfo {
     pub version: String,
     pub release_number: Option<u64>,
+    pub release_notes: Option<String>,
     pub release: String,
     pub built_at: String,
     pub verification: String,
@@ -21,6 +22,7 @@ pub fn read(paths: &AppPaths) -> AppResult<BuildInfo> {
     let manifest = exe.parent().unwrap().join("build-manifest.json");
     let mut verification = "missing";
     let mut release_number = None;
+    let mut release_notes = None;
     if let Ok(bytes) = std::fs::read(&manifest) {
         let bytes = bytes.strip_prefix(&[239, 187, 191]).unwrap_or(&bytes);
         if let Ok(value) = serde_json::from_slice::<serde_json::Value>(bytes) {
@@ -44,11 +46,13 @@ pub fn read(paths: &AppPaths) -> AppResult<BuildInfo> {
             {
                 verification = "verified";
                 release_number = value["releaseNumber"].as_u64();
+                release_notes = value["releaseNotes"].as_str().map(str::to_owned);
             }
         }
     }
     Ok(BuildInfo {
         release_number,
+        release_notes,
         version: env!("CARGO_PKG_VERSION").into(),
         release: env!("ABYA_RELEASE_ID").into(),
         built_at: env!("ABYA_BUILD_UTC").into(),

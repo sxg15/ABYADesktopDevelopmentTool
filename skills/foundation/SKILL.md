@@ -12,6 +12,8 @@ APP 当前 gameExecutablePath 是唯一启动来源；selected_game_executable �
 
 # Foundation Skill
 
+Verified build info also returns the installed manifest release notes.
+
 The shared projectMigrationReport API exposes read-only per-project results from native startup.
 
 Verified build info exposes the portable release number. Pin the public dev manifest to its Git commit. In-place updates prefetch that exact commit and validate its complete portable package before normal shutdown. The detached updater rechecks the checkout, fast-forwards the existing branch, verifies all hashes, then restarts the same EXE and data context. Reject dirty, diverged or unsupported checkouts and active work.

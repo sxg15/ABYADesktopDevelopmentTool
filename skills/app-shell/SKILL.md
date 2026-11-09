@@ -1,5 +1,7 @@
 # App Shell Skill
 
+Use the installed manifest notes in Settings when identifying the new build after restart.
+
 The update action invokes install_desktop_release with the offered release number and commit. Keep the dialog open during preparation, show native errors in the dialog, and allow retry after failure.
 
 Pass the verified installed release number to Settings so testers can identify the running package.

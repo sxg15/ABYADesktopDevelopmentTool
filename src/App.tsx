@@ -153,6 +153,7 @@ function App() {
         {view === "settings" && (
           <SettingsView
             releaseNumber={buildInfo?.releaseNumber}
+            releaseNotes={buildInfo?.releaseNotes}
             migrations={migrations}
             checkDesktopUpdate={() => void desktopUpdate.check(true)}
             checkingDesktopUpdate={desktopUpdate.checking}
