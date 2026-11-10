@@ -18,6 +18,8 @@ Workflow 2.12 packages scenario-actions/values/preflight modules and assets/art-
 
 ## Current scope
 
+2026-11-10 UI 美术还原文档维护：同步源 .codex 与 Publish 内的制作指南/确认单并刷新完整文件清单，沿用发布 5 的程序及其构建元信息。此变更交付制作约束，不声明新的编号二进制发布或游戏视觉验收；固定项目按原 APP 升级入口更新 Skill。
+
 2026-11-05 用户要求多人人工试玩可选人数。维护包 APP `c5a61c5bd11c49836357e6d0f10bec73110c5c748681d80b3def5117b16ac3ac`、inventory `8c9e4c982b3a019313f49ea0b2dfae32387f8cac03de9ee09d93ff2684a45e7e` 已完成完整检查、372项库测试和2项CLI测试。隔离真实项目从界面分别启动1/4窗口，核对1个联网房主及其余客户端；正式验收1窗口和原配置保留通过。专项证据在D盘维护目录，本轮为已授权的APP功能更新。
 
 2026-11-05 用户明确要求修复反馈修改后仍启动旧包的严重缺陷。本轮正式维护包 APP SHA-256 `3e3c9ef4329c2defe235d413bc41dd39e65c6f59a15c3072e0aba3412fa391bb`，inventory `7bc4d7e9e66b12138e19a64acc57c415a9c760089fe0ec04a272aefa14ef398b`。完整检查、371 项库测试与2项CLI测试通过。实际项目副本在旧包与新候选并存时从界面启动 feedback-acc35-v4 双端，32文件均匹配；旧版本号请求被拒绝。此发布是用户要求的版本交接修复，不扩展游戏验收范围。

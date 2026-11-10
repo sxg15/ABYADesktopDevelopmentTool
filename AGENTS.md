@@ -33,3 +33,7 @@ Do not add raw command-line input to the UI. Do not introduce or persist game
 connection secrets without an explicit security-design change. Do not add
 desktop MCP tools without documenting their contracts in the `desktop-mcp`
 Skill.
+
+## UI 美术还原约束
+
+维护受管美术流程时，保留「选中基准与唯一尺寸配置 → 资源分层合成核对 → 授权后引擎代表片段全屏/局部对照 → 修正关键偏差后扩展」链路。字体/按钮缩水、分区漂移与非等比变形不得以功能通过结项。具体尺度取当前任务基准与目标设备，不把单个案例坐标或统一容差固化到所有游戏；沿用现有审批及固定任务升级入口。

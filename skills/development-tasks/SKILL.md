@@ -64,6 +64,9 @@ task-to-instance history relationships.
 
 ## Public Contracts
 
+UI 美术交接沿用现有 resources/direction/visual/realizations：资源批量制作前锁定选中布局基准、唯一配置、分区/留白、字面层级和控件可见尺寸及目标显示下限。制作前分层合成稿、计划批准后的引擎代表片段分别保留全屏与局部对照；缩水、漂移或非等比变形违反有效要求/下限时先修正再扩展，功能通过不能替代视觉通过。
+具体规则由受管游戏 UI Skill 和原确认单模板承载；宿主完整部署，不新增 schema、审批点或自动像素判定。现有固定任务仍走 APP 的 Skill 升级入口，保留批准、历史、用户修改和备份，不直接覆盖其工作区。
+
 Model-reported permission causes do not themselves stop 2.11 recovery; native approval and authorization controls remain authoritative. A dependency deferral waits only for an actual unfinished dependency, never for a label on a ready work item. Unknown write outcomes remain unreplayed and explicitly reconciled.
 
 The 2.11 impact mapper preserves full file fingerprints and only recognizes PBUI v1 Layout-only changes and parsed archive LastEditTime changes. Binding/code/unknown-schema changes are never ignored. Layout changes require fresh input/visual/save-reload checks. Explicit dependency projections may support logic evidence reuse, but cannot cross build/scope changes, required retest categories or check identities.
