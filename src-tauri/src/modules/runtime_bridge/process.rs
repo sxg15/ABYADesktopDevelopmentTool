@@ -166,6 +166,15 @@ pub(super) fn execute(
     {
         return Err(AppError::validation("CLI response identity mismatch."));
     }
+    if args == ["status"] && !status.is_some_and(|s| s.success()) {
+        return Err(AppError::new(
+            value["errorCode"].as_str().unwrap_or("runtimeCliFailed"),
+            value["message"]
+                .as_str()
+                .unwrap_or("运行时 CLI 状态探测失败。"),
+            "status",
+        ));
+    }
     if !status.is_some_and(|s| s.success()) && value.get("content").is_none() {
         return Err(AppError::new(
             "runtimeCliFailed",

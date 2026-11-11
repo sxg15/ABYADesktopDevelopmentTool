@@ -158,7 +158,7 @@ pub(super) fn document_gate(r: &ProductionRecord, root: &Path, kind: &str) -> Ap
         }
         "plan" => {
             super::test_plan::validate(r, root)?;
-            super::capability_preflight::gate(r, root)?;
+
             if super::interaction::art_approval(r) {
                 approved(r, root, "resources")?;
             }

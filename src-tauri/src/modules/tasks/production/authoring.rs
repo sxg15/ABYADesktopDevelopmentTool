@@ -13,13 +13,17 @@ impl TaskService {
         let Some(r) = self.database.with_connection(|c| load(c, task))? else {
             return Ok(None);
         };
+        let root = Path::new(&t.workspace_path);
+        if matches!(r.current_stage.as_str(), "implementation" | "review") {
+            super::capability_preflight::gate(&r, root)?;
+        }
         if !super::stage_contracts::enabled(&r) {
             return Ok(None);
         }
-        let root = Path::new(&t.workspace_path);
         if matches!(r.current_stage.as_str(), "implementation" | "review") {
             validation::approved(&r, root, "requirements")?;
             validation::approved(&r, root, "plan")?;
+
             return Ok(None);
         }
         let scope = autonomy::scope(&r);

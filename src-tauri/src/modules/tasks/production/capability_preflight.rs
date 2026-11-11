@@ -34,7 +34,7 @@ impl TaskService {
                         "repairTarget":if platform{"abya-build"}else{"other"},"diagnosisStatus":if platform{"confirmed"}else{"suspected"},
                         "category":if platform{"platform-confirmed"}else{"runtime-unknown"},"preflightDisposition":if value["state"]=="workaround-verified"{"verified-workaround"}else{"pending"},
                         "fix":if value["state"]=="workaround-verified"{"复用本任务已有存档，保存及冷加载已验证；原创建入口问题仍保留。"}else{"核对当前包、运行状态和调用条件；有本任务已有存档时可验证复用路径，禁止自行换包。"},
-                        "resumeWhen":if stage=="plan"{"当前包下通过基础链路或经验证的等效路径，并在方案中引用本次预检报告。"}else{"在当前阶段完成当前包的隔离预检，再继续原修改任务；无需回退方案或重复确认安装意图。"},
+                        "resumeWhen":"方案可直接提交审核；需要运行 Player 的实施或试玩操作前，在当前包完成隔离预检。",
                         "playerBuildHash":value["playerBuildHash"],"preflightReport":relative,"updatedAt":now()});
                     if let Some(old)=r.issues.iter_mut().find(|i|i["id"]==ISSUE){*old=issue;}else{r.issues.push(issue);}
                 } else if value["state"]=="passed" && let Some(old)=r.issues.iter_mut().find(|i|i["id"]==ISSUE){old["status"]=json!("resolved");old["fix"]=json!("基础能力重新实测通过。");old["recheck"]=json!(relative);old["preflightDisposition"]=json!("resolved");old["preflightReport"]=json!(relative);old["preflightRunId"]=value["runId"].clone();}
@@ -62,6 +62,14 @@ impl TaskService {
             root.parent().ok_or_else(conflict)?,
             &format!(".abya-preflight/{task}/{run}"),
         )?;
+        let data = if data.exists() {
+            data
+        } else {
+            files::safe_path(
+                root.parent().ok_or_else(conflict)?,
+                &format!(".abya-preflight/{run}"),
+            )?
+        };
         if !data.exists() {
             return Ok(());
         }
@@ -117,7 +125,7 @@ impl TaskService {
         uuid::Uuid::parse_str(run).map_err(AppError::internal)?;
         let destination = files::safe_path(
             root.parent().ok_or_else(conflict)?,
-            &format!(".abya-preflight/{task}/{run}/Archives"),
+            &format!(".abya-preflight/{run}/Archives"),
         )?;
         let mut archives = vec![];
         for directory in roots["editableRoots"]
@@ -187,7 +195,15 @@ pub(super) fn gate(r: &ProductionRecord, root: &Path) -> AppResult<()> {
                 .any(|c| c["id"] == *id && c["status"] == "passed")
         })
     }) {
-        return Err(AppError::validation("基础预检缺少真实完成的必要检查。"));
+        let message = match p["state"].as_str() {
+            None => "尚未运行基础预检。开始 Player 实施前，请在 APP 中授权启动隔离预检。",
+            Some("running") => "基础预检正在执行，请等待本次回执。",
+            Some("failed" | "interrupted") => {
+                "已有失败或中断的基础预检回执，请查看失败阶段并重新验证。"
+            }
+            _ => "基础预检缺少真实完成的必要检查。",
+        };
+        return Err(AppError::validation(message));
     }
     if !matches!(
         p["state"].as_str(),
@@ -202,29 +218,6 @@ pub(super) fn gate(r: &ProductionRecord, root: &Path) -> AppResult<()> {
     let report = files::safe_path(root, mutation::text(p, "reportPath")?)?;
     if files::hash_file(&report)?.0 != mutation::text(p, "reportHash")? {
         return Err(AppError::validation("预检证据已变化，请重新验证。"));
-    }
-    Ok(())
-}
-
-pub(super) fn plan_notes(r: &ProductionRecord, content: &str) -> AppResult<()> {
-    if enabled(r)
-        && r.workbench.execution.capability_preflight["state"] == "workaround-verified"
-        && !content.contains("复用本任务已有存档")
-        && !content.contains("reuse-existing")
-    {
-        return Err(AppError::validation(
-            "方案须明确注明复用本任务已有存档的替代路径及新建能力仍未恢复的限制。",
-        ));
-    }
-    if enabled(r)
-        && !content.contains(mutation::text(
-            &r.workbench.execution.capability_preflight,
-            "reportPath",
-        )?)
-    {
-        return Err(AppError::validation(
-            "请在方案的能力预检与兼容处理部分引用当前预检报告，说明问题、替代路径及限制。",
-        ));
     }
     Ok(())
 }
@@ -245,11 +238,21 @@ pub(super) fn workaround(r: &ProductionRecord, i: &Value) -> bool {
 
 impl TaskService {
     /// 固定隔离预检支持方案、实现和试玩修改；不改阶段或授予普通开发权限。
+    #[cfg(test)]
     pub fn begin_capability_preflight(
         &self,
         task: &str,
         reuse: bool,
         retry: bool,
+    ) -> AppResult<Value> {
+        self.begin_capability_preflight_from(task, reuse, retry, true)
+    }
+    pub fn begin_capability_preflight_from(
+        &self,
+        task: &str,
+        reuse: bool,
+        retry: bool,
+        user_initiated: bool,
     ) -> AppResult<Value> {
         let r = self.production_get(task)?.record.ok_or_else(conflict)?;
         if self.get_readonly(task)?.status != TaskStatus::Active
@@ -298,13 +301,31 @@ impl TaskService {
         {
             return Ok(old.clone());
         }
+        if !user_initiated
+            && !(old["userAuthorized"] == true
+                && old["scope"] == scope(&r)
+                && old["reuseExisting"] == reuse
+                && old["stage"] == r.current_stage
+                && player.as_ref().is_ok_and(|p| {
+                    p["matches"] == true
+                        && p["selectedHash"] == old["playerBuildHash"]
+                        && p["selectedPath"] == old["playerPath"]
+                }))
+        {
+            return Err(AppError::new(
+                "preflight_authorization_required",
+                "请在 APP 的基础能力预检面板授权启动隔离 Player。方案可直接提交和审核。",
+                "not_executed",
+            ));
+        }
         let run = uuid::Uuid::new_v4().to_string();
         let data = files::safe_path(
             root.parent().ok_or_else(conflict)?,
-            &format!(".abya-preflight/{task}/{run}"),
+            &format!(".abya-preflight/{run}"),
         )?;
         let mut value = json!({"runId":run,"taskId":task,"stage":r.current_stage,"purpose":if maintenance{"maintenance"}else{"initialization"},"scope":scope(&r),"suiteVersion":1,"state":"running","phase":"starting","reuseExisting":reuse,
             "dataRoot":data,"instances":[],"checks":[],"cleanup":{"state":"pending"},"startedAt":now(),"reportPath":format!("artifacts/capability-preflight/{run}.json")});
+        value["userAuthorized"] = json!(true);
         if reuse {
             value["routeIssue"] = old["error"].clone();
         }

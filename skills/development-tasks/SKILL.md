@@ -281,11 +281,11 @@ Runtime image paths in completed CLI activity details are previewable in the exi
 Read the matching section in [historical contracts](../../docs/skill-history/20261026/development-tasks.md) only when changing that surface. New current-scope rules override historical versions.
 
 Workflow continuity 2.6 (2026-10-26), Autonomous recovery 2.5 (2026-10-24), v5 workbench (2026-10-21), Approved art feedback recovery (2026-10-20), Game UI design and candidate references (2026-10-20), Reference conversion and optional collage specimen (2026-10-20), Concept-to-runtime calibration (2026-10-20), Codex-only deployment and historical records (2026-10-19), Contextual visual refinement (2026-10-17), Integrated Skill and art library (2026-10-17), Game art traceability and library (2026-10-16), Unified art collaboration (2026-10-16), Readable workspace presentation (2026-10-16), Task description disclosure (2026-10-16), Programmer Markdown export (2026-10-15), Planner art references (2026-10-15), Acceptance UI lifetime (2026-10-14), Programmer issue escalation (2026-10-13), Legacy default workspace repair, Stage workspace update, Workflow 2.0: visual proposals and human feedback, Interaction and art review (2026-10-12), Reconnected task guidance (2026-10-13), Background task notifications (2026-10-14), User-requested AI issue repair (2026-10-13), Atomic goal execution journal (2026-10-22), Resizable workbench panes (2026-10-22), Autonomous implementation 2.4 (2026-10-23).
-## 2026-11-05 方案基础能力预检与自动清理
+## 2026-11-05 实施准入预检与自动清理
 
-capabilityPreflightVersion=1 的任务在方案阶段运行固定创建/加载/保存/冷加载检查，仅使用 APP 当前包。production preflight / development_production_preflight（reuseExisting、retry 默认 false）从认证上下文取得 taskId，无任意 Player 或测试目录参数。APP 进入方案自动执行，CLI 提交方案遗漏预检时先执行并要求刷新记录。
-独立 .abya-preflight/<taskId>/<runId> 具有 owner 标记；不放宽普通 authoring 权限。首次失败立即登记 preflight:basic；超时/上下文不可用为普通待定位问题，真实能力目录缺项/必需契约缺失才标 PB 包兼容问题。此问题只能由实际预检回执更新。
-reuseExisting 仅复制本任务唯一编辑存档，实测保存冷加载后记为已验证替代，保留原问题。方案引用当前报告并说明替代路径及限制；未测、失败、证据变化、包变化或清理未完均不能进入实现。旧任务未显式启动或升级时不追溯撤销既有批准。
+打开方案、提交与批准方案都不启动 Player。capabilityPreflightVersion=1 的实施/试玩任务在首次需要 Player 的操作前核对完整预检和当前包。首次测试由策划在 APP 明确启动，CLI 仅可复用已有回执或在相同授权范围重试。
+独立 .abya-preflight/<runId>（兼容清理旧 taskId/runId 目录） 具有 owner 标记；不放宽普通 authoring 权限。首次失败立即登记 preflight:basic；超时/上下文不可用为普通待定位问题，真实能力目录缺项/必需契约缺失才标 PB 包兼容问题。此问题只能由实际预检回执更新。
+reuseExisting 仅复制本任务唯一编辑存档，实测保存冷加载后记为已验证替代，保留原问题。方案可先记录已知风险；运行前须验证包、范围、报告及清理结果。旧任务未显式启动或升级时不追溯撤销既有批准。
 回执保存在 artifacts/capability-preflight，临时数据自动清理：停止本次实例、核对 OS PID 已退出、验证 UUID/路径边界/owner/无链接后删除。失败/未知也先停止并核对；重启及每 30 秒继续清理 pending，不重放创建、不停止外来 PID、不删正式存档。只保留诊断回执和日志。无 owner 的空目录可回收，非空且归属不明则保留并报告。
 
 试玩摘要直接展示 playerSummary，缺失或空白时使用原问题 description/复现记录，另列已记录影响；无标题时从具体描述提取首行。失败检查展示 observations，不按 Esc 等关键词编造表现；确认状态单独标示。真正缺失描述时明确指出记录缺项与问题 ID。

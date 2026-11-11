@@ -339,26 +339,18 @@ fn cleanup_rejects_foreign_owner_and_escape_and_preserves_other_files() {
 }
 
 #[test]
-fn plan_requires_finished_checks_cleanup_current_build_and_report_reference() {
-    let (f, mut p) = fixture();
-    successful_contract(&f, &mut p);
-    f.service.validate_current_preflight(&f.id).unwrap();
-    files::write_file(&f.workspace, "artifacts/plan.md", b"Plan without preflight").unwrap();
-    assert!(
-        f.apply(
-            "submit-document",
-            json!({"kind":"plan","path":"artifacts/plan.md"})
-        )
-        .is_err()
-    );
-    let r = f.record();
-    let report = r.workbench.execution.capability_preflight["reportPath"]
-        .as_str()
+fn plan_can_be_submitted_and_approved_without_preflight_but_runtime_remains_gated() {
+    let (f, mut receipt) = fixture();
+    receipt["state"] = json!("failed");
+    receipt["cleanup"] = json!({"state":"completed"});
+    receipt["error"] = json!({"code":"runtimeCliTimeout","message":"timeout"});
+    f.service
+        .publish_capability_preflight(&f.id, &receipt)
         .unwrap();
     files::write_file(
         &f.workspace,
         "artifacts/plan.md",
-        format!("Plan: {report}").as_bytes(),
+        b"Design without runtime report",
     )
     .unwrap();
     f.apply(
@@ -366,10 +358,41 @@ fn plan_requires_finished_checks_cleanup_current_build_and_report_reference() {
         json!({"kind":"plan","path":"artifacts/plan.md"}),
     )
     .unwrap();
-    std::fs::write(f.root.join("fixture-player.exe"), b"different build").unwrap();
+    f.accept("plan");
     assert!(f.service.validate_current_preflight(&f.id).is_err());
+    assert!(f.service.production_authoring_guard(&f.id, "").is_err());
 }
 
+#[test]
+fn absent_receipt_does_not_start_player_or_block_plan() {
+    let (f, p) = fixture();
+    f.service
+        .cleanup_capability_preflight_files(&f.id, p["runId"].as_str().unwrap())
+        .unwrap();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.workbench.execution.capability_preflight = Value::Null;
+            Ok(())
+        })
+        .unwrap();
+    assert_eq!(
+        f.service
+            .begin_capability_preflight_from(&f.id, false, false, false)
+            .unwrap_err()
+            .code,
+        "preflight_authorization_required"
+    );
+    f.doc("plan", "Submit without a Player");
+    f.accept("plan");
+    assert!(
+        f.record()
+            .workbench
+            .execution
+            .capability_preflight
+            .is_null()
+    );
+    assert!(f.service.production_bootstrap_root(&f.id).is_err());
+}
 #[test]
 fn pending_cleanup_and_changed_evidence_cannot_be_reported_as_passed() {
     let (f, mut p) = fixture();
@@ -397,17 +420,6 @@ fn verified_workaround_keeps_original_issue_and_requires_plan_disclosure() {
     assert_eq!(r.issues[0]["status"], "open");
     assert_eq!(r.issues[0]["repairTarget"], "abya-build");
     assert!(capability_preflight::workaround(&r, &r.issues[0]));
-    assert!(capability_preflight::plan_notes(&r, p["reportPath"].as_str().unwrap()).is_err());
-    assert!(
-        capability_preflight::plan_notes(
-            &r,
-            &format!(
-                "复用本任务已有存档；新建能力未恢复。{}",
-                p["reportPath"].as_str().unwrap()
-            )
-        )
-        .is_ok()
-    );
 }
 
 #[test]

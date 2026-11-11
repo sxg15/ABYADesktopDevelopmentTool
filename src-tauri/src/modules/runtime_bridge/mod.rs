@@ -44,6 +44,7 @@ pub struct RuntimeBridgeState {
     pub server_version: String,
     pub instructions: String,
     pub last_error: String,
+    pub last_error_code: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -256,6 +257,11 @@ impl RuntimeBridgeService {
             server_name: "Abya CLI".into(),
             server_version: "1".into(),
             instructions: String::new(),
+            last_error_code: result
+                .as_ref()
+                .err()
+                .map(|e| e.code.clone())
+                .unwrap_or_default(),
             last_error: result.err().map(|e| e.message).unwrap_or_default(),
         }
     }
@@ -335,8 +341,25 @@ impl RuntimeBridgeService {
             if state.connected {
                 return Ok(state);
             }
-            if start.elapsed() >= timeout {
-                return Err(AppError::new("runtimeCliTimeout", state.last_error, ""));
+            if state.last_error_code == "managedInstanceUnavailable" || start.elapsed() >= timeout {
+                let code = state.last_error_code.as_str();
+                let (kind, reason) = match code {
+                    "managedInstanceUnavailable" => {
+                        ("managedInstanceUnavailable", "等待 CLI 时托管进程已不可用")
+                    }
+                    "instance_not_found" => ("runtimeCliTimeout", "CLI 未发现匹配的实例登记"),
+                    "ambiguous_instance" => ("runtimeCliTimeout", "CLI 发现多个候选实例"),
+                    _ => ("runtimeCliTimeout", "运行时 CLI 未完成握手"),
+                };
+                return Err(AppError::new(
+                    kind,
+                    format!(
+                        "{reason}（{:.1} 秒）：{}",
+                        start.elapsed().as_secs_f32(),
+                        state.last_error
+                    ),
+                    code,
+                ));
             }
             std::thread::sleep(Duration::from_millis(200));
         }

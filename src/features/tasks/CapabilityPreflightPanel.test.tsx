@@ -8,11 +8,11 @@ vi.mock("../../shared/production",()=>({productionApi:{preflight:vi.fn()}}));
 vi.mock("../../shared/api",()=>({errorMessage:String}));
 afterEach(()=>{cleanup();vi.resetAllMocks();});
 function record():ProductionRecord{return {taskId:"task",cycle:1,currentStage:"plan",policy:{capabilityPreflightVersion:1},workbench:{execution:{capabilityPreflight:{runId:"run",state:"failed",phase:"runtime-connect",checks:[],cleanup:{state:"completed"},error:{code:"timeout",message:"timeout"}}}}} as unknown as ProductionRecord;}
-it("automatically checks once in plan and does not loop on polling",async()=>{
+it("opening or polling a plan never launches the Player",async()=>{
  const r=record();const view=render(<CapabilityPreflightPanel record={r} active onUpdated={()=>{}}/>);
- await waitFor(()=>expect(productionApi.preflight).toHaveBeenCalledTimes(1));
+ expect(productionApi.preflight).not.toHaveBeenCalled();
  view.rerender(<CapabilityPreflightPanel record={{...r,revision:4}} active onUpdated={()=>{}}/>);
- expect(productionApi.preflight).toHaveBeenCalledTimes(1);
+ expect(productionApi.preflight).not.toHaveBeenCalled();
  fireEvent.click(screen.getByRole("button",{name:"验证复用本任务已有存档"}));
  await waitFor(()=>expect(productionApi.preflight).toHaveBeenLastCalledWith("task",true,true));
 });
@@ -33,7 +33,7 @@ it("allows review revalidation using the existing archive without auto-running o
  render(<CapabilityPreflightPanel record={r} active onUpdated={()=>{}}/>);
  expect(productionApi.preflight).not.toHaveBeenCalled();
  expect(screen.getByText(/可在当前阶段验证修改环境/)).toBeTruthy();
- fireEvent.click(screen.getByRole("button",{name:"重新预检"}));
+ fireEvent.click(screen.getByRole("button",{name:"授权启动 Player 并预检"}));
  await waitFor(()=>expect(productionApi.preflight).toHaveBeenCalledWith("task",true,true));
 });
 

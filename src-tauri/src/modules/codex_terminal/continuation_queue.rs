@@ -560,7 +560,7 @@ impl CodexTerminalService {
         request.status = "sending".into();
         save(directory, request)?;
         let stage_contract = production.record.as_ref().filter(|r|r.policy["stageContractsVersion"]==1)
-            .map(|r|format!("当前阶段 {}，流程 {}。resources/plan 交付可审核设计或计划，技术疑点记录后续待验证，不提前绑定Lua/架构验证或启动Player。隔离运行小样仅使用APP当前有效授权。先读取 production current 和当前目标已有成果。",r.current_stage,r.workflow_version)).unwrap_or_default();
+            .map(|r|format!("当前阶段 {}，流程 {}。resources/plan 交付可审核设计或计划，技术疑点记录后续待验证，不提前绑定Lua/架构验证或启动Player。直接提交方案，提交和批准不会启动Player；缺少或失败的基础预检留到实施准备。已有仅询问是否允许为提交方案启动Player的待答项，可由策划选择不启动后继续。启动隔离预检使用APP授权。先读取 production current 和当前目标已有成果。",r.current_stage,r.workflow_version)).unwrap_or_default();
         let goal_prompt=request.goal_id.as_ref().map(|goal|format!("{stage_contract}继续原子目标 {goal}，执行尝试 {}。保留ID与成果，先对账未知写入，仅推进剩余工作。达到当前阶段结果即提交；遇到真实人工决定或用户暂停时等待，不重复已完成请求。",request.id));
         let autonomous_prompt = unit.as_ref().map(|u| {
             if production.record.as_ref().is_some_and(|r| r.policy["implementationExecution"]["inPlaceRecoveryVersion"] == 1) {

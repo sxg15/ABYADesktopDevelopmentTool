@@ -228,9 +228,7 @@ fn submit(r: &mut ProductionRecord, root: &Path, data: &Value) -> AppResult<()> 
         return Err(AppError::validation("请提交 Markdown 文档。"));
     }
     let (content, sha256) = files::text_file(root, path)?;
-    if kind == "plan" {
-        super::capability_preflight::plan_notes(r, &content)?;
-    }
+
     let art_scope = if kind == "resources" {
         let scope = text(data, "artScope")?;
         if !["new-art", "reuse-only", "no-art"].contains(&scope) {

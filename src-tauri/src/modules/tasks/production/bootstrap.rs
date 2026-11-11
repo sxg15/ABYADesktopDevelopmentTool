@@ -42,6 +42,7 @@ impl TaskService {
             let root = Path::new(&t.workspace_path);
             validation::approved(&r, root, "requirements")?;
             validation::approved(&r, root, "plan")?;
+            self.validate_current_preflight(task)?;
         }
         self.owned_authoring_data_root(task)
     }

@@ -9,6 +9,9 @@ pub(super) fn design_stage(stage: &str) -> bool {
 /// Agent issue prose cannot create a new design submission gate. Material and
 /// document integrity gates remain in their existing authoritative validators.
 pub(super) fn blocks(r: &ProductionRecord, i: &Value, stage: &str, operation: &str) -> bool {
+    if i["id"] == super::capability_preflight::ISSUE && design_stage(stage) {
+        return false;
+    }
     if super::capability_preflight::workaround(r, i) {
         return false;
     }

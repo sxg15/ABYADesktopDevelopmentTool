@@ -1107,7 +1107,7 @@ async fn run_task_preflight(
 ) -> AppResult<serde_json::Value> {
     let bridge = state.runtime_bridge.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        bridge.run_capability_preflight(&task_id, reuse_existing, retry)
+        bridge.run_capability_preflight(&task_id, reuse_existing, retry, true)
     })
     .await
     .map_err(foundation::AppError::internal)?

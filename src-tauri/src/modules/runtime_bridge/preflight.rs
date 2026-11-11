@@ -86,7 +86,14 @@ impl RuntimeBridgeService {
 
     fn preflight_ready(&self, id: &str) -> AppResult<()> {
         self.wait_for_cli(id, Duration::from_secs(40))?;
+        let start = Instant::now();
         loop {
+            if start.elapsed() >= Duration::from_secs(60) {
+                return Err(error(
+                    "preflight_root_timeout",
+                    "CLI 已连接，但游戏根未在限时内就绪。",
+                ));
+            }
             let game = self.preflight_call(id, "runtime_get_game_state", json!({}))?;
             if game["context"]["rootInitialized"] == true
                 && game["context"]["isTransitioning"] == false
@@ -102,6 +109,7 @@ impl RuntimeBridgeService {
         task: &str,
         reuse: bool,
         retry: bool,
+        user_initiated: bool,
     ) -> AppResult<Value> {
         let key = format!("capability-preflight:{task}");
         if !self.acceptance_busy.lock().insert(key.clone()) {
@@ -111,7 +119,9 @@ impl RuntimeBridgeService {
             ));
         }
         let result = (|| {
-            let mut p = self.tasks.begin_capability_preflight(task, reuse, retry)?;
+            let mut p =
+                self.tasks
+                    .begin_capability_preflight_from(task, reuse, retry, user_initiated)?;
             if p["state"] != "running" {
                 return Ok(p);
             }
@@ -146,7 +156,15 @@ impl RuntimeBridgeService {
                 }
                 Err(e) => {
                     p["state"] = json!("failed");
-                    p["error"] = json!({"code":e.code,"message":e.message});
+                    p["error"] = json!({"code":e.code,"message":e.message,"detail":e.detail});
+                    if let Some(id) = p["instances"]
+                        .as_array()
+                        .and_then(|list| list.last())
+                        .and_then(|v| v["id"].as_str())
+                        && let Ok(info) = self.instances.get(id)
+                    {
+                        p["instanceAtFailure"] = json!({"id":id,"pid":info.instance.pid,"state":info.instance.process_state,"alive":info.process_alive,"exitCode":info.instance.exit_code});
+                    }
                 }
             }
             p["finishedAt"] = json!(chrono::Utc::now().to_rfc3339());
@@ -253,7 +271,14 @@ impl RuntimeBridgeService {
 impl RuntimeBridgeService {
     /// 场景就绪不代表关卡加载已完成，保存和冷加载均核对实际存档加载标志。
     fn preflight_loaded_archive(&self, id: &str) -> AppResult<Value> {
+        let start = Instant::now();
         loop {
+            if start.elapsed() >= Duration::from_secs(60) {
+                return Err(error(
+                    "preflight_archive_timeout",
+                    "CLI 已连接，但存档和关卡未在限时内就绪。",
+                ));
+            }
             let actual = self.preflight_call(id, "editor_get_archive", json!({}))?;
             if actual["archiveAndLevelLoaded"] == true
                 && actual["isLoadingArchive"] != true
