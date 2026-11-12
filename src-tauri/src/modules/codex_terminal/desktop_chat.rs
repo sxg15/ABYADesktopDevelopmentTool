@@ -47,16 +47,23 @@ impl CodexTerminalService {
     }
 
     pub fn desktop_chat(&self, id: &str) -> AppResult<String> {
+        let gate = self.gate(id);
+        let _guard = gate.normal.lock();
         let cli = (self.resolver)().ok_or_else(|| {
             AppError::validation("找不到 Codex CLI，无法建立任务对话。请检查 Codex 安装后重试。")
         })?;
-        let server = self.ensure_app_server(&cli)?;
-        self.prepare_desktop_chat(id, &server)
+        // A metadata server shared with legacy terminal sessions can retain a
+        // native writer lease even after thread/unsubscribe. This short-lived
+        // client never starts a model turn and exits before opening the link.
+        let bootstrap = AppServerHandle::start(&cli, Arc::new(|_| {}))?;
+        let prepared = self.prepare_desktop_chat(id, &bootstrap);
+        let stopped = bootstrap.stop_confirmed();
+        let link = prepared?;
+        stopped?;
+        Ok(link)
     }
 
     fn prepare_desktop_chat(&self, id: &str, server: &AppServerHandle) -> AppResult<String> {
-        let gate = self.gate(id);
-        let _guard = gate.normal.lock();
         if crate::foundation::cli_sessions::task_active(id) {
             return Err(AppError::validation(
                 "此任务仍有旧版执行正在运行，请先结束该次执行。",
@@ -122,18 +129,25 @@ impl CodexTerminalService {
                 "thread/start",
                 json!({"cwd":task.workspace_path,"projectId":project,"ephemeral":false,"developerInstructions":DESKTOP_INSTRUCTIONS}),
             )?;
-            if !same_workspace(&started["thread"], workspace)? {
-                return Err(AppError::validation(
-                    "新对话的工作目录与任务不同，已保留当前任务并停止打开。",
-                ));
-            }
             let native = started["thread"]["id"]
                 .as_str()
                 .ok_or_else(|| AppError::validation("Codex 未返回新对话 ID。"))?;
             Uuid::parse_str(native).map_err(AppError::internal)?;
-            chat.native_session_id = Some(native.into());
-            write_conversation(&conversation_directory(workspace, &chat.id), &chat)?;
-            server.persist_developer_instructions(native, DESKTOP_INSTRUCTIONS)?;
+            let saved = (|| {
+                if !same_workspace(&started["thread"], workspace)? {
+                    return Err(AppError::validation(
+                        "新对话工作目录与任务不同，已停止打开。",
+                    ));
+                }
+                chat.native_session_id = Some(native.into());
+                write_conversation(&conversation_directory(workspace, &chat.id), &chat)?;
+                server.persist_developer_instructions(native, DESKTOP_INSTRUCTIONS)
+            })();
+            // thread/start subscribes the creating client as a writer. The desktop
+            // can only resume once that subscription has been released.
+            let released = server.request("thread/unsubscribe", json!({"threadId":native}));
+            saved?;
+            released?;
         }
         let native = chat.native_session_id.as_deref().unwrap();
         let mut meta = server.request(
@@ -163,6 +177,28 @@ impl CodexTerminalService {
         self.tasks
             .save_desktop_context(id, &context(&chat, Some(native)))?;
         Ok(format!("codex://threads/{native}"))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn verify_desktop_resume(&self, native: &str, workspace: &Path) -> AppResult<()> {
+        let cli = (self.resolver)().ok_or_else(|| AppError::validation("Missing test CLI"))?;
+        let desktop = AppServerHandle::start(&cli, Arc::new(|_| {}))?;
+        let result = (|| {
+            let resumed = desktop.request(
+                "thread/resume",
+                json!({"threadId":native,"cwd":workspace,"excludeTurns":true}),
+            )?;
+            if resumed["thread"]["id"] != native || !same_workspace(&resumed["thread"], workspace)?
+            {
+                return Err(AppError::validation(
+                    "Independent desktop client resumed another thread or directory.",
+                ));
+            }
+            desktop.request("thread/unsubscribe", json!({"threadId":native}))?;
+            Ok(())
+        })();
+        desktop.stop();
+        result
     }
 
     #[cfg(test)]
@@ -197,6 +233,7 @@ impl CodexTerminalService {
                 "thread/start" | "thread/read" => {
                     json!({"thread":{"id":native,"cwd":task.workspace_path,"projectId":"test-project","archived":false}})
                 }
+                "thread/unsubscribe" => json!({"status":"unsubscribed"}),
                 "thread/inject_items" | "thread/name/set" => json!({}),
                 _ => return Err(format!("Unexpected RPC {method}")),
             })

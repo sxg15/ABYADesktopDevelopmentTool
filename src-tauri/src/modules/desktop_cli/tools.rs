@@ -1609,7 +1609,11 @@ mod tests {
         println!(
             "Verified installed Codex thread {native}, correct cwd, project membership and idempotent reopen."
         );
+        let handoff = f
+            .codex_terminal
+            .verify_desktop_resume(native, std::path::Path::new(&task.workspace_path));
         f.codex_terminal.archive_desktop_fixture(&task, native);
+        handoff.expect("independent desktop app-server must be able to write to the prepared chat");
     }
 
     fn result_json(result: ToolCallResult) -> Value {

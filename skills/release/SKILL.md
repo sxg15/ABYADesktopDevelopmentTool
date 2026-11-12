@@ -1,3 +1,7 @@
+## 2026-11-12 新任务桌面对话交接
+
+本分支 -UiStaging 生成 codex-desktop-workflow-preview-5，修复策划全流程演练中的首次对话占用。
+
 ## 2026-11-12 制作阶段状态卡
 
 节点卡片预览使用 -Validation 打包到 Publish-Staging-Validation，标识 codex-desktop-workflow-preview-4。
