@@ -1,3 +1,7 @@
+## 2026-11-12 制作阶段状态卡
+
+节点卡片预览使用 -Validation 打包到 Publish-Staging-Validation，标识 codex-desktop-workflow-preview-4。
+
 ## 2026-11-12 制作工作台视觉还原
 
 此分支的 -UiStaging 产物位于 Publish-Staging-UI，标识 codex-desktop-workflow-preview-3，用于核对新版工作区的旧版流程样式。

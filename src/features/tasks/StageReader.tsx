@@ -11,6 +11,7 @@ import {errorMessage} from "../../shared/api";
 import {ReadableText} from "./ReadableText";
 import {VisualGallery} from "./VisualGallery";
 import {briefPrompt,openTaskChat,chatStatus,copyAndOpenTaskChat} from "./desktopChat";
+import {StageCard} from "./StageCard";
 import {statusName} from "./productionText";
 
 const names:Record<string,string>={requirements:"需求整理",resources:"美术需求整理",plan:"方案预检",implementation:"Lua 实现",review:"试玩与修改",delivery:"交付验收",closeout:"收尾复盘"};
@@ -89,12 +90,11 @@ export function StageReader({task,stage,selectStage,notify,visible,children}:{ta
       <h3><Workflow size={17} aria-hidden="true"/> 制作流程</h3>
       <small>本任务流程 {record.workflowVersion}</small>
     </header>
-    <nav className="wb-stages desktop-stages" aria-label="制作阶段">
-      {view.policy.stages.map((s,i)=><button key={s.id} aria-current={shown===s.id?"step":undefined}
-        onClick={()=>{selectStage(s.id===current?"":s.id);setGoal("");}}>
-        <span>{i+1}</span><strong>{names[s.id]??s.name}</strong>
-        <small>{statusName(view.stageStatuses?.[s.id]??record.stages[s.id]??"pending")}</small>
-      </button>)}
+    <nav className="desktop-stages" aria-label="制作阶段">
+      {view.policy.stages.map((s,i)=><StageCard key={s.id} number={i+1} name={names[s.id]??s.name}
+        status={view.stageStatuses?.[s.id]??record.stages[s.id]??"not-started"}
+        current={current===s.id} viewed={shown===s.id}
+        onView={()=>{selectStage(s.id===current?"":s.id);setGoal("");}}/>)}
     </nav>
     <div className="desktop-stage-body"><aside className="wb-goals" aria-label="本阶段子阶段">
       <header><h3>本阶段子阶段</h3><History size={15} aria-hidden="true"/></header>
