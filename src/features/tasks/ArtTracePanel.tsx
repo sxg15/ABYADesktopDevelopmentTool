@@ -44,9 +44,10 @@ export function ArtTracePanel({taskId,view,active,en=false,onUpdated,onContinue}
       const current=c?.inputHash===status.inputHash&&c.status==="addressed";
       const realized=actual?.designHash===status.designHash&&actual.version===r.currentVersion&&actual.cycle===r.cycle;
       return <article className="art-requirement" key={q.id}>
-        <header><strong>{q.id} · {({must:t("必须满足","Required"),preference:t("偏好","Preference"),prohibited:t("禁止","Prohibited"),clarify:t("待澄清","Clarify")})[q.kind]}</strong>
+        <header><strong>{q.id} · {({must:t("必须满足","Required"),preference:t("偏好","Preference"),prohibited:t("禁止","Prohibited"),clarify:status?.resolvedClarifications?.includes(q.id)?t("已澄清","Clarified"):t("待澄清","Clarify")})[q.kind]}</strong>
           <span className={stale||!current?"art-unresolved":""}>{stale?t("来源已变更","Source changed"):current?t("已关联设计","Design linked"):t("待落实到当前设计","Current design missing")}</span></header>
         <blockquote>{q.quote||t("图片要求：请对照来源图片","Image requirement: inspect the source image")}</blockquote>
+        {q.clarificationAnswer && <p>{status?.resolvedClarifications?.includes(q.id)?t("已按正式答案澄清","Resolved by submitted answer"):t("关联答案需重新核对","Recheck linked answer")} · {q.clarificationAnswer.requirementId} · {q.clarificationAnswer.groupId}/{q.clarificationAnswer.questionId} · v{q.clarificationAnswer.answerRevision}</p>}
         <p><b>{t("AI 解读：","AI interpretation: ")}</b>{q.interpretation}</p><p>{q.scope}</p><p>{t("验收：","Acceptance: ")}{q.acceptance}</p>
         {c&&<p>{c.designLocation}</p>}
         <div className="art-inline-actions">{c?.artifactIds.map(id=>{const a=images.find(a=>a.id===id);return a&&<button key={id} className="text-button" onClick={()=>setPreview(id)}>{a.title}</button>;})}</div>
@@ -95,6 +96,14 @@ export function ArtTracePanel({taskId,view,active,en=false,onUpdated,onContinue}
           <textarea value={editing[key]} maxLength={4000} required onChange={e=>setEditing({...editing,[key]:e.target.value})}/></label>)}
         <button className="primary-button" disabled={busy}>{t("保存明确修订","Save revision")}</button>
       </form>
+      {editing.kind==="clarify" && (r.questionGroups??[]).filter(g=>g.stage==="resources"&&g.status==="submitted"&&g.cycle===r.cycle).flatMap(g=>{
+        const rev=g.answers[g.answers.length-1];
+        return g.questions.flatMap(question=>requirements.filter(a=>a.kind!=="clarify" && a.sourceId===("answer:"+g.id+":"+question.id) &&
+          (!question.clarifiesRequirementId||question.clarifiesRequirementId===editing.id) && !!a.quote && rev?.answers[question.id]?.includes(a.quote)).map(a=>
+          <button key={a.id} className="secondary-button" disabled={busy} onClick={()=>void write("save-art-requirement",{...editing,answerRequirementId:a.id,answerRevision:rev.revision},()=>setEditing(undefined))}>
+            {t("关联正式答案","Link submitted answer")} · {a.id} · {a.quote} (v{rev.revision})
+          </button>));
+      })}
       <div className="art-withdraw"><label>{t("撤回原因","Withdrawal reason")}<input value={reason} maxLength={2000} onChange={e=>setReason(e.target.value)}/></label>
         <button className="secondary-button" disabled={busy||!reason.trim()} onClick={()=>void write("withdraw-art-requirement",{id:editing.id,reason},()=>setEditing(undefined))}>{t("撤回这条要求并保留历史","Withdraw and retain history")}</button></div>
       {error&&<p role="alert">{error}</p>}

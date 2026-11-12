@@ -141,3 +141,5 @@ The stage workspace release retains the existing Windows Graphics Capture record
 LAN clients inherit the selected live same-task Host's executable as well as archive/level/port. Validate the inherited executable before spawning so generic UI and CLI cannot mix Player builds within one pair.
 RuntimeBridge owns acceptance orchestration and calls this module's existing lifecycle APIs. Failed acceptance launches stop only instances created by that attempt; unrelated and reused instances are preserved.
 The generic launch dialog prefers the selected task's captured Player over global settings. The dedicated acceptance button additionally validates fingerprints and readiness. Test inherited executable/archive and task ownership.
+
+The Windows Player launch converts verbatim drive and UNC executable paths for Unity after validating that both forms resolve to the same selected file. Runtime transport remains native MCP.

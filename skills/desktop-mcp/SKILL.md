@@ -37,3 +37,7 @@ protocol support or workflow mapping change. Never reintroduce a CLI fallback.
 Runtime calls accept a stable requestId UUID; results expose abyaOperationId in text and metadata. MCP cancellation is scoped by protocol session/request and reaches only that owned runtime operation. Conversation binding is automatic and is not an advertised tool.
 
 Explicit connection reset stops serving and revokes current leases before restart; ordinary restart preserves same-endpoint leases. Reset requires reopening owned conversations for fresh credentials. No global reusable bearer token is stored.
+
+The existing development_production_update data supports clarifiesRequirementId on a published resource question and answerRevision on the adopted art requirement. Planner-only answers, legacy linking and approvals remain APP actions. No shell command or new MCP tool is needed.
+
+For an active resources/plan task with stage contracts, development_production_current returns designRuntimeScope with playerRequiredForSubmission=false and the currently effective prototype instance IDs and expirations. An empty grant list allows continued document work. A grant alone never authorizes an arbitrary PB tool, task or archive.

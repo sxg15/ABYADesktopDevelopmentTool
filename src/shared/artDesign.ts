@@ -3,6 +3,7 @@ export interface ArtSource {
   id:string;kind:string;text:string;hash:string;asset?:{id:string;path:string;sha256:string;title:string}|null;
 }
 export interface ArtRequirement {
+  clarificationAnswer?:{groupId:string;questionId:string;requirementId:string;answerRevision:number};
   id:string;sourceId:string;sourceHash:string;sourceText:string;quote:string;kind:"must"|"preference"|"prohibited"|"clarify";
   interpretation:string;scope:string;acceptance:string;withdrawn?:boolean;withdrawReason?:string;
 }

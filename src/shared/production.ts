@@ -86,7 +86,7 @@ export interface ProductionRecord {
 }
 export interface ProductionView {
   approvalStatuses?: Record<string, string>;
-  artDesignStatus?: {enabled:boolean;inputHash:string;designHash:string};
+  artDesignStatus?: {enabled:boolean;inputHash:string;designHash:string;resolvedClarifications?:string[]};
   actions?: { review: Record<string,string>; approve: Record<string,string>; feedback: Record<string,string>; recheck?: Record<string,string>; resume?: Record<string,string> };
   stageStatuses?: Record<string,string>;
   artifacts?: ProductionArtifact[];
@@ -161,7 +161,7 @@ export interface IntakeQuestionGroup {
   stage?: string; cycle?: number;
   id: string; title: string; provider: string; conversationId: string;
   nativeSessionId?: string; status: string; publishedAt: string; updatedAt: string;
-  questions: { id: string; text: string; options: string[]; optional: boolean }[];
+  questions: { id: string; text: string; options: string[]; optional: boolean; clarifiesRequirementId?:string }[];
   draft: Record<string, string>;
   answers: { revision: number; answers: Record<string, string>; submittedAt: string }[];
 }

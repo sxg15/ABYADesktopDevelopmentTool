@@ -119,4 +119,6 @@ Owned CLI lease heartbeat (2026-10-26), Workflow 2.5 shared diagnosis (2026-10-2
 
 Transport deactivation clears leases and endpoint but retains paused/stopped conversation fences; only an explicit lifecycle reopen authorizes a fresh session.
 
+The shared art model includes clarificationAnswer and resolvedClarifications. Questions can bind a clarify requirement using clarifiesRequirementId.
+
 ProductionIssue.playerSummary and self-test blockedByIssueIds are optional read fields. Older records fall back to their stored description or observations.

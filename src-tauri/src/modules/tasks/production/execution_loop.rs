@@ -259,6 +259,35 @@ pub(super) fn complete(r: &mut ProductionRecord, id: &str) {
     }
 }
 
+pub(super) fn document_delivered(r: &mut ProductionRecord, stage: &str, revision: u64) {
+    let prefix = format!("{stage}:{}:", r.cycle);
+    let ledger = &mut r.workbench.execution;
+    let mut resolved = false;
+    for (key, item) in &mut ledger.technical_queue {
+        if key.starts_with(&prefix)
+            && item["stage"] == stage
+            && item["reason"] == "no-artifact-progress"
+            && matches!(item["status"].as_str(), Some("open" | "in-progress"))
+        {
+            item["status"] = json!("resolved");
+            item["resolution"] = json!({"document":stage,"revision":revision});
+            item["resolvedAt"] = json!(now());
+            item["checkpointAtResolution"] =
+                ledger.stage_recovery.remove(key).unwrap_or(Value::Null);
+            resolved = true;
+        }
+    }
+    if resolved
+        && ledger.state == "technicalReview"
+        && ledger
+            .technical_queue
+            .values()
+            .all(|item| item["status"] == "resolved")
+    {
+        ledger.state = "ready".into();
+    }
+}
+
 pub(super) fn reopen_finalization(r: &mut ProductionRecord) {
     if !enabled(r) {
         return;
@@ -457,6 +486,12 @@ impl TaskService {
         let r = self.production_get(task)?.record.ok_or_else(conflict)?;
         if !enabled(&r) || autonomy::autonomous_implementation(&r) {
             return Ok(true);
+        }
+        if r.stages
+            .get(&r.current_stage)
+            .is_some_and(|s| s == "awaiting-confirmation")
+        {
+            return Ok(false);
         }
         let key = format!(
             "{}:{}:{}",

@@ -110,7 +110,7 @@ pub(super) fn gate(
                 q["id"]
             )));
         }
-        if q["kind"] == "clarify" {
+        if q["kind"] == "clarify" && !super::art_clarification::resolved(r, q) {
             return Err(AppError::validation(format!("要求 {} 仍待澄清。", q["id"])));
         }
         let c = a

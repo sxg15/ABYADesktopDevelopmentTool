@@ -175,7 +175,16 @@ impl InstanceService {
             None
         };
 
-        validate_executable(input.executable_path.trim())?;
+        let selected = input.executable_path.trim();
+        validate_executable(selected)?;
+        let executable = player_launch_path(selected);
+        if executable != selected
+            && Path::new(&executable).canonicalize()? != Path::new(selected).canonicalize()?
+        {
+            return Err(AppError::validation(
+                "转换后的 Player 路径未指向已选择的构建包。",
+            ));
+        }
         let id = Uuid::new_v4().to_string();
         let gateway_endpoint = self.connections.preferred_endpoint()?;
         let contract = build_launch_contract(
@@ -221,7 +230,6 @@ impl InstanceService {
             let _ = writeln!(stdout, "[ABYA memory warning] {warning}");
         }
         let stderr = stdout.try_clone()?;
-        let executable = input.executable_path.trim().to_string();
         let working_directory = Path::new(&executable).parent().map(Path::to_path_buf);
         let log_path = PathBuf::from(&contract.log_path);
         let args = if let Some(root) = data_root {
@@ -770,6 +778,32 @@ impl InstanceService {
             }
         });
     }
+}
+
+// Unity treats verbatim drive and UNC paths differently when resolving StreamingAssets.
+fn player_launch_path(value: &str) -> String {
+    if let Some(unc) = value.strip_prefix(r"\\?\UNC\") {
+        return format!(r"\\{unc}");
+    }
+    if let Some(drive) = value.strip_prefix(r"\\?\")
+        && drive.as_bytes().get(1..3) == Some(b":\\")
+    {
+        return drive.to_owned();
+    }
+    value.to_owned()
+}
+
+#[test]
+fn player_arguments_use_normal_drive_and_unc_paths() {
+    assert_eq!(
+        player_launch_path(r"\\?\D:\构建包\PB.exe"),
+        r"D:\构建包\PB.exe"
+    );
+    assert_eq!(
+        player_launch_path(r"\\?\UNC\server\share\PB.exe"),
+        r"\\server\share\PB.exe"
+    );
+    assert_eq!(player_launch_path(r"D:\normal\PB.exe"), r"D:\normal\PB.exe");
 }
 
 fn truncate_oversized_instance_log(path: &Path) -> AppResult<bool> {
