@@ -1,5 +1,7 @@
 # MCP Release
 
+The Windows PowerShell launcher reads the UTF-8 manifest and inventory explicitly, including non-ASCII resource paths.
+
 ## Purpose
 Build and qualify an independent Windows MCP edition without modifying CLI releases.
 

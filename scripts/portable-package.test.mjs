@@ -60,7 +60,12 @@ test('local WebView state does not block launch and cannot enter a new distribut
 });
 
 test('native PowerShell launcher verifies complete inventory and refuses an extra CLI executable', {skip:process.platform!=='win32'}, async t=>{
-  const packageRoot=fixture(t);await verifyPackage(packageRoot,{write:true});
+  const packageRoot=fixture(t);
+  const resource=path.join(packageRoot,'.codex','skills','abya-game-development-task',
+    ...Array(6).fill('nested-design-reference-for-portable-verification'),'风格参考.html');
+  fs.mkdirSync(path.dirname(resource),{recursive:true});
+  fs.writeFileSync(resource,'fixture');
+  await verifyPackage(packageRoot,{write:true});
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'abya-mcp-launch-'));
   t.after(()=>{assert.ok(root.startsWith(path.join(os.tmpdir(),'abya-mcp-launch-')));fs.rmSync(root,{recursive:true,force:true});});
   fs.mkdirSync(path.join(root,'scripts'));
