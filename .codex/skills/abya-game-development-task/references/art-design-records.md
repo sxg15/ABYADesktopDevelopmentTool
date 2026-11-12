@@ -33,6 +33,8 @@ UI 的玩法/镜头/输入/密度和界面职责写入 direction.tasksAndInforma
 - direction.assetProduction：可复用数值配置及版本/摘要、字体和资产实际规格、背景/前景/文字分层；标出实现读取位置及保护项。
 - direction.feasibility：当前 Player 中实际字体、自动字号、锚点/缩放能力的验证与待确认替代，区分运行检查和仅源码推断。
 - direction.representativeScene / acceptance：最小标定片段、状态/分辨率矩阵、同内容对照方法、阈值来源与适用范围；未约定阈值明确标为候选。
+UI 资源制作前，visualRules/assetProduction 引用选中布局基准与唯一配置中的分区占比、留白/对齐、关键字面、底板/图标可见尺寸、显示下限及缩放/重排规则。保留借鉴范围、透明边界、自动缩字例外与字体替代；没有变化时沿用既有版本，不另抄数值。
+representativeScene/acceptance 区分制作前分层合成稿与计划授权后的引擎片段，均检查全屏及关键局部。realization.comparison 关联对象/配置键、基准及实际测量口径、证据与复验；违反要求/下限的缩水、漂移或变形写 mismatch，缺少运行证据保留待验证项，不提交 matched，不以功能可用填还原通过。基准改变沿用原文档修订，不回改旧基准掩盖偏差。
 规格/测量配置/差异报告作为任务内版本化文件保存，用 register-artifact 登记，路径与摘要写入当前资源确认单/方向记录。不要直接编辑 workflow.json 或把这些本地文件当成新增 production 操作。
 代表片段在计划授权后实施；字体接口等关键修复后更新对应实际版本和证据。visual 自测 observations 分别记录功能、外观与还原；realization.comparison 关联具体对象、测量与实际截图，differences 写残余差异。数字检查不是视觉证据，不可单凭工具结果写 matched。
 图像内容/状态不同或未配准时只记录定性观察，不能写全画面还原率。保留实际原图与排除区域说明，动态效果以相同触发/时序另验。

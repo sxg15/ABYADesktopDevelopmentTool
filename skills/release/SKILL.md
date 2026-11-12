@@ -45,3 +45,5 @@ CLI release/Node requirements do not apply to this isolated branch.
 
 MCP pilot setup/launch uses independent roots and debug port 9258. Native Rust fault probes
 are source-fingerprint matched component evidence, explicitly not AI game-repair proof.
+
+MCP 美术约束随本版受管 Skill 构建，核验源码与 MCP 候选资源的对应关系。使用 MCP 版标识与独立运行包。

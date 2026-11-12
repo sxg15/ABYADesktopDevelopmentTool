@@ -45,3 +45,7 @@ Do not add raw command-line input to the UI. Do not introduce or persist game
 connection secrets without an explicit security-design change. Do not add
 desktop MCP tools without documenting their contracts in the `desktop-mcp`
 Skill.
+
+## UI 美术还原
+
+制作 UI 资源时记录选定参考、共享尺寸配置、分层合成对照和授权后的实机证据。设计阶段可直接送审；需要实机验证的差异随实施任务跟进。
