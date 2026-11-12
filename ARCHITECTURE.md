@@ -1,3 +1,7 @@
+## 2026-11-12 Codex 桌面制作流程
+
+桌面工作台以任务关联的原生 Codex 对话收集决定。production respond 核对会话、最新策划消息时间和版本，再复用 TaskService；SQLite 制作记录仍为流程状态源。
+
 ## 2026-11-06 Workflow 2.12
 
 TaskService owns unlimited execution policy and explicit, history-preserving migration. Planned runtime cases bind approved requirement hashes. The task-owned scenario runner composes versioned input/observation actions and retains role-specific responses; engine capabilities remain separate. ArtLibrary stores media plus checked source/asset dependencies. Bundled Web recipes are available learning assets with independent native validation status.

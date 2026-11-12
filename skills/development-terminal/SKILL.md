@@ -1,3 +1,7 @@
+## 2026-11-12 Codex 桌面制作流程
+
+新工作台使用外部 Codex 桌面对话。内嵌终端界面退出用户入口，历史数据保留。
+
 # Development Terminal Skill
 
 Malformed or truncated workflow JSON yields a read-only empty projection with a recovery warning. On the next write, preserve the damaged bytes and old journal, sync the replacement, then rename it over the snapshot. Identity, schema and I/O failures still propagate.

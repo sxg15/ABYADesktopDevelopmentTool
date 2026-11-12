@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "date": "2026-11-12",
+  "assets": [
+    {
+      "asset": "assets/countdown-3.png",
+      "source_name": "img_v3_0217c_88e72daa-5d1f-4131-baa7-1f6683ceddag.png",
+      "sha256": "5b995174e270292397efa1152ceaaa5f6539c8b5fcaa0d43b83b566b2506dbbd",
+      "size": [
+        392,
+        607
+      ],
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        92
+      ],
+      "unchanged_bytes": true
+    },
+    {
+      "asset": "assets/countdown-2.png",
+      "source_name": "img_v3_0217c_f2ef0e83-6b48-4b6e-be98-0a529abd69fg.png",
+      "sha256": "fa5b20f992db1ad680b126d6bad0c595368c40fc53d83952be42da8442f75d73",
+      "size": [
+        411,
+        598
+      ],
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        115
+      ],
+      "unchanged_bytes": true
+    },
+    {
+      "asset": "assets/countdown-1.png",
+      "source_name": "img_v3_0217c_5c3a1c10-ace3-451b-8583-ef984a780aeg.png",
+      "sha256": "9be7fa5927018aa0022e3dc225496660e919bd1acb6bbcab7eb6f26d72d3bb75",
+      "size": [
+        292,
+        601
+      ],
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        115
+      ],
+      "unchanged_bytes": true
+    }
+  ],
+  "placement_reference": {
+    "asset": "assets/placement-reference.jpg",
+    "sha256": "e41017cced223b4e4dc04dbffb7f3d6ef5cf83973c85c72415243f594fc4379b",
+    "size": [
+      1229,
+      696
+    ],
+    "game_rect": [
+      4,
+      8,
+      1223,
+      688
+    ],
+    "measured_digit_3_ink_bbox": [
+      336,
+      179,
+      585,
+      565
+    ],
+    "geometry": "screenshot measurement mapped to1600x900, fixed center597/476 and common5/6 source scale; tolerance1px"
+  },
+  "runtime_validation": "not_tested",
+  "per_game_migration": "pending"
+}

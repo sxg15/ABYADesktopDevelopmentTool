@@ -62,7 +62,7 @@ impl DesktopToolDispatcher {
         name: &str,
         mut arguments: Value,
     ) -> ToolCallResult {
-        let Some(context) = context else {
+        let Some(mut context) = context else {
             if matches!(name, "development_task_list" | "development_task_create") {
                 return self.dispatch(None, name, arguments, request_id);
             }
@@ -70,10 +70,33 @@ impl DesktopToolDispatcher {
                 "A task conversation context is required.",
             ));
         };
+        let native = context
+            .as_object_mut()
+            .and_then(|v| v.remove("desktopThread"));
         let input: ConversationBindInput = match decode(context.clone()) {
             Ok(value) => value,
             Err(error) => return ToolCallResult::error(error),
         };
+        if let Some(thread) = native.as_ref().and_then(Value::as_str)
+            && let Err(error) = self.dependencies.codex_terminal.check_desktop_thread(
+                &input.task_id,
+                &input.conversation_id,
+                thread,
+            )
+        {
+            return ToolCallResult::error(error);
+        }
+        if name == "development_production_chat_response" {
+            let result = self.chat_response(
+                &input.task_id,
+                native.as_ref().and_then(Value::as_str),
+                arguments,
+            );
+            return match result {
+                Ok(value) => ToolCallResult::success(value),
+                Err(error) => ToolCallResult::error(error),
+            };
+        }
         let session = format!(
             "{}-{}",
             match input.provider {
@@ -169,6 +192,82 @@ impl DesktopToolDispatcher {
             return ToolCallResult::success(json!({"bound":true}));
         }
         self.dispatch(Some(&session), name, arguments, request_id)
+    }
+
+    fn chat_response(&self, id: &str, native: Option<&str>, args: Value) -> AppResult<Value> {
+        let native =
+            native.ok_or_else(|| AppError::validation("请在绑定的 Codex 桌面对话确认。"))?;
+        let tasks = &self.dependencies.tasks;
+        let record = tasks
+            .production_get(id)?
+            .record
+            .ok_or_else(|| AppError::validation("任务尚未启用制作流程。"))?;
+        let revision = args["expectedRevision"]
+            .as_u64()
+            .ok_or_else(|| AppError::validation("缺少成果版本。"))?;
+        let quote = args["userMessage"].as_str().unwrap_or_default();
+        let op = args["operation"].as_str().unwrap_or_default();
+        let data = &args["data"];
+        let since = if op == "decide" {
+            record
+                .documents
+                .get(data["kind"].as_str().unwrap_or_default())
+                .map(|doc| doc.submitted_at.as_str())
+                .ok_or_else(|| AppError::validation("没有这份文档。"))?
+        } else {
+            &record.updated_at
+        };
+        self.dependencies
+            .codex_terminal
+            .check_user_message(id, native, quote, since)?;
+        if revision != record.revision {
+            return Err(AppError::validation("任务已有新版，请重新读取进展。"));
+        }
+        if op == "preflight" {
+            return self.dependencies.runtime_bridge.run_capability_preflight(
+                id,
+                data["reuseExisting"].as_bool().unwrap_or(false),
+                data["retry"].as_bool().unwrap_or(false),
+                true,
+            );
+        }
+        if op == "prototype" {
+            return serialize(self.dependencies.runtime_bridge.start_prototype(
+                id,
+                revision,
+                data["sourceInstanceId"].as_str().unwrap_or_default(),
+                quote,
+            )?);
+        }
+        if op == "decide" {
+            return serialize(
+                tasks.production_decide(crate::modules::tasks::ProductionDecision {
+                    task_id: id.into(),
+                    expected_revision: revision,
+                    kind: data["kind"].as_str().unwrap_or_default().into(),
+                    document_hash: data["documentHash"].as_str().unwrap_or_default().into(),
+                    accepted: data["accepted"]
+                        .as_bool()
+                        .ok_or_else(|| AppError::validation("请明确通过或退回。"))?,
+                    feedback: quote.into(),
+                })?,
+            );
+        }
+        let input = crate::modules::tasks::ProductionMutation {
+            task_id: id.into(),
+            expected_revision: revision,
+            operation: op.into(),
+            data: data.clone(),
+        };
+        serialize(match op {
+            "submit-answers" | "set-player-mode" => tasks.production_answer(input)?,
+            "revisit" => tasks.production_revisit(input)?,
+            "enter-playtest" => tasks.production_workbench(input)?,
+            "add" | "resolve" | "reopen" | "resume-art" | "add-art-note" => {
+                tasks.production_feedback(input)?
+            }
+            _ => return Err(AppError::validation("未知的对话操作。")),
+        })
     }
 
     #[cfg(test)]
@@ -1308,7 +1407,9 @@ mod tests {
         let database = Database::open(&paths).unwrap();
         let settings = SettingsService::new(database.clone(), paths.default_workspace_root.clone());
         let tasks = TaskService::new(database.clone(), paths.default_workspace_root.clone());
-        let codex_terminal = CodexTerminalService::new(tasks.clone()).unwrap();
+        let codex_terminal = CodexTerminalService::new(tasks.clone())
+            .unwrap()
+            .with_session_store(root.join("sessions"));
         let connections = GameConnectionService::new();
         let archives = ArchiveCatalogService::new(paths.clone());
         let instances = InstanceService::new(database.clone(), paths.clone(), connections.clone());
@@ -1339,6 +1440,109 @@ mod tests {
             codex_terminal,
             root,
         }
+    }
+
+    #[test]
+    fn desktop_chat_reuses_workspace_and_applies_review_once() {
+        let f = fixture();
+        let task = f
+            .tasks
+            .create(TaskInput {
+                title: "桌面审阅".into(),
+                description: "计分玩法".into(),
+            })
+            .unwrap();
+        let id = &task.id;
+        let workspace = std::path::Path::new(&task.workspace_path);
+        assert!(
+            f.codex_terminal
+                .desktop_chat(id, "整理文档")
+                .unwrap()
+                .contains("codex://new?")
+        );
+        let mut context: Value = serde_json::from_slice(
+            &std::fs::read(f.tasks.desktop_context_path(id).unwrap()).unwrap(),
+        )
+        .unwrap();
+        assert!(
+            workspace
+                .join(".codex/skills/abya-gameplay-brief/SKILL.md")
+                .is_file()
+        );
+        context.as_object_mut().unwrap().remove("cli");
+        let native = Uuid::new_v4().to_string();
+        context["desktopThread"] = json!(native);
+        let sessions = f.root.join("sessions");
+        std::fs::create_dir_all(&sessions).unwrap();
+        let file = sessions.join(format!("rollout-{native}.jsonl"));
+        let now = || chrono::Utc::now().to_rfc3339();
+        let meta=json!({"type":"session_meta","payload":{"id":native,"timestamp":now(),"cwd":workspace}}).to_string();
+        std::fs::write(&file, &meta).unwrap();
+        let call = |name, data| {
+            f.dispatcher
+                .call_with_context(Some(context.clone()), "regression-test", name, data)
+        };
+        assert!(!call("development_production_get", json!({})).is_error);
+        assert_eq!(
+            f.codex_terminal.desktop_chat(id, "继续").unwrap(),
+            format!("codex://threads/{native}")
+        );
+        let mutate = |rev, op, data| {
+            call(
+                "development_production_update",
+                json!({"expectedRevision":rev,"operation":op,"data":data}),
+            )
+        };
+        let initialized = result_json(mutate(
+            0,
+            "initialize",
+            json!({"questionMode":"no-followup","playerMode":"single"}),
+        ));
+        let path = "artifacts/requirements.md";
+        let doc = std::env::var_os("ABYA_BRIEF_SMOKE_DOCUMENT")
+            .map(|p| std::fs::read_to_string(p).unwrap())
+            .unwrap_or_else(|| "# 规则\n单人，点击得分。".into());
+        std::fs::write(workspace.join(path), doc).unwrap();
+        let submitted = result_json(mutate(
+            initialized["record"]["revision"].as_u64().unwrap(),
+            "submit-document",
+            json!({"kind":"requirements","path":path}),
+        ));
+        let r = &submitted["record"];
+        let say = |msg: &str| {
+            std::fs::write(&file,format!("{}\n{}\n",meta,json!({"type":"response_item","timestamp":now(),"payload":{"type":"message","role":"user","content":[{"type":"input_text","text":msg}]}}))).unwrap()
+        };
+        let quote = "确认这一版，进入美术需求整理";
+        let approve = json!({"operation":"decide","expectedRevision":r["revision"],"userMessage":quote,"data":{"kind":"requirements","accepted":true,"documentHash":r["documents"]["requirements"]["sha256"]}});
+        assert!(call("development_production_chat_response", approve.clone()).is_error);
+        say(quote);
+        let accepted = result_json(call(
+            "development_production_chat_response",
+            approve.clone(),
+        ));
+        assert_eq!(
+            accepted["record"]["currentStage"], "resources",
+            "{accepted}"
+        );
+        assert!(call("development_production_chat_response", approve).is_error);
+        say("回到需求，调整计分");
+        let revisited = result_json(call(
+            "development_production_chat_response",
+            json!({"operation":"revisit","userMessage":"回到需求，调整计分","expectedRevision":accepted["record"]["revision"],"data":{"stage":"requirements","reason":"调整计分"}}),
+        ));
+        assert_eq!(revisited["record"]["currentStage"], "requirements");
+        assert_eq!(
+            revisited["record"]["approvals"].as_array().unwrap().len(),
+            1
+        );
+        std::fs::write(workspace.join(path), "手改计分规则").unwrap();
+        assert_eq!(
+            f.tasks
+                .document_source(id, "requirements")
+                .unwrap()
+                .unwrap(),
+            "手改计分规则"
+        );
     }
 
     fn result_json(result: ToolCallResult) -> Value {

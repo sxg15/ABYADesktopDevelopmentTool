@@ -446,6 +446,31 @@ impl TaskService {
         Ok(directory)
     }
 
+    pub fn install_desktop_skills(&self, workspace: &Path) -> AppResult<()> {
+        for managed in &self.managed_skill_sources {
+            let root = managed
+                .source
+                .as_ref()
+                .and_then(|p| p.parent())
+                .ok_or_else(|| AppError::validation("找不到项目 Skill 库。"))?;
+            for name in [
+                "abya-desktop-workflow",
+                "abya-gameplay-brief",
+                "abya-foundation-rule-maintenance",
+                "abya-crayon-paper-effects",
+            ] {
+                let dest = workspace
+                    .join(managed.llm_directory)
+                    .join("skills")
+                    .join(name);
+                if !dest.exists() {
+                    sync_skill_directory(workspace, managed.llm_directory, &root.join(name), name)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn sync_managed_skills(&self, workspace: &Path) -> AppResult<()> {
         for managed_skill in &self.managed_skill_sources {
             self.sync_managed_skill(workspace, managed_skill)?;

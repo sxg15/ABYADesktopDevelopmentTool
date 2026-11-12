@@ -1,0 +1,4 @@
+interface:
+  display_name: "蜡笔纸艺特效库"
+  short_description: "复用蜡笔勾、蜡笔叉、柔和纸片爆开与折页切换，交付工程接入及验收。"
+  default_prompt: "使用 $abya-crayon-paper-effects 将选定特效接入当前工程，复用附带素材与动效规格并验证实机表现。"

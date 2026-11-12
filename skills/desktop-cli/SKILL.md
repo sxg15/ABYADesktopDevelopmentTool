@@ -1,3 +1,7 @@
+## 2026-11-12 Codex 桌面制作流程
+
+桌面对话从工作目录读取 .codex/abya-desktop.json 和 CODEX_THREAD_ID，经当前 Windows 用户的加密连接描述访问 APP。production respond 将绑定对话的策划原话、当前修订号和文档哈希交由任务服务核对。
+
 ## 2026-11-06 Workflow 2.12
 
 production version 从任务实例获取 Player 路径并核对 App 所选 PB、任务绑定与适用预检，再冻结存档。

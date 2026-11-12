@@ -1,3 +1,7 @@
+## 2026-11-12 Codex 桌面制作流程
+
+桌面对话工作台保留开发任务、游戏客户端管理、Skill 库和设置。任务列表常驻。阶段浏览只读，当前阶段依据任务服务刷新。
+
 # App Shell Skill
 
 Use the installed manifest notes in Settings when identifying the new build after restart.

@@ -1,3 +1,5 @@
+桌面工作台通过 read_document_source 读取任务已登记 Markdown 与提交快照之间的差异。CLI 上下文文件只记录任务、会话身份及 CLI 路径，认证沿用 Windows 用户连接。
+
 ## 2026-11-06 Workflow 2.12
 
 task_player_binding 单独读取任务和 App 的 PB 路径与指纹。试玩及预检卡片据此提供确认与重新验证入口。

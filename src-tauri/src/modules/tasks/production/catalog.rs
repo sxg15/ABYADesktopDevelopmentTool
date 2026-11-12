@@ -109,8 +109,33 @@ pub(super) fn validate_choice(root: &Path, key: &str, id: &str) -> AppResult<()>
 }
 
 impl TaskService {
+    fn catalog_root(&self, id: &str) -> AppResult<std::path::PathBuf> {
+        if !id.is_empty() {
+            return self.production_workspace(id);
+        }
+        let source = self
+            .managed_skill_sources
+            .first()
+            .and_then(|s| s.source.as_deref());
+        source
+            .and_then(|p| p.ancestors().nth(3))
+            .map(Path::to_path_buf)
+            .ok_or_else(|| AppError::validation("找不到随包 Skill 库。"))
+    }
+    pub fn desktop_context_path(&self, id: &str) -> AppResult<std::path::PathBuf> {
+        let task = self.get_readonly(id)?;
+        files::safe_path(Path::new(&task.workspace_path), ".codex/abya-desktop.json")
+    }
+    pub fn save_desktop_context(&self, id: &str, context: &serde_json::Value) -> AppResult<()> {
+        let task = self.get_readonly(id)?;
+        files::write_file(
+            Path::new(&task.workspace_path),
+            ".codex/abya-desktop.json",
+            &serde_json::to_vec(context)?,
+        )
+    }
     pub fn production_catalog(&self, id: &str) -> AppResult<Vec<SkillEntry>> {
-        let root = self.production_workspace(id)?;
+        let root = self.catalog_root(id)?;
         let mut entries = scan(&root)?;
         // Browsing projections only: the owning workflow remains the single pinned tree.
         for provider in ["codex"] {
@@ -175,7 +200,7 @@ impl TaskService {
         if !["codex"].contains(&provider) {
             return Err(AppError::validation("无效 provider。"));
         }
-        let root = self.production_workspace(id)?;
+        let root = self.catalog_root(id)?;
         Ok(files::text_file(&root, &format!(".{provider}/skills/{skill}/SKILL.md"))?.0)
     }
 }

@@ -1,3 +1,5 @@
+本分支的 -Validation 生成独立桌面对话预览包，清单标识 codex-desktop-workflow-preview。包含 .codex/skills 中的工作流和全部玩法资源。
+
 ## 2026-11-06 Workflow 2.12
 
 2026-11-07 PB 切换维护包 APP `a1d47a2b91b854bdb53d6e70e270fbc9623a9b69f45508d4724067979a95c4c0`、inventory `870372242a3a689ead1046fb6593434e719b1812b12024d94d4e9aad9af2cd50`。隔离原生任务使用见缝插针冻结存档，从试玩卡片确认当前 PB，完成连接、保存、冷加载，并用当前包启动两个网络席位。回执区分候选原指纹与实际运行指纹。完整包和回归通过，专项回执在 D 盘维护目录 pb-switch-20261107。

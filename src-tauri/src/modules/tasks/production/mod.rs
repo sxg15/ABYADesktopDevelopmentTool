@@ -189,6 +189,39 @@ impl TaskService {
         self.production_get(&task.id)
     }
 
+    pub fn production_revisit(&self, input: ProductionMutation) -> AppResult<ProductionView> {
+        self.production_commit(&input.task_id, input.expected_revision, |r| {
+            let stage = mutation::text(&input.data, "stage")?;
+            let reason = mutation::text(&input.data, "reason")?;
+            let stages = r.policy["stages"]
+                .as_array()
+                .ok_or_else(|| AppError::validation("无法读取任务阶段。"))?;
+            let target = stages
+                .iter()
+                .position(|s| s["id"] == stage)
+                .ok_or_else(|| AppError::validation("未知阶段。"))?;
+            let current = stages
+                .iter()
+                .position(|s| s["id"] == r.current_stage)
+                .ok_or_else(|| AppError::validation("当前阶段无效。"))?;
+            if target >= current {
+                return Err(AppError::validation("请指定一个已经过的阶段。"));
+            }
+            for s in &stages[target..] {
+                if let Some(key) = s["id"].as_str() {
+                    r.stages.insert(key.into(), "not-started".into());
+                }
+            }
+            r.current_stage = stage.into();
+            r.stages.insert(stage.into(), "in-progress".into());
+            r.stage_updates
+                .insert(stage.into(), json!({"summary":reason,"updatedAt":now()}));
+            Ok(())
+        })?;
+        self.production_export(&input.task_id)?;
+        self.production_get(&input.task_id)
+    }
+
     pub fn production_decide(&self, input: ProductionDecision) -> AppResult<ProductionView> {
         let root = self.production_workspace(&input.task_id)?;
         self.production_commit(&input.task_id, input.expected_revision, |r| {
@@ -282,6 +315,15 @@ impl TaskService {
     fn production_workspace(&self, id: &str) -> AppResult<PathBuf> {
         let task = self.database.with_connection(|c| read_task(c, id))?;
         Ok(PathBuf::from(task.workspace_path))
+    }
+
+    pub fn document_source(&self, id: &str, kind: &str) -> AppResult<Option<String>> {
+        let record = self.database.with_connection(|c| load(c, id))?;
+        let Some(doc) = record.as_ref().and_then(|r| r.documents.get(kind)) else {
+            return Ok(None);
+        };
+        let (content, hash) = files::text_file(&self.production_workspace(id)?, &doc.path)?;
+        Ok((hash != doc.sha256).then_some(content))
     }
 
     pub fn production_get(&self, id: &str) -> AppResult<ProductionView> {

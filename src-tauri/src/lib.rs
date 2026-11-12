@@ -672,6 +672,39 @@ fn read_task_skill(
 }
 
 #[tauri::command(async)]
+fn read_document_source(
+    task_id: String,
+    kind: String,
+    state: State<'_, AppState>,
+) -> AppResult<Option<String>> {
+    state.tasks.document_source(&task_id, &kind)
+}
+
+#[tauri::command(async)]
+fn desktop_chat_status(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<serde_json::Value> {
+    Ok(
+        serde_json::json!({"ready":state.desktop_cli.state().running,"bound":state.codex_terminal.desktop_thread_bound(&task_id)?}),
+    )
+}
+
+#[tauri::command(async)]
+fn open_desktop_chat(
+    task_id: String,
+    prompt: String,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let url = state.codex_terminal.desktop_chat(&task_id, &prompt)?;
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(foundation::AppError::internal)
+}
+
+#[tauri::command(async)]
 fn open_production_artifact(
     task_id: String,
     path: String,
@@ -1493,6 +1526,9 @@ pub fn run() {
             upgrade_task_production,
             get_task_skills,
             read_task_skill,
+            read_document_source,
+            desktop_chat_status,
+            open_desktop_chat,
             open_production_artifact,
             reveal_production_report,
             export_programmer_issues,

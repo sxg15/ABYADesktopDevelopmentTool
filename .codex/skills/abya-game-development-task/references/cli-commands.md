@@ -4,7 +4,7 @@
 
 基础能力预检 `production preflight` 支持 plan、implementation、review。后两者要求已有有效的需求和计划批准；review 默认使用本任务已有编辑存档的隔离副本验证加载、保存和冷加载。结果 existing-verified 只证明这条编辑链路，不证明新建能力或游戏验收通过。预检完成继续原阶段，不重新提交未变化的方案；包切换和未知写入仍分别确认/对账。
 
-使用环境变量 ABYA_DESKTOP_CLI 指定的可执行文件。参数均为 JSON 对象，
+桌面对话使用 .codex/abya-desktop.json 的 cli 字段，任务工作目录及 CODEX_THREAD_ID 用于核对身份。旧托管终端使用 ABYA_DESKTOP_CLI。参数均为 JSON 对象，
 通过 --input-file 文件路径或 -（stdin）传递；--json 返回单个 JSON 文档。
 先运行 doctor 和 capabilities。capabilities 返回准确的命令 ID、参数 schema 与风险说明。
 不要根据名称猜参数。下面左侧为命令，右侧为目录中的命令 ID。
@@ -12,7 +12,7 @@
 | CLI | 命令 ID |
 | --- | --- |
 | task list/create/update/status | development_task_list/create/update/set_status |
-| production get/update/version/report | development_production_get/update/version/report；确认由 APP 用户操作，不能通过 CLI 批准 |
+| production get/update/version/report | development_production_get/update/version/report；桌面对话由 production respond 传递策划对具体版本的决定；原终端继续沿用 APP 确认 |
 | skill list/read | development_skill_list/read |
 | recording tools/start/get/stop | game_recording_tools/start/get/stop；实时视频，无音频 |
 | conversation bind/report | development_conversation_bind/activity_report |

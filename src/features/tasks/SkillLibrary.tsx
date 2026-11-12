@@ -26,13 +26,14 @@ export function SkillLibrary({ taskId, active, visible = true, initialSection = 
   useEffect(() => {
     const current = ++generation.current; readRequest.current++; actionLock.current = false;
     setSkills([]); setView(undefined); setBody(undefined); setError(""); setNotice(""); setBusy(false); setReading(false); setLoading(true);
-    Promise.all([productionApi.skills(taskId), productionApi.get(taskId)]).then(([items, workflow]) => {
+    Promise.all([productionApi.skills(taskId), taskId ? productionApi.get(taskId) : Promise.resolve(undefined)]).then(([items, workflow]) => {
       if (generation.current === current) { setSkills(items); setView(workflow); }
     }).catch(e => { if (generation.current === current) setError(errorMessage(e)); })
       .finally(() => { if (generation.current === current) setLoading(false); });
     return () => { generation.current++; readRequest.current++; };
   }, [taskId]);
   async function refreshView() {
+    if (!taskId) return;
     const current = generation.current;
     try { const next = await productionApi.get(taskId); if (current === generation.current) setView(old =>
       (old?.record?.revision ?? -1) > (next.record?.revision ?? -1) ? old : next); }
@@ -94,7 +95,7 @@ export function SkillLibrary({ taskId, active, visible = true, initialSection = 
       </>}
     </div>
     <div hidden={section !== "cases"}>
-      {skills.some(k => k.provider === provider && k.kind === "design") && <div className="skill-design-note"><BookOpen size={16}/><strong>{t("配套设计方法", "Design methods")}</strong>{skills.filter(k => k.provider === provider && k.kind === "design").map(skill => <button key={skill.id} className="secondary-button" onClick={() => { setSection("skills"); void read(skill); }}>{title(skill)}</button>)}</div>}
-      {visitedCases && view && <ArtLibraryPanel key={taskId} taskId={taskId} view={view} active={active} en={en} embedded onChanged={refreshView} onContinue={onContinue}/>}</div>
+      {skills.some(k => k.provider === provider && k.kind === "design") && <section><h3>{t("配套设计方法", "Design methods")}</h3><div className="production-skill-grid">{skills.filter(k => k.provider === provider && k.kind === "design").map(skill => <button key={skill.id} className="production-card skill-card design-method" onClick={() => { setSection("skills"); void read(skill); }}><strong>{title(skill)}</strong><span>{skill.description}</span></button>)}</div></section>}
+      {visitedCases && <ArtLibraryPanel key={taskId} taskId={taskId} view={view} active={active} en={en} embedded onChanged={refreshView} onContinue={onContinue}/>}</div>
   </section>;
 }

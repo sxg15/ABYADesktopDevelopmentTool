@@ -2,6 +2,7 @@ mod app_server;
 mod autonomy_watch;
 #[cfg(windows)]
 mod crash_job;
+mod desktop_chat;
 mod diagnostics;
 mod memory_context;
 mod preflight;
@@ -163,6 +164,7 @@ pub struct CodexTerminalService {
     tasks: TaskService,
     sessions: Arc<Mutex<HashMap<String, LiveTerminal>>>,
     resolver: CodexResolver,
+    desktop_sessions_root: Option<PathBuf>,
     app_server: Arc<Mutex<Option<AppServerHandle>>>,
     runtime_servers: Arc<Mutex<HashMap<String, AppServerHandle>>>,
     thread_conversations: Arc<Mutex<HashMap<String, (String, String)>>>,
@@ -241,6 +243,7 @@ impl CodexTerminalService {
             tasks,
             sessions: Default::default(),
             resolver: Arc::new(resolve_codex),
+            desktop_sessions_root: codex_sessions_root(),
             app_server: Default::default(),
             runtime_servers: Default::default(),
             thread_conversations: Default::default(),
@@ -1437,6 +1440,7 @@ impl CodexTerminalService {
             tasks,
             sessions: Default::default(),
             resolver: Arc::new(move || Some(codex.clone())),
+            desktop_sessions_root: None,
             app_server: Default::default(),
             runtime_servers: Default::default(),
             thread_conversations: Default::default(),

@@ -14,6 +14,7 @@ fn command(group: &str, action: &str) -> Option<&'static str> {
         ("production", "current") => "development_production_current",
         ("production", "batch") => "development_production_batch",
         ("production", "receipt") => "development_production_receipt",
+        ("production", "respond") => "development_production_chat_response",
         ("production", "get") => "development_production_get",
         ("production", "preflight") => "development_production_preflight",
         ("production", "start-acceptance") => "development_production_start_acceptance",
@@ -142,7 +143,24 @@ fn execute() -> Result<Value, Box<dyn std::error::Error>> {
     ) {
         (Ok(task), Ok(conversation)) => Some(json!({"taskId":task,"conversationId":conversation,
             "provider":std::env::var("ABYA_DEVELOPMENT_PROVIDER").unwrap_or("codex".into())})),
-        _ => None,
+        (Err(_), Err(_)) => {
+            let cwd = std::env::current_dir()?;
+            let file = cwd
+                .ancestors()
+                .map(|p| p.join(".codex/abya-desktop.json"))
+                .find(|p| p.is_file());
+            if let Some(path) = file {
+                let cfg: Value = serde_json::from_slice(&std::fs::read(path)?)?;
+                let native = std::env::var("CODEX_THREAD_ID")
+                    .map_err(|_| "请在本任务的 Codex 桌面对话执行此命令。")?;
+                Some(
+                    json!({"provider":"codex","taskId":cfg["taskId"],"conversationId":cfg["conversationId"],"desktopThread":native}),
+                )
+            } else {
+                None
+            }
+        }
+        _ => return Err("Incomplete task conversation environment.".into()),
     };
     let connection = Connection::discover()?;
     let request_id = supplied_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());

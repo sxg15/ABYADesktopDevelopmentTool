@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABYA 看图设计玩法"
+  short_description: "从参考图设计短局计分玩法，按用户确定的交互、布局与暖色平面纸片风生成飞书开发文档"
+  default_prompt: "使用 $abya-gameplay-brief 根据参考设计玩法，遵守现行规则和精确UI规格，先展示本玩法局内图，再生成自包含开发文档、同步飞书并附同版输入包。"

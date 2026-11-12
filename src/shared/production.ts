@@ -129,6 +129,7 @@ export const productionApi = {
     invoke<IntakeContinuation>("continue_intake_questions", { taskId, groupId, revision }),
   answer: (taskId: string, expectedRevision: number, operation: string, data: unknown) =>
     invoke<ProductionView>("answer_task_questions", { input: { taskId, expectedRevision, operation, data } }),
+  source: (taskId:string,kind:string) => invoke<string|null>("read_document_source",{taskId,kind}),
   get: (taskId: string) => invoke<ProductionView>("get_task_production", { taskId }),
   update: (taskId: string, expectedRevision: number, operation: string, data: unknown) =>
     invoke<ProductionView>("update_task_production", { input: { taskId, expectedRevision, operation, data } }),

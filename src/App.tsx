@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, CloudDownload, ScrollText, Send, Settings, X } from "lucide-react";
+import { ClipboardList, CloudDownload, BookOpen, Settings, X } from "lucide-react";
 import { ArchiveTransferView } from "./features/archive-transfer/ArchiveTransferView";
 import { TasksView } from "./features/tasks/TasksView";
 import { LogsView } from "./features/logs/LogsView";
@@ -17,12 +17,13 @@ import {
 import "./App.css";
 import "./app/workspaceRefinement.css";
 import "./app/workbenchTheme.css";
+import "./features/tasks/desktopWorkflow.css";
 import { IconButtonTooltips } from "./app/IconButtonTooltips";
 import { useDesktopUpdate } from "./app/useDesktopUpdate";
 import { useNotificationActivations } from "./app/useNotificationActivations";
 import type { NotificationActivation } from "./shared/notifications";
 
-type ViewId = "tasks" | "archiveTransfer" | "logs" | "settings" | "gameClients";
+type ViewId = "library" | "tasks" | "archiveTransfer" | "logs" | "settings" | "gameClients";
 
 function App() {
   const [view, setView] = useState<ViewId>("tasks");
@@ -84,13 +85,12 @@ function App() {
 
   const nav: Array<{
     id: ViewId;
-    label: MessageKey;
+    label: MessageKey | "library";
     icon: typeof ClipboardList;
   }> = [
     { id: "tasks", label: "tasks", icon: ClipboardList },
-    { id: "archiveTransfer", label: "archiveTransfer", icon: Send },
     { id: "gameClients", label: "gameClients", icon: CloudDownload },
-    { id: "logs", label: "logs", icon: ScrollText },
+    { id: "library", label: "library", icon: BookOpen },
     { id: "settings", label: "settings", icon: Settings },
   ];
 
@@ -112,13 +112,13 @@ function App() {
             return (
               <button
                 key={item.id}
-                aria-label={t(item.label)}
-                title={t(item.label)}
+                aria-label={(item.label==="library"?"Skill 库":t(item.label))}
+                title={(item.label==="library"?"Skill 库":t(item.label))}
                 className={view === item.id ? "active" : ""}
                 onClick={() => { setPreferredInstallationId(undefined); setPreferredReleaseId(undefined); setFocusGitHub(false); setView(item.id); }}
               >
                 <Icon size={19} />
-                <span>{t(item.label)}</span>
+                <span>{(item.label==="library"?"Skill 库":t(item.label))}</span>
               </button>
             );
           })}
@@ -137,10 +137,10 @@ function App() {
 
       <main className="app-main">
         <div
-          className={`app-view ${view === "tasks" ? "active" : ""}`}
-          aria-hidden={view !== "tasks"}
+          className={`app-view ${view === "tasks" || view === "library" ? "active" : ""}`}
+          aria-hidden={view !== "tasks" && view !== "library"}
         >
-          <TasksView settings={settings} t={t} notify={notify}
+          <TasksView library={view==="library"} visible={view==="tasks"||view==="library"} settings={settings} t={t} notify={notify}
             notificationNavigation={notificationNavigation}
             onNotificationHandled={id => setNotificationNavigation(current => current?.id === id ? undefined : current)} />
         </div>
@@ -148,8 +148,8 @@ function App() {
           <ArchiveTransferView t={t} notify={notify} />
         )}
         {view === "logs" && <LogsView t={t} notify={notify} />}
-        {view === "gameClients" && <GameClientsView settings={settings} t={t} notify={notify} preferredReleaseId={preferredReleaseId}
-          onOpenSettings={(id, login) => { setPreferredInstallationId(id); setFocusGitHub(!!login); setView("settings"); }} />}
+        {view === "gameClients" && <><div className="client-related"><button className="text-button" onClick={()=>setView("archiveTransfer")}>{t("archiveTransfer")}</button><button className="text-button" onClick={()=>setView("logs")}>{t("logs")}</button></div><GameClientsView settings={settings} t={t} notify={notify} preferredReleaseId={preferredReleaseId}
+          onOpenSettings={(id, login) => { setPreferredInstallationId(id); setFocusGitHub(!!login); setView("settings"); }} /></>}
         {view === "settings" && (
           <SettingsView
             releaseNumber={buildInfo?.releaseNumber}
