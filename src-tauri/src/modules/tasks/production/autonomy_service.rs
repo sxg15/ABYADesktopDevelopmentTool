@@ -9,6 +9,17 @@ impl TaskService {
             return Ok(json!({"taskId":task,"revision":0}));
         };
         let scope_hash = autonomy::scope(&r);
+        // Navigation for design work; executable permissions are checked again at dispatch.
+        let design_runtime_scope = (t.status == TaskStatus::Active
+            && stage_contracts::enabled(&r)
+            && stage_contracts::design_stage(&r.current_stage))
+        .then(|| {
+            let grants = r.workbench.prototype_grants.iter()
+                .filter(|grant| grant["effective"] == true)
+                .map(|grant| json!({"instanceId":grant["instanceId"],"expiresAt":grant["expiresAt"]}))
+                .collect::<Vec<_>>();
+            json!({"playerRequiredForSubmission":false,"effectivePrototypeGrants":grants})
+        });
         let ledger = &r.workbench.execution;
         let mut ordered: Vec<_> = ledger
             .units
@@ -39,6 +50,7 @@ impl TaskService {
             "technicalQueue":ledger.technical_queue,"acceptanceContract":ledger.acceptance_contract,"runtimeBaselines":ledger.runtime_baselines,
             "issueCount":r.issues.iter().filter(|i|i["status"]!="resolved").count(),
             "issues":r.issues.iter().filter(|i|i["status"]!="resolved").take(16).map(|i|json!({"id":i["id"],"status":i["status"],"repairTarget":i["repairTarget"],"description":i["description"].as_str().unwrap_or("").chars().take(300).collect::<String>(),"handling":{"mode":i["executionHandling"]["mode"],"reason":i["executionHandling"]["reason"].as_str().unwrap_or("").chars().take(200).collect::<String>(),"impact":i["executionHandling"]["impact"].as_str().unwrap_or("").chars().take(200).collect::<String>()}})).collect::<Vec<_>>(),
+            "designRuntimeScope":design_runtime_scope,
             "pendingQuestions":r.question_groups.iter().filter(|g|g.status=="pending").map(|g|&g.id).collect::<Vec<_>>(),
             "approvals":view.approval_statuses,"stageStatuses":view.stage_statuses,
             "latestEvents":ledger.events.iter().rev().take(12).collect::<Vec<_>>(),

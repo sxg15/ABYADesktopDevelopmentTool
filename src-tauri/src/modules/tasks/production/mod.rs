@@ -19,6 +19,7 @@ mod autonomy_service;
 mod receipts;
 pub use autonomy::autonomous_implementation;
 mod acceptance;
+mod art_clarification;
 mod art_design;
 mod art_design_sources;
 mod art_design_validation;
@@ -344,7 +345,8 @@ impl TaskService {
                 (kind.clone(), validation::accepted_document(r, root, kind).err().map(|e| e.message).unwrap_or_default())
             }).collect()).unwrap_or_default(),
             art_design_status: record.as_ref().map(|r| json!({"enabled":art_design_sources::enabled(r),
-                "inputHash":art_design_sources::inputs_hash(r),"designHash":art_design_sources::design_hash(r)})).unwrap_or(Value::Null),
+                "inputHash":art_design_sources::inputs_hash(r),"designHash":art_design_sources::design_hash(r),
+                "resolvedClarifications":r.art_design.requirements.iter().filter(|q| q["kind"]=="clarify" && art_clarification::resolved(r,q)).map(|q|&q["id"]).collect::<Vec<_>>()})).unwrap_or(Value::Null),
             actions,
             stage_statuses,
             artifacts,

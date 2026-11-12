@@ -124,7 +124,7 @@ export function IntakeQuestions({ taskId, group, revision, active, onSaved, onEn
       <button key={item.id} className="secondary-button" aria-current={i === index ? "step" : undefined}
         onClick={() => setIndex(i)}>第 {i + 1} 题{answers[item.id]?.trim() ? " ✓" : ""}</button>)}</nav>
     <fieldset key={q.id} ref={questionRef} tabIndex={-1} disabled={busy || !active || !pending}>
-      <legend>{q.text}{q.optional ? "（可选）" : "（必答）"}</legend>
+      <legend>{q.clarifiesRequirementId && <strong>{q.clarifiesRequirementId} · </strong>}{q.text}{q.optional ? "（可选）" : "（必答）"}</legend>
       {q.options.filter(o => !otherOption(o)).map(option => <label className="intake-option" key={option}>
         <input type="radio" name={`${group.id}:${q.id}`} checked={field.choice === option}
           onChange={() => edit(q.id, { choice: option })} />{option}</label>)}
