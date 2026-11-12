@@ -1,54 +1,17 @@
-# ABYA Desktop Development Tool
+# ABYA Desktop Development Tool MCP
 
-开发工具现仅支持 Codex。Grok 界面、终端服务和随包资源已移除；已有任务、历史文件和用户账号数据保留。
+MCP 版在独立的 Windows 桌面应用中管理开发任务、游戏实例和运行日志。Codex 会话通过原生桌面 MCP 工具执行 ABYA 业务操作，运行时调用连接到支持原生 MCP 的 PB Player。
 
-游戏美术流程 2.2 增加原话与设计/实机追踪、美术设计库和案例复用。
-使用方式、旧任务升级与案例导入导出见 [美术设计流程](docs/ART_DESIGN_WORKFLOW.md)。
+## 在 Windows x64 上使用
 
-## 策划直接使用（Windows x64）
+1. 将 MCP 便携包完整解压到独立目录；通过仓库取得正式包时，使用 **MCP** 分支的独立克隆。
+2. 保留根目录的「ABYA 开发工具.cmd」、`scripts/launch-mcp.ps1` 和完整的 `Publish-MCP/`。双击启动器，它会校验清单和文件哈希，然后启动程序。
+3. 在设置中选择支持原生 MCP 的 Player。AI 会话使用本机 Codex 安装和登录；桌面界面依赖 Windows WebView2 Runtime。
 
-1. 切换并拉取仓库的 **dev** 分支，获取已同步的源码与完整运行包。
-2. 双击仓库根目录的 **ABYA 开发工具.cmd**。
-3. 首次使用在 APP 设置中选择自己电脑上的 ABYA Player 路径；AI 会话使用自己电脑的 Codex 安装和登录。
-
-`Publish/` 是完整、已编译的运行包，包含桌面程序、Desktop CLI、Node、Abya CLI、FFmpeg 和 Codex 工作流资源。
-不需要安装 Rust、Node、npm 或自行编译，也不需要 Git LFS。保持整个仓库目录结构，不要单独复制 EXE。
-启动入口按自身位置寻找程序，支持任意盘符、中文及空格路径；不依赖开发者电脑的绝对路径快捷方式。
-Windows 需要可用的 WebView2 Runtime；Windows 11 通常已提供，缺少时按系统提示安装微软运行时。
-
-拉取失败或启动提示文件不完整时，先完成 Git 更新，再运行 `ABYA 开发工具.cmd --check` 校验全部运行文件。
-任务、账户、登录令牌和本机路径设置属于各自 Windows 用户，不随仓库上传，不应互相复制。
-更新前退出旧 APP，拉取后仍使用同一启动入口；已有任务数据不会因拉取代码被替换。
+可用「ABYA 开发工具.cmd --check」单独校验文件。更新 MCP 包前先关闭旧实例，保留独立的 MCP 用户数据和工作区。账户、凭据和项目存档保存在本机。
 
 ## 发布与维护
 
-- 开发统一在 **CLI** 分支进行。动手前先 fetch，将远端 CLI 和最新 dev 合入 CLI；完成修改与验证后提交、推送 CLI，再将此次 CLI 提交合入并推送 dev，核对远端包含关系，最后保留工作分支为 CLI。不更新 main、不强推，合并时保留双方功能；合并改变源码时重新执行相关检查并构建运行包。
-- 正式 `Publish/` 和相对路径启动入口纳入 Git；测试包、旧发布备份、日志、缓存和数据库仍忽略。
-- `npm run build:portable` 构建正式包并生成 `Publish/package-files.json`，记录每个运行文件的大小和 SHA-256。
-- 更新发布包后将其完整暂存，再运行 `npm run check:portable`，确认文件完整且没有被忽略规则漏掉。
-- `Publish/**` 禁止 Git 自动转换换行，保证拉取后的字节与发布清单一致。
-- 不将开发者本机的 `.lnk` 作为团队入口；个人桌面快捷方式可以指向自己的仓库启动器。
+MCP 工作区只向远端 MCP 分支发布。候选包位于 `Publish-Staging-MCP/`，正式包位于 `Publish-MCP/`，回滚副本位于 `ReleaseBackups-MCP/`。便携包包含 MCP 桌面程序、受管 Codex Skill 和 FFmpeg。候选验证需绑定源码指纹、可执行文件和资源清单，正式晋级条件见[发布规则](skills/release/SKILL.md)。
 
-Portable Windows tooling for ABYA game development tasks, managed game
-instances, structured runtime logs, and pure CLI AI development workflows.
-
-## Commands
-
-- `npm run tauri dev`: run the desktop application.
-- `npm run check`: validate module Skills, changelog policy, tests, and frontend build.
-- `cargo test --manifest-path src-tauri/Cargo.toml`: run Rust tests.
-- `npm run build:portable`: build the release executable into `Publish`.
-
-Read `AGENTS.md`, `ARCHITECTURE.md`, and the relevant module Skill before
-changing production code.
-
-## Recommended IDE Setup
-
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
-
-## CLI 开发入口
-
-保留现有桌面软件。启动桌面后，任务终端通过 ABYA_DESKTOP_CLI 获得 abya-desktop 的绝对路径。
-执行 doctor --json 与 capabilities --json，再按 JSON schema 调用命令。
-无需配置 MCP；旧服务与客户端模板已移除。完整契约见 docs/DESKTOP_CLI_COMMANDS.md。
-开发时先 npm run build:cli；便携包包含 Node 20+ 与固定版本的 Abya CLI。
+开发前阅读 [AGENTS.md](AGENTS.md)、[架构](ARCHITECTURE.md)及相应模块 Skill。原生任务会话与传输边界见[桌面 MCP 契约](skills/desktop-mcp/SKILL.md)。游戏美术需求、实机追踪和案例复用见[美术设计流程](docs/ART_DESIGN_WORKFLOW.md)。
