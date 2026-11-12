@@ -1,6 +1,7 @@
 mod acceptance;
 mod archive_creation;
 mod authoring;
+mod native_archive_ui;
 pub use archive_creation::CreateArchiveInput;
 mod baseline;
 mod operation_receipts;

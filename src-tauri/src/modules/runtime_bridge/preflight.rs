@@ -103,6 +103,14 @@ impl RuntimeBridgeService {
 
     fn preflight_ready(&self, id: &str) -> AppResult<()> {
         self.wait_for_cli(id, Duration::from_secs(40))?;
+        self.wait_for_game_root(id, "capability-preflight", &Default::default())
+    }
+    pub(super) fn wait_for_game_root(
+        &self,
+        id: &str,
+        session: &str,
+        cancel: &Arc<AtomicBool>,
+    ) -> AppResult<()> {
         let start = Instant::now();
         loop {
             if start.elapsed() >= Duration::from_secs(60) {
@@ -111,7 +119,19 @@ impl RuntimeBridgeService {
                     "CLI 已连接，但游戏根未在限时内就绪。",
                 ));
             }
-            match self.preflight_call(id, "runtime_get_game_state", json!({})) {
+            if cancel.load(Ordering::SeqCst) {
+                return Err(AppError::validation("初始化已取消。"));
+            }
+            let response = self.run(
+                id,
+                &["capability", "run", "runtime_get_game_state"],
+                Some(json!({})),
+                session,
+                &uuid::Uuid::new_v4().to_string(),
+                Duration::from_secs(35),
+                cancel.clone(),
+            )?;
+            match preflight_response("runtime_get_game_state", response) {
                 Ok(game)
                     if game["context"]["rootInitialized"] == true
                         && game["context"]["isTransitioning"] == false =>
@@ -126,6 +146,70 @@ impl RuntimeBridgeService {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn probe_archive_ui(
+        &self,
+        input: LaunchInstanceInput,
+        data: PathBuf,
+    ) -> AppResult<Value> {
+        let witness = super::native_archive_ui::RootWitness::capture(&data)?;
+        let instance = self
+            .instances
+            .launch_bootstrap(input.clone(), data.clone())?;
+        let result = (|| {
+            self.preflight_ready(&instance.id)?;
+            self.create_from_native_form(
+                &instance.id,
+                &witness,
+                super::native_archive_ui::ArchiveFormInput {
+                    name: "原生界面空白建档验收",
+                    author: "ABYA QA",
+                    description: "隔离建档测试",
+                },
+                "native-menu-test",
+                &Default::default(),
+                || Ok(()),
+            )
+        })();
+        self.instances.stop(&instance.id)?;
+        let mut created = result?;
+        let selection = super::native_archive_ui::ui_archive_selection(&created)?;
+        let mut receipts = Vec::new();
+        for save in [true, false] {
+            let mut launch = input.clone();
+            launch.profile.archive = Some(selection.clone());
+            let instance = self
+                .instances
+                .launch_with_data_root(launch, Some(data.clone()))?;
+            let checked = (|| {
+                self.preflight_ready(&instance.id)?;
+                let loaded = self.preflight_loaded_archive(&instance.id)?;
+                archive_creation::checked_archive(&data, &loaded)?;
+                if loaded["guid"] != selection.archive_guid
+                    || loaded["currentLevelGuid"] != selection.level_guid
+                {
+                    return Err(error(
+                        "preflight_load_failed",
+                        "Cold load identity mismatch",
+                    ));
+                }
+                if save
+                    && self.preflight_call(&instance.id, "editor_save_archive", json!({}))?["completed"]
+                        != true
+                {
+                    return Err(error(
+                        "preflight_save_failed",
+                        "Player did not complete save",
+                    ));
+                }
+                Ok(json!({"guid":loaded["guid"],"level":loaded["currentLevelGuid"],"saved":save}))
+            })();
+            self.instances.stop(&instance.id)?;
+            receipts.push(checked?);
+        }
+        created["launches"] = json!(receipts);
+        Ok(created)
+    }
     pub fn run_capability_preflight(
         &self,
         task: &str,
@@ -293,6 +377,14 @@ impl RuntimeBridgeService {
 impl RuntimeBridgeService {
     /// 场景就绪不代表关卡加载已完成，保存和冷加载均核对实际存档加载标志。
     fn preflight_loaded_archive(&self, id: &str) -> AppResult<Value> {
+        self.wait_for_loaded_archive(id, "capability-preflight", &Default::default())
+    }
+    pub(super) fn wait_for_loaded_archive(
+        &self,
+        id: &str,
+        session: &str,
+        cancel: &Arc<AtomicBool>,
+    ) -> AppResult<Value> {
         let start = Instant::now();
         loop {
             if start.elapsed() >= Duration::from_secs(60) {
@@ -301,7 +393,16 @@ impl RuntimeBridgeService {
                     "CLI 已连接，但存档和关卡未在限时内就绪。",
                 ));
             }
-            let actual = self.preflight_call(id, "editor_get_archive", json!({}))?;
+            let response = self.run(
+                id,
+                &["capability", "run", "editor_get_archive"],
+                Some(json!({})),
+                session,
+                &uuid::Uuid::new_v4().to_string(),
+                Duration::from_secs(35),
+                cancel.clone(),
+            )?;
+            let actual = preflight_response("editor_get_archive", response)?;
             if actual["archiveAndLevelLoaded"] == true
                 && actual["isLoadingArchive"] != true
                 && actual["isLoadingLevel"] != true
@@ -338,7 +439,8 @@ impl RuntimeBridgeService {
         } else {
             None
         };
-        let id = self.preflight_launch(p, selection)?;
+        let witness = super::native_archive_ui::RootWitness::capture(&root)?;
+        let mut id = self.preflight_launch(p, selection)?;
         self.preflight_progress(p, "runtime-connect")?;
         self.preflight_ready(&id)?;
         p["checks"]
@@ -354,6 +456,7 @@ impl RuntimeBridgeService {
                     "运行时未返回有效能力目录。",
                 ));
             }
+            let mut native_ui = false;
             for name in [
                 "editor_create_archive",
                 "editor_load_archive",
@@ -380,6 +483,10 @@ impl RuntimeBridgeService {
                 if d["available"] != true
                     && ["editor_create_archive", "editor_load_archive"].contains(&name)
                 {
+                    if d["available"] == false && d["currentContext"]["mode"] == "MainMenu" {
+                        native_ui = true;
+                        continue;
+                    }
                     return Err(error(
                         "preflight_capability_unavailable",
                         &format!(
@@ -387,7 +494,8 @@ impl RuntimeBridgeService {
                         ),
                     ));
                 }
-                if name == "editor_load_archive"
+                if !native_ui
+                    && name == "editor_load_archive"
                     && d["inputSchema"]["properties"]["openStartLevel"]["type"] != "boolean"
                 {
                     return Err(error(
@@ -397,35 +505,75 @@ impl RuntimeBridgeService {
                 }
             }
             self.preflight_progress(p, "create-archive")?;
-            let catalog = self.preflight_call(&id, "editor_list_archives", json!({}))?;
-            let archives = catalog["archives"].as_array().ok_or_else(|| {
-                error(
-                    "preflight_isolation_unknown",
-                    "无法读回存档目录，未派发创建。",
-                )
-            })?;
-            if archives.iter().any(|a| {
-                a["path"]
-                    .as_str()
-                    .and_then(|v| PathBuf::from(v).canonicalize().ok())
-                    .is_none_or(|v| !v.starts_with(root.join("Archives")))
-            }) {
-                return Err(error(
-                    "preflight_isolation_unknown",
-                    "运行时枚举到了测试目录之外的存档，未派发创建或修改用户存档。",
-                ));
-            }
-            let created = self.preflight_call(
+            if native_ui {
+                p["initializationRoute"] = json!("native-creator-ui");
+                self.preflight_progress(p, "native-create-form")?;
+                let name = format!("预检-{run}");
+                let created = self.create_from_native_form(
+                    &id,
+                    &witness,
+                    super::native_archive_ui::ArchiveFormInput {
+                        name: &name,
+                        author: "ABYA 基础能力预检",
+                        description: &run,
+                    },
+                    "capability-preflight",
+                    &Default::default(),
+                    || Ok(()),
+                )?;
+                let path = archive_creation::checked_archive(&root, &created["archive"])?;
+                p["checks"].as_array_mut().unwrap().push(json!({"id":"create-archive","status":"passed","route":"native-creator-ui","archive":created["archive"],"path":path}));
+                let selection = super::native_archive_ui::ui_archive_selection(&created)?;
+                if self.instances.stop(&id)?.process_alive {
+                    return Err(error(
+                        "preflight_stop_failed",
+                        "建档实例仍在运行，未启动第二个编辑器。",
+                    ));
+                }
+                id = self.preflight_launch(p, Some(selection))?;
+                self.preflight_ready(&id)?;
+            } else {
+                let catalog = self.preflight_call(&id, "editor_list_archives", json!({}))?;
+                let archives = catalog["archives"].as_array().ok_or_else(|| {
+                    error(
+                        "preflight_isolation_unknown",
+                        "无法读回存档目录，未派发创建。",
+                    )
+                })?;
+                if archives.iter().any(|a| {
+                    a["path"]
+                        .as_str()
+                        .and_then(|v| PathBuf::from(v).canonicalize().ok())
+                        .is_none_or(|v| !v.starts_with(root.join("Archives")))
+                }) {
+                    return Err(error(
+                        "preflight_isolation_unknown",
+                        "运行时枚举到了测试目录之外的存档，未派发创建或修改用户存档。",
+                    ));
+                }
+                let created = self.preflight_call(
                 &id,
                 "editor_create_archive",
                 json!({"name":format!("预检-{run}"),"author":"ABYA 基础能力预检","introduce":run}),
             )?;
-            let path = archive_creation::checked_archive(&root, &created["archive"])?;
-            p["checks"].as_array_mut().unwrap().push(json!({"id":"create-archive","status":"passed","archive":created["archive"],"path":path}));
-            self.preflight_call(&id,"editor_load_archive",json!({"archiveGuid":created["archive"]["guid"],"openStartLevel":true,"discardUnsavedChanges":false}))?;
+                let path = archive_creation::checked_archive(&root, &created["archive"])?;
+                p["checks"].as_array_mut().unwrap().push(json!({"id":"create-archive","status":"passed","archive":created["archive"],"path":path}));
+                self.preflight_call(&id,"editor_load_archive",json!({"archiveGuid":created["archive"]["guid"],"openStartLevel":true,"discardUnsavedChanges":false}))?;
+            }
         }
         self.preflight_progress(p, "save-archive")?;
         let loaded = self.preflight_loaded_archive(&id)?;
+        if !reused
+            && p["checks"]
+                .as_array()
+                .and_then(|checks| checks.iter().find(|c| c["id"] == "create-archive"))
+                .is_none_or(|c| c["archive"]["guid"] != loaded["guid"])
+        {
+            return Err(error(
+                "preflight_load_failed",
+                "打开的存档不是这次创建的存档。",
+            ));
+        }
         let archive = archive_creation::checked_archive(&root, &loaded)?;
         if loaded["archiveAndLevelLoaded"] != true {
             return Err(error("preflight_load_failed", "存档或初始关卡未真正加载。"));

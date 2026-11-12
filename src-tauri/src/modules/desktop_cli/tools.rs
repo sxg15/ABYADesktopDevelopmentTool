@@ -1616,6 +1616,84 @@ mod tests {
         handoff.expect("independent desktop app-server must be able to write to the prepared chat");
     }
 
+    #[test]
+    #[ignore = "Starts the selected Player in a fresh disposable data root and inspects the visible native menu"]
+    fn real_player_isolated_archive_menu() {
+        let exe = std::env::var("ABYA_MENU_SMOKE_PLAYER").unwrap();
+        let output = PathBuf::from(std::env::var_os("ABYA_MENU_SMOKE_OUTPUT").unwrap());
+        let f = fixture();
+        let deps = &f.dispatcher.dependencies;
+        let mut settings = deps.settings.get().unwrap();
+        let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        settings.game_gateway_port = listener.local_addr().unwrap().port();
+        drop(listener);
+        settings.lan_broadcast_enabled = false;
+        settings.game_executable_path = exe.clone();
+        deps.settings.save(&settings).unwrap();
+        deps.connections
+            .set_handler(Arc::new(crate::GameConnectionCoordinator {
+                instances: deps.instances.clone(),
+                logs: deps.logs.clone(),
+            }));
+        deps.connections.start(&settings).unwrap();
+        let task = f
+            .tasks
+            .create(TaskInput {
+                title: "Player 菜单兼容测试".into(),
+                description: String::new(),
+            })
+            .unwrap();
+        let data = f.root.join("isolated-menu-data");
+        std::fs::create_dir_all(data.join("Archives")).unwrap();
+        let snapshot = deps
+            .runtime_bridge
+            .probe_archive_ui(
+                LaunchInstanceInput {
+                    task_id: task.id.clone(),
+                    executable_path: exe.clone(),
+                    name: "隔离主菜单实测".into(),
+                    profile: LaunchProfile {
+                        mode: LaunchMode::Editor,
+                        window_mode: WindowMode::Windowed,
+                        visibility_mode: WindowVisibilityMode::Background,
+                        width: 1280,
+                        height: 720,
+                        archive: None,
+                        host_instance_id: None,
+                        exit_on_failure: false,
+                        language: String::new(),
+                    },
+                },
+                data,
+            )
+            .unwrap();
+        std::fs::write(output, serde_json::to_vec_pretty(&snapshot).unwrap()).unwrap();
+        assert_eq!(snapshot["route"], "native-creator-ui");
+        assert!(
+            snapshot["archive"]["currentLevelGuid"]
+                .as_str()
+                .is_some_and(|v| !v.is_empty())
+        );
+        let creation = Uuid::new_v4().to_string();
+        let args = json!({"taskId":task.id,"creationId":creation,"name":"本任务的空白起点","author":"ABYA QA","executablePath":exe});
+        let init = || {
+            deps.runtime_bridge.create_archive(
+                serde_json::from_value(args.clone()).unwrap(),
+                "menu-smoke",
+                &Uuid::new_v4().to_string(),
+            )
+        };
+        let ready = init().unwrap();
+        let repeated = init().unwrap();
+        for instance in deps.instances.list(Some(&task.id)).unwrap() {
+            let _ = deps.instances.stop(&instance.id);
+        }
+        assert_eq!(ready["status"], "ready", "{ready}");
+        assert_eq!(ready["initializationRoute"], "native-creator-ui");
+        assert_eq!(ready["archiveGuid"], repeated["archiveGuid"]);
+        assert_eq!(ready["instanceId"], repeated["instanceId"]);
+    }
+
     fn result_json(result: ToolCallResult) -> Value {
         serde_json::from_str(result.content[0]["text"].as_str().unwrap()).unwrap()
     }

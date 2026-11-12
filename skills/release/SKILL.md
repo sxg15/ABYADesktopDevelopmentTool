@@ -1,3 +1,7 @@
+## 2026-11-13 主菜单原生空白建档
+
+-UiStaging 的 codex-desktop-workflow-preview-7 包含当前包原生空白建档路线。独立 Player 测试覆盖创建、带开始关卡加载、保存以及第二次冷加载身份核对。
+
 ## 2026-11-13 隔离 Player 就绪与策划确认
 
 本分支 -Validation 构建 codex-desktop-workflow-preview-6，用于 v3.11 真机预检启动复跑。

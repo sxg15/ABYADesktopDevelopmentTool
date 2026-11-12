@@ -1,3 +1,7 @@
+## 2026-11-13 主菜单原生空白建档
+
+production preflight 与 archive create 支持同一绑定 Player 的原生主菜单建档路径。回执注明 native-creator-ui，真实任务仍需经阶段校验、用户授权及包指纹核对；创建可能已派发时沿用原 creationId 回读。
+
 ## 2026-11-12 新任务桌面对话交接
 
 受管桌面对话的实机测试还需从独立客户端接回同一线程，核对工作目录并验证无 writer 占用。

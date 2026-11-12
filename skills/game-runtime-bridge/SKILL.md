@@ -1,3 +1,7 @@
+## 2026-11-13 主菜单原生空白建档
+
+在已初始化的 MainMenu 中，若已知创建/加载接口受 CreatorEditor 场景约束，则使用受管启动的私有 Player：核对该进程在私有数据根留下的启动证据，在 MineMenu 与 CreatArchiveBox 中针对可见、唯一、可操作的控件选择创建、写入名称作者与说明、核对回读后只点击一次创建。只接受独立目录中的新 GUID 和实际关卡，用相同数据根重新启动编辑器，再进行保存与冷读验证。
+
 ## 2026-11-13 隔离 Player 就绪与策划确认
 
 preflight_ready 把 runtime_get_game_state 报告 runtime_not_ready / not_executed / initializing / ready=false 视为尚未就绪，沿用原超时；其他失败直接返回。写入命令不因该判断自动重试。
