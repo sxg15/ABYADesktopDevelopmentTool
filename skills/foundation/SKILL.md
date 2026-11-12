@@ -118,3 +118,5 @@ Read the matching section in [historical contracts](../../docs/skill-history/202
 Owned CLI lease heartbeat (2026-10-26), Workflow 2.5 shared diagnosis (2026-10-24), Terminal freeze recovery (2026-10-22), System memory warning (2026-10-22), Workbench adapters (2026-10-21), Art approval and recheck projections (2026-10-20), 内存保护适配接口（2026-10-19）, Codex-only provider contract (2026-10-19), Workspace library contracts (2026-10-17), Art design contracts (2026-10-16), Game client selection (2026-10-14), Managed sandbox transport, User-initiated clipboard access, Stage workspace update, Workflow 2.0 shared contracts, Review availability contracts (2026-10-12), Background task notifications (2026-10-14), Execution ownership contracts (2026-10-22), Autonomous implementation presentation (2026-10-23).
 
 Transport deactivation clears leases and endpoint but retains paused/stopped conversation fences; only an explicit lifecycle reopen authorizes a fresh session.
+
+ProductionIssue.playerSummary and self-test blockedByIssueIds are optional read fields. Older records fall back to their stored description or observations.
