@@ -312,6 +312,20 @@ fn check_latest_message(reader: impl BufRead, quote: &str, since: &str) -> AppRe
         let payload = &event["payload"];
         let text = match event["type"].as_str() {
             Some("response_item") if payload["type"] == "message" && payload["role"] == "user" => {
+                let kinds = payload
+                    .pointer("/internal_chat_message_metadata_passthrough/content_item_kinds")
+                    .and_then(Value::as_array);
+                if kinds.is_some_and(|items| {
+                    !items.is_empty()
+                        && items
+                            .iter()
+                            .all(|k| k == "environments.environment_context")
+                        && payload["content"]
+                            .as_array()
+                            .is_some_and(|content| content.len() == items.len())
+                }) {
+                    continue;
+                }
                 payload["content"].as_array().map(|items| {
                     items
                         .iter()
@@ -356,6 +370,19 @@ mod tests {
             "payload":{"type":"message","role":role,"content":[{"type":"input_text","text":text}]}})
             .to_string()
         };
+        let mut system_date: Value = serde_json::from_str(&message(
+            "user",
+            "<environment_context>日期变更</environment_context>",
+        ))
+        .unwrap();
+        system_date["payload"]["internal_chat_message_metadata_passthrough"] =
+            json!({"content_item_kinds":["environments.environment_context"]});
+        let dated = [message("user", "确认本版"), system_date.to_string()].join("\n");
+        assert!(check_latest_message(dated.as_bytes(), "确认本版", time).is_ok());
+        system_date["payload"]["internal_chat_message_metadata_passthrough"] =
+            json!({"content_item_kinds":["user.text"]});
+        let authored = [message("user", "确认本版"), system_date.to_string()].join("\n");
+        assert!(check_latest_message(authored.as_bytes(), "确认本版", time).is_err());
         let log = [
             message("user", "旧版通过"),
             message("assistant", "新版通过"),

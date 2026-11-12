@@ -1,3 +1,7 @@
+## 2026-11-13 隔离 Player 就绪与策划确认
+
+本分支 -Validation 构建 codex-desktop-workflow-preview-6，用于 v3.11 真机预检启动复跑。
+
 ## 2026-11-12 新任务桌面对话交接
 
 本分支 -UiStaging 生成 codex-desktop-workflow-preview-5，修复策划全流程演练中的首次对话占用。

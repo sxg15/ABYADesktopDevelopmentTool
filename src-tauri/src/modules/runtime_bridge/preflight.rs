@@ -8,6 +8,29 @@ fn error(code: &str, message: &str) -> AppError {
     AppError::new(code, message, "preflight-report")
 }
 
+fn preflight_response(tool: &str, response: Value) -> AppResult<Value> {
+    if response["success"] == true {
+        return Ok(response["data"].clone());
+    }
+    let data = &response["data"];
+    if tool == "runtime_get_game_state"
+        && response["success"] == false
+        && data["errorCode"] == "runtime_not_ready"
+        && data["executionState"] == "not_executed"
+        && data["status"] == "initializing"
+        && data["ready"] == false
+    {
+        return Err(error(
+            "preflight_root_initializing",
+            "游戏运行时正在初始化。",
+        ));
+    }
+    Err(error(
+        "preflight_runtime_failed",
+        &format!("{tool}: {data}"),
+    ))
+}
+
 impl RuntimeBridgeService {
     /// 固定测试脚本仅能调用这些能力；不开放设计阶段的任意运行写入。
     fn preflight_call(&self, id: &str, tool: &str, input: Value) -> AppResult<Value> {
@@ -33,13 +56,7 @@ impl RuntimeBridgeService {
             Duration::from_secs(35),
             Default::default(),
         )?;
-        if response["success"] != true {
-            return Err(error(
-                "preflight_runtime_failed",
-                &format!("{tool}: {}", response["data"]),
-            ));
-        }
-        Ok(response["data"].clone())
+        preflight_response(tool, response)
     }
 
     fn preflight_progress(&self, p: &mut Value, phase: &str) -> AppResult<()> {
@@ -94,11 +111,16 @@ impl RuntimeBridgeService {
                     "CLI 已连接，但游戏根未在限时内就绪。",
                 ));
             }
-            let game = self.preflight_call(id, "runtime_get_game_state", json!({}))?;
-            if game["context"]["rootInitialized"] == true
-                && game["context"]["isTransitioning"] == false
-            {
-                return Ok(());
+            match self.preflight_call(id, "runtime_get_game_state", json!({})) {
+                Ok(game)
+                    if game["context"]["rootInitialized"] == true
+                        && game["context"]["isTransitioning"] == false =>
+                {
+                    return Ok(());
+                }
+                Ok(_) => {}
+                Err(e) if e.code == "preflight_root_initializing" => {}
+                Err(e) => return Err(e),
             }
             std::thread::sleep(Duration::from_millis(300));
         }
@@ -472,5 +494,33 @@ impl RuntimeBridgeService {
             ));
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod readiness_tests {
+    use super::*;
+    #[test]
+    fn only_the_unexecuted_readiness_probe_is_retryable_on_startup() {
+        let mut response = json!({"success":false,"data":{"errorCode":"runtime_not_ready","executionState":"not_executed","status":"initializing","ready":false}});
+        assert_eq!(
+            preflight_response("runtime_get_game_state", response.clone())
+                .unwrap_err()
+                .code,
+            "preflight_root_initializing"
+        );
+        assert_eq!(
+            preflight_response("editor_create_archive", response.clone())
+                .unwrap_err()
+                .code,
+            "preflight_runtime_failed"
+        );
+        response["data"]["executionState"] = json!("outcome_unknown");
+        assert_eq!(
+            preflight_response("runtime_get_game_state", response)
+                .unwrap_err()
+                .code,
+            "preflight_runtime_failed"
+        );
     }
 }

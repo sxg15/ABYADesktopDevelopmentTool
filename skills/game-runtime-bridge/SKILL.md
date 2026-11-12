@@ -1,3 +1,7 @@
+## 2026-11-13 隔离 Player 就绪与策划确认
+
+preflight_ready 把 runtime_get_game_state 报告 runtime_not_ready / not_executed / initializing / ready=false 视为尚未就绪，沿用原超时；其他失败直接返回。写入命令不因该判断自动重试。
+
 ## 2026-11-06 预检完成条件
 
 启动试玩各窗口使用确认后的同一 App PB。试玩会话记录实际路径、实际指纹、候选原指纹和兼容试玩标记。预检回传原生设置错误码供 App 恢复。
