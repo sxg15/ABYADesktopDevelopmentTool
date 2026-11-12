@@ -1,0 +1,14 @@
+{
+  "sha256": "b07720209862108c454de3d542d6e43864af06b01de03de773274831229b9f41",
+  "workflowVersion": "2.11.0",
+  "version": "0.4.0",
+  "builtAtUtc": "2026-11-12T11:48:49.2958273Z",
+  "edition": "mcp",
+  "executable": "ABYA Desktop Development Tool MCP.exe",
+  "releaseLabel": "mcp-native-20261031",
+  "sourceFingerprint": "b93853a7219b574481d413b310971f1054537674918be8c08a0b9e7cd0ec743e",
+  "toolTransport": "mcp",
+  "sourceBuiltAtUtc": "2026-11-12T11:44:25.6839508Z",
+  "mcpProtocolVersion": "2025-11-25",
+  "product": "ABYA Desktop Development Tool MCP"
+}
