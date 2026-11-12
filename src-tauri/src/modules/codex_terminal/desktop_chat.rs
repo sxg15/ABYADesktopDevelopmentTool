@@ -1,6 +1,23 @@
 use super::*;
 use serde_json::{Value, json};
 
+const DESKTOP_INSTRUCTIONS: &str = "这是 ABYA 开发 APP 创建的任务对话。开始制作前，读取本工作区 .codex/skills/abya-desktop-workflow/SKILL.md，通过 .codex/abya-desktop.json 中的 cli 核对任务 ID。文档确认、回退和修改意见由当前策划表达，按具体版本记录。";
+
+pub(super) fn same_workspace(thread: &Value, expected: &Path) -> AppResult<bool> {
+    let cwd = thread["cwd"]
+        .as_str()
+        .ok_or_else(|| AppError::validation("Codex 未报告对话工作目录。"))?;
+    let actual = Path::new(cwd);
+    if !actual.is_absolute() {
+        return Err(AppError::validation("Codex 返回了无效的工作目录。"));
+    }
+    Ok(actual.canonicalize().is_ok_and(|p| {
+        expected
+            .canonicalize()
+            .is_ok_and(|root| paths_equal(&p, &root))
+    }))
+}
+
 impl CodexTerminalService {
     #[cfg(test)]
     pub(crate) fn with_session_store(mut self, root: PathBuf) -> Self {
@@ -8,66 +25,183 @@ impl CodexTerminalService {
         self
     }
 
-    pub fn desktop_thread_bound(&self, id: &str) -> AppResult<bool> {
+    pub fn prepared_desktop_link(&self, id: &str) -> AppResult<Option<String>> {
         let file = self.tasks.desktop_context_path(id)?;
         if !file.exists() {
-            return Ok(false);
+            return Ok(None);
         }
         let saved: Value = serde_json::from_slice(&std::fs::read(file)?)?;
+        let Some(native) = saved["preparedThread"].as_str() else {
+            return Ok(None);
+        };
+        Uuid::parse_str(native).map_err(AppError::internal)?;
         let cid = saved["conversationId"]
             .as_str()
             .ok_or_else(|| AppError::validation("任务对话记录缺失。"))?;
         Uuid::parse_str(cid).map_err(AppError::internal)?;
         let chat = self.conversation(id, cid)?;
-        Ok(!chat.archived && chat.native_session_id.is_some())
+        Ok(
+            (!chat.archived && chat.native_session_id.as_deref() == Some(native))
+                .then(|| format!("codex://threads/{native}")),
+        )
     }
 
-    pub fn desktop_chat(&self, id: &str, prompt: &str) -> AppResult<String> {
+    pub fn desktop_chat(&self, id: &str) -> AppResult<String> {
+        let cli = (self.resolver)().ok_or_else(|| {
+            AppError::validation("找不到 Codex CLI，无法建立任务对话。请检查 Codex 安装后重试。")
+        })?;
+        let server = self.ensure_app_server(&cli)?;
+        self.prepare_desktop_chat(id, &server)
+    }
+
+    fn prepare_desktop_chat(&self, id: &str, server: &AppServerHandle) -> AppResult<String> {
         let gate = self.gate(id);
         let _guard = gate.normal.lock();
         if crate::foundation::cli_sessions::task_active(id) {
             return Err(AppError::validation(
-                "此任务仍有旧版执行正在运行。请先结束该次执行，再接入桌面对话。",
+                "此任务仍有旧版执行正在运行，请先结束该次执行。",
             ));
         }
         let task = self.tasks.get_readonly(id)?;
-        self.tasks
-            .install_desktop_skills(Path::new(&task.workspace_path))?;
+        let workspace = Path::new(&task.workspace_path);
+        self.tasks.install_desktop_skills(workspace)?;
         let file = self.tasks.desktop_context_path(id)?;
-        let chat = if file.exists() {
-            let saved: Value = serde_json::from_slice(&std::fs::read(file)?)?;
-            let cid = saved["conversationId"]
-                .as_str()
-                .ok_or_else(|| AppError::validation("任务对话记录缺失。"))?;
+        let saved = if file.exists() {
+            serde_json::from_slice(&std::fs::read(file)?)?
+        } else {
+            Value::Null
+        };
+        let mut chat = if let Some(cid) = saved["conversationId"].as_str() {
             Uuid::parse_str(cid).map_err(AppError::internal)?;
             self.conversation(id, cid)?
         } else {
-            let mut chats: Vec<_> = self
-                .list_conversations(id)?
+            let mut candidates = self
+                .stored_conversations(id)?
                 .into_iter()
-                .filter(|c| !c.archived && c.native_session_id.is_some())
-                .collect();
-            if chats.len() == 1 {
-                chats.remove(0)
-            } else {
-                self.create_conversation(id, Some(task.title.chars().take(60).collect()))?
+                .filter(|c| !c.archived && c.native_session_id.is_some());
+            match (candidates.next(), candidates.next()) {
+                (Some(chat), None) => chat,
+                _ => self.create_conversation(id, Some(task.title.chars().take(60).collect()))?,
             }
         };
-        if chat.archived {
+        let mut prepared = saved["preparedThread"].as_str();
+        if let Some(native) = chat.native_session_id.as_deref() {
+            Uuid::parse_str(native).map_err(AppError::internal)?;
+            let reusable = match server.request(
+                "thread/read",
+                json!({"threadId":native,"includeTurns":false}),
+            ) {
+                Ok(metadata) => {
+                    let thread = &metadata["thread"];
+                    if thread["id"] != native {
+                        return Err(AppError::validation("Codex 返回了其他对话，已停止打开。"));
+                    }
+                    !chat.archived
+                        && same_workspace(thread, workspace)?
+                        && !lifecycle::native_archived_state(thread)?
+                }
+                Err(error) if error.code == "codex_session_missing" => false,
+                Err(error) => return Err(error),
+            };
+            if !reusable {
+                chat = self.create_conversation(id, Some(task.title.chars().take(60).collect()))?;
+                prepared = None;
+            }
+        }
+        let project = server.ensure_project(&task)?;
+        let locator = crate::foundation::cli_environment::task_locator(id, workspace)?;
+        let context = |c: &CodexConversation, prepared: Option<&str>| {
+            json!({
+                "taskId":id,"provider":"codex","conversationId":c.id,
+                "preparedThread":prepared,"desktopLocator":locator,"cli":crate::foundation::cli_environment::desktop_cli_path()
+            })
+        };
+        if chat.native_session_id.is_none() {
+            self.tasks.save_desktop_context(id, &context(&chat, None))?;
+            let started = server.request(
+                "thread/start",
+                json!({"cwd":task.workspace_path,"projectId":project,"ephemeral":false,"developerInstructions":DESKTOP_INSTRUCTIONS}),
+            )?;
+            if !same_workspace(&started["thread"], workspace)? {
+                return Err(AppError::validation(
+                    "新对话的工作目录与任务不同，已保留当前任务并停止打开。",
+                ));
+            }
+            let native = started["thread"]["id"]
+                .as_str()
+                .ok_or_else(|| AppError::validation("Codex 未返回新对话 ID。"))?;
+            Uuid::parse_str(native).map_err(AppError::internal)?;
+            chat.native_session_id = Some(native.into());
+            write_conversation(&conversation_directory(workspace, &chat.id), &chat)?;
+            server.persist_developer_instructions(native, DESKTOP_INSTRUCTIONS)?;
+        }
+        let native = chat.native_session_id.as_deref().unwrap();
+        let mut meta = server.request(
+            "thread/read",
+            json!({"threadId":native,"includeTurns":false}),
+        )?;
+        if meta["thread"]["id"] != native || !same_workspace(&meta["thread"], workspace)? {
             return Err(AppError::validation(
-                "此任务绑定的 Codex 对话已归档，请先在 Codex 中恢复。",
+                "Codex 返回的工作目录与任务不一致，请重新打开任务。",
             ));
         }
-        self.tasks.save_desktop_context(id,&json!({"taskId":id,"provider":"codex","conversationId":chat.id,"cli":crate::foundation::cli_environment::desktop_cli_path()}))?;
-        if let Some(native) = chat.native_session_id {
-            let native = Uuid::parse_str(&native).map_err(AppError::internal)?;
-            return Ok(format!("codex://threads/{native}"));
+        if prepared != Some(native) || meta["thread"]["projectId"] != project {
+            server.organize_thread(&project, &task, &chat, native)?;
+            meta = server.request(
+                "thread/read",
+                json!({"threadId":native,"includeTurns":false}),
+            )?;
+            if meta["thread"]["id"] != native
+                || !same_workspace(&meta["thread"], workspace)?
+                || meta["thread"]["projectId"] != project
+            {
+                return Err(AppError::validation(
+                    "Codex 未关联正确的任务项目，未打开对话。",
+                ));
+            }
         }
-        let mut url = reqwest::Url::parse("codex://new").map_err(AppError::internal)?;
-        url.query_pairs_mut()
-            .append_pair("path", &task.workspace_path)
-            .append_pair("prompt", prompt);
-        Ok(url.into())
+        self.tasks
+            .save_desktop_context(id, &context(&chat, Some(native)))?;
+        Ok(format!("codex://threads/{native}"))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn archive_desktop_fixture(
+        &self,
+        task: &crate::modules::tasks::DevelopmentTask,
+        native: &str,
+    ) {
+        let server = self.ensure_app_server(&(self.resolver)().unwrap()).unwrap();
+        let project = server.ensure_project(task).unwrap();
+        server
+            .request("thread/archive", json!({"threadId":native}))
+            .unwrap();
+        server
+            .request("project/delete", json!({"projectId":project}))
+            .unwrap();
+        self.stop_all();
+    }
+
+    #[cfg(test)]
+    pub(crate) fn fixture_desktop_chat(&self, id: &str, native: &str) -> AppResult<String> {
+        let task = self.tasks.get_readonly(id)?;
+        let native = native.to_owned();
+        let server = AppServerHandle::for_rpc_test(move |method, params| {
+            Ok(match method {
+                "project/list" => {
+                    json!({"data":[{"id":"test-project","roots":[{"path":task.workspace_path}]}]})
+                }
+                "thread/read" if params["threadId"] != native => {
+                    json!({"thread":{"id":params["threadId"],"cwd":std::env::temp_dir(),"projectId":"previous-project","archived":false}})
+                }
+                "thread/start" | "thread/read" => {
+                    json!({"thread":{"id":native,"cwd":task.workspace_path,"projectId":"test-project","archived":false}})
+                }
+                "thread/inject_items" | "thread/name/set" => json!({}),
+                _ => return Err(format!("Unexpected RPC {method}")),
+            })
+        });
+        self.prepare_desktop_chat(id, &server)
     }
 
     pub fn check_desktop_thread(&self, id: &str, cid: &str, native: &str) -> AppResult<()> {
@@ -79,24 +213,16 @@ impl CodexTerminalService {
         if context["conversationId"] != cid {
             return Err(AppError::validation("此对话没有绑定当前任务。"));
         }
-        let mut chat = self.conversation(id, cid)?;
-        if chat.archived {
-            return Err(AppError::validation("对话已归档。"));
+        let chat = self.conversation(id, cid)?;
+        if chat.archived
+            || chat.native_session_id.as_deref() != Some(native)
+            || context["preparedThread"] != native
+        {
+            return Err(AppError::validation(
+                "当前 Codex 对话未绑定这项任务。请在开发 APP 点击「打开任务对话」后继续。",
+            ));
         }
-        if let Some(bound) = chat.native_session_id {
-            return if bound == native {
-                Ok(())
-            } else {
-                Err(AppError::validation("请回到本任务绑定的对话。"))
-            };
-        }
-        self.desktop_rollout(id, native)?;
-        let task = self.tasks.get_readonly(id)?;
-        chat.native_session_id = Some(native.to_owned());
-        write_conversation(
-            &conversation_directory(Path::new(&task.workspace_path), cid),
-            &chat,
-        )
+        Ok(())
     }
 
     fn desktop_rollout(&self, id: &str, native: &str) -> AppResult<PathBuf> {

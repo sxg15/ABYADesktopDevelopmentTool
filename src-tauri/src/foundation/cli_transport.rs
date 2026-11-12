@@ -15,7 +15,7 @@ pub enum Connection {
     },
 }
 impl Connection {
-    pub fn discover() -> AppResult<Self> {
+    pub fn discover(desktop_file: Option<&std::path::Path>) -> AppResult<Self> {
         match (
             std::env::var("ABYA_DESKTOP_PIPE"),
             std::env::var("ABYA_DESKTOP_SESSION_TOKEN"),
@@ -45,7 +45,7 @@ impl Connection {
                 })
             }
             (Err(_), Err(_)) => {
-                let (endpoint, token) = cli_environment::connection()?;
+                let (endpoint, token) = cli_environment::connection(desktop_file)?;
                 Ok(Self::Http { endpoint, token })
             }
             _ => Err(AppError::validation(

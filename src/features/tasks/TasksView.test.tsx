@@ -12,9 +12,9 @@ it("opens the selected project once and switches without a terminal or collapsin
  const props={t:translator("zh-CN"),notify:vi.fn()};
  const page=render(<TasksView {...props}/>);
  await screen.findByText("流程 A");
- await waitFor(()=>expect(openTaskChat).toHaveBeenCalledWith("A","prepare"));
+ await waitFor(()=>expect(openTaskChat).toHaveBeenCalledWith("A"));
  fireEvent.click(screen.getByRole("button",{name:/B/}));
- await waitFor(()=>expect(openTaskChat).toHaveBeenCalledWith("B","prepare"));
+ await waitFor(()=>expect(openTaskChat).toHaveBeenCalledWith("B"));
  expect(screen.getByRole("button",{name:/A/})).toBeTruthy();
  expect(screen.queryByRole("tab",{name:/终端/})).toBeNull();
  page.rerender(<TasksView {...props}/>);

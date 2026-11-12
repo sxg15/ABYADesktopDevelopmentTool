@@ -1454,11 +1454,10 @@ mod tests {
             .unwrap();
         let id = &task.id;
         let workspace = std::path::Path::new(&task.workspace_path);
-        assert!(
-            f.codex_terminal
-                .desktop_chat(id, "整理文档")
-                .unwrap()
-                .contains("codex://new?")
+        let native = Uuid::new_v4().to_string();
+        assert_eq!(
+            f.codex_terminal.fixture_desktop_chat(id, &native).unwrap(),
+            format!("codex://threads/{native}")
         );
         let mut context: Value = serde_json::from_slice(
             &std::fs::read(f.tasks.desktop_context_path(id).unwrap()).unwrap(),
@@ -1470,7 +1469,8 @@ mod tests {
                 .is_file()
         );
         context.as_object_mut().unwrap().remove("cli");
-        let native = Uuid::new_v4().to_string();
+        context.as_object_mut().unwrap().remove("preparedThread");
+        context.as_object_mut().unwrap().remove("desktopLocator");
         context["desktopThread"] = json!(native);
         let sessions = f.root.join("sessions");
         std::fs::create_dir_all(&sessions).unwrap();
@@ -1484,7 +1484,7 @@ mod tests {
         };
         assert!(!call("development_production_get", json!({})).is_error);
         assert_eq!(
-            f.codex_terminal.desktop_chat(id, "继续").unwrap(),
+            f.codex_terminal.fixture_desktop_chat(id, &native).unwrap(),
             format!("codex://threads/{native}")
         );
         let mutate = |rev, op, data| {
@@ -1543,6 +1543,73 @@ mod tests {
                 .unwrap(),
             "手改计分规则"
         );
+    }
+
+    #[test]
+    fn mismatched_working_directory_rebinds_without_moving_the_prior_thread() {
+        let f = fixture();
+        let task = f
+            .tasks
+            .create(TaskInput {
+                title: "原目录已变化".into(),
+                description: String::new(),
+            })
+            .unwrap();
+        let prior = Uuid::new_v4().to_string();
+        let current = Uuid::new_v4().to_string();
+        let id = &task.id;
+        f.codex_terminal.fixture_desktop_chat(id, &prior).unwrap();
+        let link = f.codex_terminal.fixture_desktop_chat(id, &current).unwrap();
+        assert_eq!(link, format!("codex://threads/{current}"));
+        assert_eq!(
+            f.codex_terminal.prepared_desktop_link(id).unwrap(),
+            Some(link)
+        );
+        let chats = f.codex_terminal.list_conversations(id).unwrap();
+        assert_eq!(chats.len(), 2);
+        let old = chats
+            .iter()
+            .find(|c| c.native_session_id.as_deref() == Some(&prior))
+            .unwrap();
+        assert!(
+            f.codex_terminal
+                .check_desktop_thread(id, &old.id, &prior)
+                .is_err()
+        );
+    }
+
+    #[test]
+    #[ignore = "Creates an isolated QA project and thread in the installed Codex app server"]
+    fn real_desktop_chat_binds_before_first_message() {
+        let f = fixture();
+        let task = f
+            .tasks
+            .create(TaskInput {
+                title: "ABYA 桌面对话定位验收".into(),
+                description: "测试用任务".into(),
+            })
+            .unwrap();
+        let id = &task.id;
+        let result = f.codex_terminal.desktop_chat(id).unwrap();
+        let native = result.strip_prefix("codex://threads/").unwrap();
+        Uuid::parse_str(native).unwrap();
+        assert_eq!(
+            f.codex_terminal
+                .prepared_desktop_link(id)
+                .unwrap()
+                .as_deref(),
+            Some(result.as_str())
+        );
+        assert_eq!(f.codex_terminal.desktop_chat(id).unwrap(), result);
+        let ctx: Value = serde_json::from_slice(
+            &std::fs::read(f.tasks.desktop_context_path(id).unwrap()).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(ctx["preparedThread"], native);
+        println!(
+            "Verified installed Codex thread {native}, correct cwd, project membership and idempotent reopen."
+        );
+        f.codex_terminal.archive_desktop_fixture(&task, native);
     }
 
     fn result_json(result: ToolCallResult) -> Value {

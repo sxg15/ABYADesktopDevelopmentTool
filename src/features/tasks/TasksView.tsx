@@ -8,7 +8,7 @@ import {CreateTaskModal} from "./CreateTaskModal";
 import {TaskDescription} from "./TaskDescription";
 import {SkillLibrary} from "./SkillLibrary";
 import {StageReader} from "./StageReader";
-import {openTaskChat,briefPrompt} from "./desktopChat";
+import {openTaskChat} from "./desktopChat";
 import {TaskInstances} from "./TaskInstances";
 
 
@@ -37,7 +37,7 @@ export function TasksView({settings,t,notify,notificationNavigation,onNotificati
     localStorage.setItem("abya:last-desktop-task",selected.id);
     if(opened.current===selected.id||selected.status!=="active")return;
     opened.current=selected.id;
-    void openTaskChat(selected.id,briefPrompt).catch(e=>notify(errorMessage(e),true));
+    void openTaskChat(selected.id).catch(e=>notify(errorMessage(e),true));
   },[selected?.id,library,visible]);
   if(library)return <SkillLibrary key={id} taskId={selected?.id??""} active={selected?.status==="active"} locale={settings?.locale}/>;
   return <div className="workspace tasks-workspace desktop-workspace">

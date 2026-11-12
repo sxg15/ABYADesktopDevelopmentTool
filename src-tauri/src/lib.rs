@@ -686,19 +686,28 @@ fn desktop_chat_status(
     state: State<'_, AppState>,
 ) -> AppResult<serde_json::Value> {
     Ok(
-        serde_json::json!({"ready":state.desktop_cli.state().running,"bound":state.codex_terminal.desktop_thread_bound(&task_id)?}),
+        serde_json::json!({"ready":state.desktop_cli.state().running,"bound":state.codex_terminal.prepared_desktop_link(&task_id)?.is_some()}),
     )
+}
+
+#[tauri::command(async)]
+fn prepare_desktop_chat(task_id: String, state: State<'_, AppState>) -> AppResult<String> {
+    state.codex_terminal.desktop_chat(&task_id)
 }
 
 #[tauri::command(async)]
 fn open_desktop_chat(
     task_id: String,
-    prompt: String,
+    expected_link: String,
     state: State<'_, AppState>,
     app: tauri::AppHandle,
 ) -> AppResult<()> {
     use tauri_plugin_opener::OpenerExt;
-    let url = state.codex_terminal.desktop_chat(&task_id, &prompt)?;
+    let url = state
+        .codex_terminal
+        .prepared_desktop_link(&task_id)?
+        .filter(|url| url == &expected_link)
+        .ok_or_else(|| foundation::AppError::validation("任务对话已变化，请重新打开当前任务。"))?;
     app.opener()
         .open_url(url, None::<&str>)
         .map_err(foundation::AppError::internal)
@@ -1528,6 +1537,7 @@ pub fn run() {
             read_task_skill,
             read_document_source,
             desktop_chat_status,
+            prepare_desktop_chat,
             open_desktop_chat,
             open_production_artifact,
             reveal_production_report,

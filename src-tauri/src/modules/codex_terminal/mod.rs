@@ -288,7 +288,7 @@ impl CodexTerminalService {
         }
     }
 
-    pub fn list_conversations(&self, task_id: &str) -> AppResult<Vec<CodexConversation>> {
+    fn stored_conversations(&self, task_id: &str) -> AppResult<Vec<CodexConversation>> {
         let task = self.tasks.get_readonly(task_id)?;
         let root = conversations_root(Path::new(&task.workspace_path));
         if !root.is_dir() {
@@ -311,6 +311,13 @@ impl CodexTerminalService {
             }
         }
         conversations.sort_by(|left, right| right.updated_at.cmp(&left.updated_at));
+        Ok(conversations)
+    }
+
+    pub fn list_conversations(&self, task_id: &str) -> AppResult<Vec<CodexConversation>> {
+        let conversations = self.stored_conversations(task_id)?;
+        #[cfg(not(test))]
+        let task = self.tasks.get_readonly(task_id)?;
         #[cfg(not(test))]
         if self.metadata_refreshing.lock().insert(task_id.into()) {
             let service = self.clone();

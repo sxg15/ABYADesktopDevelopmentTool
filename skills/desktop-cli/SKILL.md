@@ -1,3 +1,9 @@
+读取工作区上下文时使用 desktopLocator 定位准备该任务的 APP，即使 Codex 的 LOCALAPPDATA 与 APP 不同。任务目录内不保存连接令牌。
+
+## 2026-11-12 修复桌面对话定位
+
+桌面 CLI 只接受 APP 准备并核对过的原生线程 ID；在无关对话粘贴提示词时用其中的原始任务链接跳回。
+
 ## 2026-11-12 Codex 桌面制作流程
 
 桌面对话从工作目录读取 .codex/abya-desktop.json 和 CODEX_THREAD_ID，经当前 Windows 用户的加密连接描述访问 APP。production respond 将绑定对话的策划原话、当前修订号和文档哈希交由任务服务核对。

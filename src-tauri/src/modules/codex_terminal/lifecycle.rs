@@ -4,7 +4,7 @@ use serde_json::Value;
 
 // Current Codex schema exposes archive storage through Thread.path (unstable).
 // Never infer "active" from omission in thread/list: empty threads can be omitted.
-fn native_archived_state(thread: &Value) -> AppResult<bool> {
+pub(super) fn native_archived_state(thread: &Value) -> AppResult<bool> {
     if let Some(value) = thread["archived"].as_bool() {
         return Ok(value);
     }
@@ -81,6 +81,13 @@ impl AppServerHandle {
             "thread/read",
             json!({"threadId":thread,"includeTurns":false}),
         )?;
+        if current["thread"]["id"] != thread
+            || !desktop_chat::same_workspace(&current["thread"], Path::new(&task.workspace_path))?
+        {
+            return Err(AppError::validation(
+                "对话属于其他工作区，未更改其项目或标题。",
+            ));
+        }
         if current["thread"]["projectId"].as_str() != Some(project) {
             self.request(
                 "thread/metadata/update",
