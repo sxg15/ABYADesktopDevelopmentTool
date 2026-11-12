@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from "react";
-import {CirclePlus} from "lucide-react";
+import {CirclePlus,Gamepad2} from "lucide-react";
 import type {MessageKey} from "../../i18n";
 import type {AppSettings,DevelopmentTask} from "../../shared/types";
 import type {NotificationActivation} from "../../shared/notifications";
@@ -46,7 +46,10 @@ export function TasksView({settings,t,notify,notificationNavigation,onNotificati
       <div className="task-list">{tasks.map(task=><button key={task.id} className={"task-row "+(id===task.id?"selected":"")} onClick={()=>{setStage("");setId(task.id);}}>
         <span className={"status-dot status-"+task.status}/><span className="task-row-copy"><strong>{task.title}</strong><small>{t(task.status)}</small></span></button>)}</div></aside>
     <section className="content-pane desktop-task">{selected?<>
-      <header className="content-header task-content-header"><h2>{selected.title}</h2>
+      <header className="content-header task-content-header">
+        <div className="task-heading-title"><span className="task-title-icon"><Gamepad2 size={23} aria-hidden="true"/></span>
+          <div><div className="eyebrow">{t(selected.status)}</div><h2>{selected.title}</h2></div>
+        </div>
       <TaskDescription key={id} taskId={id} description={selected.description} workspacePath={selected.workspacePath} en={settings?.locale==="en-US"}/></header>
       <StageReader key={id} task={selected} stage={stage} selectStage={setStage} notify={notify} visible={visible}>
         <TaskInstances task={selected} t={t} settings={settings} notify={notify}/>

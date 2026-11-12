@@ -1,4 +1,10 @@
 import {useEffect,useState,type ReactNode} from "react";
+import {
+  ArrowRight, ChevronRight, CircleHelp, ClipboardCheck, FilePenLine, FileText,
+  History, Info, MapPin, MessageSquare, RotateCcw, TriangleAlert, Unplug, Workflow,
+} from "lucide-react";
+import "./taskGuidance.css";
+import "./workbench.css";
 import {productionApi,type ProductionRecord,type ProductionView} from "../../shared/production";
 import type {DevelopmentTask} from "../../shared/types";
 import {errorMessage} from "../../shared/api";
@@ -48,16 +54,61 @@ export function StageReader({task,stage,selectStage,notify,visible,children}:{ta
   const instruction=needsRepair?"请在下方查看没通过的检查。你可以在 Codex 中要求修复，或指定使用已有存档重新验证。":blocked|| (start?"在 Codex 中提供已有定稿，或写下玩法想法并附上参考图。":review?"请审阅"+names[current]+"第 "+review.revision+" 版。在 Codex 中确认这一版或直接指出要改的地方。":"回到任务对话继续制作，或告诉 Codex 要修复的具体问题。");
   const prompt=needsRepair?"请读取本任务失败的预检，解释它对玩法的影响，定位原因并验证修复结果。":blocked?"请根据任务服务列出的待处理项修订当前成果，并说明需要我决定的事项。":start?briefPrompt:review?"我已审阅并确认「"+names[current]+"」第 "+review.revision+" 版（"+review.sha256+"），请按项目流程继续。":"请读取当前任务的实际进度，继续当前阶段；如果需要我确认，请先展示对应成果。";
   async function open(copy:boolean){try{const opened=copy?await copyAndOpenTaskChat(task,prompt):await openTaskChat(task.id);if(opened&&copy)notify("提示词已复制，请在任务对话中粘贴并发送。");}catch(e){notify(errorMessage(e),true);}}
-  return <><section className="desktop-guide"><div><small className="desktop-link-state">{connection?(connection.ready?"开发环境就绪":"开发环境连接已断开")+(connection.bound?" · 已关联任务对话":" · 等待对话连接任务"):"正在读取任务环境"}</small><strong>{review?"等待审阅":start?"准备玩法文档":names[current]}</strong><p>{instruction}</p></div>
-    <div><button className="secondary-button" onClick={()=>void open(false)}>打开任务对话</button>
-    {task.status==="active"&&<button className="primary-button" onClick={()=>void open(true)}>{(needsRepair?"复制修复指令":blocked?"复制处理指令":start?"复制开场提示词":review?"复制确认指令":"复制继续指令")+"并打开 Codex"}</button>}</div></section>
+  const disconnected = connection?.ready === false;
+  const attention = needsRepair || !!blocked;
+  const Icon = disconnected ? Unplug : attention ? TriangleAlert : review ? ClipboardCheck : start ? FilePenLine : CircleHelp;
+  const guidanceTitle = disconnected ? "开发环境已断开" : needsRepair ? "预检需要处理" : blocked ? "审阅前有待处理项" : review ? "等待审阅" : start ? "准备玩法文档" : "当前工作";
+  const tone = disconnected || attention ? "error" : review || start ? "human" : "idle";
+  const copyLabel = needsRepair ? "复制修复指令" : blocked ? "复制处理指令" : start ? "复制开场提示词" : review ? "复制确认指令" : "复制继续指令";
+  const connectionText = connection
+    ? (connection.ready ? "开发环境就绪" : "开发环境连接已断开") + (connection.bound ? " · 已关联任务对话" : " · 等待对话连接任务")
+    : "正在读取任务环境";
+
+  return <><div className="task-guidance-shell">
+    <section className={"task-guidance desktop-guide tone-" + tone} aria-label="当前操作指引">
+      <div className="guidance-main" role="status">
+        <span className="guidance-icon"><Icon size={20} aria-hidden="true"/></span>
+        <div className="guidance-copy">
+          <div className="guidance-eyebrow"><strong>任务状态</strong><span>{names[current] ?? current}</span></div>
+          <h2>{guidanceTitle}</h2><p>{instruction}</p>
+        </div>
+      </div>
+      <div className="guidance-action">
+        <span className="guidance-destination"><MapPin size={14}/> 操作位置：Codex 任务对话</span>
+        {task.status === "active"
+          ? <button className="guidance-primary" onClick={()=>void open(true)} aria-label={copyLabel+"并打开 Codex"} title={copyLabel+"并打开任务对话"}>复制并前往 Codex <ArrowRight size={15}/></button>
+          : <button className="guidance-secondary" onClick={()=>void open(false)}>打开任务对话 <ArrowRight size={15}/></button>}
+      </div>
+      <div className="guidance-detail"><Info size={14}/><span>{connectionText}</span>
+        {task.status === "active" && <button className="text-button" onClick={()=>void open(false)}><MessageSquare size={13}/> 打开任务对话</button>}
+      </div>
+    </section></div>
     {error&&<p role="alert" className="inline-error">{error}</p>}
     {view&&!record&&<p className="reading-sheet">此任务按需制作，可直接在 Codex 中处理具体问题。</p>}
-    {record&&view&&<><nav className="desktop-stages" aria-label="制作阶段">{view.policy.stages.map((s,i)=><button key={s.id} aria-current={shown===s.id?"step":undefined} onClick={()=>{selectStage(s.id===current?"":s.id);setGoal("");}}>
-      <span>{i+1}</span><strong>{names[s.id]??s.name}</strong><small>{statusName(view.stageStatuses?.[s.id]??record.stages[s.id]??"pending")}</small></button>)}</nav>
-    <div className="desktop-stage-body"><aside><h3>本阶段子阶段</h3>{goals.map(g=><button key={g.id} aria-pressed={g.id===(goalId||record.workbench?.activeGoalId)} onClick={()=>setGoal(g.id)}>{g.title}</button>)}
-      {shown!==current||goalId?<button className="text-button" onClick={()=>{selectStage("");setGoal("");}}>返回当前工作</button>:null}</aside>
-      <section className="reading-sheet"><header><h2>{goal?.title??names[shown]}</h2>{doc&&<small>第 {doc.revision} 版</small>}</header>
+    {record&&view&&<><header className="desktop-flow-heading">
+      <h3><Workflow size={17} aria-hidden="true"/> 制作流程</h3>
+      <small>本任务流程 {record.workflowVersion}</small>
+    </header>
+    <nav className="wb-stages desktop-stages" aria-label="制作阶段">
+      {view.policy.stages.map((s,i)=><button key={s.id} aria-current={shown===s.id?"step":undefined}
+        onClick={()=>{selectStage(s.id===current?"":s.id);setGoal("");}}>
+        <span>{i+1}</span><strong>{names[s.id]??s.name}</strong>
+        <small>{statusName(view.stageStatuses?.[s.id]??record.stages[s.id]??"pending")}</small>
+      </button>)}
+    </nav>
+    <div className="desktop-stage-body"><aside className="wb-goals" aria-label="本阶段子阶段">
+      <header><h3>本阶段子阶段</h3><History size={15} aria-hidden="true"/></header>
+      {goals.map(g=>{
+        const selected=g.id===(goalId||record.workbench?.activeGoalId);
+        return <button key={g.id} className={selected?"selected":undefined} aria-pressed={selected} onClick={()=>setGoal(g.id)}>
+          <span className="desktop-goal-number">{g.number}</span><div><strong>{g.title}</strong><small>{statusName(g.status)}</small></div>
+          <ChevronRight size={14} aria-hidden="true"/>
+        </button>;
+      })}
+      {goals.length===0&&<p>进入此阶段后显示子阶段。</p>}
+      {(shown!==current||goalId)&&<button className="text-button" onClick={()=>{selectStage("");setGoal("");}}><RotateCcw size={13}/> 返回当前工作</button>}
+    </aside>
+      <section className="reading-sheet"><header><h2><FileText size={18} aria-hidden="true"/>{goal?.title??names[shown]}</h2>{doc&&<small>第 {doc.revision} 版</small>}</header>
       {historical&&!snapshot?<p>正在读取子阶段成果…</p>:<>
       {shown==="plan"&&preflight?.state==="failed"&&issues.length===0&&<article className="planner-issue"><h3>{preflightTitle(preflight)}</h3><p>这次检查没有完成。请在任务对话中让 Codex 定位问题并重新验证。</p><details><summary>检查结果</summary>{preflight.error?.message}</details></article>}
       {issues.map(i=><article className="planner-issue" key={i.id}><h3>{i.playerSummary||(i.id.startsWith("preflight:")&&preflight?.state==="failed"?preflightTitle(preflight):i.title||i.description)}</h3>{i.playerSummary&&i.description!==i.playerSummary&&<details><summary>查看问题详情</summary>{i.description}</details>}

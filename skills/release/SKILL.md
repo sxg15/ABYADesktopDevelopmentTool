@@ -1,3 +1,7 @@
+## 2026-11-12 制作工作台视觉还原
+
+此分支的 -UiStaging 产物位于 Publish-Staging-UI，标识 codex-desktop-workflow-preview-3，用于核对新版工作区的旧版流程样式。
+
 本分支的 -Validation 生成独立桌面对话预览包，清单标识 codex-desktop-workflow-preview-2。包含 .codex/skills 中的工作流和全部玩法资源。
 
 ## 2026-11-06 Workflow 2.12
