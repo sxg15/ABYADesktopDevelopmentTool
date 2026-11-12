@@ -25,7 +25,7 @@ it("does not label suspected, Lua or stale build records as confirmed source def
   expect(screen.queryByRole("button",{name:"导出诊断资料（ZIP）"})).toBeNull();
   r.issues[0].diagnosisStatus="confirmed";r.issues[0].diagnosis!.playerBuildHash="old";v.rerender(<PlaytestIssues record={r} en={false}/>);
   expect(screen.queryByRole("heading",{name:/已知 Abya-PB/})).toBeNull();
-  expect(screen.getByText(/仍有问题需要 AI/)).toBeTruthy();
+  expect(screen.getByText("窗口切回后输入未恢复")).toBeTruthy();
   r.issues[0].status="resolved";v.rerender(<PlaytestIssues record={r} en={false}/>);
   expect(screen.queryByLabelText("试玩问题")).toBeNull();
 });

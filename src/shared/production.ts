@@ -31,6 +31,7 @@ export interface ProductionPolicy {
   questions: { id: string; text: string; family: string }[];
 }
 export interface ProductionIssue {
+  playerSummary?: string;
   diagnosis?: {reproduction?:string;comparison?:string;rootCause?:string;playerBuildHash?:string;exclusionReason?:string};
   category?:string; owningStage?:string; detectedStage?:string; blockingDisposition?:string;
   diagnosisStatus?: "suspected" | "confirmed" | "excluded";
@@ -68,7 +69,7 @@ export interface ProductionRecord {
   acceptanceConfig?: { version: string; seats: number; requireUi: boolean; requiredTools: string[] } | null;
   acceptanceSessions?: AcceptanceSession[];
   feedback?: ProductionFeedback[];
-  selfTests?: { id: string; status: string; outcome?:string; observations: string; version: string; cycle: number; recordedAt: string }[];
+  selfTests?: { id: string; status: string; outcome?:string; observations: string; blockedByIssueIds?: string[]; version: string; cycle: number; recordedAt: string }[];
   artifacts?: ProductionArtifact[];
   stageUpdates?: Record<string, { summary: string; nextAction?: string; updatedAt: string }>;
   events?: {stage:string;status:string;at:string;cycle:number;revision:number}[];

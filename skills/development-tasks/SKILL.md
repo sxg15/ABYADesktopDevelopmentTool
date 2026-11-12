@@ -235,3 +235,5 @@ Workflow continuity 2.6 (2026-10-26), Autonomous recovery 2.5 (2026-10-24), v5 w
 UI 制作沿用已确认的布局、可见文字与控件尺度。合成图与引擎实测分别登记，已有项目由原有固定 Skill 升级入口接续。
 
 When a resources-stage question is linked to a clarify requirement, record the explicit requirement with the current submitted answerRevision and quote. Design blockers can close with reviewed same-stage and same-cycle state or document evidence, with its actual hash verified. Delivery retires only the corresponding no-artifact-progress queue entries.
+
+试玩工作台展示尚未关闭且未排除的问题，以及当前版本、当前周期最后一次失败或阻塞的自测观察。已有问题覆盖的自测不重复列出；确诊源码缺陷沿用现有证据判断和诊断导出。

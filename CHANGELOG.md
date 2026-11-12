@@ -721,3 +721,5 @@ All notable changes to this project are documented in this file.
 
 - 图标按钮显示 APP 内悬停说明，键盘聚焦也可查看，覆盖弹窗和禁用按钮。
 - 阶段报告按钮改为打开所在文件夹并选中对应报告；保留固定路径校验和报告更新。
+
+2026-11-12 · MCP 试玩工作台显示具体问题及当前版本的自测观察（移植 d99adab 的摘要逻辑）。
