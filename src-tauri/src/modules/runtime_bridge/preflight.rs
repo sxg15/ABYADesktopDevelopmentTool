@@ -8,6 +8,27 @@ fn error(code: &str, message: &str) -> AppError {
     AppError::new(code, message, "preflight-report")
 }
 
+fn root_ready(response: &Value) -> AppResult<bool> {
+    let game = &response["data"];
+    if response["success"] == true {
+        return Ok(game["context"]["rootInitialized"] == true
+            && game["context"]["isTransitioning"] == false);
+    }
+    // Only this read may be repeated while the native runtime is initializing.
+    // Write failures and unknown outcomes still use preflight_call's fail-closed path.
+    if game["errorCode"] == "runtime_not_ready"
+        && game["executionState"] == "not_executed"
+        && game["status"] == "initializing"
+        && game["ready"] == false
+    {
+        return Ok(false);
+    }
+    Err(error(
+        "preflight_runtime_failed",
+        &format!("runtime_get_game_state: {game}"),
+    ))
+}
+
 impl RuntimeBridgeService {
     /// 固定测试脚本仅能调用这些能力；不开放设计阶段的任意运行写入。
     fn preflight_call(&self, id: &str, tool: &str, input: Value) -> AppResult<Value> {
@@ -94,10 +115,18 @@ impl RuntimeBridgeService {
                     "CLI 已连接，但游戏根未在限时内就绪。",
                 ));
             }
-            let game = self.preflight_call(id, "runtime_get_game_state", json!({}))?;
-            if game["context"]["rootInitialized"] == true
-                && game["context"]["isTransitioning"] == false
-            {
+            // CLI connectivity precedes runtime initialization in current Players.
+            self.wait_for_cli(id, Duration::from_secs(5))?;
+            let response = self.run(
+                id,
+                &["capability", "run", "runtime_get_game_state"],
+                Some(json!({})),
+                "capability-preflight",
+                &uuid::Uuid::new_v4().to_string(),
+                Duration::from_secs(35),
+                Default::default(),
+            )?;
+            if root_ready(&response)? {
                 return Ok(());
             }
             std::thread::sleep(Duration::from_millis(300));
@@ -472,5 +501,51 @@ impl RuntimeBridgeService {
             ));
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod readiness_tests {
+    use super::*;
+
+    #[test]
+    fn native_startup_rejections_wait_until_root_is_ready() {
+        for phase in ["starting_runtime", "resource_label"] {
+            let pending = json!({"success":false,"data":{
+                "errorCode":"runtime_not_ready","executionState":"not_executed",
+                "status":"initializing","ready":false,"phase":phase}});
+            assert!(!root_ready(&pending).unwrap());
+        }
+        assert!(
+            !root_ready(&json!({"success":true,"data":{"context":{
+            "rootInitialized":true,"isTransitioning":true}}}))
+            .unwrap()
+        );
+        assert!(
+            root_ready(&json!({"success":true,"data":{"context":{
+            "rootInitialized":true,"isTransitioning":false}}}))
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn real_failures_and_unknown_outcomes_are_not_startup_waits() {
+        for (code, execution, status) in [
+            ("runtime_not_ready", "outcome_unknown", "initializing"),
+            ("runtime_not_ready", "not_executed", "failed"),
+            (
+                "runtime_initialization_failed",
+                "not_executed",
+                "initializing",
+            ),
+        ] {
+            assert!(
+                root_ready(&json!({"success":false,"data":{
+                "errorCode":code,"executionState":execution,"status":status,"ready":false}}))
+                .is_err()
+            );
+        }
+        assert!(root_ready(&json!({"success":false,"data":{}})).is_err());
+        assert!(!root_ready(&json!({"success":true,"data":{}})).unwrap());
     }
 }

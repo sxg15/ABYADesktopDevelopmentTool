@@ -1,3 +1,7 @@
+## 2026-11-13 新版 PB 初始化等待
+
+基础预检的初次连接与冷加载均区分 CLI 连通和游戏根就绪。只读 runtime_get_game_state 返回明确的 runtime_not_ready / not_executed / initializing / ready=false 时，在原有根初始化限时内继续查询 CLI 状态及游戏根；这不代表预检通过。真实失败、未知结果、进程退出和通信错误仍进入失败及清理流程，创建/加载/保存写操作不自动重放。回归覆盖 starting_runtime、resource_label、场景切换以及未知结果拒绝。
+
 ## 2026-11-06 预检完成条件
 
 启动试玩各窗口使用确认后的同一 App PB。试玩会话记录实际路径、实际指纹、候选原指纹和兼容试玩标记。预检回传原生设置错误码供 App 恢复。
