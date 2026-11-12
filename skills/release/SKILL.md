@@ -1,3 +1,7 @@
+## 2026-11-13 试玩入口就绪检查
+
+-Validation 生成 codex-desktop-workflow-preview-8，接续 v3.11 联测的一键试玩入口检查。
+
 ## 2026-11-13 主菜单原生空白建档
 
 -UiStaging 的 codex-desktop-workflow-preview-7 包含当前包原生空白建档路线。独立 Player 测试覆盖创建、带开始关卡加载、保存以及第二次冷加载身份核对。

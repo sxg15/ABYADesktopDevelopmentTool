@@ -124,6 +124,8 @@ impl RuntimeBridgeService {
                     })
                     .unwrap_or(error)
             })?;
+        // The CLI socket can respond before the Player has registered its catalog.
+        self.wait_for_game_root(id, "acceptance", &Default::default())?;
         let tools = self.list_tools(id)?;
         let mut required = vec!["runtime_get_game_state", "lua_runtime_list"];
         if spec.require_ui {
@@ -149,23 +151,30 @@ impl RuntimeBridgeService {
                 || (c["clientConnected"] == true
                     && c["serverActive"] == host
                     && c["networkGameplayReady"] == true);
-            let ui = !spec.require_ui
-                || self.acceptance_read(id, "custom_ui_runtime_list_roots", json!({}))?["roots"]
-                    .as_array()
-                    .is_some_and(|roots| !roots.is_empty());
-            validate_lua(&self.acceptance_read(
-                id,
-                "lua_runtime_list",
-                json!({"state":"Failed","limit":32}),
-            )?)?;
+            if report.report["phase"] == "failed" {
+                return Err(AppError::validation(format!(
+                    "试玩启动失败：{}",
+                    report.report["error"]
+                        .as_str()
+                        .unwrap_or("请查看启动报告。")
+                )));
+            }
             if report.exists
                 && validate_report(&report.report, spec).is_ok()
                 && c["rootInitialized"] == true
                 && c["isTransitioning"] == false
                 && networking
-                && ui
             {
-                return Ok(());
+                let ui=!spec.require_ui || self.acceptance_read(id,"custom_ui_runtime_list_roots",json!({}))?["roots"]
+                    .as_array().is_some_and(|roots|!roots.is_empty());
+                validate_lua(&self.acceptance_read(
+                    id,
+                    "lua_runtime_list",
+                    json!({"state":"Failed","limit":32}),
+                )?)?;
+                if ui {
+                    return Ok(());
+                }
             }
             if start.elapsed() > Duration::from_secs(35) {
                 return Err(AppError::validation(

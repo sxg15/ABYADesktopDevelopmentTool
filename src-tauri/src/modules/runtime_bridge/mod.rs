@@ -276,6 +276,16 @@ impl RuntimeBridgeService {
             Duration::from_secs(30),
             Default::default(),
         )?;
+        if value["success"] != true {
+            return Err(AppError::new(
+                "runtime_catalog_unavailable",
+                "Player 尚未成功返回能力目录，请检查当前启动状态。",
+                "",
+            ));
+        }
+        if !value["data"]["tools"].is_array() {
+            return Err(AppError::validation("Player 返回的能力目录格式无效。"));
+        }
         Ok(value["data"]["tools"].clone())
     }
     pub fn call_tool_scoped(
