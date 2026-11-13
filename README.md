@@ -26,7 +26,7 @@ Windows 需要可用的 WebView2 Runtime；Windows 11 通常已提供，缺少�
 
 - 日常开发和发布统一使用 `dev`。开发前和发布前同步远端；验证合并后的源码、正式包与项目接续后，将改动和递增编号的完整 `Publish` 一起推送到 `dev`，并核对远端更新清单。
 - 正式 `Publish/` 和相对路径启动入口纳入 Git；测试包、旧发布备份、日志、缓存和数据库仍忽略。
-- `npm run build:portable` 构建正式包并生成 `Publish/package-files.json`，记录每个运行文件的大小和 SHA-256。
+- 在 dev 发布桌面工具时运行 `scripts/publish.ps1 -Validation` 构建候选包，验证后运行 `scripts/promote-validated.ps1` 整目录替换正式 Publish。发布完成只保留 Publish，项目数据与固定 Player 单独保留。
 - 更新发布包后将其完整暂存，再运行 `npm run check:portable`，确认文件完整且没有被忽略规则漏掉。
 - `Publish/**` 禁止 Git 自动转换换行，保证拉取后的字节与发布清单一致。
 - 不将开发者本机的 `.lnk` 作为团队入口；个人桌面快捷方式可以指向自己的仓库启动器。

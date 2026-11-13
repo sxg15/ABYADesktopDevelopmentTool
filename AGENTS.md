@@ -6,6 +6,8 @@ Branch and release policy (2026-11-13): develop on dev. Fetch origin/dev before 
 
 Before changing production code (load context according to the change):
 
+Windows releases have one permanent installation directory, `Publish`. Build to temporary staging, verify the full inventory, close the old installation and replace its directory as a unit. After successful verification remove the superseded installation and staging copies. Keep databases, project workspaces, pinned Players and saves outside package cleanup. Point shortcuts, task CLI bindings and acceptance launchers at the formal package.
+
 1. Locate ownership with `module-registry.json`; read relevant `ARCHITECTURE.md` sections when crossing boundaries.
 2. Read affected `skills/<module>/SKILL.md` current contracts. Load linked history only for the affected surface; do not read all modules or dated release history every turn.
 3. Keep business logic inside the owning module and depend only on its public

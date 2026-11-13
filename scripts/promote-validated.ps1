@@ -32,4 +32,11 @@ catch {
 }
 & (Join-Path $destination 'runtime/node.exe') (Join-Path $root 'scripts/portable-package.mjs') --package $destination
 if ($LASTEXITCODE -ne 0) { throw 'Promoted package inventory verification failed.' }
-[pscustomobject]@{ Release=$manifest.releaseLabel; Version=$manifest.version; Entry=(Join-Path $root 'ABYA 开发工具.cmd'); PreviousPackage=$backup } | ConvertTo-Json
+foreach ($packageCopy in @($backup,$source)) {
+    if (!(Test-Path -LiteralPath $packageCopy)) { continue }
+    $resolved = (Resolve-Path -LiteralPath $packageCopy).Path
+    if ($resolved -ne $packageCopy -or ($resolved -ne "$root\Publish-Staging-Validation" -and (Split-Path -Parent $resolved) -ne "$root\ReleaseBackups")) { throw 'Unexpected cleanup path' }
+    if (((Get-Item -Force -LiteralPath $resolved).Attributes -band [IO.FileAttributes]::ReparsePoint) -or (Get-ChildItem -LiteralPath $resolved -Force -Recurse -Attributes ReparsePoint | Select-Object -First 1)) { throw 'Unexpected link in package' }
+    Remove-Item -LiteralPath $resolved -Recurse -Force
+}
+[pscustomobject]@{ Release=$manifest.releaseLabel; Version=$manifest.version; Package=$destination } | ConvertTo-Json

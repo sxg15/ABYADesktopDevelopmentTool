@@ -786,6 +786,22 @@ fn set_task_status(
 }
 
 #[tauri::command(async)]
+fn open_task_folder(
+    id: String,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let path = std::path::PathBuf::from(state.tasks.get_readonly(&id)?.workspace_path);
+    if !path.is_absolute() || !path.is_dir() {
+        return Err(foundation::AppError::validation("任务工作区目录不可用。"));
+    }
+    app.opener()
+        .open_path(path.to_string_lossy(), None::<&str>)
+        .map_err(foundation::AppError::internal)
+}
+
+#[tauri::command(async)]
 fn delete_task(id: String, state: State<'_, AppState>) -> AppResult<()> {
     state.tasks.ensure_deletable(&id)?;
     state.codex_terminal.stop_task(&id);
@@ -1562,6 +1578,7 @@ pub fn run() {
             update_task,
             set_task_status,
             delete_task,
+            open_task_folder,
             get_codex_terminal_availability,
             open_codex_terminal,
             write_codex_terminal,

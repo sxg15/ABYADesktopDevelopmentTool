@@ -115,3 +115,8 @@
 .instance-card-process[data-state="running"] { color: #236945; }
 .instance-card-process:is([data-state="launching"], [data-state="stopping"]) { color: #8a590d; }
 .instance-card-process:is([data-state="failed"], [data-state="interrupted"]) { color: #a53633; }
+.task-card-menu {position:fixed;z-index:1000;display:grid;padding:4px;background:#fffcf6;border:1px solid #c9bfad;border-radius:8px;box-shadow:0 5px 18px #322d2426}
+.task-card-menu button {display:flex;align-items:center;gap:9px;background:transparent;border:0;border-radius:4px;text-align:start;color:#30423d;padding:8px 12px}
+.task-card-menu button:is(:hover,:focus-visible):enabled {background:#efe9dc}
+.task-card-menu button:disabled {opacity:.5}
+.task-card-menu .task-delete-action {color:#a22e28}
