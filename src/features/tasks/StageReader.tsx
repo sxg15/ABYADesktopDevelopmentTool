@@ -15,7 +15,7 @@ import {StageCard} from "./StageCard";
 import {statusName} from "./productionText";
 
 const names:Record<string,string>={requirements:"需求整理",resources:"美术需求整理",plan:"方案预检",implementation:"Lua 实现",review:"试玩与修改",delivery:"交付验收",closeout:"收尾复盘"};
-export function StageReader({task,stage,selectStage,notify,visible,children}:{task:DevelopmentTask;stage:string;selectStage:(id:string)=>void;notify:(m:string,error?:boolean)=>void;visible:boolean;children:(record:ProductionRecord)=>ReactNode}){
+export function StageReader({task,stage,selectStage,notify,visible,children}:{task:DevelopmentTask;stage:string;selectStage:(id:string)=>void;notify:(m:string,error?:boolean)=>void;visible:boolean;children:(record:ProductionRecord,shown:string)=>ReactNode}){
   const [connection,setConnection]=useState<{ready:boolean;bound:boolean}>();
   const [view,setView]=useState<ProductionView>(),[error,setError]=useState("");
   const [goalId,setGoal]=useState(""),[snapshot,setSnapshot]=useState<ProductionRecord>();
@@ -119,6 +119,6 @@ export function StageReader({task,stage,selectStage,notify,visible,children}:{ta
       {doc?<>{edited!==undefined&&<p role="status">源文档已有人工修改。请在 Codex 中提交新版后再确认。</p>}<ReadableText text={edited??doc.content} taskId={task.id} basePath={doc.path} artifacts={artifacts}/>
         {!historical&&<button className="text-button" onClick={()=>void productionApi.open(task.id,doc.path).catch(e=>notify(errorMessage(e),true))}>打开 Markdown 源文件</button>}</>:<p>{goal?.summary||result?.stageUpdates?.[shown]?.summary||(shown===current?"本阶段成果会在这里显示。":"这一阶段还没有文档。")}</p>}
       <VisualGallery taskId={task.id} artifacts={artifacts.filter(a=>a.stage===shown&&(!historical||view.artifacts?.some(now=>now.id===a.id&&now.sha256===a.sha256)))} en={false}/>
-      {!historical&&["implementation","review"].includes(shown)&&record&&children(record)}</>}
+      {!historical&&["implementation","review"].includes(shown)&&record&&children(record,shown)}</>}
       </section></div></>}</>;
 }

@@ -1,5 +1,6 @@
 import {useEffect,useMemo,useState} from "react";
 import {ChevronRight, Monitor} from "lucide-react";
+import {LuaPlaytest} from "./LuaPlaytest";
 import {AcceptanceLauncher} from "./AcceptanceLauncher";
 import {LaunchInstanceModal} from "../instances/LaunchInstanceModal";
 import {InstanceDetailsModal} from "../instances/InstanceDetailsModal";
@@ -8,7 +9,7 @@ import type {AppSettings,DevelopmentTask,GameInstance} from "../../shared/types"
 import type {MessageKey} from "../../i18n";
 import {productionApi,type ProductionRecord} from "../../shared/production";
 import {playVersionInfo,PlayVersionLabel} from "./PlayVersionLabel";
-export function TaskInstances({task,record,t,settings,notify}:{task:DevelopmentTask;record:ProductionRecord;t:(k:MessageKey)=>string;settings?:AppSettings;notify:(m:string,error?:boolean)=>void}){
+export function TaskInstances({task,record,t,settings,notify,preview}:{preview:boolean;task:DevelopmentTask;record:ProductionRecord;t:(k:MessageKey)=>string;settings?:AppSettings;notify:(m:string,error?:boolean)=>void}){
   const [items,setItems]=useState<GameInstance[]>([]),[launch,setLaunch]=useState(false),[detail,setDetail]=useState<GameInstance>();
   const [dates,setDates]=useState<Record<string,string>>({});
   const pack=record.workbench?.execution?.verificationPackage;
@@ -28,7 +29,7 @@ export function TaskInstances({task,record,t,settings,notify}:{task:DevelopmentT
     void poll();const timer=setInterval(poll,4000);return()=>{live=false;clearInterval(timer);};},[task.id]);
   return <section className="task-instances"><header><h3>{t("instances")}</h3>
     <button className="secondary-button" disabled={task.status!=="active"} onClick={()=>setLaunch(true)}>{t("launch")}</button></header>
-    <AcceptanceLauncher taskId={task.id} active={task.status==="active"} en={en} versionLabel={label(latest)}/>
+    {preview?<LuaPlaytest key={task.id} record={record} active={task.status==="active"} en={en} label={label}/>:<AcceptanceLauncher taskId={task.id} active={task.status==="active"} en={en} versionLabel={label(latest)}/>}
     {items.length > 0 && <ul className="instance-cards">
       {items.map(instance => <li key={instance.id}>
         <button type="button" className="instance-card" onClick={() => setDetail(instance)}>
