@@ -1,7 +1,7 @@
 use super::{SkillEntry, TaskService, files, now, policy};
 use crate::foundation::{AppError, AppResult};
 use sha2::{Digest, Sha256};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub(super) fn tree_hash(workspace: &Path, relative: &str) -> AppResult<String> {
     let canonical = workspace.canonicalize()?;
@@ -121,6 +121,64 @@ impl TaskService {
             .and_then(|p| p.ancestors().nth(3))
             .map(Path::to_path_buf)
             .ok_or_else(|| AppError::validation("找不到随包 Skill 库。"))
+    }
+    pub fn library_cards(&self, id: &str) -> AppResult<Vec<serde_json::Value>> {
+        let root = self.catalog_root(id)?;
+        let bundled = self.catalog_root("")?;
+        self.production_catalog(id)?
+            .into_iter()
+            .map(|entry| {
+                let relative = format!("{}/library.json", entry.path);
+                let local = files::safe_path(&root, &relative)?;
+                let default = files::safe_path(&bundled, &relative)?;
+                let info = if local.is_file() {
+                    Some(local)
+                } else if default.is_file() {
+                    Some(default)
+                } else {
+                    None
+                };
+                let mut card = serde_json::to_value(entry)?;
+                if let Some(info) = info {
+                    card["library"] = serde_json::from_slice(&std::fs::read(info)?)?;
+                }
+                Ok(card)
+            })
+            .collect()
+    }
+
+    pub fn maintainable_skill(&self, task: &str, id: &str) -> AppResult<(PathBuf, String)> {
+        let entry = self
+            .production_catalog(task)?
+            .into_iter()
+            .find(|e| e.provider == "codex" && e.id == id)
+            .ok_or_else(|| AppError::validation("此 Skill 已不在当前库中。"))?;
+        let file = format!("{}/SKILL.md", entry.path);
+        let bundle = self.catalog_root("")?;
+        if files::safe_path(&bundle, &file)?.is_file() {
+            let repo = if bundle
+                .file_name()
+                .is_some_and(|n| n.to_string_lossy().starts_with("Publish"))
+            {
+                bundle
+                    .parent()
+                    .ok_or_else(|| AppError::validation("找不到开发工具仓库。"))?
+            } else {
+                &bundle
+            };
+            if !repo.join(".git").exists() || !files::safe_path(repo, &file)?.is_file() {
+                return Err(AppError::validation(
+                    "请从含 Skill 源文件的开发工具 Git 克隆中打开维护对话。",
+                ));
+            }
+            Ok((repo.to_owned(), file))
+        } else {
+            let workspace = self.catalog_root(task)?;
+            if task.is_empty() || !files::safe_path(&workspace, &file)?.is_file() {
+                return Err(AppError::validation("找不到任务自定义 Skill。"));
+            }
+            Ok((workspace, file))
+        }
     }
     pub fn desktop_context_path(&self, id: &str) -> AppResult<std::path::PathBuf> {
         let task = self.get_readonly(id)?;

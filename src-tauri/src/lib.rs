@@ -32,7 +32,7 @@ use modules::task_notifications::{
     NotificationActivation, NotificationSettings, TaskAttentionSnapshot, TaskNotificationService,
 };
 use modules::tasks::{
-    DevelopmentTask, ProductionDecision, ProductionMutation, ProductionView, SkillEntry, TaskInput,
+    DevelopmentTask, ProductionDecision, ProductionMutation, ProductionView, TaskInput,
     TaskService, TaskStatus,
 };
 use serde::Deserialize;
@@ -665,9 +665,9 @@ fn upgrade_task_production(
 async fn get_task_skills(
     task_id: String,
     state: State<'_, AppState>,
-) -> AppResult<Vec<SkillEntry>> {
+) -> AppResult<Vec<serde_json::Value>> {
     let service = state.tasks.clone();
-    tauri::async_runtime::spawn_blocking(move || service.production_catalog(&task_id))
+    tauri::async_runtime::spawn_blocking(move || service.library_cards(&task_id))
         .await
         .map_err(foundation::AppError::internal)?
 }
@@ -701,6 +701,23 @@ fn desktop_chat_status(
     Ok(
         serde_json::json!({"ready":state.desktop_cli.state().running,"bound":state.codex_terminal.prepared_desktop_link(&task_id)?.is_some()}),
     )
+}
+
+#[tauri::command(async)]
+fn open_skill_maintenance(
+    task_id: String,
+    skill_id: String,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let (root, file) = state.tasks.maintainable_skill(&task_id, &skill_id)?;
+    let link = state
+        .codex_terminal
+        .skill_chat(&state.database, &root, &file)?;
+    app.opener()
+        .open_url(link, None::<&str>)
+        .map_err(foundation::AppError::internal)
 }
 
 #[tauri::command(async)]
@@ -1572,6 +1589,7 @@ pub fn run() {
             read_document_source,
             desktop_chat_status,
             prepare_desktop_chat,
+            open_skill_maintenance,
             open_desktop_chat,
             open_production_artifact,
             reveal_production_report,

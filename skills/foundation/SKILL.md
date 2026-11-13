@@ -149,3 +149,5 @@ play_version_dates 按任务 ID 返回已登记版本的首次制作修订时间
 delete_task 接受可选 cleanWorkspace，缺省仅删除任务记录。清理范围由任务服务根据任务 ID 及登记的目录确定。
 
 远端客户端下载目录可独立保存。设置页、客户端管理页与更新提示共用此偏好；已安装客户端保留自身的安装来源目录。
+
+Skill 卡片以相邻 library.json 维护 group、usage、creator 和可选 maintainer。内置 Skill 维护目标为 Git 克隆中的源文件，自定义 Skill 使用其任务工作区。按工作区与相对文件路径保存独立 Codex 维护对话，再次打开复用。

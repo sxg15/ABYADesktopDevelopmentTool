@@ -6,7 +6,7 @@ import { productionApi } from "../../shared/production";
 import { artLibraryApi } from "../../shared/artDesign";
 import { artCaseFixture, artViewFixture } from "../../shared/artDesign.test-fixtures";
 vi.mock("@tauri-apps/plugin-dialog", () => ({open:vi.fn()}));
-vi.mock("../../shared/production", () => ({productionApi:{get:vi.fn(),skills:vi.fn(),readSkill:vi.fn(),update:vi.fn(),media:vi.fn()}}));
+vi.mock("../../shared/production", () => ({productionApi:{get:vi.fn(),skills:vi.fn(),readSkill:vi.fn(),maintainSkill:vi.fn(),update:vi.fn(),media:vi.fn()}}));
 vi.mock("../../shared/artDesign", async original => ({...await original<typeof import("../../shared/artDesign")>(),artLibraryApi:{list:vi.fn(),media:vi.fn(),action:vi.fn()}}));
 const skill = {id:"abya-game-development-task/references/game-art-design",name:"game-art-design",kind:"design",provider:"codex",description:"Game art method",path:".codex/skills/design",sha256:"design-hash"};
 const gameUiSkill = {...skill, id:`${skill.id}/references/game-ui-design`, name:"game-ui-design", path:".codex/skills/game-ui-design", description:"Game UI method"};
@@ -92,4 +92,18 @@ it("discards a selected-body response after the task changes", async () => {
   page.rerender(<SkillLibrary taskId="other" active locale="en-US"/>);
   finish("OLD TASK PRIVATE BODY");await waitFor(()=>expect(screen.queryByText("Loading this task's skills…")).toBeNull());
   expect(screen.queryByText("OLD TASK PRIVATE BODY")).toBeNull();
+});
+
+it("groups and searches by maintenance metadata and opens the exact nested method",async()=>{
+  const meta={group:"design",usage:"Inspect a dense HUD",creator:"Original contributor",maintainer:"Current owner"};
+  vi.mocked(productionApi.skills).mockResolvedValue([{...gameUiSkill,library:meta},productSkill]);
+  vi.mocked(productionApi.readSkill).mockResolvedValue("HUD instructions");
+  render(<SkillLibrary taskId="one" active locale="en-US"/>);
+  const heading=await screen.findByRole("heading",{name:"Game UI design"});
+  expect(heading.closest(".skill-function-group")?.querySelector("h3")?.textContent).toBe("Design methods");
+  fireEvent.change(screen.getByRole("textbox"),{target:{value:"Current owner"}});
+  expect(screen.queryByRole("heading",{name:"Product interface design"})).toBeNull();
+  fireEvent.click(heading);
+  fireEvent.click(await screen.findByRole("button",{name:"Maintain in Codex"}));
+  expect(productionApi.maintainSkill).toHaveBeenCalledWith("one",gameUiSkill.id);
 });

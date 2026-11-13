@@ -58,8 +58,21 @@ export function SkillLibrary({ taskId, active, visible = true, initialSection = 
     } catch (e) { if (current === generation.current) { setError(errorMessage(e)); await refreshView(); } }
     finally { if (current === generation.current) { actionLock.current = false; setBusy(false); } }
   }
-  const items = skills.filter(k => k.provider === provider && `${k.name} ${k.description} ${k.kind}`.toLowerCase().includes(query.toLowerCase()))
-    .sort((a, b) => Number(b.kind === "design") - Number(a.kind === "design"));
+  const sections=[
+    ["planning",t("策划与规则","Planning and rules")],["workflow",t("开发与流程","Development workflow")],
+    ["templates",t("任务模板","Task templates")],["art",t("美术模板与效果","Art templates and effects")],
+    ["design",t("设计方法","Design methods")],["custom",t("其他与自定义","Other and custom")],
+  ];
+  const group=(skill:TaskSkill)=>sections.some(([id])=>id===skill.library?.group)?skill.library!.group:({design:"design",workflow:"workflow",task:"templates",art:"art"}[skill.kind]??"custom");
+  const usage=(skill:TaskSkill)=>skill.library?.usage||skill.description||t("待补充使用场景","Usage not documented");
+  const owner=(skill:TaskSkill)=>skill.library?.maintainer||skill.library?.creator||t("未登记","Unassigned");
+  async function maintain(skill:TaskSkill){
+    if(actionLock.current)return;
+    const current=generation.current;actionLock.current=true;setBusy(true);setError("");
+    try{await productionApi.maintainSkill(taskId,skill.id);}
+    catch(e){if(current===generation.current)setError(errorMessage(e));}
+    finally{if(current===generation.current){actionLock.current=false;setBusy(false);}}
+  }
   const designTitles = new Map<string, [string, string]>([
     ["game-art-design", ["游戏美术设计", "Game art design"]],
     ["product-interface-design", ["产品界面设计", "Product interface design"]],
@@ -71,6 +84,11 @@ export function SkillLibrary({ taskId, active, visible = true, initialSection = 
     const localized = skill.kind === "design" ? designTitles.get(skill.name) : undefined;
     return localized ? t(...localized) : skill.name;
   };
+  const items=skills.filter(skill=>skill.provider===provider&&[skill.id,title(skill),skill.description,skill.kind,usage(skill),owner(skill),sections.find(([id])=>id===group(skill))?.[1]].join(" ").toLowerCase().includes(query.trim().toLowerCase()));
+  function details(skill:TaskSkill){return <dl className="skill-facts">
+    <dt>{t("使用场景","When to use")}</dt><dd>{usage(skill)}</dd>
+    <dt>{skill.library?.maintainer?t("维护人","Maintainer"):t("创建人（仓库）","Repository creator")}</dt><dd>{owner(skill)}</dd>
+  </dl>;}
   return <section className="production-panel skill-library-workspace" aria-label={s.skills}>
     <header className="production-heading"><div><h3>{s.skills}</h3><p>{t("技能、模板与美术经验，围绕当前任务一起使用。", "Skills, templates and art experience for this task.")}</p></div><span><Pin size={14} />{s.scope}</span></header>
     <div className="skill-library-sections" role="tablist" aria-label={t("库分类", "Library sections")}>
@@ -79,19 +97,19 @@ export function SkillLibrary({ taskId, active, visible = true, initialSection = 
     </div>
     {error && <div role="alert" className="inline-error">{error}</div>}{notice && <p role="status" className="skill-library-notice">{notice}</p>}
     <div hidden={section !== "skills"}>
-      {body ? <div className="skill-reading"><button className="secondary-button" onClick={() => setBody(undefined)}>{s.back}</button><h4>{title(body.skill)}</h4><small>{body.skill.provider} · {body.skill.sha256.slice(0, 12)}</small>
+      {body ? <div className="skill-reading"><button className="secondary-button" onClick={() => setBody(undefined)}>{s.back}</button><h4>{title(body.skill)}</h4><small>{body.skill.provider} · {body.skill.sha256.slice(0, 12)}</small><p>{body.skill.description}</p>{details(body.skill)}<button className="primary-button" disabled={busy} onClick={()=>void maintain(body.skill)}>{busy?t("正在连接 Codex…","Connecting…"):t("在 Codex 中维护","Maintain in Codex")}</button>
         {body.skill.kind === "design" && body.text.includes("visual-refinement") && <p className="skill-design-note">{t("本版本包含视觉细化与实机审查：用于方向确定后的层级、排版、配色和反馈检查，保留当前需求与风格。", "This version includes visual refinement and runtime review: hierarchy, typography, color and feedback within the current requirements and style.")}</p>}
         {body.skill.kind === "design" && body.skill.name === "game-ui-design" && body.text.includes("query-ui-references.mjs") && <p className="skill-design-note">{t("本版本包含本地 UI 候选参考索引，供检索与适用性分析；候选参考不代表策划已确认的美术案例。", "This version includes a local index of candidate UI references for search and applicability analysis; candidates are not planner-approved art cases.")}</p>}
         <div className="production-document"><ReadableText text={body.text} /></div></div> : <>
         <div className="skill-library-search"><label><Search size={16}/><input aria-label={s.search} placeholder={s.search} value={query} onChange={e => setQuery(e.target.value)}/></label></div>
         {skills.some(k => k.provider === provider && k.kind === "design") && <p className="skill-design-note"><Palette size={17}/>{t("可按需阅读当前任务中的设计方法；内容以已安装的流程版本为准。", "Read this task's available design methods as needed; content follows its installed workflow version.")}</p>}
         {loading && <p role="status">{t("正在读取当前任务的 Skill…", "Loading this task's skills…")}</p>}{reading && <p role="status">{t("正在读取正文…", "Loading Skill content…")}</p>}
-        <div className="production-skill-grid">{items.map(skill => <article className={`production-card skill-card ${skill.kind === "design" ? "design-skill" : ""}`} key={skill.path}>
+        {sections.map(([id,label])=>{const cards=items.filter(skill=>group(skill)===id);return cards.length>0&&<section className="skill-function-group" key={id}><h3>{label}</h3><div className="production-skill-grid">{cards.map(skill => <article className={`production-card skill-card ${skill.kind === "design" ? "design-skill" : ""}`} key={skill.path} onClick={event=>{if(!reading&&!(event.target as Element).closest("button"))void read(skill);}}>
           <span className="skill-kind">{skill.kind === "design" ? t("设计方法 · 随制作流程提供", "Design method · included in workflow") : skill.kind === "art" ? t("美术模板", "Art template") : skill.kind === "task" ? t("任务模板", "Task template") : skill.kind === "workflow" ? t("制作工作流", "Production workflow") : t("用户 Skill", "User Skill")}</span>
-          <h4>{title(skill)}</h4><p>{skill.description}</p><small>{skill.name} · {skill.sha256.slice(0, 12)}</small>
+          <h4>{title(skill)}</h4><p>{skill.description}</p>{details(skill)}<small>{skill.name} · {skill.sha256.slice(0, 12)}</small>
           <div className="production-actions"><button className="secondary-button" disabled={reading} onClick={() => void read(skill)}>{s.readSkill}</button>
             {["task", "art"].includes(skill.kind) && <button className="secondary-button" disabled={!active || !view?.record || busy || [view?.record?.taskTemplate, view?.record?.artTemplate].includes(skill.id)} onClick={() => void choose(skill)}>{[view?.record?.taskTemplate, view?.record?.artTemplate].includes(skill.id) ? s.selected : s.select}</button>}</div>
-        </article>)}</div>{!loading && !items.length && <p>{s.noSkills}</p>}
+        </article>)}</div></section>})}{!loading && !items.length && <p>{s.noSkills}</p>}
       </>}
     </div>
     <div hidden={section !== "cases"}>

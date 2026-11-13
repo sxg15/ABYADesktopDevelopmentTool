@@ -8,6 +8,7 @@ mod memory_context;
 mod preflight;
 mod recovery;
 mod resume_failure;
+mod skill_chat;
 pub use recovery::RecoveryCandidate;
 mod auto_progress;
 mod continuation_queue;

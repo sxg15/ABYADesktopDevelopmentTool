@@ -23,6 +23,7 @@ export interface ProductionEvidence {
   recordedAt: string; cycle: number;
 }
 export interface TaskSkill {
+  library?: {group?:string;usage?:string;creator?:string;maintainer?:string};
   id: string; provider: string; kind: string; name: string; description: string;
   path: string; sha256: string;
 }
@@ -102,6 +103,7 @@ export interface ProductionView {
   reportPaths: string[]; availableUpdate: boolean;
 }
 export const productionApi = {
+  maintainSkill:(taskId:string,skillId:string)=>invoke<void>("open_skill_maintenance",{taskId,skillId}),
   playVersionDates: (taskId:string) => invoke<Record<string,string>>("play_version_dates",{taskId}),
   preflight:(taskId:string,reuseExisting=false,retry=false)=>invoke<CapabilityPreflight>("run_task_preflight",{taskId,reuseExisting,retry}),
   reconcile:(taskId:string)=>invoke<ProductionView>("reconcile_task_execution",{taskId}),

@@ -170,3 +170,5 @@ Update this Skill with discovery, transport, lifecycle, contracts, diagnostics o
 Read the matching section in [historical contracts](../../docs/skill-history/20261026/codex-terminal.md) only when changing that surface. New current-scope rules override historical versions.
 
 Progress checkpoints versus failures (2026-10-26), Autonomous budget checkpoints (2026-10-24), Terminal freeze recovery (2026-10-22), Non-human automatic progress (2026-10-22), v5 workbench (2026-10-21), Reliable stop control (2026-10-20), Interrupt current turn (2026-10-19), Persisted case request continuation (2026-10-17), Stage workspace update, Native interaction visibility (2026-10-12), Resume conflict recovery (2026-10-13), Workspace startup recovery (2026-10-13), Background task notifications (2026-10-14), Targeted issue repair queue (2026-10-13), Task isolation and atomic subprocess recovery (2026-10-22), Autonomous Lua scheduling (2026-10-23).
+
+Skill 卡片以相邻 library.json 维护 group、usage、creator 和可选 maintainer。内置 Skill 维护目标为 Git 克隆中的源文件，自定义 Skill 使用其任务工作区。按工作区与相对文件路径保存独立 Codex 维护对话，再次打开复用。

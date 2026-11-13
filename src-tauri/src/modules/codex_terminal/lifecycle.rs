@@ -33,32 +33,46 @@ pub(super) fn native_archived_state(thread: &Value) -> AppResult<bool> {
 
 impl AppServerHandle {
     pub(super) fn ensure_project(&self, task: &DevelopmentTask) -> AppResult<String> {
-        let name = format!("ABYA · {}", task.title);
+        self.ensure_named_project(
+            &task.id,
+            &format!("ABYA · {}", task.title),
+            &task.workspace_path,
+        )
+    }
+    pub(super) fn ensure_named_project(
+        &self,
+        key: &str,
+        name: &str,
+        workspace: &str,
+    ) -> AppResult<String> {
         let mut cursor = Value::Null;
         for _ in 0..100 {
             let page = self.request("project/list", json!({"limit":100,"cursor":cursor}))?;
             for project in page["data"].as_array().into_iter().flatten() {
-                let owned = project["metadata"]["abyaTaskId"].as_str() == Some(&task.id);
+                let owned = project["metadata"]["abyaTaskId"].as_str() == Some(key);
                 let matching = project["roots"].as_array().is_some_and(|roots| {
                     roots.iter().any(|r| {
                         r["path"]
                             .as_str()
-                            .is_some_and(|p| Path::new(p) == Path::new(&task.workspace_path))
+                            .is_some_and(|p| Path::new(p) == Path::new(workspace))
                     })
                 });
                 if owned || matching {
                     let id = project["id"]
                         .as_str()
                         .ok_or_else(|| AppError::internal("Invalid Codex project identity."))?;
-                    if owned && (project["name"].as_str() != Some(&name) || !matching) {
-                        self.request("project/update",json!({"projectId":id,"name":name,"roots":[{"path":task.workspace_path}]}))?;
+                    if owned && (project["name"].as_str() != Some(name) || !matching) {
+                        self.request(
+                            "project/update",
+                            json!({"projectId":id,"name":name,"roots":[{"path":workspace}]}),
+                        )?;
                     }
                     return Ok(id.into());
                 }
             }
             cursor = page["nextCursor"].clone();
             if cursor.is_null() {
-                let result=self.request("project/create",json!({"idempotencyKey":format!("abya-task-{}",task.id),"name":name,"roots":[{"path":task.workspace_path}],"metadata":{"abyaTaskId":task.id,"origin":"ABYA Desktop Development Tool"}}))?;
+                let result=self.request("project/create",json!({"idempotencyKey":format!("abya-task-{}",key),"name":name,"roots":[{"path":workspace}],"metadata":{"abyaTaskId":key,"origin":"ABYA Desktop Development Tool"}}))?;
                 return result["project"]["id"]
                     .as_str()
                     .map(str::to_owned)
