@@ -84,3 +84,34 @@
 
 .app-shell .app-sidebar nav button { gap:7px; padding-inline:8px; }
 .app-shell .app-sidebar nav button>svg { flex:0 0 17px; width:17px; height:17px; }
+.task-instances .instance-cards {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.instance-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd6c8;
+  border-radius: 8px;
+  background: #fffcf6;
+  color: #615c50;
+  text-align: start;
+}
+.instance-card:hover { background: #f7f2e7; border-color: #b5aa95; }
+.instance-card:focus-visible { outline: 2px solid #945211; outline-offset: 2px; }
+.instance-card-icon { box-sizing: content-box; padding: 7px; border-radius: 7px; background: #efeade; color: #625d4f; }
+.instance-card-body { display: grid; gap: 4px; min-width: 0; }
+.instance-card-body strong { font-size: 14px; line-height: 1.4; color: #263b39; overflow-wrap: anywhere; }
+.instance-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 12px; line-height: 1.5; }
+.instance-card-process { display: inline-flex; align-items: center; gap: 5px; }
+.instance-card-process::before { content: ""; width: 7px; height: 7px; background: currentColor; border-radius: 50%; }
+.instance-card-process[data-state="running"] { color: #236945; }
+.instance-card-process:is([data-state="launching"], [data-state="stopping"]) { color: #8a590d; }
+.instance-card-process:is([data-state="failed"], [data-state="interrupted"]) { color: #a53633; }
