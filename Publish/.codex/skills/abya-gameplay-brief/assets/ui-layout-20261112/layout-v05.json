@@ -1,0 +1,93 @@
+{
+  "status": "draft_awaiting_user_adjustment",
+  "viewport": [
+    1600,
+    900
+  ],
+  "left": [
+    5,
+    5,
+    1192,
+    890
+  ],
+  "right": [
+    1197,
+    5,
+    398,
+    890
+  ],
+  "button_visible_bounds": [
+    45,
+    539,
+    278,
+    316
+  ],
+  "available_play": [
+    347,
+    141,
+    810,
+    714
+  ],
+  "play": [
+    395,
+    205,
+    714,
+    586
+  ],
+  "margins": {
+    "button_left": 40,
+    "button_bottom": 40,
+    "play_left": 48,
+    "play_right": 48,
+    "play_top": 64,
+    "play_bottom": 64
+  },
+  "sizes": {
+    "direction": [
+      76,
+      76
+    ],
+    "reset": [
+      88,
+      88
+    ],
+    "choice": [
+      128,
+      77
+    ],
+    "key_badge": [
+      44,
+      44
+    ]
+  },
+  "visible_controls": [
+    "reset",
+    "directions"
+  ],
+  "choice_policy": "User says choices and directions generally coexist; hidden only in this preview",
+  "split_ratio": {
+    "left": 0.75,
+    "right": 0.25,
+    "rounding": "right=floor(0.25*(W-10)+0.5), left=remaining"
+  },
+  "key_font_size": 18,
+  "instruction_font_size": 26,
+  "round_font_size": 26,
+  "timer_font_size": 40,
+  "round_text": "轮数：1",
+  "reset_icon": {
+    "visible_size": [
+      30,
+      31.8
+    ],
+    "center_normal": [
+      43.5294,
+      36.7059
+    ],
+    "center_pressed": [
+      43.5294,
+      35.0588
+    ],
+    "basis": "source face center; tight visible SVG bounds"
+  }
+}

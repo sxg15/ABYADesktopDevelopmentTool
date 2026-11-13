@@ -1,0 +1,267 @@
+{
+  "version": "1.0.0",
+  "files": [
+    {
+      "path": "agents/openai.yaml",
+      "bytes": 320,
+      "sha256": "5ef9bafca9233842e2fd46ee29616cf7937f8108ca6919cdd697b7d7b2dd032b"
+    },
+    {
+      "path": "assets/effects.json",
+      "bytes": 10413,
+      "sha256": "7836557ede0eefeffa4ec083d66679d37c1bc135b98cf80301712a77e96efec9"
+    },
+    {
+      "path": "assets/previews/crayon-check.gif",
+      "bytes": 201536,
+      "sha256": "278fee072f694593aa0cfc35c775adad61ac83dbcb24dfb66a6f1e52b1421747"
+    },
+    {
+      "path": "assets/previews/crayon-cross.gif",
+      "bytes": 228201,
+      "sha256": "6d369560995f33d3308312ddb6acdbfa9013a7f04fd709caa4f23640dc54c474"
+    },
+    {
+      "path": "assets/previews/page-turn.gif",
+      "bytes": 271561,
+      "sha256": "f3df320e0e5b6514f85e306a786f4c802b229f850003bef7e32bae2de3fddb33"
+    },
+    {
+      "path": "assets/previews/paper-burst.gif",
+      "bytes": 182343,
+      "sha256": "d060888102f3e08fe689b839c89fb382270ffcf994343299d82dd381b45dfb65"
+    },
+    {
+      "path": "assets/textures/check.png",
+      "bytes": 103147,
+      "sha256": "d726cf300e61bb36c5780c7fc395195d99d7eec981407a617589c808caa08bee",
+      "size": [
+        1024,
+        768
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        135,
+        94,
+        899,
+        606
+      ]
+    },
+    {
+      "path": "assets/textures/cross.png",
+      "bytes": 127135,
+      "sha256": "cea7d1f6c1155ed4ef076999d1933df52589cf133c846c359c4fc4ac0c10ced5",
+      "size": [
+        1024,
+        768
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        216,
+        127,
+        823,
+        646
+      ]
+    },
+    {
+      "path": "assets/textures/paper-01-back.png",
+      "bytes": 101155,
+      "sha256": "ff912348eefd70300adca5d4454d4389633fa74bf377997382f83df186fab764",
+      "size": [
+        303,
+        206
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        0,
+        0,
+        303,
+        206
+      ]
+    },
+    {
+      "path": "assets/textures/paper-01.png",
+      "bytes": 125368,
+      "sha256": "c272199fccf2d23013ef7b9264ae10efe40fe00d9c797a5590df8fff9ef7db7b",
+      "size": [
+        303,
+        206
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        0,
+        0,
+        303,
+        206
+      ]
+    },
+    {
+      "path": "assets/textures/paper-02-back.png",
+      "bytes": 101017,
+      "sha256": "b75bc9391d600c89f6d7fb53ba4dec2b115af605d2f5a89d981794646c566920",
+      "size": [
+        291,
+        206
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        0,
+        0,
+        291,
+        206
+      ]
+    },
+    {
+      "path": "assets/textures/paper-02.png",
+      "bytes": 126173,
+      "sha256": "81101a48aba9e319eed7485d93259aa99acf0e7008faf114a9f0e51b2b2a8b78",
+      "size": [
+        291,
+        206
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        0,
+        0,
+        291,
+        206
+      ]
+    },
+    {
+      "path": "assets/textures/paper-04-back.png",
+      "bytes": 95555,
+      "sha256": "a276c13c44f3f6dcbf0e3ae6776d49295ee6c1cc9a36ddb8eeaac76ea62bf474",
+      "size": [
+        300,
+        207
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        0,
+        0,
+        300,
+        207
+      ]
+    },
+    {
+      "path": "assets/textures/paper-04.png",
+      "bytes": 117853,
+      "sha256": "bb1f5c4096e749de0a7a64cbb62b956436652db06f2b697bbd8e309d4eb87c77",
+      "size": [
+        300,
+        207
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        0,
+        0,
+        300,
+        207
+      ]
+    },
+    {
+      "path": "assets/textures/paper-06-back.png",
+      "bytes": 95869,
+      "sha256": "543767ef5852e454a6794ba935f4033fe574814255ffa096d1b52be7b3cfba05",
+      "size": [
+        285,
+        201
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        0,
+        0,
+        285,
+        201
+      ]
+    },
+    {
+      "path": "assets/textures/paper-06.png",
+      "bytes": 119884,
+      "sha256": "f5b1162719b04939c8ee69366e62d54a1435212d8358002d22290141741f3c83",
+      "size": [
+        285,
+        201
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        0,
+        0,
+        285,
+        201
+      ]
+    },
+    {
+      "path": "assets/textures/paper-07-back.png",
+      "bytes": 87588,
+      "sha256": "712b18277e091cf31e145fdfb003acd4b65460679474ee91a1bd4abfa695b79e",
+      "size": [
+        296,
+        186
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        0,
+        0,
+        296,
+        186
+      ]
+    },
+    {
+      "path": "assets/textures/paper-07.png",
+      "bytes": 107663,
+      "sha256": "db5fccdb2c9b01d36c165642526ab5d3075cfd4f137e2604b5ca15c2ff0c962d",
+      "size": [
+        296,
+        186
+      ],
+      "mode": "RGBA",
+      "alpha_bbox": [
+        0,
+        0,
+        296,
+        186
+      ]
+    },
+    {
+      "path": "references/acceptance.md",
+      "bytes": 1967,
+      "sha256": "9e924aca8fa1251792783e109ace0f9ac99cb461f63eab511d2629faa5a1f967"
+    },
+    {
+      "path": "references/generation-prompt.txt",
+      "bytes": 1635,
+      "sha256": "e4e384c4bcc82954e61a3916eadbd61e3ab543c566f6e259b1eb367aa24a4587"
+    },
+    {
+      "path": "references/integration.md",
+      "bytes": 4436,
+      "sha256": "2a6edf2ce09664e004d9a05e42d78ab92735427b404089433557abe4515f5bd2"
+    },
+    {
+      "path": "references/motion.md",
+      "bytes": 2515,
+      "sha256": "95da0e777762a2e605b8ab0ebbd52c1ca895741da2860256b11ff7893babc549"
+    },
+    {
+      "path": "references/provenance.md",
+      "bytes": 2394,
+      "sha256": "ebb4f8ad0b836a5d8415e2ac122470fc3c1ad57161b4f86a05e23070dde934f6"
+    },
+    {
+      "path": "scripts/effect_math.py",
+      "bytes": 3550,
+      "sha256": "6be3de7d15c09cdfbb651ab65807cbd2bbac6ea6e38936c094ece2547c657400"
+    },
+    {
+      "path": "scripts/validate_library.py",
+      "bytes": 4284,
+      "sha256": "870a881bbd373ff75bbe3755db43f0686beae635ad6922c9d2b0cf7f7ea3603a"
+    },
+    {
+      "path": "SKILL.md",
+      "bytes": 3881,
+      "sha256": "a5d1e382d4b9ef6cf7d37453c0ce1c0593c3eaf6fd23511d7dbfddbf969fb9d4"
+    }
+  ]
+}

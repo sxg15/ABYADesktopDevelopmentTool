@@ -10,7 +10,7 @@
 不循环轮询、不要求先暂停，不让策划重复已经提交的答案。问答不等于文档确认。
 模板只读取摘要与实际选中项；明确选择复用，否则把建议纳入需求文档。
 使用稳定 REQ 编号列核心循环、胜负、退出重开、必要页面、验收条件和不包含的内容。
-提交 requirements 文档，由 APP 确认其具体版本，才推进资源与方案。
+提交 requirements 文档，策划审阅并在当前对话确认其具体版本，才推进资源与方案。
 
 ## 2. 资源与美术预览
 
@@ -31,7 +31,7 @@
 涉及必要动作或特效时提供短视频；静态素材不强制录像。
 用 register-visual 登记实际文件、用途、来源和方案版本；保持旧文件不被覆盖。
 流程 2.1 以 [美术需求确认单](../assets/production/art-requirements.template.md) 梳理风格、资源清单、复用/新增范围、关联概念图版本、制作约束及验收标准。
-提交 resources 文档并等待 APP 用户确认，禁止用 complete-stage resources 跳过审查。
+提交 resources 文档并等待策划确认该版本，禁止用 complete-stage resources 跳过审查。
 submit-document data 必填 artScope（new-art/reuse-only/no-art）及 artScopeReason，正文必须包含该理由；美术模板 artTemplate 随此文档确认。
 新增美术须提供上述预览；仅复用或无美术需求也提交确认单，列出复用对象、范围和依据，可不新增概念图。
 文档及关联图片有变化时重新提交相应版本；确认后进入执行计划。旧任务没有 resources 批准节点时仍按旧 policy 完成资源阶段。
