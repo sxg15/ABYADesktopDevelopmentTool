@@ -212,9 +212,9 @@ impl TaskService {
         let archive = if freeze {
             super::version_snapshots::copy_verified(
                 &archive,
-                &root
-                    .join("artifacts/version-snapshots")
-                    .join(uuid::Uuid::new_v4().to_string()),
+                &self
+                    .archive_storage(task_id, "版本")?
+                    .join(self.project_archive_name(task_id, id)?),
             )?
         } else {
             archive

@@ -157,3 +157,5 @@ delete_task 接受可选 cleanWorkspace，缺省仅删除任务记录。清理�
 Skill 卡片以相邻 library.json 维护 group、usage、creator 和可选 maintainer。内置 Skill 维护目标为 Git 克隆中的源文件，自定义 Skill 使用其任务工作区。按工作区与相对文件路径保存独立 Codex 维护对话，再次打开复用。
 
 勾选清理工作区时，任务删除与待清理记录在同一事务提交。Windows 占用导致重命名或移除失败时，在后台和重启后重试；以任务标识和一次性清理标记保护同路径新目录。
+
+项目长期保存的编辑档位于 存档/编辑数据/Archives，冻结版本位于 存档/版本。新建存档 name 填可读的版本特点，由 APP 组合游戏名称、版本特点与本地创建时间；沿用原 creationId 重查回执。右键任务可打开存档目录。

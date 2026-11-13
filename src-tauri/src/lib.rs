@@ -816,6 +816,19 @@ fn set_task_status(
 }
 
 #[tauri::command(async)]
+fn open_task_archives(
+    id: String,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let folder = state.tasks.project_save_folder(&id)?;
+    app.opener()
+        .open_path(folder.to_string_lossy(), None::<&str>)
+        .map_err(foundation::AppError::internal)
+}
+
+#[tauri::command(async)]
 fn open_task_folder(
     id: String,
     state: State<'_, AppState>,
@@ -1635,6 +1648,7 @@ pub fn run() {
             set_task_status,
             delete_task,
             open_task_folder,
+            open_task_archives,
             get_codex_terminal_availability,
             open_codex_terminal,
             write_codex_terminal,

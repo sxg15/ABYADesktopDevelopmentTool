@@ -262,3 +262,5 @@ Workflow continuity 2.6 (2026-10-26), Autonomous recovery 2.5 (2026-10-24), Term
 2026-11-05 试玩问题具体描述候选：Candidates/ConcreteIssues-20261105。缺少 playerSummary 时展示原始 description/复现及影响，失败检查展示 observations。相关组件 12 项测试通过，完整检查通过；不替换运行中的正式 APP。
 
 2026-11-05 用户明确要求将见缝插针项目接入最新 Publish 并清理旧文件。已发布 APP 09048ec6fa753bdc4a180b9e166cd9ff714f1632691a0795859aca340a8d4aa0，保留项目 revision463、input-362f-v1、原会话和指定 Player，核对编辑源/冻结快照哈希及实际工作台。删除三份旧候选目录，旧 Publish 与项目备份保留；额外 staging/临时数据库清理被自动审核阻止，未执行。见 docs/JFCZ_PUBLISH_MIGRATION_20261105.md。
+
+发布后核对右键「在资源管理器中打开存档位置」、项目内编辑档与版本目录，以及迁移前后存档内容、GUID 和冻结版本的可启动性。为旧历史记录保留迁移路径的兼容访问。

@@ -10,6 +10,7 @@ mod execution_time;
 mod preflight_recovery;
 mod progress_budget;
 mod review_handoff;
+mod save_layout;
 mod scoped_evidence;
 mod stage_contracts;
 mod validation_impact;

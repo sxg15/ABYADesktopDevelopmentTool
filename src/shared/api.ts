@@ -75,6 +75,7 @@ export const api = {
   setTaskStatus: (id: string, status: TaskStatus) =>
     invoke<DevelopmentTask>("set_task_status", { input: { id, status } }),
   deleteTask: (id: string, cleanWorkspace = false) => invoke<boolean>("delete_task", { id, cleanWorkspace }),
+  openTaskArchives: (id:string)=>invoke<void>("open_task_archives",{id}),
   openTaskFolder: (id: string) => invoke<void>("open_task_folder", { id }),
 
   codexTerminalAvailability: () =>

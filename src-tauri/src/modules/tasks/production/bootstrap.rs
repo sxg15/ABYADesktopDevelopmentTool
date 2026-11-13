@@ -10,11 +10,7 @@ impl TaskService {
         if archive.is_empty() {
             return Ok(None);
         }
-        let root = self.production_workspace(task)?;
-        let data = files::safe_path(
-            root.parent().ok_or_else(conflict)?,
-            &format!(".abya-authoring/{task}"),
-        )?;
+        let data = self.archive_storage(task, "编辑数据")?;
         if !data.is_dir() {
             return Ok(None);
         }

@@ -127,9 +127,7 @@ impl TaskService {
         if r.version_details["frozenSnapshot"] != true {
             return Ok(source.to_string_lossy().into_owned());
         }
-        let root = self.production_workspace(task)?;
-        let workspace_root = root.parent().ok_or_else(conflict)?;
-        let runs = files::safe_path(workspace_root, ".abya-play-runs")?;
+        let runs = self.archive_storage(task, "试玩副本")?;
         let data = runs.join(uuid::Uuid::new_v4().simple().to_string());
         let parent = data.join("Archives");
         std::fs::create_dir_all(&parent)?;
@@ -153,14 +151,17 @@ impl TaskService {
         archive: &str,
     ) -> AppResult<Option<PathBuf>> {
         let root = self.production_workspace(task)?;
-        let allowed = files::safe_path(root.parent().ok_or_else(conflict)?, ".abya-play-runs")?;
-        if !allowed.is_dir() {
-            return Ok(None);
-        }
         let archive = Path::new(archive).canonicalize()?;
-        if !archive.starts_with(allowed.canonicalize()?) {
+        let allowed = [
+            self.archive_storage(task, "试玩副本")?,
+            files::safe_path(root.parent().ok_or_else(conflict)?, ".abya-play-runs")?,
+        ];
+        let Some(allowed) = allowed
+            .iter()
+            .find(|p| p.is_dir() && archive.starts_with(p))
+        else {
             return Ok(None);
-        }
+        };
         let archives = archive.parent().ok_or_else(conflict)?;
         let data = archives.parent().ok_or_else(conflict)?;
         if archives.file_name() != Some(std::ffi::OsStr::new("Archives"))
