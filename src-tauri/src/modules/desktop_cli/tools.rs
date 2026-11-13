@@ -62,7 +62,7 @@ impl DesktopToolDispatcher {
         name: &str,
         mut arguments: Value,
     ) -> ToolCallResult {
-        let Some(context) = context else {
+        let Some(mut context) = context else {
             if matches!(name, "development_task_list" | "development_task_create") {
                 return self.dispatch(None, name, arguments, request_id);
             }
@@ -70,10 +70,33 @@ impl DesktopToolDispatcher {
                 "A task conversation context is required.",
             ));
         };
+        let native = context
+            .as_object_mut()
+            .and_then(|v| v.remove("desktopThread"));
         let input: ConversationBindInput = match decode(context.clone()) {
             Ok(value) => value,
             Err(error) => return ToolCallResult::error(error),
         };
+        if let Some(thread) = native.as_ref().and_then(Value::as_str)
+            && let Err(error) = self.dependencies.codex_terminal.check_desktop_thread(
+                &input.task_id,
+                &input.conversation_id,
+                thread,
+            )
+        {
+            return ToolCallResult::error(error);
+        }
+        if name == "development_production_chat_response" {
+            let result = self.chat_response(
+                &input.task_id,
+                native.as_ref().and_then(Value::as_str),
+                arguments,
+            );
+            return match result {
+                Ok(value) => ToolCallResult::success(value),
+                Err(error) => ToolCallResult::error(error),
+            };
+        }
         let session = format!(
             "{}-{}",
             match input.provider {
@@ -169,6 +192,82 @@ impl DesktopToolDispatcher {
             return ToolCallResult::success(json!({"bound":true}));
         }
         self.dispatch(Some(&session), name, arguments, request_id)
+    }
+
+    fn chat_response(&self, id: &str, native: Option<&str>, args: Value) -> AppResult<Value> {
+        let native =
+            native.ok_or_else(|| AppError::validation("请在绑定的 Codex 桌面对话确认。"))?;
+        let tasks = &self.dependencies.tasks;
+        let record = tasks
+            .production_get(id)?
+            .record
+            .ok_or_else(|| AppError::validation("任务尚未启用制作流程。"))?;
+        let revision = args["expectedRevision"]
+            .as_u64()
+            .ok_or_else(|| AppError::validation("缺少成果版本。"))?;
+        let quote = args["userMessage"].as_str().unwrap_or_default();
+        let op = args["operation"].as_str().unwrap_or_default();
+        let data = &args["data"];
+        let since = if op == "decide" {
+            record
+                .documents
+                .get(data["kind"].as_str().unwrap_or_default())
+                .map(|doc| doc.submitted_at.as_str())
+                .ok_or_else(|| AppError::validation("没有这份文档。"))?
+        } else {
+            &record.updated_at
+        };
+        self.dependencies
+            .codex_terminal
+            .check_user_message(id, native, quote, since)?;
+        if revision != record.revision {
+            return Err(AppError::validation("任务已有新版，请重新读取进展。"));
+        }
+        if op == "preflight" {
+            return self.dependencies.runtime_bridge.run_capability_preflight(
+                id,
+                data["reuseExisting"].as_bool().unwrap_or(false),
+                data["retry"].as_bool().unwrap_or(false),
+                true,
+            );
+        }
+        if op == "prototype" {
+            return serialize(self.dependencies.runtime_bridge.start_prototype(
+                id,
+                revision,
+                data["sourceInstanceId"].as_str().unwrap_or_default(),
+                quote,
+            )?);
+        }
+        if op == "decide" {
+            return serialize(
+                tasks.production_decide(crate::modules::tasks::ProductionDecision {
+                    task_id: id.into(),
+                    expected_revision: revision,
+                    kind: data["kind"].as_str().unwrap_or_default().into(),
+                    document_hash: data["documentHash"].as_str().unwrap_or_default().into(),
+                    accepted: data["accepted"]
+                        .as_bool()
+                        .ok_or_else(|| AppError::validation("请明确通过或退回。"))?,
+                    feedback: quote.into(),
+                })?,
+            );
+        }
+        let input = crate::modules::tasks::ProductionMutation {
+            task_id: id.into(),
+            expected_revision: revision,
+            operation: op.into(),
+            data: data.clone(),
+        };
+        serialize(match op {
+            "submit-answers" | "set-player-mode" => tasks.production_answer(input)?,
+            "revisit" => tasks.production_revisit(input)?,
+            "enter-playtest" => tasks.production_workbench(input)?,
+            "add" | "resolve" | "reopen" | "resume-art" | "add-art-note" => {
+                tasks.production_feedback(input)?
+            }
+            _ => return Err(AppError::validation("未知的对话操作。")),
+        })
     }
 
     #[cfg(test)]
@@ -1308,7 +1407,9 @@ mod tests {
         let database = Database::open(&paths).unwrap();
         let settings = SettingsService::new(database.clone(), paths.default_workspace_root.clone());
         let tasks = TaskService::new(database.clone(), paths.default_workspace_root.clone());
-        let codex_terminal = CodexTerminalService::new(tasks.clone()).unwrap();
+        let codex_terminal = CodexTerminalService::new(tasks.clone())
+            .unwrap()
+            .with_session_store(root.join("sessions"));
         let connections = GameConnectionService::new();
         let archives = ArchiveCatalogService::new(paths.clone());
         let instances = InstanceService::new(database.clone(), paths.clone(), connections.clone());
@@ -1339,6 +1440,258 @@ mod tests {
             codex_terminal,
             root,
         }
+    }
+
+    #[test]
+    fn desktop_chat_reuses_workspace_and_applies_review_once() {
+        let f = fixture();
+        let task = f
+            .tasks
+            .create(TaskInput {
+                title: "桌面审阅".into(),
+                description: "计分玩法".into(),
+            })
+            .unwrap();
+        let id = &task.id;
+        let workspace = std::path::Path::new(&task.workspace_path);
+        let native = Uuid::new_v4().to_string();
+        assert_eq!(
+            f.codex_terminal.fixture_desktop_chat(id, &native).unwrap(),
+            format!("codex://threads/{native}")
+        );
+        let mut context: Value = serde_json::from_slice(
+            &std::fs::read(f.tasks.desktop_context_path(id).unwrap()).unwrap(),
+        )
+        .unwrap();
+        assert!(
+            workspace
+                .join(".codex/skills/abya-gameplay-brief/SKILL.md")
+                .is_file()
+        );
+        context.as_object_mut().unwrap().remove("cli");
+        context.as_object_mut().unwrap().remove("preparedThread");
+        context.as_object_mut().unwrap().remove("desktopLocator");
+        context["desktopThread"] = json!(native);
+        let sessions = f.root.join("sessions");
+        std::fs::create_dir_all(&sessions).unwrap();
+        let file = sessions.join(format!("rollout-{native}.jsonl"));
+        let now = || chrono::Utc::now().to_rfc3339();
+        let meta=json!({"type":"session_meta","payload":{"id":native,"timestamp":now(),"cwd":workspace}}).to_string();
+        std::fs::write(&file, &meta).unwrap();
+        let call = |name, data| {
+            f.dispatcher
+                .call_with_context(Some(context.clone()), "regression-test", name, data)
+        };
+        assert!(!call("development_production_get", json!({})).is_error);
+        assert_eq!(
+            f.codex_terminal.fixture_desktop_chat(id, &native).unwrap(),
+            format!("codex://threads/{native}")
+        );
+        let mutate = |rev, op, data| {
+            call(
+                "development_production_update",
+                json!({"expectedRevision":rev,"operation":op,"data":data}),
+            )
+        };
+        let initialized = result_json(mutate(
+            0,
+            "initialize",
+            json!({"questionMode":"no-followup","playerMode":"single"}),
+        ));
+        let path = "artifacts/requirements.md";
+        let doc = std::env::var_os("ABYA_BRIEF_SMOKE_DOCUMENT")
+            .map(|p| std::fs::read_to_string(p).unwrap())
+            .unwrap_or_else(|| "# 规则\n单人，点击得分。".into());
+        std::fs::write(workspace.join(path), doc).unwrap();
+        let submitted = result_json(mutate(
+            initialized["record"]["revision"].as_u64().unwrap(),
+            "submit-document",
+            json!({"kind":"requirements","path":path}),
+        ));
+        let r = &submitted["record"];
+        let say = |msg: &str| {
+            std::fs::write(&file,format!("{}\n{}\n",meta,json!({"type":"response_item","timestamp":now(),"payload":{"type":"message","role":"user","content":[{"type":"input_text","text":msg}]}}))).unwrap()
+        };
+        let quote = "确认这一版，进入美术需求整理";
+        let approve = json!({"operation":"decide","expectedRevision":r["revision"],"userMessage":quote,"data":{"kind":"requirements","accepted":true,"documentHash":r["documents"]["requirements"]["sha256"]}});
+        assert!(call("development_production_chat_response", approve.clone()).is_error);
+        say(quote);
+        let accepted = result_json(call(
+            "development_production_chat_response",
+            approve.clone(),
+        ));
+        assert_eq!(
+            accepted["record"]["currentStage"], "resources",
+            "{accepted}"
+        );
+        assert!(call("development_production_chat_response", approve).is_error);
+        say("回到需求，调整计分");
+        let revisited = result_json(call(
+            "development_production_chat_response",
+            json!({"operation":"revisit","userMessage":"回到需求，调整计分","expectedRevision":accepted["record"]["revision"],"data":{"stage":"requirements","reason":"调整计分"}}),
+        ));
+        assert_eq!(revisited["record"]["currentStage"], "requirements");
+        assert_eq!(
+            revisited["record"]["approvals"].as_array().unwrap().len(),
+            1
+        );
+        std::fs::write(workspace.join(path), "手改计分规则").unwrap();
+        assert_eq!(
+            f.tasks
+                .document_source(id, "requirements")
+                .unwrap()
+                .unwrap(),
+            "手改计分规则"
+        );
+    }
+
+    #[test]
+    fn mismatched_working_directory_rebinds_without_moving_the_prior_thread() {
+        let f = fixture();
+        let task = f
+            .tasks
+            .create(TaskInput {
+                title: "原目录已变化".into(),
+                description: String::new(),
+            })
+            .unwrap();
+        let prior = Uuid::new_v4().to_string();
+        let current = Uuid::new_v4().to_string();
+        let id = &task.id;
+        f.codex_terminal.fixture_desktop_chat(id, &prior).unwrap();
+        let link = f.codex_terminal.fixture_desktop_chat(id, &current).unwrap();
+        assert_eq!(link, format!("codex://threads/{current}"));
+        assert_eq!(
+            f.codex_terminal.prepared_desktop_link(id).unwrap(),
+            Some(link)
+        );
+        let chats = f.codex_terminal.list_conversations(id).unwrap();
+        assert_eq!(chats.len(), 2);
+        let old = chats
+            .iter()
+            .find(|c| c.native_session_id.as_deref() == Some(&prior))
+            .unwrap();
+        assert!(
+            f.codex_terminal
+                .check_desktop_thread(id, &old.id, &prior)
+                .is_err()
+        );
+    }
+
+    #[test]
+    #[ignore = "Creates an isolated QA project and thread in the installed Codex app server"]
+    fn real_desktop_chat_binds_before_first_message() {
+        let f = fixture();
+        let task = f
+            .tasks
+            .create(TaskInput {
+                title: "ABYA 桌面对话定位验收".into(),
+                description: "测试用任务".into(),
+            })
+            .unwrap();
+        let id = &task.id;
+        let result = f.codex_terminal.desktop_chat(id).unwrap();
+        let native = result.strip_prefix("codex://threads/").unwrap();
+        Uuid::parse_str(native).unwrap();
+        assert_eq!(
+            f.codex_terminal
+                .prepared_desktop_link(id)
+                .unwrap()
+                .as_deref(),
+            Some(result.as_str())
+        );
+        assert_eq!(f.codex_terminal.desktop_chat(id).unwrap(), result);
+        let ctx: Value = serde_json::from_slice(
+            &std::fs::read(f.tasks.desktop_context_path(id).unwrap()).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(ctx["preparedThread"], native);
+        println!(
+            "Verified installed Codex thread {native}, correct cwd, project membership and idempotent reopen."
+        );
+        let handoff = f
+            .codex_terminal
+            .verify_desktop_resume(native, std::path::Path::new(&task.workspace_path));
+        f.codex_terminal.archive_desktop_fixture(&task, native);
+        handoff.expect("independent desktop app-server must be able to write to the prepared chat");
+    }
+
+    #[test]
+    #[ignore = "Starts the selected Player in a fresh disposable data root and inspects the visible native menu"]
+    fn real_player_isolated_archive_menu() {
+        let exe = std::env::var("ABYA_MENU_SMOKE_PLAYER").unwrap();
+        let output = PathBuf::from(std::env::var_os("ABYA_MENU_SMOKE_OUTPUT").unwrap());
+        let f = fixture();
+        let deps = &f.dispatcher.dependencies;
+        let mut settings = deps.settings.get().unwrap();
+        let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        settings.game_gateway_port = listener.local_addr().unwrap().port();
+        drop(listener);
+        settings.lan_broadcast_enabled = false;
+        settings.game_executable_path = exe.clone();
+        deps.settings.save(&settings).unwrap();
+        deps.connections
+            .set_handler(Arc::new(crate::GameConnectionCoordinator {
+                instances: deps.instances.clone(),
+                logs: deps.logs.clone(),
+            }));
+        deps.connections.start(&settings).unwrap();
+        let task = f
+            .tasks
+            .create(TaskInput {
+                title: "Player 菜单兼容测试".into(),
+                description: String::new(),
+            })
+            .unwrap();
+        let data = f.root.join("isolated-menu-data");
+        std::fs::create_dir_all(data.join("Archives")).unwrap();
+        let snapshot = deps
+            .runtime_bridge
+            .probe_archive_ui(
+                LaunchInstanceInput {
+                    task_id: task.id.clone(),
+                    executable_path: exe.clone(),
+                    name: "隔离主菜单实测".into(),
+                    profile: LaunchProfile {
+                        mode: LaunchMode::Editor,
+                        window_mode: WindowMode::Windowed,
+                        visibility_mode: WindowVisibilityMode::Background,
+                        width: 1280,
+                        height: 720,
+                        archive: None,
+                        host_instance_id: None,
+                        exit_on_failure: false,
+                        language: String::new(),
+                    },
+                },
+                data,
+            )
+            .unwrap();
+        std::fs::write(output, serde_json::to_vec_pretty(&snapshot).unwrap()).unwrap();
+        assert_eq!(snapshot["route"], "native-creator-ui");
+        assert!(
+            snapshot["archive"]["currentLevelGuid"]
+                .as_str()
+                .is_some_and(|v| !v.is_empty())
+        );
+        let creation = Uuid::new_v4().to_string();
+        let args = json!({"taskId":task.id,"creationId":creation,"name":"本任务的空白起点","author":"ABYA QA","executablePath":exe});
+        let init = || {
+            deps.runtime_bridge.create_archive(
+                serde_json::from_value(args.clone()).unwrap(),
+                "menu-smoke",
+                &Uuid::new_v4().to_string(),
+            )
+        };
+        let ready = init().unwrap();
+        let repeated = init().unwrap();
+        for instance in deps.instances.list(Some(&task.id)).unwrap() {
+            let _ = deps.instances.stop(&instance.id);
+        }
+        assert_eq!(ready["status"], "ready", "{ready}");
+        assert_eq!(ready["initializationRoute"], "native-creator-ui");
+        assert_eq!(ready["archiveGuid"], repeated["archiveGuid"]);
+        assert_eq!(ready["instanceId"], repeated["instanceId"]);
     }
 
     fn result_json(result: ToolCallResult) -> Value {

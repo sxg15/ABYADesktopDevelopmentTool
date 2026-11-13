@@ -23,6 +23,16 @@ struct ToolAnnotations {
 pub(crate) fn tools() -> Vec<CliCommand> {
     vec![
         tool(
+            "development_production_chat_response",
+            "Apply the latest explicit planner message from the bound desktop thread to its reviewed version.",
+            "Planner response",
+            object_schema(
+                json!({"expectedRevision":{"type":"integer"},"operation":{"type":"string"},"data":{"type":"object"},"userMessage":{"type":"string"}}),
+                &["expectedRevision", "operation", "data", "userMessage"],
+            ),
+            reversible_write(),
+        ),
+        tool(
             "development_production_preflight",
             "Run isolated capability preflight in plan, implementation or review using the APP-selected Player. Implementation/review require an approved plan. Review defaults to a copy of the task's existing editable archive; it validates load/save/cold-load without moving stages or reopening approval. Temporary data is cleaned and receipts retained.",
             "Run current-stage capability preflight",

@@ -1,3 +1,21 @@
+## 2026-11-13 主菜单原生空白建档
+
+production preflight 与 archive create 支持同一绑定 Player 的原生主菜单建档路径。回执注明 native-creator-ui，真实任务仍需经阶段校验、用户授权及包指纹核对；创建可能已派发时沿用原 creationId 回读。
+
+## 2026-11-12 新任务桌面对话交接
+
+受管桌面对话的实机测试还需从独立客户端接回同一线程，核对工作目录并验证无 writer 占用。
+
+读取工作区上下文时使用 desktopLocator 定位准备该任务的 APP，即使 Codex 的 LOCALAPPDATA 与 APP 不同。任务目录内不保存连接令牌。
+
+## 2026-11-12 修复桌面对话定位
+
+桌面 CLI 只接受 APP 准备并核对过的原生线程 ID；在无关对话粘贴提示词时用其中的原始任务链接跳回。
+
+## 2026-11-12 Codex 桌面制作流程
+
+桌面对话从工作目录读取 .codex/abya-desktop.json 和 CODEX_THREAD_ID，经当前 Windows 用户的加密连接描述访问 APP。production respond 将绑定对话的策划原话、当前修订号和文档哈希交由任务服务核对。
+
 ## 2026-11-06 Workflow 2.12
 
 production version 从任务实例获取 Player 路径并核对 App 所选 PB、任务绑定与适用预检，再冻结存档。

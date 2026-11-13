@@ -1,0 +1,4 @@
+interface:
+  display_name: "底层规则批量维护"
+  short_description: "记录底层规则并跟踪旧玩法文档的逐份应用状态，支持延期执行和按文档查询"
+  default_prompt: "使用 $abya-foundation-rule-maintenance 查询或登记底层规则及各玩法旧文档的待维护事项。"

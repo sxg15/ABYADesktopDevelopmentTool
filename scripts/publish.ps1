@@ -1,4 +1,4 @@
-﻿param([switch]$Staging, [switch]$WorkflowStaging, [switch]$RecoveryStaging, [switch]$ContinuationStaging, [switch]$UiStaging, [switch]$Validation, [switch]$RecorderStaging)
+param([switch]$Staging, [switch]$WorkflowStaging, [switch]$RecoveryStaging, [switch]$ContinuationStaging, [switch]$UiStaging, [switch]$Validation, [switch]$RecorderStaging)
 
 $ErrorActionPreference = "Stop"
 
@@ -9,10 +9,10 @@ if ($publishName -eq 'Publish') { throw 'Workflow 2.12 requires an isolated cand
 $publish = Join-Path $root $publishName
 $running = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith("$publish\", [StringComparison]::OrdinalIgnoreCase) }
 if ($running) { throw "Close the running package before replacing it: $publish" }
-$env:ABYA_RELEASE_ID = if ($RecorderStaging) { 'window-recorder-fix-20261009' } elseif ($UiStaging) { 'guidance-action-panel-20261012' } else { 'workflow-unlimited-20261106' }
 $env:ABYA_BUILD_UTC = [DateTime]::UtcNow.ToString('O')
 $previous = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'Publish/build-manifest.json') | ConvertFrom-Json
 $releaseNumber = [int64]$previous.releaseNumber + 1
+$env:ABYA_RELEASE_ID = if ($Validation) { 'codex-desktop-workflow-' + $releaseNumber } elseif ($RecorderStaging) { 'window-recorder-fix-20261009' } elseif ($UiStaging) { 'codex-desktop-workflow-preview-9' } else { 'workflow-unlimited-20261106' }
 $releaseNotes = (Get-Content -Encoding UTF8 -LiteralPath (Join-Path $root 'CHANGELOG.md') | Select-String '^# ' | Select-Object -First 1).Line -replace '^# ', ''
 if ([string]::IsNullOrWhiteSpace($releaseNotes)) { throw 'Add a release summary to CHANGELOG.md.' }
 $packageVersion = (Get-Content -Raw -LiteralPath (Join-Path $root 'package.json') | ConvertFrom-Json).version

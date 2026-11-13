@@ -2,6 +2,7 @@ mod app_server;
 mod autonomy_watch;
 #[cfg(windows)]
 mod crash_job;
+mod desktop_chat;
 mod diagnostics;
 mod memory_context;
 mod preflight;
@@ -163,6 +164,7 @@ pub struct CodexTerminalService {
     tasks: TaskService,
     sessions: Arc<Mutex<HashMap<String, LiveTerminal>>>,
     resolver: CodexResolver,
+    desktop_sessions_root: Option<PathBuf>,
     app_server: Arc<Mutex<Option<AppServerHandle>>>,
     runtime_servers: Arc<Mutex<HashMap<String, AppServerHandle>>>,
     thread_conversations: Arc<Mutex<HashMap<String, (String, String)>>>,
@@ -241,6 +243,7 @@ impl CodexTerminalService {
             tasks,
             sessions: Default::default(),
             resolver: Arc::new(resolve_codex),
+            desktop_sessions_root: codex_sessions_root(),
             app_server: Default::default(),
             runtime_servers: Default::default(),
             thread_conversations: Default::default(),
@@ -285,7 +288,7 @@ impl CodexTerminalService {
         }
     }
 
-    pub fn list_conversations(&self, task_id: &str) -> AppResult<Vec<CodexConversation>> {
+    fn stored_conversations(&self, task_id: &str) -> AppResult<Vec<CodexConversation>> {
         let task = self.tasks.get_readonly(task_id)?;
         let root = conversations_root(Path::new(&task.workspace_path));
         if !root.is_dir() {
@@ -308,6 +311,13 @@ impl CodexTerminalService {
             }
         }
         conversations.sort_by(|left, right| right.updated_at.cmp(&left.updated_at));
+        Ok(conversations)
+    }
+
+    pub fn list_conversations(&self, task_id: &str) -> AppResult<Vec<CodexConversation>> {
+        let conversations = self.stored_conversations(task_id)?;
+        #[cfg(not(test))]
+        let task = self.tasks.get_readonly(task_id)?;
         #[cfg(not(test))]
         if self.metadata_refreshing.lock().insert(task_id.into()) {
             let service = self.clone();
@@ -1437,6 +1447,7 @@ impl CodexTerminalService {
             tasks,
             sessions: Default::default(),
             resolver: Arc::new(move || Some(codex.clone())),
+            desktop_sessions_root: None,
             app_server: Default::default(),
             runtime_servers: Default::default(),
             thread_conversations: Default::default(),

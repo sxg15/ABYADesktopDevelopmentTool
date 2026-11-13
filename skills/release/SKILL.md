@@ -1,3 +1,7 @@
+## 2026-11-13 dev 正式发布
+
+正式候选用 -Validation 构建，使用桌面工作流标识及递增的发布编号。核验原生入口、项目接续及清单后通过 scripts/promote-validated.ps1 提升同一包，再核对远端 dev。
+
 ## 2026-11-13 试玩入口初始化修复
 
 发布7补齐 App 试玩/验收入口读取目录前的游戏根等待。完整检查与便携包校验通过；原生同一 start_task_preview 接口在旧包复现缺少能力错误，修复包单窗口返回 ready 并持续运行约98秒后正常关闭。此次是用户报告的启动兼容维护，非完整游戏验收。APP SHA256 d4b4085ddb919a542c3f396eaa983c895076a3d5003833e21640ed8034e5a2df，详见 [专项验证](../../docs/PREVIEW_STARTUP_20261113.md)。
@@ -5,6 +9,36 @@
 ## 2026-11-13 新版 PB 预检兼容修复
 
 迁移现有试玩时修复 runtime_not_ready 初始化误判。发布 6 候选 APP SHA-256 `4407b1b3e4918abd20e396096eff12c1ed49ec5de63eee27055855f04a88d8a7`：完整 npm 检查、Rust 格式/Clippy、398 项库测试与2项 CLI 测试通过，564 文件完整便携包校验通过。隔离数据根中的实际现有存档副本，在 App 当前 PB 上通过 runtime-connect/save-archive/cold-load，返回 existing-verified 且临时文件清理完成。这是初始化兼容专项验证，不代表游戏完整验收或用户项目已迁移。正式包替换前保留数据库一致快照及旧包，后续逐项目核对实际记录。
+
+## 2026-11-13 试玩入口就绪检查
+
+-Validation 生成 codex-desktop-workflow-preview-8，接续 v3.11 联测的一键试玩入口检查。
+
+## 2026-11-13 主菜单原生空白建档
+
+-UiStaging 的 codex-desktop-workflow-preview-7 包含当前包原生空白建档路线。独立 Player 测试覆盖创建、带开始关卡加载、保存以及第二次冷加载身份核对。
+
+## 实例卡片预览包
+
+使用 `scripts/publish.ps1 -UiStaging` 生成 preview-9，位于 Publish-Staging-UI，可与正在运行的 preview-8 分开核对。
+
+## 2026-11-13 隔离 Player 就绪与策划确认
+
+本分支 -Validation 构建 codex-desktop-workflow-preview-6，用于 v3.11 真机预检启动复跑。
+
+## 2026-11-12 新任务桌面对话交接
+
+本分支 -UiStaging 生成 codex-desktop-workflow-preview-5，修复策划全流程演练中的首次对话占用。
+
+## 2026-11-12 制作阶段状态卡
+
+节点卡片预览使用 -Validation 打包到 Publish-Staging-Validation，标识 codex-desktop-workflow-preview-4。
+
+## 2026-11-12 制作工作台视觉还原
+
+此分支的 -UiStaging 产物位于 Publish-Staging-UI，标识 codex-desktop-workflow-preview-3，用于核对新版工作区的旧版流程样式。
+
+本分支的 -Validation 生成独立桌面对话预览包，清单标识 codex-desktop-workflow-preview-2。包含 .codex/skills 中的工作流和全部玩法资源。
 
 ## 2026-11-06 Workflow 2.12
 
@@ -83,8 +117,7 @@ Publish has a path allowlist in .gitignore; package-files.json lists all runtime
 portable-package.mjs rejects private/unexpected files, links, traversal, missing files,
 hash mismatches and oversized normal-Git payloads. --require-tracked catches ignored
 or forgotten release files. Publish bytes use -text attributes to survive clone intact.
-All completed CLI source and verified distribution changes must also reach dev,
-under the CLI-to-dev policy above (2026-10-15). Do not update main.
+Develop and release on dev. Sync origin/dev before building and before pushing. Publish validated sources and the matching numbered portable package together.
 Validate a fresh checkout in a different path, including spaces/non-ASCII characters.
 The application is ready to open without build tools; per-user AI login, game Player
 selection and the Windows WebView2 dependency remain machine prerequisites.

@@ -1,3 +1,5 @@
+桌面工作流的通知引导策划阅读目标阶段，并在任务的 Codex 对话中回答或提出修改。
+
 # Task Notifications Skill
 
 ## Exact art feedback rechecks (2026-10-20)

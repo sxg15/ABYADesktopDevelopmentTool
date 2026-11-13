@@ -242,17 +242,17 @@ fn text(kind: &str, target: &AttentionTarget, count: usize, en: bool) -> Attenti
             pick("前往复验", "Review the fix"),
         ),
         "terminal" => (
-            pick("终端需要你处理", "Your input is needed in the terminal"),
+            pick("Codex 对话需要你处理", "Your input is needed in Codex"),
             pick(
                 "一项输入或确认正在等待你的处理。",
                 "An input or approval request needs your response.",
             ),
             pick(
-                "请在终端阅读当前请求；处理完成后，AI 才能继续执行。",
-                "Read the terminal request and respond so AI can continue.",
+                "请回到本任务的 Codex 对话处理当前请求。",
+                "Respond in the task’s Codex chat.",
             ),
-            pick("处理位置：原会话终端", "Respond in: Original terminal"),
-            pick("前往终端处理", "Open terminal request"),
+            pick("处理位置：Codex 原对话", "Respond in: Codex chat"),
+            pick("打开任务对话", "Open task chat"),
         ),
         "question" => (
             pick("需要你回答阶段问题", "Stage questions need your answers"),
@@ -262,8 +262,8 @@ fn text(kind: &str, target: &AttentionTarget, count: usize, en: bool) -> Attenti
                 format!("需要你回答 {count} 个问题，提交后 AI 将继续处理。")
             },
             pick(
-                "答案在 APP 内提交，无需到终端重复回复。",
-                "Submit answers here; no duplicate reply in the terminal is needed.",
+                "请在本任务的 Codex 对话回答。",
+                "Answer in the task’s Codex chat.",
             ),
             pick("处理位置：阶段问答", "Respond in: Stage questions"),
             pick("开始回答", "Answer questions"),
@@ -289,8 +289,8 @@ fn text(kind: &str, target: &AttentionTarget, count: usize, en: bool) -> Attenti
                 )
             },
             pick(
-                "AI 正在等待你的审查结果；无需到终端重复回复。",
-                "AI is waiting for your review; no duplicate terminal reply is needed.",
+                "阅读后请在 Codex 对话中确认这一版，或提出修改。",
+                "Confirm the reviewed version or request changes in Codex.",
             ),
             pick("处理位置：制作流程", "Review in: Production"),
             pick("查看并审查", "Read and review"),
@@ -335,7 +335,7 @@ fn text(kind: &str, target: &AttentionTarget, count: usize, en: bool) -> Attenti
                 "已有答案与阶段记录保留，请勿重复提交。",
                 "Answers and stage records are saved; do not resubmit them.",
             ),
-            pick("处理位置：终端", "Check in: Terminal"),
+            pick("处理位置：Codex 对话", "Check in: Terminal"),
             pick(
                 if kind == "disconnected" {
                     "查看连接状态"

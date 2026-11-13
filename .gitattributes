@@ -6,3 +6,8 @@
 /.codex/skills/abya-art-template-scrapbook-collage/** -text
 "/ABYA 开发工具.cmd" text eol=crlf
 /Candidates/ConcreteIssues-20261105/** binary
+
+# Preserve upstream gameplay bundle hashes and binary resources.
+.codex/skills/abya-gameplay-brief/** -text whitespace=cr-at-eol,-blank-at-eof
+.codex/skills/abya-foundation-rule-maintenance/** -text whitespace=cr-at-eol,-blank-at-eof
+.codex/skills/abya-crayon-paper-effects/** -text whitespace=cr-at-eol,-blank-at-eof

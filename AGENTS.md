@@ -2,21 +2,7 @@
 
 每次交付新版桌面工具，按 skills/release/SKILL.md 的「项目接续与旧包清理」执行。验收覆盖更新前 App 内的全部项目（包括见缝插针）。以新正式 Publish 的实际回读结果作为清理旧版本的前提。
 
-Release branch policy (user clarification, 2026-10-15): all development happens
-on CLI. Before editing, inspect the working tree, fetch origin/CLI and origin/dev,
-switch to CLI, and integrate both latest remote branches into CLI. Preserve local
-changes and all features; do not develop directly on dev. Prefer fast-forward;
-when histories diverge, merge and resolve conflicts without dropping either side.
-After implementation and required checks/package validation, commit and push CLI,
-then integrate that completed CLI commit into dev and push dev. Include source,
-module Skills, project constraints and the verified complete portable package.
-Fetch again before publishing to account for concurrent changes; merge any new
-changes into CLI and rerun affected checks/rebuild if the combined code changes.
-Verify origin/dev contains the completed CLI commit and return the working branch
-to CLI. Do not report completion while synchronization is outstanding; report any
-actual conflict or remote failure. Never force-push, reset unrelated work or update
-main. This supersedes historical dev-only rules. No additional confirmation is
-needed for this routine sync.
+Branch and release policy (2026-11-13): develop on dev. Fetch origin/dev before editing and again before publishing. Integrate concurrent changes, validate the combined sources and the complete portable package, then push the source and versioned Publish together to dev. Verify the remote commit and update manifest. Keep dev checked out. Never force-push.
 
 Before changing production code (load context according to the change):
 

@@ -115,6 +115,7 @@ impl RuntimeBridgeService {
         let mut owned = None;
         let mut create_dispatched = false;
         let result = (|| -> AppResult<()> {
+            let witness = super::native_archive_ui::RootWitness::capture(data)?;
             let instance = self.instances.launch_bootstrap(
                 LaunchInstanceInput {
                     task_id: input.task_id.clone(),
@@ -148,29 +149,7 @@ impl RuntimeBridgeService {
                 format!("托管初始化未就绪：{}。请核对 Player 是否支持免按键启动和主菜单存档入口。",e.message),
                 "not_executed",
             ))?;
-            let start = Instant::now();
-            loop {
-                if cancel.load(Ordering::SeqCst) {
-                    return Err(AppError::validation("初始化已取消，尚未创建存档。"));
-                }
-                let game = self.bootstrap_call(
-                    id,
-                    "runtime_get_game_state",
-                    json!({}),
-                    session,
-                    &uuid::Uuid::new_v4().to_string(),
-                    cancel.clone(),
-                )?;
-                if game["context"]["rootInitialized"] == true
-                    && game["context"]["isTransitioning"] == false
-                {
-                    break;
-                }
-                if start.elapsed() > Duration::from_secs(60) {
-                    return Err(AppError::validation("游戏初始化未就绪；未发送创建操作。"));
-                }
-                std::thread::sleep(Duration::from_millis(500));
-            }
+            self.wait_for_game_root(id, session, &cancel)?;
             let tools = self.list_tools(id)?;
             for name in [
                 "editor_create_archive",
@@ -187,6 +166,7 @@ impl RuntimeBridgeService {
                 }
             }
             state["status"] = json!("creating");
+            let mut native_ui = false;
             for name in ["editor_create_archive", "editor_load_archive"] {
                 let descriptor = self.bootstrap_call(
                     id,
@@ -197,6 +177,12 @@ impl RuntimeBridgeService {
                     cancel.clone(),
                 )?;
                 if descriptor["available"] != true {
+                    if descriptor["available"] == false
+                        && descriptor["currentContext"]["mode"] == "MainMenu"
+                    {
+                        native_ui = true;
+                        continue;
+                    }
                     return Err(AppError::new(
                         "bootstrap_capability_unavailable",
                         format!(
@@ -205,7 +191,8 @@ impl RuntimeBridgeService {
                         "not_executed",
                     ));
                 }
-                if name == "editor_load_archive"
+                if !native_ui
+                    && name == "editor_load_archive"
                     && descriptor["inputSchema"]["properties"]["openStartLevel"]["type"]
                         != "boolean"
                 {
@@ -217,9 +204,38 @@ impl RuntimeBridgeService {
                 }
             }
             state["createOperationId"] = json!(format!("{}-create", input.creation_id));
-            save(path, &state)?;
-            create_dispatched = true;
-            let created=self.bootstrap_call(id,"editor_create_archive",json!({"name":input.name,"author":input.author,"introduce":"Task-owned blank archive"}),session,state["createOperationId"].as_str().unwrap(),cancel.clone())?;
+            state["initializationRoute"] = json!(if native_ui {
+                "native-creator-ui"
+            } else {
+                "editor_create_archive"
+            });
+            let created = if native_ui {
+                self.create_from_native_form(
+                    id,
+                    &witness,
+                    super::native_archive_ui::ArchiveFormInput {
+                        name: &input.name,
+                        author: &input.author,
+                        description: "Task-owned blank archive",
+                    },
+                    session,
+                    &cancel,
+                    || {
+                        self.tasks.production_bootstrap_root(&input.task_id)?;
+                        self.tasks.production_check_player_pin(
+                            &input.task_id,
+                            Path::new(&input.executable_path),
+                        )?;
+                        save(path, &state)?;
+                        create_dispatched = true;
+                        Ok(())
+                    },
+                )?
+            } else {
+                save(path, &state)?;
+                create_dispatched = true;
+                self.bootstrap_call(id,"editor_create_archive",json!({"name":input.name,"author":input.author,"introduce":"Task-owned blank archive"}),session,state["createOperationId"].as_str().unwrap(),cancel.clone())?
+            };
             state["createResult"] = created.clone();
             save(path, &state)?;
             let archive = checked_archive(data, &created["archive"])?;
@@ -229,7 +245,45 @@ impl RuntimeBridgeService {
             state["status"] = json!("loading");
             state["loadOperationId"] = json!(format!("{}-load", input.creation_id));
             save(path, &state)?;
-            self.bootstrap_call(
+            let editing_id = if native_ui {
+                let selection = super::native_archive_ui::ui_archive_selection(&created)?;
+                if self.instances.stop(id)?.process_alive {
+                    return Err(AppError::validation(
+                        "建档实例尚未退出，未启动第二个编辑器。",
+                    ));
+                }
+                let editor = self.instances.launch_with_data_root(
+                    LaunchInstanceInput {
+                        task_id: input.task_id.clone(),
+                        name: format!("编辑 · {}", input.name),
+                        executable_path: input.executable_path.clone(),
+                        profile: LaunchProfile {
+                            mode: LaunchMode::Editor,
+                            window_mode: WindowMode::Windowed,
+                            visibility_mode: WindowVisibilityMode::Background,
+                            width: 1280,
+                            height: 720,
+                            archive: Some(selection),
+                            host_instance_id: None,
+                            exit_on_failure: false,
+                            language: String::new(),
+                        },
+                    },
+                    Some(data.to_path_buf()),
+                )?;
+                owned = Some(editor.id.clone());
+                state["bootstrapInstanceId"] = json!(id);
+                state["instanceId"] = json!(editor.id);
+                save(path, &state)?;
+                self.active.lock().insert(
+                    active_key.clone(),
+                    (editor.id.clone(), session.into(), cancel.clone()),
+                );
+                self.wait_for_cli(&editor.id, Duration::from_secs(60))?;
+                self.wait_for_game_root(&editor.id, session, &cancel)?;
+                editor.id
+            } else {
+                self.bootstrap_call(
                 id,
                 "editor_load_archive",
                 json!({"archiveGuid":state["archiveGuid"],"discardUnsavedChanges":false,"openStartLevel":true}),
@@ -237,14 +291,10 @@ impl RuntimeBridgeService {
                 state["loadOperationId"].as_str().unwrap(),
                 cancel.clone(),
             )?;
-            let loaded = self.bootstrap_call(
-                id,
-                "editor_get_archive",
-                json!({}),
-                session,
-                &uuid::Uuid::new_v4().to_string(),
-                cancel.clone(),
-            )?;
+                id.clone()
+            };
+            let id = &editing_id;
+            let loaded = self.wait_for_loaded_archive(id, session, &cancel)?;
             if loaded["guid"] != state["archiveGuid"]
                 || loaded["archiveAndLevelLoaded"] != true
                 || checked_archive(data, &loaded)? != archive
@@ -262,8 +312,17 @@ impl RuntimeBridgeService {
                 level_guid: level.into(),
                 level_name: loaded["currentLevelName"].as_str().unwrap_or("").into(),
             };
-            self.instances
-                .bind_created_archive(id, &input.task_id, selection.clone())?;
+            if native_ui {
+                // The relaunched editor is already bound by its launch profile.
+                if loaded["currentLevelGuid"] != created["archive"]["currentLevelGuid"] {
+                    return Err(AppError::validation(
+                        "原生新建存档的起始关卡与实际打开的关卡不同。",
+                    ));
+                }
+            } else {
+                self.instances
+                    .bind_created_archive(id, &input.task_id, selection.clone())?;
+            }
             state["archive"] = serde_json::to_value(selection)?;
             state["status"] = json!("ready");
             state["created"] = json!(true);

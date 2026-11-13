@@ -1,0 +1,126 @@
+[
+  {
+    "file": "round-normal.png",
+    "source": "C:\\Users\\IGP\\AppData\\Local\\Temp\\codex-clipboard-f3c0f190-2c3b-4593-8e30-2dde700dbbfa.png",
+    "size": [
+      187,
+      184
+    ],
+    "sha256": "2f57af4e35548c3b7a4e374e1b9d227ac66df09f4a44a2b93a1c6e657ce09051",
+    "role": "user_supplied"
+  },
+  {
+    "file": "round-pressed.png",
+    "source": "C:\\Users\\IGP\\AppData\\Local\\Temp\\codex-clipboard-05ac7021-f50f-4b30-845b-c8faec91d32d.png",
+    "size": [
+      187,
+      176
+    ],
+    "sha256": "41b29270d068e932daac44471d2431369506c9ad516070895fc4e5b2a5e33f09",
+    "role": "user_supplied"
+  },
+  {
+    "file": "square-normal.png",
+    "source": "C:\\Users\\IGP\\AppData\\Local\\Temp\\codex-clipboard-467473ca-2711-4291-bf0f-bfa18913825b.png",
+    "size": [
+      153,
+      153
+    ],
+    "sha256": "0b5da6776f921885ada08c5c39debea38f92672ab5c647b4102e0d48d003d2a2",
+    "role": "user_supplied"
+  },
+  {
+    "file": "square-pressed-supplied-duplicate.png",
+    "source": "C:\\Users\\IGP\\AppData\\Local\\Temp\\codex-clipboard-6841b3b9-76da-4831-82bf-321413fccba4.png",
+    "size": [
+      153,
+      153
+    ],
+    "sha256": "0b5da6776f921885ada08c5c39debea38f92672ab5c647b4102e0d48d003d2a2",
+    "role": "rejected_duplicate_not_pressed"
+  },
+  {
+    "file": "rectangle-normal.png",
+    "source": "C:\\Users\\IGP\\AppData\\Local\\Temp\\codex-clipboard-73d62283-fb59-40ff-8ce6-a316c906a8c6.png",
+    "size": [
+      255,
+      153
+    ],
+    "sha256": "a6074dc30f5ba3d3bdad02b522df51f5bbe7025c38ef7a19dfd5dc8f29ff5df1",
+    "role": "user_supplied"
+  },
+  {
+    "file": "rectangle-pressed.png",
+    "source": "C:\\Users\\IGP\\AppData\\Local\\Temp\\codex-clipboard-adfccd2c-dcfc-4703-8329-e37c11fcb14c.png",
+    "size": [
+      255,
+      145
+    ],
+    "sha256": "f1d10cf869571d9edd893d55d7bd0e5aa53182b2fcd77a4af6d6f759c4edad61",
+    "role": "user_supplied"
+  },
+  {
+    "file": "timer-panel.png",
+    "source": "F:\\AbyaPVP\\Art\\play页面UI\\游戏部分\\倒计时底部框.png",
+    "size": [
+      215,
+      82
+    ],
+    "sha256": "ff7bfbd18bf405824687cd8408ff1641b8bfc8a9d8158edb1b601ff380d0cf53",
+    "role": "user_supplied"
+  },
+  {
+    "file": "timer-icon.png",
+    "source": "F:\\AbyaPVP\\Art\\play页面UI\\游戏部分\\倒计时图标.png",
+    "size": [
+      123,
+      142
+    ],
+    "sha256": "1f6f390b3f6b19f239aed831f32afc21da3c0aa1157fad897a70498dec978fcf",
+    "role": "user_supplied"
+  },
+  {
+    "file": "instruction-panel.png",
+    "source": "F:\\AbyaPVP\\Art\\play页面UI\\游戏部分\\规则介绍底部框.png",
+    "size": [
+      710,
+      131
+    ],
+    "sha256": "f0c08451d4f4b59e7d02edfddfe1d4b5b663894395885970c5311d12be007ed0",
+    "role": "user_supplied"
+  },
+  {
+    "file": "round-panel.png",
+    "source": "F:\\AbyaPVP\\Art\\play页面UI\\游戏部分\\关卡进度底部框.png",
+    "size": [
+      215,
+      82
+    ],
+    "sha256": "16091883b00268941a6c6e0d2e1b27b57de447247ea1edac957575f52acd6e83",
+    "role": "user_supplied"
+  },
+  {
+    "file": "top-layout-reference.jpg",
+    "source": "C:\\Users\\IGP\\AppData\\Local\\Temp\\codex-clipboard-95186161-fb45-4f43-ba4e-e7f6a2518a11.jpg",
+    "size": [
+      2073,
+      1173
+    ],
+    "sha256": "a6feefcf977921b0d66fcc0a9d3d950cf802c8d4409f660ef4f05bf14faac235",
+    "role": "user_supplied"
+  },
+  {
+    "file": "square-pressed.png",
+    "source": "rectangle-pressed.png",
+    "size": [
+      153,
+      145
+    ],
+    "sha256": "0e02ef553e7f6ef4c3db7904c3d250a0935d6ef99db4bc306aa2e5b27d9888ee",
+    "role": "derived_by_user_requested_center_crop",
+    "crop": "keep x=[0,76) and [178,255), remove 102 columns, no resample",
+    "alignment": "same scale and top-left anchor as 153x153 normal; reserve common 153x153 control bounds",
+    "user_authorized": "确实，你帮我做下正方形的按下图，拿长方形的按下按钮裁一下即可",
+    "preview_approval": "not_yet_reviewed"
+  }
+]

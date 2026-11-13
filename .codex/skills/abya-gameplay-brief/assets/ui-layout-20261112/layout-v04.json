@@ -1,0 +1,83 @@
+{
+  "status": "draft_awaiting_user_adjustment",
+  "viewport": [
+    1600,
+    900
+  ],
+  "left": [
+    5,
+    5,
+    1113,
+    890
+  ],
+  "right": [
+    1118,
+    5,
+    477,
+    890
+  ],
+  "button_visible_bounds": [
+    29,
+    159,
+    278,
+    712
+  ],
+  "available_play": [
+    331,
+    141,
+    763,
+    730
+  ],
+  "play": [
+    379,
+    205,
+    667,
+    602
+  ],
+  "margins": {
+    "button_left": 24,
+    "button_bottom": 24,
+    "play_left": 48,
+    "play_right": 48,
+    "play_top": 64,
+    "play_bottom": 64
+  },
+  "sizes": {
+    "direction": [
+      76,
+      76
+    ],
+    "reset": [
+      88,
+      88
+    ],
+    "choice": [
+      128,
+      77
+    ],
+    "key_badge": [
+      44,
+      44
+    ]
+  },
+  "key_font_size": 18,
+  "instruction_font_size": 26,
+  "round_font_size": 26,
+  "timer_font_size": 40,
+  "round_text": "轮数：1",
+  "reset_icon": {
+    "visible_size": [
+      30,
+      31.8
+    ],
+    "center_normal": [
+      43.5294,
+      36.7059
+    ],
+    "center_pressed": [
+      43.5294,
+      35.0588
+    ],
+    "basis": "source face center; tight visible SVG bounds"
+  }
+}

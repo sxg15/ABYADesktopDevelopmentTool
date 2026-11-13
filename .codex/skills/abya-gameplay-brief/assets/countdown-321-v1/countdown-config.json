@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "version": "1.0",
+  "rule_id": "BR-20261112-001",
+  "design_viewport": [
+    1600,
+    900
+  ],
+  "fixed_center": [
+    597,
+    476
+  ],
+  "source_to_design_scale": 0.8333333333333334,
+  "playback_scale": 1,
+  "extra_opacity": 1,
+  "frame_duration_ms": 1000,
+  "total_duration_ms": 3000,
+  "round_duration_ms": 20000,
+  "sequence": [
+    3,
+    2,
+    1
+  ],
+  "slot": [
+    425.75,
+    223.083333333333,
+    342.5,
+    505.833333333333
+  ],
+  "frames": {
+    "3": {
+      "asset": "assets/countdown-3.png",
+      "source_size": [
+        392,
+        607
+      ],
+      "rect": [
+        433.66666666666663,
+        223.08333333333334,
+        326.6666666666667,
+        505.8333333333333
+      ]
+    },
+    "2": {
+      "asset": "assets/countdown-2.png",
+      "source_size": [
+        411,
+        598
+      ],
+      "rect": [
+        425.75,
+        226.83333333333334,
+        342.5,
+        498.3333333333333
+      ]
+    },
+    "1": {
+      "asset": "assets/countdown-1.png",
+      "source_size": [
+        292,
+        601
+      ],
+      "rect": [
+        475.3333333333333,
+        225.58333333333334,
+        243.33333333333334,
+        500.8333333333333
+      ]
+    }
+  },
+  "viewport_mapping": {
+    "mode": "uniform_contain_of_design_layer",
+    "scale": "min(W/1600,H/900)",
+    "offset": "((W-1600*q)/2,(H-900*q)/2)",
+    "changes_other_ui": false
+  },
+  "animation": {
+    "scale": false,
+    "fade": false,
+    "translation": false,
+    "extra_sound": false,
+    "go_frame": false
+  }
+}
