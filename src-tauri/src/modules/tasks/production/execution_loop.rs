@@ -492,11 +492,7 @@ impl TaskService {
 
     pub(super) fn owned_authoring_data_root(&self, task: &str) -> AppResult<PathBuf> {
         uuid::Uuid::parse_str(task).map_err(|_| conflict())?;
-        let root = self.production_workspace(task)?;
-        let data = files::safe_path(
-            root.parent().ok_or_else(conflict)?,
-            &format!(".abya-authoring/{task}"),
-        )?;
+        let data = self.archive_storage(task, "编辑数据")?;
         let owner = data.join("owner.json");
         if data.exists() {
             let value: Value = serde_json::from_slice(&std::fs::read(&owner)?)?;

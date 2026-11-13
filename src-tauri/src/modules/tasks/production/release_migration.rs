@@ -223,6 +223,7 @@ impl TaskService {
         recovery: &Path,
         backup_db: &mut impl FnMut() -> AppResult<()>,
     ) -> AppResult<bool> {
+        self.migrate_save_layout(&task.id)?;
         let key = format!("desktop-project-migration/{}", task.id);
         let mut receipt = self.database.with_connection(|c| read_receipt(c, &key))?;
         let Some(mut record) = self.database.with_connection(|c| load(c, &task.id))? else {

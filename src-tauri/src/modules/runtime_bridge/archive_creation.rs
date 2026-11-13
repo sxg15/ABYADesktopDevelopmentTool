@@ -393,7 +393,13 @@ impl RuntimeBridgeService {
         if !self.acceptance_busy.lock().insert(key.clone()) {
             return Err(AppError::validation("本任务另一个存档初始化仍在执行。"));
         }
-        let result = self.create_archive_once(&input, &data, &path, identity, session, operation);
+        let result = (|| {
+            let mut input = input;
+            input.name = self
+                .tasks
+                .project_archive_name(&input.task_id, &input.name)?;
+            self.create_archive_once(&input, &data, &path, identity, session, operation)
+        })();
         self.acceptance_busy.lock().remove(&key);
         result
     }

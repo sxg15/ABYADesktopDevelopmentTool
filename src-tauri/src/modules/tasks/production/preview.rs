@@ -150,8 +150,7 @@ impl TaskService {
         if r.current_version.as_deref() != Some(version) {
             return Err(conflict());
         }
-        let root = self.production_workspace(task)?;
-        let runs = files::safe_path(root.parent().ok_or_else(conflict)?, ".abya-play-runs")?;
+        let runs = self.archive_storage(task, "试玩副本")?;
         let data = runs.join(uuid::Uuid::new_v4().simple().to_string());
         let parent = data.join("Archives");
         std::fs::create_dir_all(&parent)?;

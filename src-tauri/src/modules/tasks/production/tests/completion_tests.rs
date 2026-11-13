@@ -212,7 +212,7 @@ fn real_legacy_player_acceptance_loads_frozen_copy_in_owned_data_root() {
             .as_str()
             .unwrap()
             .replace('\\', "/")
-            .contains("/.abya-play-runs/")
+            .contains("/存档/试玩副本/")
     );
     println!(
         "Real pinned Player accepted owned frozen copies for Host and Client; synthetic task approvals only."

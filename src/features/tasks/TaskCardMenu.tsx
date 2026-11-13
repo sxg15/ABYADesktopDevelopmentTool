@@ -48,6 +48,7 @@ export function TaskCardMenu({task,x,y,en,close,notify,onChanged}:{
       buttons[(buttons.indexOf(document.activeElement as HTMLButtonElement)+(e.key==="ArrowDown"?1:-1)+buttons.length)%buttons.length]?.focus();
     }}>
     <button role="menuitem" disabled={busy} onClick={()=>void run(()=>api.openTaskFolder(task.id))}><FolderOpen size={16}/>{en?"Open in File Explorer":"在文件资源管理器中打开"}</button>
+    <button role="menuitem" disabled={busy} onClick={()=>void run(()=>api.openTaskArchives(task.id))}><FolderOpen size={16}/>{en?"Open saves in File Explorer":"在资源管理器中打开存档位置"}</button>
     <button role="menuitem" disabled={busy||task.status==="archived"} onClick={()=>void run(()=>api.setTaskStatus(task.id,"archived"),true)}><Archive size={16}/>{en?"Archive":"归档"}</button>
     <button role="menuitem" className="task-delete-action" disabled={busy} onClick={()=>setConfirm(true)}><Trash2 size={16}/>{remove}</button>
   </div>,document.body);

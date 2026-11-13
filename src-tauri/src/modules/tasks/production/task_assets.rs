@@ -82,11 +82,7 @@ impl TaskService {
 
     /// 只返回本任务归属目录；不会扫描其他任务或把冻结候选当成编辑源。
     pub fn task_archive_sources(&self, task: &str) -> AppResult<Value> {
-        let root = self.production_workspace(task)?;
-        let data = files::safe_path(
-            root.parent().ok_or_else(conflict)?,
-            &format!(".abya-authoring/{task}"),
-        )?;
+        let data = self.archive_storage(task, "编辑数据")?;
         let mut roots = Vec::new();
         if data.exists() {
             let owner: Value = serde_json::from_slice(&std::fs::read(data.join("owner.json"))?)?;

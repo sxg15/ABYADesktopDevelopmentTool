@@ -9,7 +9,7 @@ const evidence=path.join(root,'evidence');fs.mkdirSync(evidence,{recursive:true}
 let instance;
 try {
  const task=await api.invoke('create_task',{input:{title:'任务私有存档启动回归',description:'隔离 QA：已有真实游戏的副本，测试存档路径与包唯一性，不修改用户原件。'}});
- const owned=path.join(path.dirname(task.workspacePath),'.abya-authoring',task.id);
+ const owned=path.join(task.workspacePath,'存档','编辑数据');
  const source=path.join(owned,'Archives',path.basename(fixture));
  fs.mkdirSync(owned,{recursive:true});saveJson(path.join(owned,'owner.json'),{taskId:task.id,purpose:'authoring'});
  function copyTree(from,to){fs.mkdirSync(to,{recursive:true});for(const e of fs.readdirSync(from,{withFileTypes:true})){assert.ok(!e.isSymbolicLink());const a=path.join(from,e.name),b=path.join(to,e.name);if(e.isDirectory())copyTree(a,b);else fs.copyFileSync(a,b,fs.constants.COPYFILE_EXCL);}} copyTree(fixture,source);
@@ -38,8 +38,8 @@ try {
   assert.equal(report?.success,true,JSON.stringify(report)); assert.equal(report.archiveGuid,option.archive.archiveGuid); assert.equal(report.levelGuid,level.levelGuid);
   const info=await api.invoke('get_instance',{id:instance.id});assert.equal(info.processAlive,true);
   const log=fs.readFileSync(instance.logFilePath,'utf8');
-  fs.writeFileSync(path.join(evidence,mode+'-path-log.txt'),log.split(/\r?\n/).filter(l=>l.includes('.abya-authoring')||l.includes('ArchivePath')).join('\n'));
-  assert.ok(log.includes('.abya-authoring'), 'runtime log must show private archive root');
+  fs.writeFileSync(path.join(evidence,mode+'-path-log.txt'),log.split(/\r?\n/).filter(l=>l.includes('编辑数据')||l.includes('ArchivePath')).join('\n'));
+  assert.ok(log.includes('编辑数据'), 'runtime log must show private archive root');
   runs.push({mode,instanceId:instance.id,success:true,archivePath:source,report});
   await api.invoke('stop_instance',{id:instance.id});instance=null;
  }

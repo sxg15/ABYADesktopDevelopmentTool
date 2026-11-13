@@ -69,3 +69,61 @@ fn private_sources_do_not_require_a_candidate_and_reject_foreign_owner() {
     std::fs::write(data.join("owner.json"), br#"{"taskId":"foreign"}"#).unwrap();
     assert!(f.service.task_archive_sources(&f.id).is_err());
 }
+
+#[test]
+fn migrates_owned_saves_without_changing_historical_paths_or_digests() {
+    let f = Fixture::new();
+    let old = f
+        .workspace
+        .parent()
+        .unwrap()
+        .join(".abya-authoring")
+        .join(&f.id);
+    let archive = old.join("Archives/旧档");
+    let snapshot = f
+        .workspace
+        .join("artifacts/version-snapshots")
+        .join(uuid::Uuid::new_v4().to_string())
+        .join("旧档");
+    for dir in [&archive, &snapshot] {
+        std::fs::create_dir_all(dir).unwrap();
+        std::fs::write(dir.join("Main.PBArc"), br#"{"Guid":"keep"}"#).unwrap();
+    }
+    std::fs::write(
+        old.join("owner.json"),
+        serde_json::to_vec(&json!({"taskId":f.id})).unwrap(),
+    )
+    .unwrap();
+    let expected = versions::digest(std::slice::from_ref(&archive)).unwrap();
+    for _ in 0..2 {
+        f.service.migrate_save_layout(&f.id).unwrap();
+        let base = f
+            .service
+            .project_save_folder(&f.id)
+            .unwrap()
+            .canonicalize()
+            .unwrap();
+        assert!(
+            archive
+                .canonicalize()
+                .unwrap()
+                .starts_with(base.join("编辑数据"))
+        );
+        assert!(
+            snapshot
+                .canonicalize()
+                .unwrap()
+                .starts_with(base.join("版本"))
+        );
+        assert_eq!(
+            expected,
+            versions::digest(std::slice::from_ref(&snapshot)).unwrap()
+        );
+        let aliases = std::fs::read_dir(&base)
+            .unwrap()
+            .flatten()
+            .filter(|e| e.path().canonicalize().ok() == archive.canonicalize().ok())
+            .count();
+        assert_eq!(aliases, 1);
+    }
+}
