@@ -122,7 +122,7 @@ impl TaskService {
         if r.current_version.as_deref() != Some(version) {
             return Err(conflict());
         }
-        super::versions::verify(&r.version_details)?;
+        super::versions::verify_archive(&r.version_details)?;
         let source = Path::new(mutation::text(&r.version_details, "archiveSource")?);
         if r.version_details["frozenSnapshot"] != true {
             return Ok(source.to_string_lossy().into_owned());

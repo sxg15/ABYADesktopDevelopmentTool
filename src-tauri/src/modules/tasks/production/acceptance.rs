@@ -82,7 +82,15 @@ impl TaskService {
         if !["single", "multiplayer"].contains(&r.player_mode.as_str()) {
             return Err(AppError::validation("请先确认单人或多人模式。"));
         }
-        versions::verify(&r.version_details)?;
+        versions::verify_archive(&r.version_details)?;
+        let selected = crate::foundation::selected_game_executable(&self.database, "")?;
+        if versions::player_fingerprint(&selected)? != r.version_details["playerBuildHash"] {
+            return Err(AppError::new(
+                "acceptance_player_changed",
+                "当前 Player 与此验收版本的构建指纹不同。请选回同一构建，或在当前 Player 上验证并登记新版本后再验收。",
+                "not_executed",
+            ));
+        }
         let version = validation::version(&r)?.to_owned();
         if !r.acceptance_config.is_null() && r.acceptance_config["version"] != version {
             return Err(AppError::validation(
@@ -93,7 +101,7 @@ impl TaskService {
         Ok(AcceptanceSpec {
             multiplayer: r.player_mode == "multiplayer",
             version,
-            executable_path: launch_path(string("playerSource")?),
+            executable_path: launch_path(selected.to_string_lossy().into_owned()),
             archive_path: launch_path(string("archiveSource")?),
             archive_guid: string("archiveGuid")?,
             level_guid: string("levelGuid")?,

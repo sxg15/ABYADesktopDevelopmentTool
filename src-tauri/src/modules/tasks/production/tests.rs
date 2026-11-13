@@ -1050,16 +1050,23 @@ fn only_user_can_close_feedback_and_stale_candidate_cannot_be_confirmed() {
 }
 
 #[test]
-fn acceptance_uses_recorded_player_and_rejects_changed_files() {
+fn acceptance_uses_selected_relocated_player_and_rejects_changed_files() {
     let f = modern_fixture();
+    let original = f.workspace.join("fixture-player.exe");
+    let relocated = f.root.join("relocated").join("fixture-player.exe");
+    std::fs::create_dir_all(relocated.parent().unwrap()).unwrap();
+    std::fs::rename(&original, &relocated).unwrap();
+    f.service.database.with_connection(|db|{
+        db.execute("INSERT OR REPLACE INTO settings(key,value_json,updated_at) VALUES('application',?1,'now')",[json!({"gameExecutablePath":relocated}).to_string()])?;Ok(())
+    }).unwrap();
     let spec = f.service.acceptance_spec(&f.id).unwrap();
     assert_eq!(
-        std::fs::canonicalize(&spec.executable_path).unwrap(),
-        f.workspace
-            .join("fixture-player.exe")
-            .canonicalize()
-            .unwrap()
+        Path::new(&spec.executable_path).canonicalize().unwrap(),
+        relocated.canonicalize().unwrap()
     );
+    f.service
+        .production_acceptance_archive(&f.id, &spec.version)
+        .unwrap();
     assert_eq!(spec.seats, 1);
     assert!(f.apply("configure-acceptance", json!({"seats":2})).is_err());
     std::fs::write(&spec.executable_path, b"new incompatible player").unwrap();
