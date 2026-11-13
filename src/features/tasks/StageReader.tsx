@@ -119,6 +119,6 @@ export function StageReader({task,stage,selectStage,notify,visible,children}:{ta
       {doc?<>{edited!==undefined&&<p role="status">源文档已有人工修改。请在 Codex 中提交新版后再确认。</p>}<ReadableText text={edited??doc.content} taskId={task.id} basePath={doc.path} artifacts={artifacts}/>
         {!historical&&<button className="text-button" onClick={()=>void productionApi.open(task.id,doc.path).catch(e=>notify(errorMessage(e),true))}>打开 Markdown 源文件</button>}</>:<p>{goal?.summary||result?.stageUpdates?.[shown]?.summary||(shown===current?"本阶段成果会在这里显示。":"这一阶段还没有文档。")}</p>}
       <VisualGallery taskId={task.id} artifacts={artifacts.filter(a=>a.stage===shown&&(!historical||view.artifacts?.some(now=>now.id===a.id&&now.sha256===a.sha256)))} en={false}/>
-      {!historical&&["implementation","review"].includes(shown)&&record&&children(record,shown)}</>}
+      {visible&&!historical&&["implementation","review"].includes(shown)&&record&&children(record,shown)}</>}
       </section></div></>}</>;
 }

@@ -125,6 +125,7 @@ export const api = {
     }),
   deleteCodexConversation: (taskId: string, conversationId: string) =>
     invoke<void>("delete_codex_conversation", { taskId, conversationId }),
+  runningTaskInstances: (taskId: string) => invoke<GameInstance[]>("running_task_instances", {taskId}),
   listInstances: (taskId?: string) =>
     invoke<GameInstance[]>("list_instances", { taskId: taskId ?? null }),
   getInstance: (id: string) =>

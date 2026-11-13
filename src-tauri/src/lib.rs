@@ -1119,6 +1119,14 @@ fn list_instances(
     state.instances.list(task_id.as_deref())
 }
 
+#[tauri::command(async)]
+fn running_task_instances(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<Vec<GameInstance>> {
+    state.instances.running_task_instances(&task_id)
+}
+
 #[tauri::command]
 fn get_instance(id: String, state: State<'_, AppState>) -> AppResult<InstanceRuntimeInfo> {
     state.instances.get(&id)
@@ -1637,6 +1645,7 @@ pub fn run() {
             get_codex_workflow,
             delete_codex_conversation,
             list_instances,
+            running_task_instances,
             get_instance,
             instance_memory_status,
             instance_memory_policy,

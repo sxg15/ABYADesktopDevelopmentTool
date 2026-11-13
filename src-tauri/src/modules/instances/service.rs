@@ -31,6 +31,7 @@ struct LiveInstance {
 #[derive(Clone)]
 pub struct InstanceService {
     launch_gate: Arc<Mutex<()>>,
+    last_task_cleanup: Arc<Mutex<HashMap<String, Instant>>>,
     pub(super) memory: super::memory::MemoryGuard,
     database: Database,
     pub(super) paths: AppPaths,
@@ -50,6 +51,7 @@ impl InstanceService {
     pub fn new(database: Database, paths: AppPaths, connections: GameConnectionService) -> Self {
         Self {
             launch_gate: Default::default(),
+            last_task_cleanup: Default::default(),
             memory: super::memory::MemoryGuard::new(paths.reports_dir.join("MemoryIncidents")),
             database,
             paths,
@@ -74,6 +76,37 @@ impl InstanceService {
                 let rows = statement.query_map([], map_instance)?;
                 rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
             }
+        })
+    }
+
+    /// Only process-backed, running windows belong on the task playtest panel.
+    pub fn running_task_instances(&self, task: &str) -> AppResult<Vec<GameInstance>> {
+        self.database.with_connection(|c| {
+            // Allow final receipts to settle. Log and transfer records have
+            // cascading foreign keys, so their parent remains available for diagnostics.
+            let due = {
+                let mut recent = self.last_task_cleanup.lock();
+                recent.retain(|_, at| at.elapsed() < Duration::from_secs(60));
+                !recent.contains_key(task)
+            };
+            if due {
+            c.execute(
+                "DELETE FROM game_instances WHERE id IN (
+                   SELECT g.id FROM game_instances g
+                   WHERE g.task_id=?1 AND g.origin='managed'
+                   AND g.process_state IN ('exited','failed','interrupted')
+                   AND g.connection_state!='connected'
+                   AND julianday(g.ended_at)<julianday('now','-5 minutes')
+                   AND NOT EXISTS (SELECT 1 FROM log_sessions l WHERE l.instance_id=g.id)
+                   AND NOT EXISTS (SELECT 1 FROM archive_transfers a WHERE a.instance_id=g.id)
+                   AND NOT EXISTS (SELECT 1 FROM task_production p WHERE p.task_id=?1
+                     AND json_extract(p.body,'$.workbench.execution.capabilityPreflight.cleanup.state')='pending')
+                   LIMIT 32)", [task],
+            )?;
+                self.last_task_cleanup.lock().insert(task.to_owned(),Instant::now());
+            }
+            let mut stmt=c.prepare(&format!("{SELECT_INSTANCE} WHERE task_id=?1 AND process_state='running' ORDER BY started_at DESC"))?;
+            stmt.query_map([task], map_instance)?.collect::<Result<Vec<_>,_>>().map_err(Into::into)
         })
     }
 
@@ -1051,6 +1084,45 @@ mod tests {
         assert!(contents.contains("new output"));
         assert!(fs::metadata(&path).unwrap().len() < 1_024);
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn task_panel_bounds_cleanup_and_preserves_active_and_diagnostic_instances() {
+        let (service, db) = test_service();
+        let root = service.paths.data_dir.clone();
+        db.with_connection(|c|{
+            c.execute_batch("INSERT INTO development_tasks(id,title,status,created_at,updated_at) VALUES('scope','scope','active','now','now'),('other','other','active','now','now');
+                WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<1000)
+                INSERT INTO game_instances(id,task_id,origin,name,process_state,connection_state,ended_at)
+                SELECT 'old-'||i,'scope','managed','history','exited','disconnected','2020-01-01' FROM n;
+                INSERT INTO game_instances(id,task_id,origin,name,process_state,connection_state,ended_at) VALUES
+                ('live','scope','managed','live','running','waiting',NULL),
+                ('closing','scope','managed','closing','stopping','connected',NULL),
+                ('recent','scope','managed','recent','exited','disconnected',datetime('now')),
+                ('external','scope','external','external','unmanaged','disconnected','2020-01-01'),
+                ('logged','scope','managed','logged','failed','disconnected','2020-01-01'),
+                ('foreign','other','managed','foreign','interrupted','disconnected','2020-01-01');
+                INSERT INTO log_sessions(id,instance_id,server_session_id,status,endpoint,started_at) VALUES('log','logged','session','ended','','2020-01-01');")?;
+            Ok(())
+        }).unwrap();
+        let rows = service.running_task_instances("scope").unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].id, "live");
+        assert_eq!(
+            db.with_connection(|c| Ok(c.query_row(
+                "SELECT COUNT(*) FROM game_instances WHERE id LIKE 'old-%'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )?))
+            .unwrap(),
+            968
+        );
+        for id in ["closing", "recent", "external", "logged", "foreign"] {
+            assert!(service.read(id).is_ok());
+        }
+        drop(service);
+        drop(db);
+        fs::remove_dir_all(root).unwrap();
     }
 
     fn test_service() -> (InstanceService, Database) {

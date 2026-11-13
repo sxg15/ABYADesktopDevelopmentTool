@@ -24,9 +24,20 @@ export function TaskInstances({task,record,t,settings,notify,preview}:{preview:b
   },[record]);
   useEffect(()=>{let active=true;productionApi.playVersionDates(task.id).then(v=>{if(active)setDates(v);}).catch(e=>{if(active)notify(errorMessage(e),true);});return()=>{active=false};},[task.id,record.currentVersion,pack?.version]);
   function label(version:string|undefined){return version&&<PlayVersionLabel version={version} latest={latest===version} at={dates[version]??(pack?.version===version?pack.createdAt:undefined)} en={en}/>;}
-  async function refresh(){setItems(await api.listInstances(task.id));}
-  useEffect(()=>{let live=true;async function poll(){try{const list=await api.listInstances(task.id);if(live)setItems(list);}catch(e){if(live)notify(errorMessage(e),true);}}
-    void poll();const timer=setInterval(poll,4000);return()=>{live=false;clearInterval(timer);};},[task.id]);
+  async function refresh(){setItems(await api.runningTaskInstances(task.id));}
+  useEffect(()=>{
+    let live=true;
+    let timer: ReturnType<typeof setTimeout>;
+    async function poll(){
+      try{
+        const running=await api.runningTaskInstances(task.id);
+        if(live)setItems(running);
+      }catch(e){if(live)notify(errorMessage(e),true);}
+      finally{if(live)timer=setTimeout(poll,4000);}
+    }
+    void poll();
+    return ()=>{live=false;clearTimeout(timer);};
+  },[task.id]);
   return <section className="task-instances"><header><h3>{t("instances")}</h3>
     <button className="secondary-button" disabled={task.status!=="active"} onClick={()=>setLaunch(true)}>{t("launch")}</button></header>
     {preview?<LuaPlaytest key={task.id} record={record} active={task.status==="active"} en={en} label={label}/>:<AcceptanceLauncher taskId={task.id} active={task.status==="active"} en={en} versionLabel={label(latest)}/>}

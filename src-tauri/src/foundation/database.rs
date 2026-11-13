@@ -325,6 +325,8 @@ fn create_runtime_tables(connection: &Connection) -> AppResult<()> {
         );
         CREATE INDEX IF NOT EXISTS idx_game_instances_task
             ON game_instances(task_id, started_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_game_instances_task_state
+            ON game_instances(task_id, process_state, started_at DESC);
         CREATE INDEX IF NOT EXISTS idx_game_instances_runtime
             ON game_instances(runtime_instance_id, origin);
         CREATE INDEX IF NOT EXISTS idx_game_instances_origin
