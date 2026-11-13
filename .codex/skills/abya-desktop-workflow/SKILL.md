@@ -19,4 +19,4 @@ description: 在 Codex 桌面对话中连接当前 ABYA 制作任务，整理文
 5. 回退用 respond 的 revisit，data 为 stage 和 reason。定点修复保留当前阶段，定位问题 ID，通过原有问题/验证接口记录结果。预检失败时登记策划能读懂的 playerSummary、实际影响及恢复条件。遗留问题组用 respond 的 submit-answers（id, answers）登记本次回答。
 6. 实现、试玩、交付与复盘继续使用任务固定的制作 Skill、游戏实例、测试与存档校验。中断、补充与修订在当前对话处理。实际产物及版本通过任务服务提交后再报告结果。根据需要用 respond 记录 enter-playtest、resolve、reopen。优先遵循此桌面交互流程，原制作 Skill 的技术和证据要求继续生效。
 
-需要启动隔离 Player 预检时，先向策划说明用途。在本对话收到授权后用 respond 的 preflight，data 为 reuseExisting、retry。授权小样用 prototype 和 sourceInstanceId。游戏反馈用 add 和 description，按原反馈版本修复并复验。
+需要启动隔离 Player 预检时，先向策划说明用途。策划可在方案确认消息中另写一句「我授权执行一次首次隔离 Player 预检。」。收到该句后先确认方案，再以同一条完整原话和新修订调用首次预检；普通方案确认不代表授权。在本对话收到授权后用 respond 的 preflight，data 为 reuseExisting、retry。授权小样用 prototype 和 sourceInstanceId。游戏反馈用 add 和 description，按原反馈版本修复并复验。

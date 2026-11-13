@@ -20,6 +20,19 @@ use uuid::Uuid;
 
 type ConversationBinding = (TerminalProvider, String, String);
 
+// Only an explicit, standalone grant can accompany a plan approval. Quoted,
+// conditional, or negative statements do not grant the combined operation.
+fn grants_initial_preflight(quote: &str) -> bool {
+    quote.split(['。', '；', '\n']).any(|s| {
+        matches!(
+            s.trim(),
+            "我授权用当前已配置的原版 ABYA-PB Player 执行一次首次隔离预检"
+                | "我授权执行一次首次隔离 Player 预检"
+                | "I authorize one initial isolated Player preflight."
+        )
+    })
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct PlayerQualificationInput {
@@ -208,7 +221,7 @@ impl DesktopToolDispatcher {
         let quote = args["userMessage"].as_str().unwrap_or_default();
         let op = args["operation"].as_str().unwrap_or_default();
         let data = &args["data"];
-        let since = if op == "decide" {
+        let mut since = if op == "decide" {
             record
                 .documents
                 .get(data["kind"].as_str().unwrap_or_default())
@@ -217,6 +230,35 @@ impl DesktopToolDispatcher {
         } else {
             &record.updated_at
         };
+        let previous;
+        if op == "preflight"
+            && revision == record.revision
+            && revision > 1
+            && record.current_stage == "implementation"
+            && record.workbench.execution.capability_preflight.is_null()
+            && !data["retry"].as_bool().unwrap_or(false)
+            && !data["reuseExisting"].as_bool().unwrap_or(false)
+            && grants_initial_preflight(quote)
+            && let Some(approval) = record.approvals.last()
+            && approval.kind == "plan"
+            && approval.decision == "accepted"
+            && approval.feedback == quote
+            && let Some(plan) = record.documents.get("plan")
+            && approval.document_hash == plan.sha256
+            && approval.document_revision == plan.revision
+        {
+            previous = tasks.production_snapshot(id, revision - 1)?;
+            if previous.current_stage == "plan"
+                && previous.stages.get("plan").map(String::as_str) == Some("awaiting-confirmation")
+                && previous.approvals.len() + 1 == record.approvals.len()
+                && previous
+                    .documents
+                    .get("plan")
+                    .is_some_and(|d| d.sha256 == plan.sha256 && d.revision == plan.revision)
+            {
+                since = &previous.updated_at;
+            }
+        }
         self.dependencies
             .codex_terminal
             .check_user_message(id, native, quote, since)?;
