@@ -190,6 +190,11 @@ async fn install_desktop_release(
 }
 
 #[tauri::command]
+fn set_game_client_storage(root: String, state: State<'_, AppState>) -> AppResult<AppSettings> {
+    state.game_clients.set_storage_root(&root)
+}
+
+#[tauri::command]
 fn get_settings(state: State<'_, AppState>) -> AppResult<AppSettings> {
     state.settings.get()
 }
@@ -1578,6 +1583,7 @@ pub fn run() {
             install_desktop_release,
             desktop_has_active_turn,
             get_settings,
+            set_game_client_storage,
             update_settings,
             regenerate_desktop_cli_token,
             get_desktop_cli_state,

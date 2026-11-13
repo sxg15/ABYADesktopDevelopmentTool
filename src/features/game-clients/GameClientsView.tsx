@@ -22,7 +22,7 @@ export function GameClientsView({ settings, t, onOpenSettings, preferredReleaseI
   const [detailLoading, setDetailLoading] = useState(false);
   const [revision, setRevision] = useState(0);
   const [search, setSearch] = useState("");
-  const [storage, setStorage] = useState(settings?.gameClient?.storageRoot ?? "");
+  const storage = settings?.gameClient?.storageRoot || state?.defaultStorageRoot || "";
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -37,7 +37,6 @@ export function GameClientsView({ settings, t, onOpenSettings, preferredReleaseI
     setLoading(true);
     try {
       const next = await clientApi.state(); setState(next);
-      setStorage(current => current || next.defaultStorageRoot);
       if (next.account) {
         const items = await clientApi.releases(); setReleases(items);
         setSelectedId(current => items.some(item => item.id === (prefer ?? current)) ? (prefer ?? current) : items[0]?.id ?? 0);
@@ -67,12 +66,13 @@ export function GameClientsView({ settings, t, onOpenSettings, preferredReleaseI
   }
   async function browseStorage() {
     const path = await open({ directory: true, multiple: false });
-    if (typeof path === "string") setStorage(path);
+    if (typeof path === "string") await workflow.saveStorage(path);
   }
   const filtered = releases.filter(item => `${item.tagName} ${item.name ?? ""}`.toLowerCase().includes(search.toLowerCase()));
   const canManage = !!state?.account?.canManage;
   const current = state?.installations.find(record => record.id === settings?.gameClient?.installationId);
-  const isCurrent = settings?.gameClient?.source === "remote" && current?.releaseId === detail?.id
+  const sameFolder = (a: string, b: string) => a.replace(/[\\/]+$/,"").replace(/\//g,"\\").toLowerCase() === b.replace(/[\\/]+$/,"").replace(/\//g,"\\").toLowerCase();
+  const isCurrent = state?.selectedAvailable !== false && !!current && sameFolder(storage,current.storageRoot ?? "") && settings?.gameClient?.source === "remote" && current?.releaseId === detail?.id
     && current?.assetId === assetId && current?.assetUpdatedAt === detail?.assets.find(asset => asset.id === assetId)?.updatedAt;
 
   return <div className="workspace client-workspace">

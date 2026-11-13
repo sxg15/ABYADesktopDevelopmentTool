@@ -25,6 +25,7 @@ export interface ClientOperation {
   active: boolean; kind: string; stage: string; completedBytes: number; totalBytes: number; errorCode: string | null;
 }
 export interface GameClientState {
+  selectedAvailable?: boolean;
   repository: string; account: GitHubAccount | null; installations: ClientInstallation[];
   defaultStorageRoot: string; operation: ClientOperation;
   authorization?: LoginAuthorization | null;
@@ -40,6 +41,7 @@ export const emptyClientSelection = (): GameClientSelection => ({
   source: "local", localExecutablePath: "", installationId: "", executableRelativePath: "", storageRoot: "",
 });
 export const clientApi = {
+  setStorage: (root:string) => invoke<AppSettings>("set_game_client_storage",{root}),
   state: () => invoke<GameClientState>("game_client_state"),
   operation: () => invoke<ClientOperation>("game_client_operation"),
   cancel: () => invoke<void>("game_client_cancel"),

@@ -158,3 +158,5 @@ authorization by the account owner is a separate acceptance step; do not automat
 Update this Skill, shared settings/app-shell/desktop-cli Skills and changelog with contract
 changes. No automatic remote Release deletion or forced update. User-authorized selection
 includes removal of unused managed older packages, with the usage/ownership guards above.
+
+远端客户端下载目录可独立保存。设置页、客户端管理页与更新提示共用此偏好；已安装客户端保留自身的安装来源目录。

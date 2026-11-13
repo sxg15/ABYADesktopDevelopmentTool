@@ -87,17 +87,7 @@ impl Drop for OwnedDirectory {
     }
 }
 
-pub(super) fn install<R: Read>(
-    mut reader: R,
-    release: &ClientRelease,
-    asset: &ReleaseAsset,
-    root: &str,
-    progress: &Progress,
-    persist: impl FnOnce(&ClientInstallation) -> AppResult<()>,
-) -> AppResult<ClientInstallation> {
-    if !asset.installable() || asset.size == 0 || asset.size > MAX_ASSET_BYTES {
-        return Err(error("clientPackageFormat"));
-    }
+pub(super) fn storage_parent(root: &str) -> AppResult<PathBuf> {
     let root = Path::new(root.trim());
     if !root.is_absolute()
         || root
@@ -116,7 +106,21 @@ pub(super) fn install<R: Read>(
     let parent = root.join("PlatverseOutput");
     no_links(&parent)?;
     fs::create_dir_all(&parent)?;
-    let parent = parent.canonicalize()?;
+    Ok(parent.canonicalize()?)
+}
+
+pub(super) fn install<R: Read>(
+    mut reader: R,
+    release: &ClientRelease,
+    asset: &ReleaseAsset,
+    root: &str,
+    progress: &Progress,
+    persist: impl FnOnce(&ClientInstallation) -> AppResult<()>,
+) -> AppResult<ClientInstallation> {
+    if !asset.installable() || asset.size == 0 || asset.size > MAX_ASSET_BYTES {
+        return Err(error("clientPackageFormat"));
+    }
+    let parent = storage_parent(root)?;
     let id = uuid::Uuid::new_v4().to_string();
     let staging = parent.join(format!(".install-{id}"));
     fs::create_dir(&staging)?;

@@ -7,6 +7,7 @@ import { bytes, clientApi, clientError, type ClientInstallation, type ClientRete
 import { ClientProgress, useClientOperation } from "./ClientProgress";
 
 interface ClientActions {
+  saveStorage: (root:string) => Promise<void>;
   download: (releaseId: number, assetId: number, storageRoot: string) => void;
   useInstalled: (record: ClientInstallation) => void;
   checkUpdate: () => void;
@@ -137,7 +138,7 @@ export function ClientWorkflowProvider({ children, settings, t, onSaved, notify 
     void begin(() => clientApi.install(releaseId, selectedAsset, storageRoot));
   };
 
-  return <Context.Provider value={{ download, useInstalled: record => void begin(async () => record), checkUpdate: () => void check(true), refreshUpdates: () => void check(), remoteSource: settings?.gameClient?.source === "remote", busy: busy || installOpen, retention, retentionUnavailable }}>
+  return <Context.Provider value={{ saveStorage: async root=>{latest.current.onSaved(await clientApi.setStorage(root));}, download, useInstalled: record => void begin(async () => record), checkUpdate: () => void check(true), refreshUpdates: () => void check(), remoteSource: settings?.gameClient?.source === "remote", busy: busy || installOpen, retention, retentionUnavailable }}>
     {children}
     {update && !updateOpen && !installOpen && <button className="client-update-reminder primary-button" onClick={() => { setAssetId(update.preferredAssetId ?? 0); setUpdateOpen(true); }}>
       <CloudDownload size={20} />{t("gcUpdateNow")} · {update.tagName}

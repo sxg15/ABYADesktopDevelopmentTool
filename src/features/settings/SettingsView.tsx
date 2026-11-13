@@ -70,7 +70,8 @@ export function SettingsView({
 
   useEffect(() => {
     setGameClient(settings?.gameClient ?? { ...emptyClientSelection(), localExecutablePath: settings?.gameExecutablePath ?? "" });
-  }, [settings?.gameClient, settings?.gameExecutablePath]);
+  }, [settings?.gameClient?.source, settings?.gameClient?.installationId, settings?.gameClient?.executableRelativePath, settings?.gameClient?.localExecutablePath, settings?.gameExecutablePath]);
+  useEffect(()=>{setGameClient(current=>({...current,storageRoot:settings?.gameClient?.storageRoot??""}));},[settings?.gameClient?.storageRoot]);
 
   useEffect(() => {
     setWorkspaceRoot(settings?.workspaceRootPath ?? "");

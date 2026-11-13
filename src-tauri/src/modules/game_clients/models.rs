@@ -88,6 +88,7 @@ pub struct ClientOperation {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GameClientState {
+    pub selected_available: bool,
     pub repository: String,
     pub account: Option<GitHubAccount>,
     pub installations: Vec<ClientInstallation>,

@@ -182,10 +182,21 @@ impl GameClientService {
     }
 
     pub fn state(&self) -> AppResult<GameClientState> {
+        let selection = self.settings.get()?.game_client;
+        let installations = self.installations()?;
+        let selected_available = installations
+            .iter()
+            .find(|r| r.id == selection.installation_id)
+            .is_some_and(|r| {
+                std::path::Path::new(&r.directory)
+                    .join(&selection.executable_relative_path)
+                    .is_file()
+            });
         Ok(GameClientState {
             repository: REPOSITORY.into(),
             account: self.account()?,
-            installations: self.installations()?,
+            installations,
+            selected_available,
             default_storage_root: self.default_storage.to_string_lossy().into_owned(),
             operation: self.operation(),
             authorization: self.authorization(),
@@ -252,9 +263,25 @@ impl GameClientService {
             if !asset.installable() || asset.size > MAX_ASSET_BYTES {
                 return Err(error("clientPackageFormat"));
             }
-            // Reuse the exact verified package; switching back must not create duplicates.
+            let storage = if input.storage_root.trim().is_empty() {
+                let saved = self.settings.get()?.game_client.storage_root;
+                if saved.is_empty() {
+                    self.default_storage.to_string_lossy().into_owned()
+                } else {
+                    saved
+                }
+            } else {
+                input.storage_root
+            };
+            let parent = install::storage_parent(&storage)?;
+            // Deduplicate only within the chosen download directory.
             for record in self.installations()? {
-                if record.release_id == release.id
+                if std::path::Path::new(&record.directory)
+                    .parent()
+                    .and_then(|p| p.canonicalize().ok())
+                    .as_ref()
+                    == Some(&parent)
+                    && record.release_id == release.id
                     && record.asset_id == asset.id
                     && record.asset_updated_at == asset.updated_at
                     && let Some(executable) = record.executable_candidates.first()
@@ -272,11 +299,6 @@ impl GameClientService {
                 }
             }
             let response = github.download(asset.id)?;
-            let storage = if input.storage_root.trim().is_empty() {
-                self.default_storage.to_string_lossy().into_owned()
-            } else {
-                input.storage_root
-            };
             let installed = install::install(
                 response,
                 &release,
@@ -301,6 +323,15 @@ impl GameClientService {
             rows.map(|row| serde_json::from_str(&row?).map_err(AppError::from))
                 .collect()
         })
+    }
+
+    pub fn set_storage_root(&self, root: &str) -> AppResult<crate::foundation::AppSettings> {
+        let path = root.trim();
+        let parent = install::storage_parent(path)?;
+        let probe = parent.join(format!(".write-check-{}", uuid::Uuid::new_v4()));
+        drop(File::create_new(&probe)?);
+        std::fs::remove_file(probe)?;
+        self.settings.update_storage_root(path)
     }
 
     pub fn resolve_settings(&self, input: &mut PublicSettingsUpdate) -> AppResult<()> {

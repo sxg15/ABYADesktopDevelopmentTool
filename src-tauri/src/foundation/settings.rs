@@ -286,6 +286,14 @@ impl SettingsService {
     }
 
     /// Caller validates the managed installation; preserve all other freshly read settings.
+    pub fn update_storage_root(&self, path: &str) -> AppResult<AppSettings> {
+        let _guard = self.gate.lock();
+        let mut settings = self.get()?;
+        settings.game_client.storage_root = path.into();
+        self.save(&settings)?;
+        Ok(settings)
+    }
+
     pub fn update_game_client(
         &self,
         mut selection: GameClientSelection,
@@ -293,6 +301,9 @@ impl SettingsService {
     ) -> AppResult<AppSettings> {
         let _guard = self.gate.lock();
         let mut settings = self.get()?;
+        if !settings.game_client.storage_root.is_empty() {
+            selection.storage_root = settings.game_client.storage_root;
+        }
         selection.local_executable_path = settings.game_client.local_executable_path;
         settings.game_client = selection;
         settings.game_executable_path = executable_path;

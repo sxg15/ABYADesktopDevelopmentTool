@@ -61,7 +61,6 @@ export function GameClientSettings({ value, onChange, t, onManage, preferredInst
 
   function choose(record: ClientInstallation) {
     onChange({ ...value, source: "remote", installationId: record.id,
-      storageRoot: record.storageRoot || value.storageRoot,
       executableRelativePath: record.executableCandidates.length === 1 ? record.executableCandidates[0] : "" });
   }
   async function run(action: () => Promise<unknown>) {
@@ -97,7 +96,7 @@ export function GameClientSettings({ value, onChange, t, onManage, preferredInst
       <div className="client-download-form client-download-hero">
         <strong>{t("gcDownloadHeading")}</strong>
         <label className="field"><span>{t("gcStorage")}</span><div className="path-control"><input readOnly value={storageRoot} /><button className="secondary-button" disabled={busy} onClick={() => void run(async () => {
-          const path = await open({ multiple: false, directory: true }); if (typeof path === "string") onChange({ ...value, storageRoot: path });
+          const path = await open({ multiple: false, directory: true }); if (typeof path === "string") { await workflow.saveStorage(path); onChange({ ...value, storageRoot: path }); }
         })}><FolderOpen size={16} />{t("browse")}</button></div></label>
         <p>{t("gcStorageHint")}</p>
         {state?.account ? <>
