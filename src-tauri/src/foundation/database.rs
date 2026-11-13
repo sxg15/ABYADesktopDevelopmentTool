@@ -62,6 +62,9 @@ impl Database {
                     updated_at TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS pending_workspace_deletions (
+                    token TEXT PRIMARY KEY, task_id TEXT NOT NULL, original_path TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS development_tasks (
                     id TEXT PRIMARY KEY,
                     title TEXT NOT NULL,

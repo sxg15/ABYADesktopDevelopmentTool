@@ -1,56 +1,112 @@
 use super::{AppError, AppResult, Path, PathBuf, TaskService, Uuid, read_task};
+use rusqlite::OptionalExtension;
 use std::fs;
 
 impl TaskService {
-    pub fn delete(&self, id: &str, clean_workspace: bool) -> AppResult<()> {
-        let staged = self.database.with_connection(|c| {
-            let tx =
-                rusqlite::Transaction::new_unchecked(c, rusqlite::TransactionBehavior::Immediate)?;
+    /// Returns true when the confirmed deletion still has files to clean up.
+    pub fn delete(&self, id: &str, clean_workspace: bool) -> AppResult<bool> {
+        let token = Uuid::new_v4().to_string();
+        let queued = self.database.with_connection(|c| {
+            let tx = rusqlite::Transaction::new_unchecked(c, rusqlite::TransactionBehavior::Immediate)?;
             Self::check_deletable(&tx, id)?;
-            let workspace = if clean_workspace {
-                let task = read_task(&tx, id)?;
-                owned_directory(
-                    &tx,
-                    id,
-                    Path::new(&task.workspace_path),
-                    &self.workspace_root.read(),
-                )?
-            } else {
-                None
-            };
-            tx.execute("DELETE FROM development_tasks WHERE id=?1", [id])?;
-            // Removing the original name in one operation leaves the task intact if the folder is locked.
-            let staged = if let Some(path) = &workspace {
-                let temp = path.with_file_name(format!(".abya-delete-{}-{}", id, Uuid::new_v4()));
-                fs::rename(path, &temp)?;
-                Some(temp)
-            } else {
-                None
-            };
-            if let Err(err) = tx.commit() {
-                if let (Some(temp), Some(path)) = (&staged, &workspace) {
-                    fs::rename(temp, path).map_err(|e| {
-                        AppError::internal(format!(
-                            "恢复工作区失败：{} → {}：{e}",
-                            temp.display(),
-                            path.display()
-                        ))
-                    })?;
-                }
+            let task = read_task(&tx,id)?;
+            let workspace = if clean_workspace { owned_directory(&tx,id,Path::new(&task.workspace_path),&self.workspace_root.read())? } else { None };
+            tx.execute("DELETE FROM development_tasks WHERE id=?1",[id])?;
+            if let Some(path)=&workspace {
+                tx.execute("INSERT INTO pending_workspace_deletions(token,task_id,original_path) VALUES(?1,?2,?3)",rusqlite::params![token,id,path.to_string_lossy()])?;
+                // A replacement folder at the same path must never inherit deletion consent.
+                fs::File::create_new(path.join(format!(".abya-cleanup-{token}"))).map_err(|e|AppError::validation(format!("无法登记清理目录 {}，请关闭占用该目录的程序后重试：{e}",path.display())))?;
+            }
+            if let Err(err)=tx.commit(){
+                if let Some(path)=&workspace {let _=fs::remove_file(path.join(format!(".abya-cleanup-{token}")));}
                 return Err(err.into());
             }
-            Ok(staged)
+            Ok(workspace.is_some())
         })?;
         crate::foundation::change_signal::notify();
-        if let Some(temp) = staged {
-            fs::remove_dir_all(&temp).map_err(|e| {
-                AppError::internal(format!(
-                    "任务已删除，剩余文件可在 {} 清理：{e}",
-                    temp.display()
-                ))
-            })?;
+        if !queued {
+            return Ok(false);
+        }
+        let _guard = self.cleanup_gate.lock();
+        Ok(!self.finish_workspace_deletion(&token).unwrap_or(false))
+    }
+
+    pub fn retry_workspace_deletions(&self) -> AppResult<()> {
+        let _guard = self.cleanup_gate.lock();
+        let tokens = self.database.with_connection(|c| {
+            let mut stmt = c.prepare("SELECT token FROM pending_workspace_deletions")?;
+            Ok(stmt
+                .query_map([], |r| r.get::<_, String>(0))?
+                .collect::<Result<Vec<_>, _>>()?)
+        })?;
+        for token in tokens {
+            if let Err(e) = self.finish_workspace_deletion(&token) {
+                eprintln!("Workspace cleanup {token}: {e}");
+            }
         }
         Ok(())
+    }
+
+    fn finish_workspace_deletion(&self, token: &str) -> AppResult<bool> {
+        Uuid::parse_str(token).map_err(AppError::internal)?;
+        let staged = self.database.with_connection(|c| {
+            let Some((id, raw)) = c
+                .query_row(
+                    "SELECT task_id,original_path FROM pending_workspace_deletions WHERE token=?1",
+                    [token],
+                    |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)),
+                )
+                .optional()?
+            else {
+                return Ok(None);
+            };
+            Uuid::parse_str(&id).map_err(AppError::internal)?;
+            let path = Path::new(&raw);
+            let temp = path.with_file_name(format!(".abya-delete-{id}-{token}"));
+            if !path.is_absolute()
+                || path
+                    .components()
+                    .any(|p| p == std::path::Component::ParentDir)
+            {
+                return Err(AppError::validation("无效的待清理目录。"));
+            }
+            for parent in temp.parent().into_iter().flat_map(Path::ancestors) {
+                if let Ok(meta) = fs::symlink_metadata(parent)
+                    && linked(&meta)
+                {
+                    return Err(AppError::validation("清理目录的上级现在是链接。"));
+                }
+            }
+            match fs::symlink_metadata(&temp) {
+                Ok(m) if m.is_dir() && !linked(&m) => return Ok(Some(temp)),
+                Ok(_) => return Err(AppError::validation("待清理路径已被替换。")),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
+                Err(e) => return Err(e.into()),
+            }
+            if let Some(original) = owned_directory(c, &id, path, &self.workspace_root.read())? {
+                let marker = original.join(format!(".abya-cleanup-{token}"));
+                match fs::symlink_metadata(marker) {
+                    Ok(m) if m.is_file() && !linked(&m) => (),
+                    Ok(_) => return Err(AppError::validation("清理标识已被替换。")),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+                    Err(e) => return Err(e.into()),
+                }
+                fs::rename(original, &temp)?;
+                Ok(Some(temp))
+            } else {
+                Ok(None)
+            }
+        })?;
+        if let Some(temp) = staged {
+            fs::remove_dir_all(&temp)?;
+        }
+        self.database.with_connection(|c| {
+            c.execute(
+                "DELETE FROM pending_workspace_deletions WHERE token=?1",
+                [token],
+            )?;
+            Ok(true)
+        })
     }
 }
 

@@ -836,7 +836,7 @@ fn delete_task(
     id: String,
     clean_workspace: Option<bool>,
     state: State<'_, AppState>,
-) -> AppResult<()> {
+) -> AppResult<bool> {
     state.tasks.ensure_deletable(&id)?;
     state.codex_terminal.stop_task(&id);
     state.tasks.delete(&id, clean_workspace.unwrap_or(false))
@@ -1427,6 +1427,17 @@ pub fn run() {
                 database.clone(),
                 PathBuf::from(&current_settings.workspace_root_path),
             );
+            let cleanup = tasks.clone();
+            std::thread::Builder::new()
+                .name("workspace-cleanup".into())
+                .spawn(move || {
+                    loop {
+                        if let Err(error) = cleanup.retry_workspace_deletions() {
+                            eprintln!("Workspace cleanup: {error}");
+                        }
+                        std::thread::sleep(std::time::Duration::from_secs(15));
+                    }
+                })?;
             let migrations = (|| -> AppResult<Vec<modules::tasks::ProjectMigration>> {
                 let build = foundation::build_info::read(&paths)?;
                 let Some(number) = build.release_number else {

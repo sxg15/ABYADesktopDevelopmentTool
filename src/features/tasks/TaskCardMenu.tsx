@@ -36,9 +36,9 @@ export function TaskCardMenu({task,x,y,en,close,notify,onChanged}:{
   if(confirm)return <Modal title={en?"Delete task":"删除开发任务"} onClose={()=>{if(!busy)close();}}>
     <p>{en?`Delete “${task.title}” and its production records?`:`删除「${task.title}」及其制作记录？`}</p>
     <label className="delete-workspace-option"><input type="checkbox" checked={cleanWorkspace} disabled={busy} onChange={e=>setCleanWorkspace(e.target.checked)}/>{en?"Also delete workspace files":"同时清理工作区文件"}</label>
-    {cleanWorkspace&&<div className="delete-workspace-detail"><p>{en?"This folder and its contents will be permanently deleted.":"以下目录及其中的文件将被永久删除。"}</p><code>{task.workspacePath}</code></div>}
+    {cleanWorkspace&&<div className="delete-workspace-detail"><p>{en?"This folder and its contents will be permanently deleted.":"以下目录及其中的文件将被永久删除。正在被占用的目录会在占用解除后自动清理。"}</p><code>{task.workspacePath}</code></div>}
     <footer className="modal-actions"><button disabled={busy} onClick={close}>{en?"Cancel":"取消"}</button>
-      <button className="danger-button" disabled={busy} onClick={()=>void run(()=>api.deleteTask(task.id,cleanWorkspace),true)}>{remove}</button></footer>
+      <button className="danger-button" disabled={busy} onClick={()=>void run(()=>api.deleteTask(task.id,cleanWorkspace).then(pending=>{if(pending)notify(en?"Task deleted. The app will retry workspace cleanup when the folder is released.":"任务已删除，工作区已加入清理队列。占用解除后，APP 会自动清理。");}),true)}>{remove}</button></footer>
   </Modal>;
   return createPortal(<div ref={ref} className="task-card-menu" role="menu" aria-label={task.title}
     onContextMenu={e=>e.preventDefault()} onKeyDown={e=>{

@@ -120,6 +120,7 @@ pub struct TaskInput {
 pub struct TaskService {
     database: Database,
     workspace_root: Arc<RwLock<PathBuf>>,
+    cleanup_gate: Arc<parking_lot::Mutex<()>>,
     managed_skill_sources: Vec<ManagedSkillSource>,
 }
 
@@ -214,6 +215,7 @@ impl TaskService {
         Self {
             database,
             workspace_root: Arc::new(RwLock::new(workspace_root)),
+            cleanup_gate: Default::default(),
             managed_skill_sources: MANAGED_LLM_DIRECTORIES
                 .into_iter()
                 .map(|llm_directory| ManagedSkillSource {
