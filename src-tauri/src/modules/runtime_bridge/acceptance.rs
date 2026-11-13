@@ -124,6 +124,10 @@ impl RuntimeBridgeService {
                     })
                     .unwrap_or(error)
             })?;
+        // A reachable CLI can still expose only its startup catalog. Preview and
+        // acceptance must wait for the same native root readiness as preflight
+        // before deciding that gameplay capabilities are missing.
+        self.preflight_ready(id)?;
         let tools = self.list_tools(id)?;
         let mut required = vec!["runtime_get_game_state", "lua_runtime_list"];
         if spec.require_ui {

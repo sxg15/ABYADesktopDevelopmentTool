@@ -105,7 +105,7 @@ impl RuntimeBridgeService {
         Ok(instance.id)
     }
 
-    fn preflight_ready(&self, id: &str) -> AppResult<()> {
+    pub(super) fn preflight_ready(&self, id: &str) -> AppResult<()> {
         self.wait_for_cli(id, Duration::from_secs(40))?;
         let start = Instant::now();
         loop {

@@ -1,5 +1,7 @@
 ## 2026-11-13 新版 PB 初始化等待
 
+App 试玩和正式验收也在读取必需能力目录之前执行同一游戏根就绪等待；CLI 连通时的初始化目录不能用来判定缺少 runtime_get_game_state。就绪后仍验证必需能力、存档/关卡、网络、UI 和 Lua，失败只清理本次创建的窗口。维护验证必须覆盖 start_preview 的单窗口真实入口，独立 instance launch 成功不等于试玩入口成功。
+
 基础预检的初次连接与冷加载均区分 CLI 连通和游戏根就绪。只读 runtime_get_game_state 返回明确的 runtime_not_ready / not_executed / initializing / ready=false 时，在原有根初始化限时内继续查询 CLI 状态及游戏根；这不代表预检通过。真实失败、未知结果、进程退出和通信错误仍进入失败及清理流程，创建/加载/保存写操作不自动重放。回归覆盖 starting_runtime、resource_label、场景切换以及未知结果拒绝。
 
 ## 2026-11-06 预检完成条件
