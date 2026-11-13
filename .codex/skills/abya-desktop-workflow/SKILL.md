@@ -5,6 +5,8 @@ description: 在 Codex 桌面对话中连接当前 ABYA 制作任务，整理文
 
 # 桌面制作任务
 
+完整任务进入 Lua 实现后，按已确认方案持续执行到可试玩包。遇到问题先读制作 Skill 的 references/lua-recovery-cases.md，用当前版本和实际路线复核，修复后在当前对话直接验证并继续。用户限定的局部目标和真实授权边界照常生效。
+
 在任务工作区打开本 Skill 后，用 PowerShell 读取项目连接文件，验证本对话已连接对应任务。在任务根目录执行，参数文件使用 UTF-8。
 
     $taskConnection = Get-Content -Raw -Encoding utf8 .codex/abya-desktop.json | ConvertFrom-Json

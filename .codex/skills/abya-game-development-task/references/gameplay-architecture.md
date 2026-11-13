@@ -6,9 +6,12 @@ Design-only resources/plan work does not require a manifest or a running Player.
 Before plan approval, runtime authoring is limited to an APP-authorized isolated prototype.
 Use the schema from the running Player. `customUiNode` is a target kind; component
 scope describes ownership. Never infer enum values from target names or try spellings.
-On an unknown enum, read `allowedValues`/`contractVersion` or describe the tool once.
-If the deployed contract is incomplete, record a contract gap and defer dependent
-implementation while continuing independent work. Do not bypass validation.
+On a field error inspect the live validator's nested component item schema and the
+diagnostic path, then match the binding against the loaded archive snapshot. See
+[the component and preflight cases](lua-recovery-cases.md). Correct the manifest
+and run validation again. Escalate a missing contract only when the relevant
+public descriptions, snapshot and validator diagnostics leave the required field
+unresolved. Keep independent work moving and preserve the validation gate.
 Tool success, manifest valid/ready, runtime acceptance and human approval are separate results.
 
 ## Target Ownership

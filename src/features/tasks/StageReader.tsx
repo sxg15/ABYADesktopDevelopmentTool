@@ -53,7 +53,9 @@ export function StageReader({task,stage,selectStage,notify,visible,children}:{ta
   const needsRepair=current==="plan"&&failed?.state==="failed";
   const preflightTitle=(f:typeof preflight)=>f?.phase==="create-availability"?"当前游戏客户端未能确认支持新建存档":(tests[f?.phase??""]??"检查游戏环境")+"时遇到了问题";
   const instruction=needsRepair?"请在下方查看没通过的检查。你可以在 Codex 中要求修复，或指定使用已有存档重新验证。":blocked|| (start?"在 Codex 中提供已有定稿，或写下玩法想法并附上参考图。":review?"请审阅"+names[current]+"第 "+review.revision+" 版。在 Codex 中确认这一版或直接指出要改的地方。":"回到任务对话继续制作，或告诉 Codex 要修复的具体问题。");
-  const prompt=needsRepair?"请读取本任务失败的预检，解释它对玩法的影响，定位原因并验证修复结果。":blocked?"请根据任务服务列出的待处理项修订当前成果，并说明需要我决定的事项。":start?briefPrompt:review?"我已审阅并确认「"+names[current]+"」第 "+review.revision+" 版（"+review.sha256+"），请按项目流程继续。":"请读取当前任务的实际进度，继续当前阶段；如果需要我确认，请先展示对应成果。";
+  const luaGuide="在已有授权内执行到可试玩包，实测输入、结算和重开后交接版本与入口。遇阻先查当前调用、字段契约和同范围回执，能修就验证并继续。若本次仅要求局部排查，按指定范围收尾。";
+  const repairGuide="先核对当前版本、实际路线及最近回执，验证此问题是否仍影响下一步。修正调用或复用同范围成功证据，按实际结果更新问题记录。缺少必要权限时只申请该项。";
+  const prompt=needsRepair?repairGuide:blocked?"请根据任务服务列出的待处理项修订当前成果，并说明需要我决定的事项。":start?briefPrompt:review?"我已审阅并确认「"+names[current]+"」第 "+review.revision+" 版（"+review.sha256+"），请按项目流程继续。"+(current==="plan"?luaGuide:""):current==="implementation"?luaGuide:"请读取当前任务的实际进度，继续当前阶段；如果需要我确认，请先展示对应成果。";
   async function open(copy:boolean){try{const opened=copy?await copyAndOpenTaskChat(task,prompt):await openTaskChat(task.id);if(opened&&copy)notify("提示词已复制，请在任务对话中粘贴并发送。");}catch(e){notify(errorMessage(e),true);}}
   const disconnected = connection?.ready === false;
   const attention = needsRepair || !!blocked;
@@ -113,7 +115,7 @@ export function StageReader({task,stage,selectStage,notify,visible,children}:{ta
       {shown==="plan"&&preflight?.state==="failed"&&issues.length===0&&<article className="planner-issue"><h3>{preflightTitle(preflight)}</h3><p>这次检查没有完成。请在任务对话中让 Codex 定位问题并重新验证。</p><details><summary>检查结果</summary>{preflight.error?.message}</details></article>}
       {issues.map(i=><article className="planner-issue" key={i.id}><h3>{i.playerSummary||(i.id.startsWith("preflight:")&&preflight?.state==="failed"?preflightTitle(preflight):i.title||i.description)}</h3>{i.playerSummary&&i.description!==i.playerSummary&&<details><summary>查看问题详情</summary>{i.description}</details>}
         <p>{i.id.startsWith("preflight:")&&preflight?.state==="failed"?"此项通过后，才能验证这套方案能否在游戏里运行。可复制问题到 Codex 继续处理。":i.executionHandling?.impact||i.resumeWhen||i.fix||"可在任务对话中请 Codex 修复并重新检查。"}</p>
-        <button className="text-button" onClick={()=>void copyAndOpenTaskChat(task,"请定位并修复问题 "+i.id+"："+(i.playerSummary||i.description)+"。保留其他成果，修好后重新验证。").catch(e=>notify(errorMessage(e),true))}>复制修复指令并打开 Codex</button></article>)}
+        <button className="text-button" onClick={()=>void copyAndOpenTaskChat(task,"请定位并修复问题 "+i.id+"："+(i.playerSummary||i.description)+"。"+repairGuide+(current==="implementation"?"修复后继续该阶段已授权的工作。":"")).catch(e=>notify(errorMessage(e),true))}>复制修复指令并打开 Codex</button></article>)}
       {doc?<>{edited!==undefined&&<p role="status">源文档已有人工修改。请在 Codex 中提交新版后再确认。</p>}<ReadableText text={edited??doc.content} taskId={task.id} basePath={doc.path} artifacts={artifacts}/>
         {!historical&&<button className="text-button" onClick={()=>void productionApi.open(task.id,doc.path).catch(e=>notify(errorMessage(e),true))}>打开 Markdown 源文件</button>}</>:<p>{goal?.summary||result?.stageUpdates?.[shown]?.summary||(shown===current?"本阶段成果会在这里显示。":"这一阶段还没有文档。")}</p>}
       <VisualGallery taskId={task.id} artifacts={artifacts.filter(a=>a.stage===shown&&(!historical||view.artifacts?.some(now=>now.id===a.id&&now.sha256===a.sha256)))} en={false}/>
