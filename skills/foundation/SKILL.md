@@ -145,3 +145,5 @@ reuseExisting 仅复制本任务唯一编辑存档，实测保存冷加载后记
 开发任务菜单通过 open_task_folder 按任务 ID 读取登记的绝对工作区路径，验证目录存在后在系统文件管理器打开。
 
 play_version_dates 按任务 ID 返回已登记版本的首次制作修订时间，供试玩卡片显示。
+
+delete_task 接受可选 cleanWorkspace，缺省仅删除任务记录。清理范围由任务服务根据任务 ID 及登记的目录确定。

@@ -8,6 +8,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 mod production;
+mod workspace_cleanup;
 pub use production::ProjectMigration;
 pub use production::autonomous_implementation;
 pub use production::{
@@ -341,43 +342,38 @@ impl TaskService {
         })
     }
 
-    pub fn delete(&self, id: &str) -> AppResult<()> {
-        self.ensure_deletable(id)?;
-        self.database.with_connection(|connection| {
-            let count = connection.execute("DELETE FROM development_tasks WHERE id=?1", [id])?;
-            if count == 0 {
-                return Err(AppError::not_found("Task"));
-            }
-            crate::foundation::change_signal::notify();
-            Ok(())
-        })
+    pub fn ensure_deletable(&self, id: &str) -> AppResult<()> {
+        self.database
+            .with_connection(|c| Self::check_deletable(c, id))
     }
 
-    pub fn ensure_deletable(&self, id: &str) -> AppResult<()> {
-        self.database.with_connection(|connection| {
-            let pending:i64=connection.query_row("SELECT COUNT(*) FROM task_production WHERE task_id=?1 AND json_extract(body,'$.workbench.execution.capabilityPreflight.cleanup.state')='pending'",[id],|row|row.get(0))?;
-            if pending>0 {return Err(AppError::validation("基础预检尚在运行或等待清理，请在自动清理完成后删除任务。"));}
-            let exists: i64 = connection.query_row(
-                "SELECT COUNT(*) FROM development_tasks WHERE id=?1",
-                [id],
-                |row| row.get(0),
-            )?;
-            if exists == 0 {
-                return Err(AppError::not_found("Task"));
-            }
-            let running: i64 = connection.query_row(
-                "SELECT COUNT(*) FROM game_instances
+    fn check_deletable(connection: &rusqlite::Connection, id: &str) -> AppResult<()> {
+        let pending:i64=connection.query_row("SELECT COUNT(*) FROM task_production WHERE task_id=?1 AND json_extract(body,'$.workbench.execution.capabilityPreflight.cleanup.state')='pending'",[id],|row|row.get(0))?;
+        if pending > 0 {
+            return Err(AppError::validation(
+                "基础预检尚在运行或等待清理，请在自动清理完成后删除任务。",
+            ));
+        }
+        let exists: i64 = connection.query_row(
+            "SELECT COUNT(*) FROM development_tasks WHERE id=?1",
+            [id],
+            |row| row.get(0),
+        )?;
+        if exists == 0 {
+            return Err(AppError::not_found("Task"));
+        }
+        let running: i64 = connection.query_row(
+            "SELECT COUNT(*) FROM game_instances
                  WHERE task_id=?1 AND process_state IN ('launching','running','stopping')",
-                [id],
-                |row| row.get(0),
-            )?;
-            if running > 0 {
-                return Err(AppError::validation(
-                    "Stop all running instances before deleting the task.",
-                ));
-            }
-            Ok(())
-        })
+            [id],
+            |row| row.get(0),
+        )?;
+        if running > 0 {
+            return Err(AppError::validation(
+                "Stop all running instances before deleting the task.",
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -1187,7 +1183,7 @@ mod tests {
             })
             .unwrap();
 
-        let error = service.delete(&task.id).unwrap_err();
+        let error = service.delete(&task.id, false).unwrap_err();
         assert_eq!(error.code, "validation");
         assert!(error.message.contains("Stop all running instances"));
         assert_eq!(service.list().unwrap().len(), 1);
@@ -1216,7 +1212,7 @@ mod tests {
             })
             .unwrap();
         let workspace = PathBuf::from(&task.workspace_path);
-        service.delete(&task.id).unwrap();
+        service.delete(&task.id, false).unwrap();
         assert!(service.list().unwrap().is_empty());
         assert!(workspace.is_dir());
         let _ = std::fs::remove_dir_all(root);

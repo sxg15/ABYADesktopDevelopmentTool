@@ -1075,7 +1075,7 @@ fn client_retention_reads_current_task_pins_without_changing_records_or_workspac
     f.service.set_status(&f.id, TaskStatus::Archived).unwrap();
     assert_eq!(f.service.pinned_player_paths().unwrap(), vec![expected]);
     assert_eq!(serde_json::to_value(f.record()).unwrap(), before);
-    f.service.delete(&f.id).unwrap();
+    f.service.delete(&f.id, false).unwrap();
     assert!(f.service.pinned_player_paths().unwrap().is_empty());
     assert!(f.workspace.is_dir());
 }

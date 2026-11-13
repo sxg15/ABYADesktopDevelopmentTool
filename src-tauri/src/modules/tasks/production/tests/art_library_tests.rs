@@ -158,7 +158,7 @@ fn collecting_requires_explicit_satisfaction_preserves_task_and_is_idempotent() 
     );
     let id = entry["id"].as_str().unwrap();
     let original = f.service.art_library_media(id, 1, 0).unwrap();
-    f.service.delete(&f.id).unwrap();
+    f.service.delete(&f.id, false).unwrap();
     assert_eq!(f.service.art_library_media(id, 1, 0).unwrap(), original);
     assert_eq!(
         f.service.art_library_get(id, 1).unwrap()["satisfaction"],

@@ -810,10 +810,14 @@ fn open_task_folder(
 }
 
 #[tauri::command(async)]
-fn delete_task(id: String, state: State<'_, AppState>) -> AppResult<()> {
+fn delete_task(
+    id: String,
+    clean_workspace: Option<bool>,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
     state.tasks.ensure_deletable(&id)?;
     state.codex_terminal.stop_task(&id);
-    state.tasks.delete(&id)
+    state.tasks.delete(&id, clean_workspace.unwrap_or(false))
 }
 
 #[tauri::command]

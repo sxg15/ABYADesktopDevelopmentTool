@@ -123,3 +123,8 @@
 .play-version-label {display:flex;align-items:center;flex-wrap:wrap;gap:3px 8px;color:#615c50;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
 .play-version-latest {padding:1px 7px;border-radius:5px;background:#e1efe5;color:#25603e;font-weight:650}
 .acceptance-launcher>.play-version-label {margin:8px 0}
+
+.delete-workspace-option {display:flex;align-items:center;gap:8px;margin:14px 0;cursor:pointer}
+.delete-workspace-option input {margin:0;width:16px;height:16px;accent-color:#985327}
+.delete-workspace-detail {padding:8px 12px;border:1px solid #e0c2b6;border-radius:6px;overflow-wrap:anywhere;background:#fff7f2}
+.delete-workspace-detail p {margin:0 0 4px}
