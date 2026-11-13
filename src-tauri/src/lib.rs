@@ -471,6 +471,14 @@ fn mutate_production_workbench(
     state.tasks.production_workbench(input)
 }
 #[tauri::command(async)]
+fn play_version_dates(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> AppResult<std::collections::BTreeMap<String, String>> {
+    state.tasks.play_version_dates(&task_id)
+}
+
+#[tauri::command(async)]
 fn read_production_snapshot(
     task_id: String,
     revision: u64,
@@ -1532,6 +1540,7 @@ pub fn run() {
             mutate_production_workbench,
             export_developer_package,
             read_production_snapshot,
+            play_version_dates,
             list_art_cases,
             read_art_case,
             read_art_case_media,

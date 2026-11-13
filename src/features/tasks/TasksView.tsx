@@ -55,7 +55,7 @@ export function TasksView({settings,t,notify,notificationNavigation,onNotificati
         </div>
       <TaskDescription key={id} taskId={id} description={selected.description} workspacePath={selected.workspacePath} en={settings?.locale==="en-US"}/></header>
       <StageReader key={id} task={selected} stage={stage} selectStage={setStage} notify={notify} visible={visible}>
-        <TaskInstances task={selected} t={t} settings={settings} notify={notify}/>
+        {record=><TaskInstances task={selected} record={record} t={t} settings={settings} notify={notify}/>}
       </StageReader></>:<p className="empty-state">{tasks.length?t("selectTask"):t("noTasks")}</p>}</section>
     {create&&<CreateTaskModal t={t} locale={settings?.locale} onClose={()=>setCreate(false)} onCreated={task=>{setTasks(old=>[task,...old.filter(x=>x.id!==task.id)]);setId(task.id);setStage("");}}/>}
     {menu&&visible&&<TaskCardMenu {...menu} en={settings?.locale==="en-US"} close={()=>setMenu(undefined)} notify={notify}

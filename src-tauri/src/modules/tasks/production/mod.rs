@@ -102,6 +102,28 @@ fn load(connection: &rusqlite::Connection, id: &str) -> AppResult<Option<Product
 }
 
 impl TaskService {
+    /// The first persisted revision carrying a version is its registration time.
+    /// Later edits and additional play windows do not change that timestamp.
+    pub fn play_version_dates(&self, task: &str) -> AppResult<BTreeMap<String, String>> {
+        self.database.with_connection(|c| {
+            let mut query = c.prepare(
+                "SELECT json_extract(body,'$.currentVersion') AS version,
+                        json_extract(body,'$.updatedAt'), MIN(revision)
+                 FROM (SELECT revision,body FROM task_production_history WHERE task_id=?1
+                       UNION ALL SELECT revision,body FROM task_production WHERE task_id=?1)
+                 WHERE json_type(body,'$.currentVersion')='text' GROUP BY version",
+            )?;
+            let mut dates = BTreeMap::new();
+            let mut rows = query.query([task])?;
+            while let Some(row) = rows.next()? {
+                if let Some(at) = row.get::<_, Option<String>>(1)? {
+                    dates.insert(row.get(0)?, at);
+                }
+            }
+            Ok(dates)
+        })
+    }
+
     fn production_initialize(&self, input: ProductionMutation) -> AppResult<ProductionView> {
         let task = self.get(&input.task_id)?;
         if task.status != TaskStatus::Active || input.expected_revision != 0 {

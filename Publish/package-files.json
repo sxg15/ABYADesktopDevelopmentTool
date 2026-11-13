@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "codex-desktop-workflow-9",
-  "totalBytes": 416586361,
+  "releaseLabel": "codex-desktop-workflow-10",
+  "totalBytes": 416830590,
   "files": [
     {
       "path": ".codex/README.md",
@@ -2170,18 +2170,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 48231936,
-      "sha256": "82b775451ef2edfc046dfa9b76956bff7dea4099f26792e66a3dbddab3b6d4af"
+      "bytes": 48478720,
+      "sha256": "4099fe450a8ad3376d24b9423f13ca0f5820558d6f727115e4a3b13533122d0a"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 6054400,
-      "sha256": "28a2d9d2f0fadfa431c0d647d9b43b3fb265d04f9f5b40849df48de201264b84"
+      "bytes": 6051840,
+      "sha256": "442566f45a84e08e782e9a20d40be7104c868c1434fde27260b75db858d7c5e7"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 854,
-      "sha256": "691492db659f9aac498cfe84b824bb0cc45285e15fd007dcae1f2519e0eb1d4f"
+      "bytes": 859,
+      "sha256": "482bfda005663f735375a3c54b9c3d81a96ea333d7956c3c981092663cff5088"
     },
     {
       "path": "runtime/LICENSE.txt",
