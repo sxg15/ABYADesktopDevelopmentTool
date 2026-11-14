@@ -1,5 +1,6 @@
 mod app_server;
 mod autonomy_watch;
+mod chat_migration;
 #[cfg(windows)]
 mod crash_job;
 mod desktop_chat;

@@ -1,3 +1,7 @@
+## 任务对话恢复入口
+
+migrate_desktop_chat 绑定 taskId 和 requestId，重试复用迁移记录和已创建的新会话。
+
 ## 桌面连接环境
 
 APP 与 Codex 的同名 LocalAppData 路径可能被 Windows 映射到不同文件。任务 locator 通过用户级保护携带原始签名连接描述，验证任务和工作区后才使用，保留旧 locator 兼容。
@@ -163,3 +167,5 @@ Skill 卡片以相邻 library.json 维护 group、usage、creator 和可选 main
 勾选清理工作区时，任务删除与待清理记录在同一事务提交。Windows 占用导致重命名或移除失败时，在后台和重启后重试；以任务标识和一次性清理标记保护同路径新目录。
 
 项目长期保存的编辑档位于 存档/编辑数据/Archives，冻结版本位于 存档/版本。新建存档 name 填可读的版本特点，由 APP 组合游戏名称、版本特点与本地创建时间；沿用原 creationId 重查回执。右键任务可打开存档目录。
+
+迁移后旧会话被其他客户端占用时，返回新会话和 archivePending，后台及重启后自动补归档；界面明确告知待归档。

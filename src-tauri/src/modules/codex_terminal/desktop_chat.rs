@@ -1,7 +1,7 @@
 use super::*;
 use serde_json::{Value, json};
 
-const DESKTOP_INSTRUCTIONS: &str = "这是 ABYA 开发 APP 创建的任务对话。开始制作前，读取本工作区 .codex/skills/abya-desktop-workflow/SKILL.md，通过 .codex/abya-desktop.json 中的 cli 核对任务 ID。文档确认、回退和修改意见由当前策划表达，按具体版本记录。";
+pub(super) const DESKTOP_INSTRUCTIONS: &str = "这是 ABYA 开发 APP 创建的任务对话。开始制作前，读取本工作区 .codex/skills/abya-desktop-workflow/SKILL.md，通过 .codex/abya-desktop.json 中的 cli 核对任务 ID。文档确认、回退和修改意见由当前策划表达，按具体版本记录。";
 
 pub(super) fn same_workspace(thread: &Value, expected: &Path) -> AppResult<bool> {
     let cwd = thread["cwd"]
@@ -262,7 +262,7 @@ impl CodexTerminalService {
         Ok(())
     }
 
-    fn desktop_rollout(&self, id: &str, native: &str) -> AppResult<PathBuf> {
+    pub(super) fn desktop_rollout(&self, id: &str, native: &str) -> AppResult<PathBuf> {
         let task = self.tasks.get_readonly(id)?;
         let root = self
             .desktop_sessions_root

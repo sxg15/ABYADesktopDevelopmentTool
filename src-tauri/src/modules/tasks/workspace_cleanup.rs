@@ -12,6 +12,7 @@ impl TaskService {
             let task = read_task(&tx,id)?;
             let workspace = if clean_workspace { owned_directory(&tx,id,Path::new(&task.workspace_path),&self.workspace_root.read())? } else { None };
             tx.execute("DELETE FROM development_tasks WHERE id=?1",[id])?;
+            tx.execute("DELETE FROM settings WHERE key LIKE ?1",[format!("chat-migration/{id}/%")])?;
             if let Some(path)=&workspace {
                 tx.execute("INSERT INTO pending_workspace_deletions(token,task_id,original_path) VALUES(?1,?2,?3)",rusqlite::params![token,id,path.to_string_lossy()])?;
                 // A replacement folder at the same path must never inherit deletion consent.

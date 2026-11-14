@@ -76,6 +76,8 @@ export const api = {
     invoke<DevelopmentTask>("set_task_status", { input: { id, status } }),
   deleteTask: (id: string, cleanWorkspace = false) => invoke<boolean>("delete_task", { id, cleanWorkspace }),
   openTaskArchives: (id:string)=>invoke<void>("open_task_archives",{id}),
+  migrateTaskChat:(taskId:string,requestId:string)=>invoke<{link:string;archivePending:boolean}>("migrate_desktop_chat",{taskId,requestId}),
+  openMigratedTaskChat:(taskId:string,expectedLink:string)=>invoke<void>("open_desktop_chat",{taskId,expectedLink}),
   openTaskFolder: (id: string) => invoke<void>("open_task_folder", { id }),
 
   codexTerminalAvailability: () =>

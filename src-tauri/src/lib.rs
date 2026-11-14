@@ -721,6 +721,33 @@ fn open_skill_maintenance(
 }
 
 #[tauri::command(async)]
+fn migrate_desktop_chat(
+    task_id: String,
+    request_id: String,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<serde_json::Value> {
+    use tauri_plugin_opener::OpenerExt;
+    let link =
+        state
+            .codex_terminal
+            .migrate_chat(&state.database, &task_id, &request_id, |link| {
+                app.opener()
+                    .open_url(link, None::<&str>)
+                    .map_err(foundation::AppError::internal)
+            })?;
+    let pending = state.database.with_connection(|c| {
+        let phase: String = c.query_row(
+            "SELECT json_extract(value_json,'$.phase') FROM settings WHERE key=?1",
+            [format!("chat-migration/{task_id}/{request_id}")],
+            |r| r.get(0),
+        )?;
+        Ok(phase != "complete")
+    })?;
+    Ok(serde_json::json!({"link":link,"archivePending":pending}))
+}
+
+#[tauri::command(async)]
 fn prepare_desktop_chat(task_id: String, state: State<'_, AppState>) -> AppResult<String> {
     state.codex_terminal.desktop_chat(&task_id)
 }
@@ -1471,6 +1498,18 @@ pub fn run() {
                 }]
             });
             let codex_terminal = CodexTerminalService::new(tasks.clone())?;
+            let archive_service = codex_terminal.clone();
+            let archive_db = database.clone();
+            std::thread::Builder::new()
+                .name("codex-migration-archive".into())
+                .spawn(move || {
+                    loop {
+                        if let Err(e) = archive_service.finish_pending_chat_archives(&archive_db) {
+                            eprintln!("Pending Codex archive: {e}")
+                        }
+                        std::thread::sleep(std::time::Duration::from_secs(30));
+                    }
+                })?;
             let connections = GameConnectionService::new();
             let archives = ArchiveCatalogService::new(paths.clone());
             let instances =
@@ -1621,6 +1660,7 @@ pub fn run() {
             read_document_source,
             desktop_chat_status,
             prepare_desktop_chat,
+            migrate_desktop_chat,
             open_skill_maintenance,
             open_desktop_chat,
             open_production_artifact,

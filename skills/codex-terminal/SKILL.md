@@ -1,3 +1,7 @@
+## 桌面对话迁移
+
+按 requestId 持久化迁移进度，先创建和核对新对话的工作区，再切换任务绑定，最后归档旧对话。交接历史不作为新的策划授权。
+
 ## 2026-11-13 隔离 Player 就绪与策划确认
 
 核对最近策划消息时，只排除原生元数据将所有条目标识为 environments.environment_context 的宿主环境更新。普通 user.text 仍按原文与提交时间核对，包括看似环境标签的文本。
@@ -172,3 +176,5 @@ Read the matching section in [historical contracts](../../docs/skill-history/202
 Progress checkpoints versus failures (2026-10-26), Autonomous budget checkpoints (2026-10-24), Terminal freeze recovery (2026-10-22), Non-human automatic progress (2026-10-22), v5 workbench (2026-10-21), Reliable stop control (2026-10-20), Interrupt current turn (2026-10-19), Persisted case request continuation (2026-10-17), Stage workspace update, Native interaction visibility (2026-10-12), Resume conflict recovery (2026-10-13), Workspace startup recovery (2026-10-13), Background task notifications (2026-10-14), Targeted issue repair queue (2026-10-13), Task isolation and atomic subprocess recovery (2026-10-22), Autonomous Lua scheduling (2026-10-23).
 
 Skill 卡片以相邻 library.json 维护 group、usage、creator 和可选 maintainer。内置 Skill 维护目标为 Git 克隆中的源文件，自定义 Skill 使用其任务工作区。按工作区与相对文件路径保存独立 Codex 维护对话，再次打开复用。
+
+迁移后旧会话被其他客户端占用时，返回新会话和 archivePending，后台及重启后自动补归档；界面明确告知待归档。

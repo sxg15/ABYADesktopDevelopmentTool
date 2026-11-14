@@ -184,6 +184,18 @@ impl TaskService {
         let task = self.get_readonly(id)?;
         files::safe_path(Path::new(&task.workspace_path), ".codex/abya-desktop.json")
     }
+    pub fn save_chat_handoff(
+        &self,
+        id: &str,
+        request: &str,
+        context: &serde_json::Value,
+    ) -> AppResult<String> {
+        uuid::Uuid::parse_str(request).map_err(AppError::internal)?;
+        let root = self.catalog_root(id)?;
+        let file = format!("artifacts/chat-migrations/{request}.json");
+        files::write_file(&root, &file, &serde_json::to_vec_pretty(context)?)?;
+        Ok(file)
+    }
     pub fn save_desktop_context(&self, id: &str, context: &serde_json::Value) -> AppResult<()> {
         let task = self.get_readonly(id)?;
         files::write_file(
