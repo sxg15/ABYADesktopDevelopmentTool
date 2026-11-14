@@ -1,6 +1,7 @@
 import {useRef,useState,type ReactNode} from "react";
 import {productionApi,type ProductionRecord} from "../../shared/production";
 import {errorMessage} from "../../shared/api";
+import {PlaytestFolder} from "./PlaytestFolder";
 import {PlaytestSeats} from "./PlaytestSeats";
 import {PreviewPlayerRecovery} from "./PreviewPlayerRecovery";
 
@@ -26,6 +27,7 @@ export function LuaPlaytest({record,active,en,label}:{record:ProductionRecord;ac
       <button className="primary-button" disabled={!active||busy||!version} onClick={()=>void start()}>
         {busy?(en?"Opening…":"正在打开试玩…"):(en?"Start playtest":"启动试玩")}</button></div>
     {version?label(version):<p>{en?"Generate a playable checkpoint first.":"生成可试玩的版本后，就可以从这里启动。"}</p>}
+    <PlaytestFolder taskId={record.taskId} version={version} preview en={en}/>
     {record.playerMode==="multiplayer"&&<PlaytestSeats value={seats} onChange={setSeats} disabled={!active||busy} en={en}/>}
     {message&&<p role="status">{message}</p>}
     {error&&<p role="alert" className="inline-error">{error}</p>}

@@ -227,6 +227,9 @@ impl DesktopToolDispatcher {
         let quote = args["userMessage"].as_str().unwrap_or_default();
         let op = args["operation"].as_str().unwrap_or_default();
         let data = &args["data"];
+        if op.starts_with("auto-") {
+            return serialize(tasks.no_questions_respond(id, revision, op, data)?);
+        }
         let mut since = if op == "decide" {
             record
                 .documents

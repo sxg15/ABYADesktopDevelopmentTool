@@ -40,7 +40,7 @@ export function TaskInstances({task,record,t,settings,notify,preview}:{preview:b
   },[task.id]);
   return <section className="task-instances"><header><h3>{t("instances")}</h3>
     <button className="secondary-button" disabled={task.status!=="active"} onClick={()=>setLaunch(true)}>{t("launch")}</button></header>
-    {preview?<LuaPlaytest key={task.id} record={record} active={task.status==="active"} en={en} label={label}/>:<AcceptanceLauncher taskId={task.id} active={task.status==="active"} en={en} versionLabel={label(latest)}/>}
+    {preview?<LuaPlaytest key={task.id} record={record} active={task.status==="active"} en={en} label={label}/>:<AcceptanceLauncher taskId={task.id} active={task.status==="active"} en={en} versionLabel={label(latest)} archiveVersion={latest}/>}
     {items.length > 0 && <ul className="instance-cards">
       {items.map(instance => <li key={instance.id}>
         <button type="button" className="instance-card" onClick={() => setDetail(instance)}>

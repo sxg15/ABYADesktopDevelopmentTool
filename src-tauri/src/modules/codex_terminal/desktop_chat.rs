@@ -162,7 +162,7 @@ impl CodexTerminalService {
             self.tasks.save_desktop_context(id, &context(&chat, None))?;
             let started = server.request(
                 "thread/start",
-                json!({"cwd":task.workspace_path,"projectId":project,"ephemeral":false,"developerInstructions":DESKTOP_INSTRUCTIONS}),
+                json!({"cwd":task.workspace_path,"projectId":project,"ephemeral":false,"model":"gpt-6-astra","config":{"model_reasoning_effort":"high"},"developerInstructions":DESKTOP_INSTRUCTIONS}),
             )?;
             let native = started["thread"]["id"]
                 .as_str()

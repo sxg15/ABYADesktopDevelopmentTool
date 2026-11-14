@@ -398,7 +398,7 @@ impl RuntimeBridgeService {
                 self.check_instance(&instance.id, &spec, seat == 0)?;
             }
             let value = json!({"id":uuid::Uuid::new_v4().to_string(),"purpose":"preview","player":player,
-                "version":spec.version,"seats":spec.seats,"status":"ready","instanceIds":created,"humanAccepted":false,
+                "version":spec.version,"archivePath":spec.archive_path,"seats":spec.seats,"status":"ready","instanceIds":created,"humanAccepted":false,
                 "message":format!("已打开版本 {} 的 {} 个试玩窗口，请核对本轮修改。",spec.version,spec.seats),"startedAt":chrono::Utc::now().to_rfc3339()});
             self.tasks
                 .record_preview(task, &spec.version, value.clone())?;

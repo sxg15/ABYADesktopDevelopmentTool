@@ -6,6 +6,8 @@ use std::collections::BTreeMap;
 #[serde(rename_all = "camelCase")]
 pub struct ProductionRecord {
     #[serde(default)]
+    pub no_questions: Value,
+    #[serde(default)]
     pub workbench: WorkbenchState,
     #[serde(default)]
     pub art_design: ArtDesign,
@@ -192,6 +194,8 @@ pub struct ArtDesign {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Approval {
+    #[serde(default)]
+    pub source: String,
     pub kind: String,
     pub document_hash: String,
     pub document_revision: u64,

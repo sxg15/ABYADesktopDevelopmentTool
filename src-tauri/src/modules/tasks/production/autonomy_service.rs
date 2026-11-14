@@ -23,7 +23,7 @@ impl TaskService {
         });
         let current_units:Vec<_>=ordered.iter().map(|u|json!({"id":u.id,"goalId":u.goal_id,"title":u.title,"kind":u.kind,"status":u.status,"dependsOn":u.depends_on,"definitionRevision":u.definition_revision,"milestone":u.milestone,"deferReasonCode":u.defer_reason_code,"nextCondition":u.next_condition,"repairFor":u.repair_for,"elapsedMs":u.elapsed_ms,"executionLimitMs":u.execution_limit_ms,"budgetGrants":u.budget_grants,"settlementUsed":u.settlement_used})).collect();
         Ok(
-            json!({"taskId":task,"revision":r.revision,"cycle":r.cycle,"stage":r.current_stage,
+            json!({"taskId":task,"noQuestions":r.no_questions,"revision":r.revision,"cycle":r.cycle,"stage":r.current_stage,
             "workflowVersion":r.workflow_version,"implementationPolicy":r.policy["implementationExecution"],
             "preflightRecovery":ledger.preflight,
             "fixtureVersions":ledger.validation_snapshots.iter().take(16).map(|(id,v)|json!({"id":id,"cycle":v["cycle"],"archiveHash":v["archiveHash"]})).collect::<Vec<_>>(),

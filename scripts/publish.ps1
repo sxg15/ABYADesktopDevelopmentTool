@@ -74,15 +74,7 @@ foreach ($directoryName in $llmDirectories) {
     }
 }
 
-npm run check
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-cargo test --manifest-path src-tauri/Cargo.toml
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& (Join-Path $PSScriptRoot 'check-with-temp.ps1')
 cargo build --manifest-path src-tauri/Cargo.toml --release --bin abya-desktop
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 npm run tauri build -- --no-bundle

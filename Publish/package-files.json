@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "codex-desktop-workflow-27",
-  "totalBytes": 419841741,
+  "releaseLabel": "codex-desktop-workflow-30",
+  "totalBytes": 420243659,
   "files": [
     {
       "path": ".codex/README.md",
@@ -930,8 +930,8 @@
     },
     {
       "path": ".codex/skills/abya-desktop-workflow/SKILL.md",
-      "bytes": 3653,
-      "sha256": "855245c75157d6c0297210672f65aea7b2ef4271c5e63b88529ada5e0290c452"
+      "bytes": 3903,
+      "sha256": "b684cbc7f43e790c981e1984bcd64498ff4ced1f01887b925cac6373ceb645d9"
     },
     {
       "path": ".codex/skills/abya-desktop-workflow/library.json",
@@ -975,8 +975,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/SKILL.md",
-      "bytes": 6123,
-      "sha256": "4e451e44ba396b2b026749a2236b8c38119f7d90ade16354a84cbcd11475a574"
+      "bytes": 6335,
+      "sha256": "6c97719699aa2371149dd108a3f0adfe7200ab434a9923a0590d6513eac852cd"
     },
     {
       "path": ".codex/skills/abya-game-development-task/agents/openai.yaml",
@@ -1669,6 +1669,11 @@
       "sha256": "8507ad9fa18eabb006138d15e8efc658d0ae2323109b1c93ccfaa028087f5477"
     },
     {
+      "path": ".codex/skills/abya-game-development-task/references/no-questions.md",
+      "bytes": 2628,
+      "sha256": "b22ddd6f2c44c2b86db55f7a8ff42e3a4f08d45edfd99726187338ea9085d682"
+    },
+    {
       "path": ".codex/skills/abya-game-development-task/references/preflight-recovery.md",
       "bytes": 3085,
       "sha256": "d96f9b271961b641a4f0c01bc5ac8a113354a81c7d650cbfbc647371ea854876"
@@ -2245,18 +2250,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 51473920,
-      "sha256": "ba18142e38da762548cdf49cd49a86c15ed6422acddfacf309a214c376c1d905"
+      "bytes": 51869184,
+      "sha256": "6bf3cdfb7a02a005f0c962c7a62df8270ff1e3f90651d89c9f635fcd43e3b2f6"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 6061056,
-      "sha256": "68680877c5184485677b8e4fe3fe6d5d657a41f525c3a9cc385d42012da36b6f"
+      "bytes": 6064640,
+      "sha256": "06247f12136e99762cd2b7c4687f990118748b8f703694346c48ec6d4dbd6f32"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 882,
-      "sha256": "98c197c10547e814ade3321c33ebd0b79ac9f23bfd63975e618e7030fa7e6364"
+      "bytes": 862,
+      "sha256": "7579c40dc4c133753260677f28713b5ed9ef3c031fa417428d2473828eb57408"
     },
     {
       "path": "runtime/LICENSE.txt",

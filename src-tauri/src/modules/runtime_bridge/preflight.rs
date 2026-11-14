@@ -131,7 +131,10 @@ impl RuntimeBridgeService {
             if cancel.load(Ordering::SeqCst) {
                 return Err(AppError::validation("初始化已取消。"));
             }
-            self.wait_for_cli(id, Duration::from_secs(5))?;
+            // Loading can briefly occupy the CLI after its first successful status.
+            // Keep the established initialization deadline instead of failing a
+            // separate five-second reconnect window inside that deadline.
+            self.wait_for_cli(id, Duration::from_secs(60).saturating_sub(start.elapsed()))?;
             let response = self.run(
                 id,
                 &["capability", "run", "runtime_get_game_state"],

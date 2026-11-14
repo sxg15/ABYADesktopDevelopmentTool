@@ -24,7 +24,7 @@ pub(crate) fn tools() -> Vec<CliCommand> {
     vec![
         tool(
             "development_production_chat_response",
-            "Apply the latest explicit planner message from the bound desktop thread to its reviewed version.",
+            "Apply a planner response. In an APP-authorized noQuestions run, auto-review, auto-answer, auto-block and auto-finish use data.runId and record AI decisions separately.",
             "Planner response",
             object_schema(
                 json!({"expectedRevision":{"type":"integer"},"operation":{"type":"string"},"data":{"type":"object"},"userMessage":{"type":"string"}}),

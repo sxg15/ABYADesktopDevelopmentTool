@@ -11,6 +11,7 @@ import {errorMessage} from "../../shared/api";
 import {ReadableText} from "./ReadableText";
 import {VisualGallery} from "./VisualGallery";
 import {briefPrompt,openTaskChat,chatStatus,copyAndOpenTaskChat} from "./desktopChat";
+import {NoQuestionsControl} from "./NoQuestionsControl";
 import {StageCard} from "./StageCard";
 import {statusName} from "./productionText";
 
@@ -50,9 +51,10 @@ export function StageReader({task,stage,selectStage,notify,visible,children}:{ta
   const preflight=result?.workbench?.execution?.capabilityPreflight;
   const tests:Record<string,string>={"runtime-connect":"连接游戏客户端","create-availability":"检查游戏能否新建存档","create-archive":"新建测试存档","save-archive":"保存测试关卡","cold-load":"重新打开保存的关卡"};
   const failed=record?.workbench?.execution?.capabilityPreflight;
+  const automatic=record?.noQuestions?.enabled===true;
   const needsRepair=current==="plan"&&failed?.state==="failed";
   const preflightTitle=(f:typeof preflight)=>f?.phase==="create-availability"?"当前游戏客户端未能确认支持新建存档":(tests[f?.phase??""]??"检查游戏环境")+"时遇到了问题";
-  const instruction=needsRepair?"请在下方查看没通过的检查。你可以在 Codex 中要求修复，或指定使用已有存档重新验证。":blocked|| (start?"在 Codex 中提供已有定稿，或写下玩法想法并附上参考图。":review?"请审阅"+names[current]+"第 "+review.revision+" 版。在 Codex 中确认这一版或直接指出要改的地方。":"回到任务对话继续制作，或告诉 Codex 要修复的具体问题。");
+  const instruction=automatic?"AI 正在本项目内自行审阅与推进；新试玩版完成后会停下。":needsRepair?"请在下方查看没通过的检查。你可以在 Codex 中要求修复，或指定使用已有存档重新验证。":blocked|| (start?"在 Codex 中提供已有定稿，或写下玩法想法并附上参考图。":review?"请审阅"+names[current]+"第 "+review.revision+" 版。在 Codex 中确认这一版或直接指出要改的地方。":"回到任务对话继续制作，或告诉 Codex 要修复的具体问题。");
   const luaGuide="在已有授权内执行到可试玩包，实测输入、结算和重开后交接版本与入口。遇阻先查当前调用、字段契约和同范围回执，能修就验证并继续。若本次仅要求局部排查，按指定范围收尾。";
   const repairGuide="先核对当前版本、实际路线及最近回执，验证此问题是否仍影响下一步。修正调用或复用同范围成功证据，按实际结果更新问题记录。缺少必要权限时只申请该项。";
   const prompt=needsRepair?repairGuide:blocked?"请根据任务服务列出的待处理项修订当前成果，并说明需要我决定的事项。":start?briefPrompt:review?"我已审阅并确认「"+names[current]+"」第 "+review.revision+" 版（"+review.sha256+"），请按项目流程继续。"+(current==="plan"?luaGuide:""):current==="implementation"?luaGuide:"请读取当前任务的实际进度，继续当前阶段；如果需要我确认，请先展示对应成果。";
@@ -60,14 +62,14 @@ export function StageReader({task,stage,selectStage,notify,visible,children}:{ta
   const disconnected = connection?.ready === false;
   const attention = needsRepair || !!blocked;
   const Icon = disconnected ? Unplug : attention ? TriangleAlert : review ? ClipboardCheck : start ? FilePenLine : CircleHelp;
-  const guidanceTitle = disconnected ? "开发环境已断开" : needsRepair ? "预检需要处理" : blocked ? "审阅前有待处理项" : review ? "等待审阅" : start ? "准备玩法文档" : "当前工作";
+  const guidanceTitle = automatic ? "不提问模式进行中" : disconnected ? "开发环境已断开" : needsRepair ? "预检需要处理" : blocked ? "审阅前有待处理项" : review ? "等待审阅" : start ? "准备玩法文档" : "当前工作";
   const tone = disconnected || attention ? "error" : review || start ? "human" : "idle";
   const copyLabel = needsRepair ? "复制修复指令" : blocked ? "复制处理指令" : start ? "复制开场提示词" : review ? "复制确认指令" : "复制继续指令";
   const connectionText = connection
     ? (connection.ready ? "开发环境就绪" : "开发环境连接已断开") + (connection.bound ? " · 已关联任务对话" : " · 等待对话连接任务")
     : "正在读取任务环境";
 
-  return <><div className="task-guidance-shell">
+  return <>{record&&<NoQuestionsControl taskId={task.id} record={record} active={task.status==="active"} onChanged={setView}/>}<div className="task-guidance-shell">
     <section className={"task-guidance desktop-guide tone-" + tone} aria-label="当前操作指引">
       <div className="guidance-main" role="status">
         <span className="guidance-icon"><Icon size={20} aria-hidden="true"/></span>
@@ -117,6 +119,7 @@ export function StageReader({task,stage,selectStage,notify,visible,children}:{ta
         <p>{i.id.startsWith("preflight:")&&preflight?.state==="failed"?"此项通过后，才能验证这套方案能否在游戏里运行。可复制问题到 Codex 继续处理。":i.executionHandling?.impact||i.resumeWhen||i.fix||"可在任务对话中请 Codex 修复并重新检查。"}</p>
         <button className="text-button" onClick={()=>void copyAndOpenTaskChat(task,"请定位并修复问题 "+i.id+"："+(i.playerSummary||i.description)+"。"+repairGuide+(current==="implementation"?"修复后继续该阶段已授权的工作。":"")).catch(e=>notify(errorMessage(e),true))}>复制修复指令并打开 Codex</button></article>)}
       {doc?<>{edited!==undefined&&<p role="status">源文档已有人工修改。请在 Codex 中提交新版后再确认。</p>}<ReadableText text={edited??doc.content} taskId={task.id} basePath={doc.path} artifacts={artifacts}/>
+        {record?.approvals.some(a=>a.source==="ai-self-review"&&a.decision==="accepted"&&a.kind===doc.kind&&a.documentHash===doc.sha256)&&<p>AI 自审通过 · 不提问模式</p>}
         {!historical&&<button className="text-button" onClick={()=>void productionApi.open(task.id,doc.path).catch(e=>notify(errorMessage(e),true))}>打开 Markdown 源文件</button>}</>:<p>{goal?.summary||result?.stageUpdates?.[shown]?.summary||(shown===current?"本阶段成果会在这里显示。":"这一阶段还没有文档。")}</p>}
       <VisualGallery taskId={task.id} artifacts={artifacts.filter(a=>a.stage===shown&&(!historical||view.artifacts?.some(now=>now.id===a.id&&now.sha256===a.sha256)))} en={false}/>
       {visible&&!historical&&["implementation","review"].includes(shown)&&record&&children(record,shown)}</>}

@@ -302,6 +302,7 @@ impl TaskService {
             return Ok(old.clone());
         }
         if !user_initiated
+            && r.no_questions["enabled"] != true
             && !(old["userAuthorized"] == true
                 && old["scope"] == scope(&r)
                 && old["reuseExisting"] == reuse

@@ -5,8 +5,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 export function sourceFingerprint(){
  const roots=['src','src-tauri','.codex','tools/abya','package.json','package-lock.json','index.html',
-  'vite.config.ts','tsconfig.json','tsconfig.node.json','scripts/publish.ps1','scripts/promote-workflow.ps1',
-  'scripts/source-fingerprint.mjs','scripts/verify-workflow-pilot.mjs'];
+  'vite.config.ts','tsconfig.json','tsconfig.node.json','scripts/publish.ps1','scripts/check-with-temp.ps1','scripts/promote-workflow.ps1',
+  'scripts/source-fingerprint.mjs','scripts/cleanup-test-temp.mjs','scripts/verify-workflow-pilot.mjs'];
  const files=[...new Set(execFileSync('git',['ls-files','-z','--cached','--others','--exclude-standard','--',...roots],{encoding:'utf8'}).split('\0').filter(Boolean))].sort();
  const hash=crypto.createHash('sha256');
  for(const file of files){

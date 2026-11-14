@@ -1193,3 +1193,66 @@ fn evidence_reuse_requires_intact_reviewed_source_and_explicit_impact() {
         .is_err()
     );
 }
+
+#[test]
+fn no_questions_requires_current_run_and_marks_ai_review() {
+    let f = modern_fixture();
+    let previous_question_mode = f.record().question_mode.clone();
+    let player = f.workspace.join("fixture-player.exe");
+    f.service.database.with_connection(|c|{
+        c.execute("INSERT OR REPLACE INTO settings(key,value_json,updated_at) VALUES('application',?1,'now')",[json!({"gameExecutablePath":player}).to_string()])?;Ok(())
+    }).unwrap();
+    f.service.no_questions_mode(&f.id, true).unwrap();
+    let run = f.record().no_questions["runId"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    f.service
+        .production_commit(&f.id, f.record().revision, |r| {
+            r.current_stage = "requirements".into();
+            r.stages
+                .insert("requirements".into(), "awaiting-confirmation".into());
+            Ok(())
+        })
+        .unwrap();
+    let hash = f.record().documents["requirements"].sha256.clone();
+    let input = json!({"runId":run,"kind":"requirements","documentHash":hash,"review":"Synthetic test: requirements are complete and consistent with the current input."});
+    f.service
+        .no_questions_respond(&f.id, f.record().revision, "auto-review", &input)
+        .unwrap();
+    assert_eq!(
+        f.record().approvals.last().unwrap().source,
+        "ai-self-review"
+    );
+    assert_eq!(f.record().current_stage, "resources");
+    f.service.no_questions_mode(&f.id, false).unwrap();
+    assert_eq!(f.record().question_mode, previous_question_mode);
+    assert!(
+        f.service
+            .no_questions_respond(&f.id, f.record().revision, "auto-review", &input)
+            .is_err()
+    );
+    f.service.no_questions_mode(&f.id, true).unwrap();
+    assert_ne!(f.record().no_questions["runId"], run);
+    assert!(
+        f.service
+            .no_questions_respond(
+                &f.id,
+                f.record().revision,
+                "auto-finish",
+                &json!({"runId":run})
+            )
+            .is_err()
+    );
+}
+
+#[test]
+fn no_questions_never_finishes_on_the_preexisting_playable_version() {
+    let f = modern_fixture();
+    f.service.production_commit(&f.id,f.record().revision,|r|{
+        r.no_questions=json!({"enabled":true,"runId":"test","baselineVersion":r.current_version,"baselineArchiveHash":r.version_details["archiveHash"]});
+        Ok(())
+    }).unwrap();
+    assert!(!f.service.no_questions_finish_if_ready(&f.id).unwrap());
+    assert!(f.record().no_questions["enabled"] == true);
+}

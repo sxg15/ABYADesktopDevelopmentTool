@@ -144,3 +144,5 @@ reuseExisting 仅复制本任务唯一编辑存档，实测保存冷加载后记
 回执保存在 artifacts/capability-preflight，临时数据自动清理：停止本次实例、核对 OS PID 已退出、验证 UUID/路径边界/owner/无链接后删除。失败/未知也先停止并核对；重启及每 30 秒继续清理 pending，不重放创建、不停止外来 PID、不删正式存档。只保留诊断回执和日志。无 owner 的空目录可回收，非空且归属不明则保留并报告。
 
 桌面设置中的 gameClient.storageRoot 仅用于下次下载安装；读取当前游戏程序路径仍以已选安装记录解析的 gameExecutablePath 为准。
+
+项目不提问模式由 APP 按钮授予并持久化。noQuestions.runId 绑定本轮，自审通过标记 ai-self-review，关闭后自动操作失效。原生对话按任务标题核验后发送控制指令，实际 Player 与平台权限继续执行原有校验；新试玩包须内容相对基线更新并通过当前版本实测。对应存档入口按显示版本及本任务启动回执定位。

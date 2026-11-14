@@ -8,6 +8,8 @@ mod completion_repair;
 mod execution_loop;
 mod execution_time;
 mod flat_saves;
+mod no_questions;
+mod playable_folder;
 mod preflight_recovery;
 mod progress_budget;
 mod review_handoff;
@@ -155,6 +157,7 @@ impl TaskService {
         }
         stages.insert("requirements".into(), "in-progress".into());
         let mut record = ProductionRecord {
+            no_questions: Value::Null,
             workbench: WorkbenchState::default(),
             art_design: ArtDesign::default(),
             schema: "abya.game-development-workflow/v1".into(),
@@ -247,8 +250,21 @@ impl TaskService {
     }
 
     pub fn production_decide(&self, input: ProductionDecision) -> AppResult<ProductionView> {
+        self.decide_with_source(input, None)
+    }
+    pub(super) fn decide_with_source(
+        &self,
+        input: ProductionDecision,
+        run: Option<&str>,
+    ) -> AppResult<ProductionView> {
         let root = self.production_workspace(&input.task_id)?;
         self.production_commit(&input.task_id, input.expected_revision, |r| {
+            if let Some(run) = run {
+                no_questions::authorize(r, run)?;
+                if !["requirements", "resources", "plan"].contains(&input.kind.as_str()) {
+                    return Err(conflict());
+                }
+            }
             interaction::review(r, &root, &input.kind)?;
             if !input.accepted && input.feedback.trim().is_empty() {
                 return Err(AppError::validation("退回修改时请填写具体修改意见。"));
@@ -274,6 +290,12 @@ impl TaskService {
                 workspace::accept_templates(r, &root, &doc)?;
             }
             r.approvals.push(Approval {
+                source: if run.is_some() {
+                    "ai-self-review"
+                } else {
+                    "user"
+                }
+                .into(),
                 kind: input.kind.clone(),
                 document_hash: doc.sha256,
                 document_revision: doc.revision,

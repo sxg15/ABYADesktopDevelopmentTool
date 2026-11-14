@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { productionApi, type AcceptanceSession, type ProductionRecord } from "../../shared/production";
 import { errorMessage } from "../../shared/api";
+import {PlaytestFolder} from "./PlaytestFolder";
 import { PlaytestSeats } from "./PlaytestSeats";
 
-export function AcceptanceLauncher({ taskId, active, visible = true, en = false, onStarted, versionLabel }: {
-  taskId: string; active: boolean; visible?: boolean; en?: boolean; onStarted?: () => void; versionLabel?:ReactNode;
+export function AcceptanceLauncher({ taskId, active, visible = true, en = false, onStarted, versionLabel,archiveVersion }: {
+  taskId: string; active: boolean; visible?: boolean; en?: boolean; onStarted?: () => void; versionLabel?:ReactNode; archiveVersion?:string;
 }) {
   const [session, setSession] = useState<AcceptanceSession>();
   const [busy, setBusy] = useState(false);
@@ -67,6 +68,7 @@ export function AcceptanceLauncher({ taskId, active, visible = true, en = false,
         {launching ? (en ? "Opening…" : "正在准备验收…") : (en ? "Start acceptance" : "一键开始验收")}
       </button></div>
     {versionLabel}
+    <PlaytestFolder taskId={taskId} version={archiveVersion??record?.currentVersion} en={en}/>
     {record?.playerMode === "multiplayer" && <PlaytestSeats value={selectedSeats} onChange={setSeats} disabled={!active || launching} en={en}/>}
     <p>{en ? "Uses the task's saved Player and archive; checks every seat before play." : "按任务登记的运行包和存档启动，检查各端就绪后交给你操作。"}</p>
     {session?.message && <p role="status">{session.version && <strong>{session.version} · </strong>}{session.message}</p>}

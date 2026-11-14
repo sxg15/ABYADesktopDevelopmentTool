@@ -843,6 +843,41 @@ fn set_task_status(
 }
 
 #[tauri::command(async)]
+fn set_no_questions(
+    task_id: String,
+    action: String,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<ProductionView> {
+    if !["start", "off", "stop"].contains(&action.as_str()) {
+        return Err(foundation::AppError::validation("无效的模式操作。"));
+    }
+    state.codex_terminal.set_no_questions(
+        &state.database,
+        &app,
+        &task_id,
+        action == "start",
+        action == "stop",
+    )
+}
+#[tauri::command(async)]
+fn open_playable_archive(
+    task_id: String,
+    version: String,
+    preview: bool,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let path = state
+        .tasks
+        .playable_archive_folder(&task_id, &version, preview)?;
+    app.opener()
+        .open_path(path.to_string_lossy(), None::<&str>)
+        .map_err(foundation::AppError::internal)
+}
+
+#[tauri::command(async)]
 fn open_task_archives(
     id: String,
     state: State<'_, AppState>,
@@ -1510,6 +1545,19 @@ pub fn run() {
                         std::thread::sleep(std::time::Duration::from_secs(30));
                     }
                 })?;
+            let mode_service = codex_terminal.clone();
+            let mode_db = database.clone();
+            let mode_app = app.handle().clone();
+            std::thread::Builder::new()
+                .name("no-questions".into())
+                .spawn(move || {
+                    loop {
+                        if let Err(e) = mode_service.drive_no_questions(&mode_db, &mode_app) {
+                            eprintln!("No-questions mode: {e}")
+                        }
+                        std::thread::sleep(std::time::Duration::from_secs(10));
+                    }
+                })?;
             let connections = GameConnectionService::new();
             let archives = ArchiveCatalogService::new(paths.clone());
             let instances =
@@ -1689,6 +1737,8 @@ pub fn run() {
             delete_task,
             open_task_folder,
             open_task_archives,
+            open_playable_archive,
+            set_no_questions,
             get_codex_terminal_availability,
             open_codex_terminal,
             write_codex_terminal,

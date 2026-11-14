@@ -72,6 +72,7 @@ export interface WorkbenchState {
   deferrals:{id:string;stage?:string;affectedStages?:string[];blockedOperations?:string[];description:string;reason:string;impact:string;status:string}[];
 }
 export interface ProductionRecord {
+  noQuestions?:{enabled:boolean;runId:string;status:string;message:string;version?:string;baselineVersion?:string};
   policy?: ProductionPolicy;
   workbench?:WorkbenchState;
   artDesign?: ArtDesign;
@@ -87,7 +88,7 @@ export interface ProductionRecord {
   taskId: string; revision: number; workflowVersion: string; questionMode: string;
   taskTemplate?: string; artTemplate?: string; currentStage: string; currentRound: number;
   cycle: number; stages: Record<string, string>; documents: Record<string, ProductionDocument>;
-  approvals: { kind: string; documentHash: string; documentRevision: number; decision: string; feedback: string; decidedAt: string }[];
+  approvals: { source?:string; kind: string; documentHash: string; documentRevision: number; decision: string; feedback: string; decidedAt: string }[];
   currentVersion?: string; versionDetails: Record<string, string>;
   issues: ProductionIssue[]; evidence: ProductionEvidence[]; rounds: ProductionRound[];
   milestones: Record<string, string[]>; knowledge: { summary: string; status: string }[];
@@ -103,6 +104,8 @@ export interface ProductionView {
   reportPaths: string[]; availableUpdate: boolean;
 }
 export const productionApi = {
+  noQuestions:(taskId:string,action:"start"|"off"|"stop")=>invoke<ProductionView>("set_no_questions",{taskId,action}),
+  openPlayableArchive:(taskId:string,version:string,preview:boolean)=>invoke<void>("open_playable_archive",{taskId,version,preview}),
   maintainSkill:(taskId:string,skillId:string)=>invoke<void>("open_skill_maintenance",{taskId,skillId}),
   playVersionDates: (taskId:string) => invoke<Record<string,string>>("play_version_dates",{taskId}),
   preflight:(taskId:string,reuseExisting=false,retry=false)=>invoke<CapabilityPreflight>("run_task_preflight",{taskId,reuseExisting,retry}),

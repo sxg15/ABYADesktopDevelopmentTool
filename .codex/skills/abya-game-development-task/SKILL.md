@@ -5,6 +5,9 @@ description: 在 ABYA 桌面任务内制作玩法或执行指定制作阶段；�
 
 # ABYA 游戏制作
 
+若 production get 中 noQuestions.enabled 为 true，立即读取references/no-questions.md，本轮按 APP 已记录的授权自行审阅推进至新试玩包。每次操作仍核对 runId 和当前状态。
+
+
 工作区有 .codex/abya-desktop.json 时，先读取同级 abya-desktop-workflow/SKILL.md。桌面工作区在当前 Codex 对话中收集反馈、对照具体文档版本登记策划确认，由 APP 展示流程。
 
 交付按已批准规格运行、可验证的游戏，复用原任务、存档、决定和已有成果。不要创建第二个任务，也不把模型一轮回复结束当作游戏完成。

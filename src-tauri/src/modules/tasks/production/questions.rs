@@ -31,7 +31,7 @@ fn invalidate_from(r: &mut ProductionRecord, stage: &str) {
     r.current_stage = stage.into();
 }
 
-fn answer(r: &mut ProductionRecord, operation: &str, data: &Value) -> AppResult<()> {
+pub(super) fn answer(r: &mut ProductionRecord, operation: &str, data: &Value) -> AppResult<()> {
     if operation == "set-player-mode" {
         let mode = player_mode(data)?.ok_or_else(|| AppError::validation("缺少人数模式。"))?;
         if r.player_mode != mode {

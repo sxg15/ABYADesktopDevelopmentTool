@@ -128,3 +128,5 @@
 .delete-workspace-option input {margin:0;width:16px;height:16px;accent-color:#985327}
 .delete-workspace-detail {padding:8px 12px;border:1px solid #e0c2b6;border-radius:6px;overflow-wrap:anywhere;background:#fff7f2}
 .delete-workspace-detail p {margin:0 0 4px}
+
+.no-questions-control{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;background:#f5f2e9;border-bottom:1px solid #d7d0c1}.no-questions-control p{margin:4px 0;font-size:13px}.no-questions-control small{color:#52685c}.no-questions-control .production-actions{margin:0}.no-questions-control>.inline-error{width:100%}.playtest-folder{display:flex;justify-content:flex-end;flex-wrap:wrap;margin:8px 0}.playtest-folder button{display:flex;gap:6px;align-items:center}.playtest-folder p{width:100%}

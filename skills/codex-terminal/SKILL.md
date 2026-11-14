@@ -182,3 +182,7 @@ Progress checkpoints versus failures (2026-10-26), Autonomous budget checkpoints
 Skill 卡片以相邻 library.json 维护 group、usage、creator 和可选 maintainer。内置 Skill 维护目标为 Git 克隆中的源文件，自定义 Skill 使用其任务工作区。按工作区与相对文件路径保存独立 Codex 维护对话，再次打开复用。
 
 迁移后旧会话被其他客户端占用时，返回新会话和 archivePending，后台及重启后自动补归档；界面明确告知待归档。
+
+项目不提问模式由 APP 按钮授予并持久化。noQuestions.runId 绑定本轮，自审通过标记 ai-self-review，关闭后自动操作失效。原生对话按任务标题核验后发送控制指令，实际 Player 与平台权限继续执行原有校验；新试玩包须内容相对基线更新并通过当前版本实测。对应存档入口按显示版本及本任务启动回执定位。
+
+其他客户端正在执行时，短生命周期 app-server 的 notLoaded 投影可能误报 interrupted；后台应以绑定工作区的原生日志 task_started/task_complete/turn_aborted 等事件增量核对，保留未写完的末行，不因投影误差重发。模式开关和 UI 投递共享锁；不重复开启同一轮。原生窗口标题只匹配可见 Text，避免 Document 同名造成重复匹配；输入框已有其他草稿时保留并等待。

@@ -6,6 +6,8 @@ mod crash_job;
 mod desktop_chat;
 mod diagnostics;
 mod memory_context;
+mod no_questions;
+mod no_questions_events;
 mod preflight;
 mod recovery;
 mod resume_failure;
