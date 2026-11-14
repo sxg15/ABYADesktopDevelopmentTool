@@ -45,6 +45,8 @@ struct TaskLocator {
     task: String,
     workspace: PathBuf,
     descriptor: PathBuf,
+    #[serde(default)]
+    connection: Option<DesktopConnection>,
 }
 
 pub fn task_locator(task: &str, workspace: &Path) -> AppResult<String> {
@@ -52,6 +54,7 @@ pub fn task_locator(task: &str, workspace: &Path) -> AppResult<String> {
         task: task.to_owned(),
         workspace: workspace.canonicalize()?,
         descriptor: descriptor_path()?,
+        connection: Some(serde_json::from_slice(&std::fs::read(descriptor_path()?)?)?),
     };
     super::settings::encrypt_token(&serde_json::to_string(&record)?)
 }
@@ -94,7 +97,24 @@ pub fn connection(file: Option<&Path>) -> AppResult<(String, String)> {
     let value: DesktopConnection = serde_json::from_slice(&std::fs::read(path).map_err(|_| {
         AppError::validation("找不到该任务对应的开发 APP 连接，请重新打开开发 APP。")
     })?)?;
-    if file.is_some() || !value.route_proof.is_empty() {
+    verified_connection(value, file.is_some())
+}
+
+pub fn task_connection(locator: &str, task: &str, workspace: &Path) -> AppResult<(String, String)> {
+    let descriptor = locate_task_connection(locator, task, workspace)?;
+    let raw = super::settings::decrypt_token(locator)?;
+    let record: TaskLocator = serde_json::from_str(&raw)?;
+    match record.connection {
+        Some(value) => verified_connection(value, true),
+        None => connection(Some(&descriptor)),
+    }
+}
+
+fn verified_connection(
+    value: DesktopConnection,
+    require_proof: bool,
+) -> AppResult<(String, String)> {
+    if require_proof || !value.route_proof.is_empty() {
         let proof = super::settings::decrypt_token(&value.route_proof).map_err(|_| {
             AppError::validation("当前用户无法验证开发 APP 连接，请重新打开任务对话。")
         })?;
@@ -169,6 +189,40 @@ pub fn runtime_paths() -> AppResult<(PathBuf, PathBuf)> {
 #[cfg(test)]
 mod task_locator_tests {
     use super::*;
+    #[test]
+    fn protected_task_route_survives_a_missing_or_redirected_local_descriptor() {
+        let root = std::env::temp_dir().canonicalize().unwrap();
+        let endpoint = "http://127.0.0.1:12345/api/v1/command";
+        let token = super::super::settings::encrypt_token("fixture-only").unwrap();
+        let mut record = TaskLocator {
+            task: "route-fixture".into(),
+            workspace: root.clone(),
+            descriptor: root
+                .join(uuid::Uuid::new_v4().to_string())
+                .join("ABYA Desktop Development Tool/Data/cli-connection.json"),
+            connection: Some(DesktopConnection {
+                version: 1,
+                endpoint: endpoint.into(),
+                route_proof: super::super::settings::encrypt_token(&route_identity(
+                    endpoint, &token,
+                ))
+                .unwrap(),
+                encrypted_token: token,
+            }),
+        };
+        let protect = |r: &TaskLocator| {
+            super::super::settings::encrypt_token(&serde_json::to_string(r).unwrap()).unwrap()
+        };
+        let locator = protect(&record);
+        assert_eq!(
+            task_connection(&locator, "route-fixture", &root).unwrap(),
+            (endpoint.into(), "fixture-only".into())
+        );
+        assert!(task_connection(&locator, "another-task", &root).is_err());
+        record.connection.as_mut().unwrap().endpoint =
+            "http://127.0.0.1:12346/api/v1/command".into();
+        assert!(task_connection(&protect(&record), "route-fixture", &root).is_err());
+    }
     #[test]
     fn a_copied_marker_cannot_select_another_tasks_connection() {
         let root = std::env::temp_dir();
