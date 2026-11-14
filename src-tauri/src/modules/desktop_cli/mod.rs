@@ -190,6 +190,7 @@ impl DesktopCliService {
             self.stop();
             return Err(error);
         }
+        self.dispatcher.refresh_connections()?;
         let mut control = self.inner.lock();
         control.state = state.clone();
         control.shutdown = Some(shutdown_tx);

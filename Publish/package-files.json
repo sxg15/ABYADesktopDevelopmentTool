@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "releaseLabel": "codex-desktop-workflow-21",
-  "totalBytes": 419104731,
+  "releaseLabel": "codex-desktop-workflow-27",
+  "totalBytes": 419841741,
   "files": [
     {
       "path": ".codex/README.md",
@@ -1690,8 +1690,8 @@
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/runtime-authoring.md",
-      "bytes": 8111,
-      "sha256": "66a6a766b94757fb34259c033514114b9164c397aed20e8ac1fa66aeab710945"
+      "bytes": 8336,
+      "sha256": "c699bfd096da70e0c38e08ce6f7389c7ab53dc0f9af1d5e184211ca1bed475b3"
     },
     {
       "path": ".codex/skills/abya-game-development-task/references/runtime-scenario-v3.md",
@@ -2245,18 +2245,18 @@
     },
     {
       "path": "ABYA Desktop Development Tool.exe",
-      "bytes": 50744320,
-      "sha256": "760e011f5802b11c056b1e6b4e0056102e7e7e825707af14c687af1ae53f72b0"
+      "bytes": 51473920,
+      "sha256": "ba18142e38da762548cdf49cd49a86c15ed6422acddfacf309a214c376c1d905"
     },
     {
       "path": "abya-desktop.exe",
-      "bytes": 6053888,
-      "sha256": "d832211a4453cd3e0677d6f4f0f6a6503964d465db8c5eca3ace9b27053707d1"
+      "bytes": 6061056,
+      "sha256": "68680877c5184485677b8e4fe3fe6d5d657a41f525c3a9cc385d42012da36b6f"
     },
     {
       "path": "build-manifest.json",
-      "bytes": 865,
-      "sha256": "0720b3e9eff6d5d874191342f23b45b45d2adb46a4e01e8893ae433e9d66e648"
+      "bytes": 882,
+      "sha256": "98c197c10547e814ade3321c33ebd0b79ac9f23bfd63975e618e7030fa7e6364"
     },
     {
       "path": "runtime/LICENSE.txt",

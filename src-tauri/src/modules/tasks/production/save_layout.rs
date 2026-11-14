@@ -4,7 +4,7 @@ use std::fs;
 const BASE: &str = "存档";
 static LAYOUT_GATE: parking_lot::Mutex<()> = parking_lot::Mutex::new(());
 
-fn part(value: &str, max: usize) -> String {
+pub(super) fn part(value: &str, max: usize) -> String {
     let s: String = value
         .chars()
         .map(|c| {
@@ -34,7 +34,7 @@ fn name(game: &str, feature: &str, at: chrono::DateTime<chrono::Local>) -> Strin
     let game = part(game, 28);
     let feature = part(feature, 22);
     format!(
-        "{}_{}_{}",
+        "{}-{}-{}",
         if game.is_empty() { "游戏" } else { &game },
         if feature.is_empty() {
             "编辑版"
@@ -50,6 +50,10 @@ impl TaskService {
         Ok(())
     }
     pub fn project_save_folder(&self, task: &str) -> AppResult<PathBuf> {
+        self.refresh_flat_saves(task)?;
+        self.save_folder_raw(task)
+    }
+    pub(super) fn save_folder_raw(&self, task: &str) -> AppResult<PathBuf> {
         let t = self.get_readonly(task)?;
         let root = Path::new(&t.workspace_path);
         let folder = files::safe_path(root, BASE)?;
@@ -66,14 +70,17 @@ impl TaskService {
         Ok(name(&t.title, feature, chrono::Local::now()))
     }
     pub(super) fn archive_storage(&self, task: &str, kind: &str) -> AppResult<PathBuf> {
-        let folder = self.project_save_folder(task)?;
+        let folder = self.archive_internal_root(task)?;
         files::safe_path(&folder, kind)
     }
     pub(super) fn migrate_save_layout(&self, task: &str) -> AppResult<()> {
         let _guard = LAYOUT_GATE.lock();
         let t = self.get_readonly(task)?;
         let root = Path::new(&t.workspace_path);
-        let base = self.project_save_folder(task)?;
+        let base = self.save_folder_raw(task)?;
+        if root.join("artifacts/save-storage/.flat-layout").is_file() {
+            return self.refresh_flat_saves(task);
+        }
         let parent = root.parent().ok_or_else(conflict)?;
         let legacy_parent = files::safe_path(parent, ".abya-authoring")?;
         let old = legacy_parent.join(task);
@@ -232,7 +239,7 @@ impl TaskService {
     }
 }
 #[cfg(windows)]
-fn compat_link(old: &Path, dest: &Path) -> AppResult<()> {
+pub(super) fn compat_link(old: &Path, dest: &Path) -> AppResult<()> {
     use std::os::windows::process::CommandExt;
     let normal = |p: &Path| super::acceptance::launch_path(p.to_string_lossy().into_owned());
     let shell = PathBuf::from(std::env::var_os("SystemRoot").ok_or_else(conflict)?)
@@ -256,7 +263,7 @@ mod tests {
     #[test]
     fn labels_have_three_safe_parts() {
         let label = name("A/B_C", "测试:一版", chrono::Local::now());
-        assert!(label.starts_with("A-B-C_测试-一版_"));
-        assert_eq!(label.split('_').count(), 3);
+        assert!(label.starts_with("A-B-C-测试-一版-"));
+        assert!(!label.contains('_'));
     }
 }

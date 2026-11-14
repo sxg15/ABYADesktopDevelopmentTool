@@ -7,6 +7,7 @@ mod completion;
 mod completion_repair;
 mod execution_loop;
 mod execution_time;
+mod flat_saves;
 mod preflight_recovery;
 mod progress_budget;
 mod review_handoff;

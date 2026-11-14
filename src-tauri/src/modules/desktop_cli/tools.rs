@@ -62,6 +62,12 @@ impl DesktopToolDispatcher {
         }
     }
 
+    pub(super) fn refresh_connections(&self) -> AppResult<()> {
+        self.dependencies
+            .codex_terminal
+            .refresh_desktop_connections()
+    }
+
     pub(super) fn shutdown(&self) {
         self.dependencies.runtime_bridge.shutdown();
         self.conversation_bindings.lock().clear();

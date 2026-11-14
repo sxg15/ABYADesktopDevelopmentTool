@@ -137,7 +137,7 @@ fn execute() -> Result<Value, Box<dyn std::error::Error>> {
             "toolName":if second=="describe" {"capability_describe"} else {"capability_search"},
             "arguments":{key:value}});
     }
-    let mut desktop_file = None;
+    let mut desktop_connection = None;
     let context = match (
         std::env::var("ABYA_DEVELOPMENT_TASK_ID"),
         std::env::var("ABYA_DEVELOPMENT_CONVERSATION_ID"),
@@ -157,7 +157,8 @@ fn execute() -> Result<Value, Box<dyn std::error::Error>> {
                         .parent()
                         .and_then(|p| p.parent())
                         .ok_or("缺少任务根目录。")?;
-                    desktop_file=Some(abya_desktop_development_tool_lib::foundation::cli_environment::locate_task_connection(locator,cfg["taskId"].as_str().ok_or("缺少任务 ID。")?,root)?);
+                    let (endpoint,token)=abya_desktop_development_tool_lib::foundation::cli_environment::task_connection(locator,cfg["taskId"].as_str().ok_or("缺少任务 ID。")?,root)?;
+                    desktop_connection = Some(Connection::Http { endpoint, token });
                 }
                 let native = std::env::var("CODEX_THREAD_ID")
                     .map_err(|_| "请在本任务的 Codex 桌面对话执行此命令。")?;
@@ -170,7 +171,10 @@ fn execute() -> Result<Value, Box<dyn std::error::Error>> {
         }
         _ => return Err("Incomplete task conversation environment.".into()),
     };
-    let connection = Connection::discover(desktop_file.as_deref())?;
+    let connection = match desktop_connection {
+        Some(connection) => connection,
+        None => Connection::discover(None)?,
+    };
     let request_id = supplied_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     uuid::Uuid::parse_str(&request_id)?;
     let interrupted = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
