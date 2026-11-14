@@ -104,21 +104,36 @@ fn migrates_owned_saves_without_changing_historical_paths_or_digests() {
             .canonicalize()
             .unwrap();
         assert!(
-            archive
-                .canonicalize()
-                .unwrap()
-                .starts_with(base.join("编辑数据"))
+            archive.canonicalize().unwrap().starts_with(
+                f.workspace
+                    .canonicalize()
+                    .unwrap()
+                    .join("artifacts/save-storage/编辑数据")
+            )
         );
         assert!(
-            snapshot
-                .canonicalize()
-                .unwrap()
-                .starts_with(base.join("版本"))
+            snapshot.canonicalize().unwrap().starts_with(
+                f.workspace
+                    .canonicalize()
+                    .unwrap()
+                    .join("artifacts/save-storage/版本")
+            )
         );
         assert_eq!(
             expected,
             versions::digest(std::slice::from_ref(&snapshot)).unwrap()
         );
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            assert_ne!(
+                std::fs::symlink_metadata(base.join("版本"))
+                    .unwrap()
+                    .file_attributes()
+                    & 2,
+                0
+            );
+        }
         let aliases = std::fs::read_dir(&base)
             .unwrap()
             .flatten()
@@ -126,4 +141,16 @@ fn migrates_owned_saves_without_changing_historical_paths_or_digests() {
             .count();
         assert_eq!(aliases, 1);
     }
+    std::thread::sleep(std::time::Duration::from_millis(1100));
+    std::fs::write(archive.join("changed.lua"), "return true").unwrap();
+    let first = f.service.project_save_folder(&f.id).unwrap();
+    let count = std::fs::read_dir(first)
+        .unwrap()
+        .flatten()
+        .filter(|e| e.path().canonicalize().ok() == archive.canonicalize().ok())
+        .count();
+    assert_eq!(
+        count, 1,
+        "timestamp refresh must replace the presentation link"
+    );
 }
