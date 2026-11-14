@@ -19,6 +19,7 @@ export function TasksView({settings,t,notify,notificationNavigation,onNotificati
 }){
   const [tasks,setTasks]=useState<DevelopmentTask[]>([]);
   const [id,setId]=useState(()=>localStorage.getItem("abya:last-desktop-task")??"");
+  const [retryOpen,setRetryOpen]=useState(0);
   const [create,setCreate]=useState(false),[stage,setStage]=useState("");
   const [menu,setMenu]=useState<{task:DevelopmentTask;x:number;y:number}>();
   const opened=useRef<string | undefined>(undefined),selected=tasks.find(task=>task.id===id);
@@ -39,13 +40,13 @@ export function TasksView({settings,t,notify,notificationNavigation,onNotificati
     localStorage.setItem("abya:last-desktop-task",selected.id);
     if(opened.current===selected.id||selected.status!=="active")return;
     opened.current=selected.id;
-    void openTaskChat(selected.id).catch(e=>notify(errorMessage(e),true));
-  },[selected?.id,library,visible]);
+    void openTaskChat(selected.id).catch(e=>{if(opened.current===selected.id)opened.current=undefined;notify(errorMessage(e),true);});
+  },[selected?.id,library,visible,retryOpen]);
   if(library)return <SkillLibrary key={id} taskId={selected?.id??""} active={selected?.status==="active"} locale={settings?.locale}/>;
   return <div className="workspace tasks-workspace desktop-workspace">
     <aside className="task-list-pane"><div className="pane-header"><h1>{t("tasks")}</h1>
       <button className="icon-button primary-icon" title={t("newTask")} onClick={()=>setCreate(true)}><CirclePlus size={18}/></button></div>
-      <div className="task-list">{tasks.map(task=><button key={task.id} aria-haspopup="menu" className={"task-row "+(id===task.id?"selected":"")} onClick={()=>{setStage("");setId(task.id);}}
+      <div className="task-list">{tasks.map(task=><button key={task.id} aria-haspopup="menu" className={"task-row "+(id===task.id?"selected":"")} onClick={()=>{setStage("");setId(task.id);setRetryOpen(value=>value+1);}}
         onContextMenu={event=>{event.preventDefault();event.currentTarget.focus();const rect=event.currentTarget.getBoundingClientRect();setMenu({task,x:event.clientX||rect.left,y:event.clientY||rect.bottom});}}>
         <span className={"status-dot status-"+task.status}/><span className="task-row-copy"><strong>{task.title}</strong><small>{t(task.status)}</small></span></button>)}</div></aside>
     <section className="content-pane desktop-task">{selected?<>

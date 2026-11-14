@@ -20,3 +20,14 @@ it("opens the selected project once and switches without a terminal or collapsin
  page.rerender(<TasksView {...props}/>);
  expect(openTaskChat).toHaveBeenCalledTimes(2);
 });
+
+it("retries the same task after an automatic open failure",async()=>{
+ vi.mocked(openTaskChat).mockRejectedValueOnce(new Error("connection unavailable")).mockResolvedValue(true);
+ const notify=vi.fn();
+ render(<TasksView t={translator("zh-CN")} notify={notify}/>);
+ await waitFor(()=>expect(notify).toHaveBeenCalled());
+ fireEvent.click(screen.getByRole("button",{name:/^A/}));
+ await waitFor(()=>expect(openTaskChat).toHaveBeenCalledTimes(2));
+ fireEvent.click(screen.getByRole("button",{name:/^A/}));
+ expect(openTaskChat).toHaveBeenCalledTimes(2);
+});

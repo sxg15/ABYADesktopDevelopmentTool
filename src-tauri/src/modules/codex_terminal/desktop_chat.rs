@@ -26,11 +26,13 @@ impl CodexTerminalService {
     }
 
     pub fn prepared_desktop_link(&self, id: &str) -> AppResult<Option<String>> {
+        let gate = self.gate(id);
+        let _guard = gate.normal.lock();
         let file = self.tasks.desktop_context_path(id)?;
         if !file.exists() {
             return Ok(None);
         }
-        let saved: Value = serde_json::from_slice(&std::fs::read(file)?)?;
+        let mut saved: Value = serde_json::from_slice(&std::fs::read(&file)?)?;
         let Some(native) = saved["preparedThread"].as_str() else {
             return Ok(None);
         };
@@ -40,10 +42,43 @@ impl CodexTerminalService {
             .ok_or_else(|| AppError::validation("任务对话记录缺失。"))?;
         Uuid::parse_str(cid).map_err(AppError::internal)?;
         let chat = self.conversation(id, cid)?;
-        Ok(
-            (!chat.archived && chat.native_session_id.as_deref() == Some(native))
-                .then(|| format!("codex://threads/{native}")),
-        )
+        if chat.archived || chat.native_session_id.as_deref() != Some(native) {
+            return Ok(None);
+        }
+        let link = format!("codex://threads/{native}");
+        let task = self.tasks.get_readonly(id)?;
+        if saved["taskId"] != id {
+            return Err(AppError::validation(
+                "项目连接文件的任务 ID 不匹配。请重新打开任务对话。",
+            ));
+        }
+        let cli = crate::foundation::cli_environment::desktop_cli_path();
+        let current = saved["desktopLocator"].as_str().is_some_and(|locator| {
+            crate::foundation::cli_environment::task_connection_is_current(
+                locator,
+                id,
+                Path::new(&task.workspace_path),
+            )
+            .unwrap_or(false)
+        });
+        if !current || saved["cli"] != cli.to_string_lossy().as_ref() {
+            saved["desktopLocator"] = json!(crate::foundation::cli_environment::task_locator(
+                id,
+                Path::new(&task.workspace_path)
+            )?);
+            saved["cli"] = json!(cli);
+            self.tasks.save_desktop_context(id, &saved)?;
+        }
+        Ok(Some(link))
+    }
+
+    pub fn refresh_desktop_connections(&self) -> AppResult<()> {
+        for task in self.tasks.list_readonly()? {
+            if let Err(error) = self.prepared_desktop_link(&task.id) {
+                eprintln!("Task connection refresh {}: {error}", task.id);
+            }
+        }
+        Ok(())
     }
 
     pub fn desktop_chat(&self, id: &str) -> AppResult<String> {

@@ -100,6 +100,16 @@ pub fn connection(file: Option<&Path>) -> AppResult<(String, String)> {
     verified_connection(value, file.is_some())
 }
 
+pub fn task_connection_is_current(locator: &str, task: &str, workspace: &Path) -> AppResult<bool> {
+    locate_task_connection(locator, task, workspace)?;
+    let raw = super::settings::decrypt_token(locator)?;
+    let record: TaskLocator = serde_json::from_str(&raw)?;
+    let Some(bound) = record.connection else {
+        return Ok(false);
+    };
+    Ok(verified_connection(bound, true)? == connection(None)?)
+}
+
 pub fn task_connection(locator: &str, task: &str, workspace: &Path) -> AppResult<(String, String)> {
     let descriptor = locate_task_connection(locator, task, workspace)?;
     let raw = super::settings::decrypt_token(locator)?;
